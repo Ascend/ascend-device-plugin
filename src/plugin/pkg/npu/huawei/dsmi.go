@@ -6,7 +6,7 @@
 
 package huawei
 
-// #cgo pkg-config: ascend_docker_plugin
+// #cgo pkg-config: ascend_device_plugin
 // #include "dsmi_common_interface.h"
 import "C"
 import (

@@ -7,7 +7,7 @@
 // Package huawei implements the query and allocation of the device and the function of the log.
 package huawei
 
-// #cgo pkg-config: ascend_docker_plugin
+// #cgo pkg-config: ascend_device_plugin
 // #include "dsmi_common_interface.h"
 import "C"
 import (
