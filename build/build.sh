@@ -6,14 +6,17 @@ TOP_DIR=$(realpath ${CUR_DIR}/..)
 build_version="1.0.8"
 build_time=$(date +'%Y-%m-%d_%T')
 
+DOWN_DRIVER_FILE="platform/Tuscany"
+DRIVER_FILE="310driver"
+
 OUTPUT_NAME="ascendplugin"
-SODIR=/usr/local/Ascend/driver/lib64/
+SODIR=${TOP_DIR}/${DRIVER_FILE}/driver/lib64/
 CONFIGDIR=${TOP_DIR}/src/plugin/config/config_310
 PKGNAME="K8sDevicePlugin.tar.gz"
 
 DEPLOYNAME="deploy.sh"
 DOCKER_FILE_NAME="Dockerfile"
-
+PC_File="ascend_device_plugin.pc"
 docker_zip_name="ascend-device-plugin_docker.tar.gz"
 docker_images_name="ascend-device-plugin:latest"
 
@@ -25,12 +28,18 @@ export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:${CONFIGDIR}
 #export GOROOT=/opt/buildtools/go
 #export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
 
-
-function clearEnv() {
+function clear_env() {
     rm -rf ${TOP_DIR}/output/*
 }
 
-function buildPlugin() {
+function make_lib() {
+    ls ${TOP_DIR}/${DOWN_DRIVER_FILE}
+    chmod +x  ${TOP_DIR}/${DOWN_DRIVER_FILE}/Ascend310-driver-*-centos7.6.aarch64.run
+    ${TOP_DIR}/${DOWN_DRIVER_FILE}/Ascend310-driver-*-centos7.6.aarch64.run  --noexec --extract=${TOP_DIR}/${DRIVER_FILE}
+    sed -i "1i\prefix=${TOP_DIR}/${DRIVER_FILE}" ${CONFIGDIR}/${PC_File}
+}
+
+function build_plugin() {
 
     cd ${TOP_DIR}/src/plugin/cmd/ascendplugin
 
@@ -47,7 +56,7 @@ function buildPlugin() {
     fi
 }
 
-function mvFile() {
+function mv_file() {
 
     mv ${TOP_DIR}/src/plugin/cmd/ascendplugin/${OUTPUT_NAME}   ${TOP_DIR}/output
     chmod 500 ${TOP_DIR}/build/${DEPLOYNAME}
@@ -55,7 +64,7 @@ function mvFile() {
 
 }
 
-function zipFile(){
+function zip_file(){
     cd ${TOP_DIR}/output
     tar -zcvf ${PKGNAME}  ${OUTPUT_NAME}  ${DEPLOYNAME} 
     rm -f ${OUTPUT_NAME}  ${DEPLOYNAME}   
@@ -72,11 +81,12 @@ function build_docker_images()
 }
 
 function main() {
-    clearEnv
-    buildPlugin
-    mvFile
+    clear_env
+    make_lib
+    build_plugin
+    mv_file
     #build_docker_images
-    zipFile
+    zip_file
 }
 
 main
