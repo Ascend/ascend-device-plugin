@@ -37,6 +37,9 @@ type HwDevManager struct {
 // GetFdFlag to describe FdFlag
 var GetFdFlag bool
 
+// UseAscendDocker to chose docker type
+var UseAscendDocker bool
+
 type devManager interface {
 	GetNPUs(*[]npuDevice, *[]string) error
 	GetDefaultDevs(*[]string) error
@@ -92,8 +95,9 @@ func (hdm *HwDevManager) GetDevType() []string {
 }
 
 // Serve start grpc server
-func (hdm *HwDevManager) Serve(devType, socketPath, k8sSocket, pluginSocket string, fdFlag *bool) {
+func (hdm *HwDevManager) Serve(devType, socketPath, k8sSocket, pluginSocket string, fdFlag, useAscendDocker *bool) {
 	GetFdFlag = *fdFlag
+	UseAscendDocker = *useAscendDocker
 	// start sockPath monitor
 	logger.Info("the log path is :", zap.String("logPath", LogPath))
 	pluginSockPath := path.Join(socketPath, pluginSocket)

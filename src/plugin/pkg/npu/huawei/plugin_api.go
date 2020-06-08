@@ -12,7 +12,6 @@ import (
 	"go.uber.org/zap"
 	"log"
 	"net"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -65,32 +64,7 @@ func Register(k8sSocketPath, pluginSocket, resourceName string) error {
 	if _, err = client.Register(context.Background(), reqt); err != nil {
 		return fmt.Errorf("register to kubelet fail: %v", err)
 	}
-
-	// create dir and file.
-	if !getPathExist(configDir) {
-		err := os.Mkdir(configDir, os.ModePerm)
-		if err != nil {
-			logger.Error("failed make dir")
-		}
-	}
-	addressPath := configDir + "/" + addressFile
-	if !getPathExist(addressPath) {
-		f, err := os.Create(addressPath)
-		defer f.Close()
-		if err != nil {
-			logger.Error(err.Error())
-		}
-	}
-
 	return nil
-}
-func getPathExist(path string) bool {
-	_, err := os.Stat(path)
-
-	if err == nil && os.IsNotExist(err) {
-		return false
-	}
-	return true
 }
 
 // GetDevicePluginOptions is Standard interface to kubelet.
@@ -168,13 +142,24 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 		ascendVisibleDevices := " "
 
 		// 从kubelet获取id
+		for i, id := range rqt.DevicesIDs {
+			getAscendDeviceID(id, &majorID, &minorID)
+			if i == len(rqt.DevicesIDs)-1 {
+				ascendVisibleDevices += majorID
+				break
+			}
+			ascendVisibleDevices += majorID + ","
+		}
+		ascendVisibleDevices = addEnv(ascendVisibleDevices, &resp)
+		if s.hps.runMode == "ascend310" && UseAscendDocker {
+			resps.ContainerResponses = append(resps.ContainerResponses, resp)
+			logger.Info("allocate responses:", zap.String("request", resps.String()))
+			break
+		}
+		// 从kubelet获取id
 		for _, id := range rqt.DevicesIDs {
 			AddDev(id, s, resp, devID)
-			getAscendDeviceID(id, &majorID, &minorID)
-			ascendVisibleDevices += majorID + " "
 		}
-
-		ascendVisibleDevices = addEnv(ascendVisibleDevices, &resp)
 
 		// mount default devices
 		for _, d := range s.hps.defaultDevs {
@@ -191,15 +176,14 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 			return nil, fmt.Errorf("AllocateAscendDev failed, %s", err)
 		}
 
-		if err := s.hps.hdm.manager.GetLogPath(devID, s.hps.hdm.dlogPath, &dlogMountPath); err != nil {
-			logger.Error("get logPath failed.", zap.String("err", err.Error()))
-			dlogMountPath = s.hps.hdm.dlogPath
-		}
-		timeStr := time.Now().Format("20060102150405")
-		rankID := "" + timeStr + "-0"
-		s.mountfile(resp, dlogMountPath, rankID)
-
 		if s.hps.hdm.runMode == "ascend910" {
+			if err := s.hps.hdm.manager.GetLogPath(devID, s.hps.hdm.dlogPath, &dlogMountPath); err != nil {
+				logger.Error("get logPath failed.", zap.String("err", err.Error()))
+				dlogMountPath = s.hps.hdm.dlogPath
+			}
+			timeStr := time.Now().Format("20060102150405")
+			rankID := "" + timeStr + "-0"
+			s.mountfile(resp, dlogMountPath, rankID)
 			addAnnotation(resp, ascendVisibleDevices)
 		}
 		resps.ContainerResponses = append(resps.ContainerResponses, resp)
