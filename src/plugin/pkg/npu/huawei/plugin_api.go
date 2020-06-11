@@ -139,43 +139,36 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 
 		var majorID string
 		var minorID string
-		ascendVisibleDevices := " "
+		ascendVisibleDevices := ""
 
 		// 从kubelet获取id
-		for i, id := range rqt.DevicesIDs {
-			getAscendDeviceID(id, &majorID, &minorID)
-			if i == len(rqt.DevicesIDs)-1 {
-				ascendVisibleDevices += majorID
-				break
+		for _, id := range rqt.DevicesIDs {
+			err := getAscendDeviceID(id, &majorID, &minorID)
+			if err != nil {
+				logger.Error("getAscendDeviceID", zap.Error(err))
 			}
 			ascendVisibleDevices += majorID + ","
 		}
 		ascendVisibleDevices = addEnv(ascendVisibleDevices, &resp)
-		if s.hps.runMode == "ascend310" && UseAscendDocker {
-			resps.ContainerResponses = append(resps.ContainerResponses, resp)
-			logger.Info("allocate responses:", zap.String("request", resps.String()))
-			break
+		if !UseAscendDocker {
+			// 从kubelet获取id
+			for _, id := range rqt.DevicesIDs {
+				AddDev(id, s, resp, devID)
+			}
+			// mount default devices
+			for _, d := range s.hps.defaultDevs {
+				resp.Devices = append(resp.Devices, &pluginapi.DeviceSpec{
+					HostPath:      d,
+					ContainerPath: d,
+					Permissions:   "mrw",
+				})
+			}
+			// allocate device
+			if err := AllocateAscendDev(devID, resp); err != nil {
+				logger.Error("AllocateAscendDev failed", zap.String("err", err.Error()))
+				return nil, fmt.Errorf("AllocateAscendDev failed, %s", err)
+			}
 		}
-		// 从kubelet获取id
-		for _, id := range rqt.DevicesIDs {
-			AddDev(id, s, resp, devID)
-		}
-
-		// mount default devices
-		for _, d := range s.hps.defaultDevs {
-			resp.Devices = append(resp.Devices, &pluginapi.DeviceSpec{
-				HostPath:      d,
-				ContainerPath: d,
-				Permissions:   "mrw",
-			})
-		}
-
-		// allocate device
-		if err := AllocateAscendDev(devID, resp); err != nil {
-			logger.Error("AllocateAscendDev failed", zap.String("err", err.Error()))
-			return nil, fmt.Errorf("AllocateAscendDev failed, %s", err)
-		}
-
 		if s.hps.hdm.runMode == "ascend910" {
 			if err := s.hps.hdm.manager.GetLogPath(devID, s.hps.hdm.dlogPath, &dlogMountPath); err != nil {
 				logger.Error("get logPath failed.", zap.String("err", err.Error()))
@@ -187,7 +180,6 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 			addAnnotation(resp, ascendVisibleDevices)
 		}
 		resps.ContainerResponses = append(resps.ContainerResponses, resp)
-
 		logger.Info("allocate responses:", zap.String("request", resps.String()))
 	}
 	return resps, nil
@@ -196,7 +188,7 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 func addEnv(ascendVisibleDevices string, resp **pluginapi.ContainerAllocateResponse) string {
 	// add env
 	envs := make(map[string]string)
-	ascendVisibleDevices = strings.TrimSpace(ascendVisibleDevices)
+	ascendVisibleDevices = strings.TrimSuffix(ascendVisibleDevices, ",")
 	envs[ascendVisibleDevicesEnv] = ascendVisibleDevices
 	(*resp).Envs = envs
 	return ascendVisibleDevices
@@ -226,7 +218,7 @@ func addAnnotation(resp *pluginapi.ContainerAllocateResponse, devices string) {
 }
 
 func setDevices(instance *Instance, devices string) error {
-	idSplit := strings.Split(devices, " ")
+	idSplit := strings.Split(devices, ",")
 	for _, deviceID := range idSplit {
 		logicID64, err := strconv.ParseInt(deviceID, 10, 32)
 		if err != nil {

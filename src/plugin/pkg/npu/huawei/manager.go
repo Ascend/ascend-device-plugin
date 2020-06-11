@@ -95,9 +95,8 @@ func (hdm *HwDevManager) GetDevType() []string {
 }
 
 // Serve start grpc server
-func (hdm *HwDevManager) Serve(devType, socketPath, k8sSocket, pluginSocket string, fdFlag, useAscendDocker *bool) {
-	GetFdFlag = *fdFlag
-	UseAscendDocker = *useAscendDocker
+func (hdm *HwDevManager) Serve(devType, socketPath, k8sSocket, pluginSocket string) {
+
 	// start sockPath monitor
 	logger.Info("the log path is :", zap.String("logPath", LogPath))
 	pluginSockPath := path.Join(socketPath, pluginSocket)
@@ -187,4 +186,10 @@ func (hdm *HwDevManager) signalWatch(watcher *fsnotify.Watcher, sigs chan os.Sig
 	}
 	return restart
 
+}
+
+// SetParameters to set Parameters
+func (hdm *HwDevManager) SetParameters(fdFlag, useAscendDocker *bool) {
+	GetFdFlag = *fdFlag
+	UseAscendDocker = *useAscendDocker
 }

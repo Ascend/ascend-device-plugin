@@ -13,13 +13,20 @@ OUTPUT_NAME="ascendplugin"
 SODIR=${TOP_DIR}/${DRIVER_FILE}/driver/lib64/driver
 CONFIGDIR=${TOP_DIR}/src/plugin/config/config_910
 
-PKGNAME="Ascend-K8sDevicePlugin-20.0.0-ARM64-Linux.run"
 
+osname=$(grep -i ^id= /etc/os-release| cut -d"=" -f2 | sed 's/"//g');
+ostype=$(arch)
+if [ "${ostype}" = "x86_64" ]; then
+  ostype="X86"
+elsecd
+  ostype="ARM64"
+fi
 DEPLOYNAME="deploy.sh"
 DOCKER_FILE_NAME="Dockerfile"
 PC_File="ascend_device_plugin.pc"
-docker_zip_name="Ascend-K8sDevicePlugin-20.0.0-ARM64-Docker.tar.gz"
-docker_images_name="Ascend-K8sDevicePlugin:latest"
+docker_zip_name="Ascend-K8sDevicePlugin-${build_version}-${ostype}-Docker.tar.gz".
+PKGNAME="Ascend-K8sDevicePlugin-${build_version}-${ostypes}-Linux.tar.gz"
+docker_images_name="ascend-k8sdeviceplugin:latest"
 
 
 # export so library path
@@ -33,9 +40,12 @@ function clear_env() {
 
 function make_lib() {
     ls ${TOP_DIR}/${DOWN_DRIVER_FILE}
-    chmod +x  ${TOP_DIR}/${DOWN_DRIVER_FILE}/Ascend310-driver-*.aarch64.run
-    ${TOP_DIR}/${DOWN_DRIVER_FILE}/Ascend910-driver-*.aarch64.run  --noexec --extract=${TOP_DIR}/${DRIVER_FILE}
-    sed -i "1i\prefix=${TOP_DIR}/${DRIVER_FILE}" ${CONFIGDIR}/${PC_File}
+    plateform=$(arch)
+    chmod +x  ${TOP_DIR}/${DOWN_DRIVER_FILE}/Ascend910-driver-*.${plateform}*.run
+
+    ${TOP_DIR}/${DOWN_DRIVER_FILE}/Ascend910-driver-*${osname}*.${plateform}.run \
+    --noexec --extract=${TOP_DIR}/${DRIVER_FILE}
+    sed -i "/^prefix=/c prefix=${TOP_DIR}/${DRIVER_FILE}" ${CONFIGDIR}/${PC_File}
 }
 
 function build_plugin() {

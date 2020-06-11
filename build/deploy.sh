@@ -281,7 +281,7 @@ Documentation=https://kubernetes.io/docs/
 After=kubelet.service
 
 [Service]
-ExecStart=/usr/local/bin/ascendplugin
+ExecStart=/usr/local/bin/ascendplugin --mode=ascend310 --fdFlag=true
 ExecReload=/bin/kill -s HUP $MAINPID
 ExecStop=/bin/kill -s QUIT $MAINPID
 Restart=no

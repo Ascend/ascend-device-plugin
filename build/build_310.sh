@@ -12,21 +12,28 @@ DRIVER_FILE="310driver"
 OUTPUT_NAME="ascendplugin"
 SODIR=${TOP_DIR}/${DRIVER_FILE}/driver/lib64/
 CONFIGDIR=${TOP_DIR}/src/plugin/config/config_310
-PKGNAME="K8sDevicePlugin.tar.gz"
 
 DEPLOYNAME="deploy.sh"
 DOCKER_FILE_NAME="Dockerfile"
 PC_File="ascend_device_plugin.pc"
 docker_zip_name="ascend-device-plugin_docker.tar.gz"
-docker_images_name="ascend-device-plugin:latest"
+docker_images_name="ascend-k8sdeviceplugin:latest"
+export GO111MODULE="on"
+export GOPROXY="http://mirrors.tools.huawei.com/goproxy/"
+export GONOSUMDB="*"
 
-
+osname=$(grep -i ^id= /etc/os-release| cut -d"=" -f2 | sed 's/"//g');
+ostype=$(arch)
+if [ "${ostype}" = "aarch64" ]; then
+  ostype="ARM64"
+else
+  ostype="X86"
+fi
+PKGNAME="Ascend-K8sDevicePlugin-${build_version}-${ostype}-Linux.tar.gz"
+docker_zip_name="Ascend-K8sDevicePlugin-${build_version}-${ostype}-Docker.tar.gz"
 # export so library path
 export LD_LIBRARY_PATH=${SODIR}
 export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:${CONFIGDIR}
-#export GOPATH=${TOP_DIR}/:/home/gopath
-#export GOROOT=/opt/buildtools/go
-#export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
 
 function clear_env() {
     rm -rf ${TOP_DIR}/output/*
@@ -34,16 +41,17 @@ function clear_env() {
 
 function make_lib() {
     ls ${TOP_DIR}/${DOWN_DRIVER_FILE}
-    chmod +x  ${TOP_DIR}/${DOWN_DRIVER_FILE}/Ascend310-driver-*-centos7.6.aarch64.run
-    ${TOP_DIR}/${DOWN_DRIVER_FILE}/Ascend310-driver-*-centos7.6.aarch64.run  --noexec --extract=${TOP_DIR}/${DRIVER_FILE}
-    sed -i "1i\prefix=${TOP_DIR}/${DRIVER_FILE}" ${CONFIGDIR}/${PC_File}
+    plateform=$(arch)
+    chmod +x  ${TOP_DIR}/${DOWN_DRIVER_FILE}/Ascend310-driver-*.${plateform}.run
+
+    ${TOP_DIR}/${DOWN_DRIVER_FILE}/Ascend310-driver-*${osname}*.${plateform}*.run \
+    --noexec --extract=${TOP_DIR}/${DRIVER_FILE}
+    sed -i "/^prefix=/c prefix=${TOP_DIR}/${DRIVER_FILE}" ${CONFIGDIR}/${PC_File}
 }
 
 function build_plugin() {
 
     cd ${TOP_DIR}/src/plugin/cmd/ascendplugin
-
-
     go build -ldflags "-X main.BuildName=${OUTPUT_NAME} \
             -X main.BuildVersion=${build_version} \
             -X main.BuildTime=${build_time}"  \
@@ -85,7 +93,7 @@ function main() {
     make_lib
     build_plugin
     mv_file
-    #build_docker_images
+    build_docker_images
     zip_file
 }
 

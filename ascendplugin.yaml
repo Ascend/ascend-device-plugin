@@ -30,10 +30,10 @@ spec:
       nodeSelector:
         accelerator: huawei-Ascend910
       containers:
-      - image: ascend-device-plugin:v1
+      - image: ascend-k8sdeviceplugin:latest
         name: device-plugin-01
         command: [ "/bin/bash", "-c", "--"]
-        args: [ "ascendplugin" ]
+        args: [ "ascendplugin --useAscendDocer=${USE_ASCEND_DOCKER}" ]
         securityContext:
           privileged: true
         imagePullPolicy: Never
