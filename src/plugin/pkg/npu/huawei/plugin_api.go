@@ -12,7 +12,6 @@ import (
 	"go.uber.org/zap"
 	"log"
 	"net"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -65,32 +64,7 @@ func Register(k8sSocketPath, pluginSocket, resourceName string) error {
 	if _, err = client.Register(context.Background(), reqt); err != nil {
 		return fmt.Errorf("register to kubelet fail: %v", err)
 	}
-
-	// create dir and file.
-	if !getPathExist(configDir) {
-		err := os.Mkdir(configDir, os.ModePerm)
-		if err != nil {
-			logger.Error("failed make dir")
-		}
-	}
-	addressPath := configDir + "/" + addressFile
-	if !getPathExist(addressPath) {
-		f, err := os.Create(addressPath)
-		defer f.Close()
-		if err != nil {
-			logger.Error(err.Error())
-		}
-	}
-
 	return nil
-}
-func getPathExist(path string) bool {
-	_, err := os.Stat(path)
-
-	if err == nil && os.IsNotExist(err) {
-		return false
-	}
-	return true
 }
 
 // GetDevicePluginOptions is Standard interface to kubelet.
@@ -165,45 +139,47 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 
 		var majorID string
 		var minorID string
-		ascendVisibleDevices := " "
+		ascendVisibleDevices := ""
 
 		// 从kubelet获取id
 		for _, id := range rqt.DevicesIDs {
-			AddDev(id, s, resp, devID)
-			getAscendDeviceID(id, &majorID, &minorID)
-			ascendVisibleDevices += majorID + " "
+			err := getAscendDeviceID(id, &majorID, &minorID)
+			if err != nil {
+				logger.Error("getAscendDeviceID", zap.Error(err))
+			}
+			ascendVisibleDevices += majorID + ","
 		}
-
 		ascendVisibleDevices = addEnv(ascendVisibleDevices, &resp)
-
-		// mount default devices
-		for _, d := range s.hps.defaultDevs {
-			resp.Devices = append(resp.Devices, &pluginapi.DeviceSpec{
-				HostPath:      d,
-				ContainerPath: d,
-				Permissions:   "mrw",
-			})
+		if !UseAscendDocker {
+			// 从kubelet获取id
+			for _, id := range rqt.DevicesIDs {
+				AddDev(id, s, resp, devID)
+			}
+			// mount default devices
+			for _, d := range s.hps.defaultDevs {
+				resp.Devices = append(resp.Devices, &pluginapi.DeviceSpec{
+					HostPath:      d,
+					ContainerPath: d,
+					Permissions:   "mrw",
+				})
+			}
+			// allocate device
+			if err := AllocateAscendDev(devID, resp); err != nil {
+				logger.Error("AllocateAscendDev failed", zap.String("err", err.Error()))
+				return nil, fmt.Errorf("AllocateAscendDev failed, %s", err)
+			}
 		}
-
-		// allocate device
-		if err := AllocateAscendDev(devID, resp); err != nil {
-			logger.Error("AllocateAscendDev failed", zap.String("err", err.Error()))
-			return nil, fmt.Errorf("AllocateAscendDev failed, %s", err)
-		}
-
-		if err := s.hps.hdm.manager.GetLogPath(devID, s.hps.hdm.dlogPath, &dlogMountPath); err != nil {
-			logger.Error("get logPath failed.", zap.String("err", err.Error()))
-			dlogMountPath = s.hps.hdm.dlogPath
-		}
-		timeStr := time.Now().Format("20060102150405")
-		rankID := "" + timeStr + "-0"
-		s.mountfile(resp, dlogMountPath, rankID)
-
 		if s.hps.hdm.runMode == "ascend910" {
+			if err := s.hps.hdm.manager.GetLogPath(devID, s.hps.hdm.dlogPath, &dlogMountPath); err != nil {
+				logger.Error("get logPath failed.", zap.String("err", err.Error()))
+				dlogMountPath = s.hps.hdm.dlogPath
+			}
+			timeStr := time.Now().Format("20060102150405")
+			rankID := "" + timeStr + "-0"
+			s.mountfile(resp, dlogMountPath, rankID)
 			addAnnotation(resp, ascendVisibleDevices)
 		}
 		resps.ContainerResponses = append(resps.ContainerResponses, resp)
-
 		logger.Info("allocate responses:", zap.String("request", resps.String()))
 	}
 	return resps, nil
@@ -212,7 +188,7 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 func addEnv(ascendVisibleDevices string, resp **pluginapi.ContainerAllocateResponse) string {
 	// add env
 	envs := make(map[string]string)
-	ascendVisibleDevices = strings.TrimSpace(ascendVisibleDevices)
+	ascendVisibleDevices = strings.TrimSuffix(ascendVisibleDevices, ",")
 	envs[ascendVisibleDevicesEnv] = ascendVisibleDevices
 	(*resp).Envs = envs
 	return ascendVisibleDevices
@@ -242,7 +218,7 @@ func addAnnotation(resp *pluginapi.ContainerAllocateResponse, devices string) {
 }
 
 func setDevices(instance *Instance, devices string) error {
-	idSplit := strings.Split(devices, " ")
+	idSplit := strings.Split(devices, ",")
 	for _, deviceID := range idSplit {
 		logicID64, err := strconv.ParseInt(deviceID, 10, 32)
 		if err != nil {

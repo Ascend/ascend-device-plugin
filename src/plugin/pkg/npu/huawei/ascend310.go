@@ -47,6 +47,7 @@ func (hnm *HwAscend310Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *
 	} else {
 		deviType = hiAIAscend310Prefix
 	}
+	logger.Info("--->< ", zap.String("deviType", deviType))
 	for i := int32(0); i < devNum; i++ {
 		dev := fmt.Sprintf("%s-%d", deviType, ids[i])
 		log.Printf("Found Huawei Ascend310 %s\n", dev)
