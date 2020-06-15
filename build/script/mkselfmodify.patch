@@ -1,0 +1,234 @@
+--- makeself-header.sh	2018-04-27 17:23:32.000000000 +0800
++++ ascend-run-header.sh	2020-05-29 10:59:14.686786800 +0800
+@@ -1,18 +1,18 @@
+ cat << EOF  > "$archname"
+-#!/bin/sh
++#!/bin/bash
+ # This script was generated using Makeself $MS_VERSION
+ # The license covering this archive and its contents, if any, is wholly independent of the Makeself license (GPL)
+ 
+ ORIG_UMASK=\`umask\`
+-if test "$KEEP_UMASK" = n; then
+-    umask 077
+-fi
+ 
+ CRCsum="$CRCsum"
+ MD5="$MD5sum"
+ SHA="$SHAsum"
+ TMPROOT=\${TMPDIR:=/tmp}
+ USER_PWD="\$PWD"; export USER_PWD
++name_of_file="\$0 "
++pwd_of_file="\$PWD "
++
+ 
+ label="$LABEL"
+ script="$SCRIPT"
+@@ -138,6 +138,24 @@
+ MS_Help()
+ {
+     cat << EOH >&2
++Usage: \$0 [options]
++Options:
++  --help | -h                       Print this message
++  --info                            Print embedded info : title, default target directory, embedded script ...
++  --list                            Print the list of files in the archive
++  --check                           Checks integrity of the archive
++  --quiet                           Quiet install mode, skip human-computer interactions
++  --noexec                          Do not run embedded script
++  --extract=<path>                  Extract directly to a target directory (absolute or relative)
++                                    Usually used with --noexec to just extract files without running
++  --tar arg1 [arg2 ...]             Access the contents of the archive through the tar command
++\${helpheader}
++EOH
++}
++
++MS_Help1()
++{
++    cat << EOH >&2
+ \${helpheader}Makeself version $MS_VERSION
+  1) Getting help or info about \$0 :
+   \$0 --help   Print this message
+@@ -145,7 +163,6 @@
+   \$0 --lsm    Print embedded lsm entry (or no LSM)
+   \$0 --list   Print the list of files in the archive
+   \$0 --check  Checks integrity of the archive
+-
+  2) Running \$0 :
+   \$0 [options] [--] [additional arguments to embedded script]
+   with following options (in that order)
+@@ -194,7 +211,7 @@
+ 			fi
+ 			sha=\`echo \$SHA | cut -d" " -f\$i\`
+ 			if test x"\$sha" = x0000000000000000000000000000000000000000000000000000000000000000; then
+-				test x"\$verb" = xy && echo " \$1 does not contain an embedded SHA256 checksum." >&2
++				test x"\$verb" = xy
+ 			else
+ 				shasum=\`MS_dd_Progress "\$1" \$offset \$s | eval "\$SHA_PATH \$SHA_ARG" | cut -b-64\`;
+ 				if test x"\$shasum" != x"\$sha"; then
+@@ -212,7 +229,7 @@
+ 			fi
+ 			md5=\`echo \$MD5 | cut -d" " -f\$i\`
+ 			if test x"\$md5" = x00000000000000000000000000000000; then
+-				test x"\$verb" = xy && echo " \$1 does not contain an embedded MD5 checksum." >&2
++				test x"\$verb" = xy
+ 			else
+ 				md5sum=\`MS_dd_Progress "\$1" \$offset \$s | eval "\$MD5_PATH \$MD5_ARG" | cut -b-32\`;
+ 				if test x"\$md5sum" != x"\$md5"; then
+@@ -225,7 +242,7 @@
+ 			fi
+ 		fi
+ 		if test x"\$crc" = x0000000000; then
+-			test x"\$verb" = xy && echo " \$1 does not contain a CRC checksum." >&2
++			test x"\$verb" = xy
+ 		else
+ 			sum1=\`MS_dd_Progress "\$1" \$offset \$s | CMD_ENV=xpg4 cksum | awk '{print \$1}'\`
+ 			if test x"\$sum1" = x"\$crc"; then
+@@ -252,6 +269,22 @@
+     fi
+ }
+ 
++Script_Args_Check()
++{
++    script_supported_args=\$(echo \${helpheader} | grep -o -P "\-\-[^ ]+" | awk -F"=" {'print \$1'})
++    arg_to_test=\$(echo \$1|awk -F"=" {'print \$1'})
++
++    for arg in \${script_supported_args[@]};
++    do
++        if test x"\$arg_to_test" = x"\$arg" ;then
++            return
++        fi
++    done
++
++    MS_Help
++    exit 1
++}
++
+ finish=true
+ xterm_loop=
+ noprogress=$NOPROGRESS
+@@ -262,7 +295,7 @@
+ 
+ initargs="\$@"
+ 
+-while true
++while [ -n "\$*" ]
+ do
+     case "\$1" in
+     -h | --help)
+@@ -274,10 +307,6 @@
+ 	noprogress=y
+ 	shift
+ 	;;
+-	--accept)
+-	accept=y
+-	shift
+-	;;
+     --info)
+ 	echo Identification: "\$label"
+ 	echo Target directory: "\$targetdir"
+@@ -318,14 +347,6 @@
+ 	echo OLDSKIP=`expr $SKIP + 1`
+ 	exit 0
+ 	;;
+-    --lsm)
+-cat << EOLSM
+-EOF
+-eval "$LSM_CMD"
+-cat << EOF  >> "$archname"
+-EOLSM
+-	exit 0
+-	;;
+     --list)
+ 	echo Target directory: \$targetdir
+ 	offset=\`head -n $SKIP "\$0" | wc -c | tr -d " "\`
+@@ -363,10 +384,10 @@
+ 	keep=y
+ 	shift
+ 	;;
+-    --target)
++    --extract=*)
+ 	keep=y
+-	targetdir="\${2:-.}"
+-    if ! shift 2; then MS_Help; exit 1; fi
++	targetdir=\`echo \$1 | cut -d"=" -f2 \`
++    if ! shift; then MS_Help; exit 1; fi
+ 	;;
+     --noprogress)
+ 	noprogress=y
+@@ -395,19 +416,34 @@
+ 	copy=phase2
+ 	shift
+ 	;;
+-    --)
++    *)
++	Script_Args_Check \$1
++	scriptargs="\$scriptargs \$1"
+ 	shift
+-	break ;;
+-    -*)
+-	echo Unrecognized flag : "\$1" >&2
+-	MS_Help
+-	exit 1
+ 	;;
+-    *)
+-	break ;;
+     esac
+ done
+ 
++quiet_para=""
++
++if test x"\$quiet" = xy; then 
++    quiet_para="--quiet "
++fi
++
++keep_para=""
++
++if test x"\$keep" = xy; then 
++    keep_para="--keep "
++fi
++
++confirm_para=""
++
++if test x"\$verbose" = xy; then 
++    confirm_para="--confirm "
++fi
++
++
++scriptargs="--\$name_of_file""--\$pwd_of_file""\$quiet_para""\$keep_para""\$confirm_para""\$scriptargs"
+ if test x"\$quiet" = xy -a x"\$verbose" = xy; then
+ 	echo Cannot be verbose and quiet at the same time. >&2
+ 	exit 1
+@@ -484,7 +520,7 @@
+     fi
+     mkdir \$dashp "\$tmpdir" || {
+ 	echo 'Cannot create target directory' \$tmpdir >&2
+-	echo 'You should try option --target dir' >&2
++	echo 'You should try option --extract=<path>' >&2
+ 	eval \$finish
+ 	exit 1
+     }
+@@ -567,11 +603,19 @@
+     fi
+ 
+     if test x"\$verbose" = x"y"; then
+-		MS_Printf "OK to execute: \$script \$scriptargs \$* ? [Y/n] "
+-		read yn
+-		if test x"\$yn" = x -o x"\$yn" = xy -o x"\$yn" = xY; then
+-			eval "\"\$script\" \$scriptargs \"\\\$@\""; res=\$?;
+-		fi
++        yn="x"
++        while test x"\$yn" != x -a x"\$yn" != xy -a x"\$yn" != xY -a x"\$yn" != xn -a x"\$yn" != xN
++        do
++            MS_Printf "OK to execute: \$script \$scriptargs \$* ? [Y/n] "
++            read yn
++            if test x"\$yn" = x -o x"\$yn" = xy -o x"\$yn" = xY; then
++                eval "\"\$script\" \$scriptargs \"\\\$@\""; res=\$?;
++            elif  test x"\$yn" = xn -o x"\$yn" = xN; then
++                echo "Unable to decompress \$script ,because of aborting! ";res=\$?
++            else
++                echo "Input value is unacceptable,please try again."
++            fi
++        done
+     else
+ 		eval "\"\$script\" \$scriptargs \"\\\$@\""; res=\$?
+     fi
