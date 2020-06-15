@@ -16,15 +16,15 @@ export GONOSUMDB="*"
 osname=$(grep -i ^id= /etc/os-release| cut -d"=" -f2 | sed 's/"//g');
 ostype=$(arch)
 if [ "${ostype}" = "aarch64" ]; then
-  ostype="ARM64"
+  ostype="arm64"
 else
-  ostype="X86"
+  ostype="x86"
 fi
-PKGNAME="Ascend-K8sDevicePlugin-${build_version}-${ostype}-Linux.run"
+PKGNAME="Ascend-k8s_device-plugin-${build_version}-linux.run"
 TARNAME="Ascend-K8sDevicePlugin-${build_version}-${ostype}-Linux.tar.gz"
 docker_zip_name="Ascend-K8sDevicePlugin-${build_version}-${ostype}-Docker.tar.gz"
 # export so library path
-export LD_LIBRARY_PATH=${SODIR}
+export LD_LIBRARY_PATH=${SODIR}:${LD_LIBRARY_PATH}
 export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:${CONFIGDIR}
 
 
@@ -78,7 +78,7 @@ function make_run_package() {
     chmod +x  ${CUR_DIR}/script/makepackgeinstall.sh
     dos2unix  ${CUR_DIR}/script/makepackgeinstall.sh
     cp ${CUR_DIR}/script/makepackgeinstall.sh  ${TOP_DIR}/makerunout
-    dirname="Ascend-K8sDevicePlugin-${ostype}-${osname}"
+    dirname="${ostype}"
     if [ ! -d "${TOP_DIR}/output/${dirname}" ]; then
         mkdir -p "${TOP_DIR}/output/${dirname}"
     fi
@@ -96,6 +96,7 @@ function make_run_package() {
     sh ${CUR_DIR}/script/makeself.sh --nomd5 --nocrc --header ${CUR_DIR}/script/makeself-header.sh  --help-header \
     ${CUR_DIR}/script/help.info ${TOP_DIR}/makerunout "${PKGNAME}" ascendplugin ./makepackgeinstall.sh
     rm -rf ${TOP_DIR}/makerunout
+    rm -f ${TOP_DIR}/output/${OUTPUT_NAME}  ${TOP_DIR}/output/${DEPLOYNAME}
 }
 
 function build_docker_images()
