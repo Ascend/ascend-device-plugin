@@ -78,7 +78,7 @@ function make_run_package() {
     chmod +x  ${CUR_DIR}/script/makepackgeinstall.sh
     dos2unix  ${CUR_DIR}/script/makepackgeinstall.sh
     cp ${CUR_DIR}/script/makepackgeinstall.sh  ${TOP_DIR}/makerunout
-    dirname="${ostype}"
+    dirname="${ostype}-$(get_os_name)$(get_os_version)"
     if [ ! -d "${TOP_DIR}/output/${dirname}" ]; then
         mkdir -p "${TOP_DIR}/output/${dirname}"
     fi
@@ -109,3 +109,18 @@ function build_docker_images()
     rm -f ${DOCKER_FILE_NAME}
 }
 
+function get_os_name() {
+    lsb_release -i | awk '{print $3}' | tr 'A-Z' 'a-z'
+}
+
+function get_os_version() {
+    local os_name=$(get_os_name)
+    declare -A os_version=(["ubuntu"]="18.04" ["centos"]="7.6" ["euleros"]="2.8" ["debian"]="9.9")
+    for key in "${!os_version[@]}"; do
+        if [ $key == $os_name ]; then
+            echo "${os_version[$key]}"
+            return 0
+        fi
+    done
+    exit 1
+}
