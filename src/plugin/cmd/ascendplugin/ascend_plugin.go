@@ -36,8 +36,8 @@ var (
 	lowThreshold   = flag.String("lowThreshold", "80", "AI core low-level threshold of frequency")
 	netDetect      = flag.Bool("netDetect", false, "detect device network health ")
 	version        = flag.Bool("version", false, "show k8s device plugin version ")
-	fdFlag         = flag.Bool("fdFlag", false, "set the system is fd")
-	useAscendDocer = flag.Bool("useAscendDocer", false, "use docker type")
+	fdFlag         = flag.Bool("fdFlag", false, "set the connect system is fd system")
+	useAscendDocer = flag.Bool("useAscendDocker", true, "use ascend docker or not")
 )
 
 var (

@@ -1,5 +1,5 @@
 #Package Information for pkg-config
-prefix=
+prefix=/usr/local/Ascend
 libdriver=${prefix}/driver/lib64
 includedir=${prefix}/driver/kernel/inc/driver/
 Name: ascend_docker_plugin

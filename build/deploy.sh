@@ -1,5 +1,4 @@
 #!/bin/bash
-
 unset http_proxy https_proxy
 
 CURRENT_PATH=$(cd "$(dirname "$0")"; pwd)
@@ -19,7 +18,10 @@ TMPFILE=/tmp/deploy.sh.tmp
 
 SCRIP_NAME="$0"
 ARGS="$1"
-
+echo $ARGS
+INSTALL_PARA1="$2"
+INSTALL_PARA2="$3"
+INSTALL_PARA3="$4"
 
 target_kubelet_version=v1.13
 target_go_version=go1.11
@@ -101,9 +103,6 @@ function install_plugin()
 	log_info "${APP_NAME} install"
 
 
-	check_env
-
-
 	# check app exist
 
     if [ -e ${CURRENT_PATH}/${APP_NAME} ]
@@ -133,7 +132,6 @@ function install_plugin()
 		log_error "fail to find ${APP_NAME} in target dir,install failed"
 		exit 1
 	fi
-
 }
 
 function upgrade_plugin()
@@ -192,11 +190,6 @@ function clean_service_config()
 
 }
 
-function check_env()
-{
-	check_kubelet
-	check_go_version
-}
 
 function check_version()
 {
@@ -274,6 +267,17 @@ function check_golang_install()
 
 function dp_config_file()
 {
+
+  command="/usr/local/bin/ascendplugin"
+   if [ -n "${INSTALL_PARA1}" ]; then
+      command="${command} ${INSTALL_PARA1}"
+   fi
+   if [ -n "${INSTALL_PARA2}" ]; then
+     command="${command} ${INSTALL_PARA2}"
+   fi
+   if [ -n "${INSTALL_PARA3}" ]; then
+     command="${command} ${INSTALL_PARA3}"
+   fi
 cat > ${SERVICENAME} <<EOF
 [Unit]
 Description=ascendplugin: The Ascend910 k8s device plugin
@@ -281,7 +285,7 @@ Documentation=https://kubernetes.io/docs/
 After=kubelet.service
 
 [Service]
-ExecStart=/usr/local/bin/ascendplugin --mode=ascend310 --fdFlag=true
+ExecStart=${command}
 ExecReload=/bin/kill -s HUP $MAINPID
 ExecStop=/bin/kill -s QUIT $MAINPID
 Restart=no
@@ -376,16 +380,19 @@ function help()
 
 }
 
+
+function version()
+{
+	./ascendplugin --version
+}
+
 function main()
 {
 
 	log_info "***********************************devicePlugin deploy start***************************************" 
 	log_info "deploy log path: ${logfile}" 
 	check_deploy_process
-
 	lograte_setting
-	
-
 	if [[ ${ARGS} == "--install" ]];then
 		install_plugin
 	elif [[ ${ARGS} == "--upgrade" ]];then
@@ -394,6 +401,8 @@ function main()
 		uninstall_plugin
 	elif [[ ${ARGS} == "--help" ]];then
 		help
+	elif [[ ${ARGS} == "--version" ]];then
+		version
 	else
 		echo "command not support !"
 	fi
