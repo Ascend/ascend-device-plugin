@@ -23,11 +23,11 @@
             <repoType>Generic</repoType>
             <id>
                 <offering>Tuscany</offering>
-                <version>Tuscany V100R001C72B050</version>
+                <version>Tuscany V100R001C73B050</version>
             </id>
             <copies>
                 <copy>
-                    <source>Beta/Inference/InstallPackages/Ascend310-driver-*-centos7.6.*.run</source>
+                    <source>Gamma/Inference/InstallPackages/Ascend310-driver-*.run</source>
                     <dest>platform/Tuscany</dest>
                 </copy>
             </copies>
