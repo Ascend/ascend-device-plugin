@@ -1,14 +1,16 @@
 #!/bin/bash
-set -x
+
 CUR_DIR=$(dirname $(readlink -f $0))
 TOP_DIR=$(realpath ${CUR_DIR}/..)
 DOWN_DRIVER_FILE="platform/Tuscany"
 DRIVER_FILE="310driver"
 CONFIGDIR=${TOP_DIR}/src/plugin/config/config_310
+SODIR=/usr/local/Ascend/driver/lib64
 BUILD_TYPE=build
 DOCKER_TYPE=nodockerimages
 if [ "$1" == "ci" ] || [ "$2" == "ci" ]; then
     BUILD_TYPE=ci
+    SODIR=${TOP_DIR}/${DRIVER_FILE}/driver/lib64/
 fi
 
 if [ "$1" == "dockerimages" ] || [ "$2" == "dockerimages" ]; then

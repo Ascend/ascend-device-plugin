@@ -1,10 +1,6 @@
   --upgrade                         Upgrade the installed device-plugin module
-  --version                         query the  device-plugin package version
-  --install                         install device-plugin
-  --mode                            install device-plugin parameter:device plugin running mode
-                                    default:ascend910 [ascend910|ascend310]
-  --fdFlag                          install device-p:wlugin parameter :set the connect system is fd system or not
-                                    defult:false [true|false]
-  --useAscendDocker                  install device-plugin parameter:use ascend docker or not
-                                    default:true [true|false]
-  --uninstall                       uninstall device-plugin
+  --version                         Query the  device-plugin package version
+  --full                            Install full mode
+  --run                             Install run mode
+  --install-path=<path>             Specify the path to install devieplugin module
+  --uninstall                       Uninstall device-plugin

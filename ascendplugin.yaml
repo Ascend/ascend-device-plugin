@@ -54,16 +54,3 @@ spec:
         - name: log-path
           hostPath:
             path: /var/log/devicePlugin
-
-
-
-
-
-
-
-
-
-
-
-
-
