@@ -13,6 +13,7 @@ import (
 	"log"
 	"net"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -200,7 +201,7 @@ func addAnnotation(resp *pluginapi.ContainerAllocateResponse, devices string) {
 	var instance Instance
 	instance.PodName = "cloud-localhost-"
 
-	instance.ServerID = "127.0.0.1"
+	instance.ServerID = ""
 
 	err := setDevices(&instance, devices)
 	if err != nil {
@@ -219,6 +220,7 @@ func addAnnotation(resp *pluginapi.ContainerAllocateResponse, devices string) {
 
 func setDevices(instance *Instance, devices string) error {
 	idSplit := strings.Split(devices, ",")
+	sort.Sort(sort.StringSlice(idSplit))
 	for _, deviceID := range idSplit {
 		logicID64, err := strconv.ParseInt(deviceID, 10, 32)
 		if err != nil {

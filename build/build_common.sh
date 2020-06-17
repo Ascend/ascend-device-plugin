@@ -2,7 +2,6 @@
 
 build_version="1.0.8"
 build_time=$(date +'%Y-%m-%d_%T')
-SODIR=${TOP_DIR}/${DRIVER_FILE}/driver/lib64/
 OUTPUT_NAME="ascendplugin"
 DEPLOYNAME="deploy.sh"
 DOCKER_FILE_NAME="Dockerfile"
@@ -25,7 +24,7 @@ TARNAME="Ascend-K8sDevicePlugin-${build_version}-${ostype}-Linux.tar.gz"
 docker_zip_name="Ascend-K8sDevicePlugin-${build_version}-${ostype}-Docker.tar.gz"
 # export so library path
 export LD_LIBRARY_PATH=${SODIR}:${LD_LIBRARY_PATH}
-export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:${CONFIGDIR}
+export PKG_CONFIG_PATH=${CONFIGDIR}:$PKG_CONFIG_PATH
 
 
 function clear_env() {
@@ -38,7 +37,6 @@ function clear_env() {
 
 
 function build_plugin() {
-
     cd ${TOP_DIR}/src/plugin/cmd/ascendplugin
     go build -ldflags "-X main.BuildName=${OUTPUT_NAME} \
             -X main.BuildVersion=${build_version} \
@@ -56,7 +54,7 @@ function mv_file() {
 
     cp ${TOP_DIR}/src/plugin/cmd/ascendplugin/${OUTPUT_NAME}   ${TOP_DIR}/output
     dos2unix ${TOP_DIR}/build/${DEPLOYNAME}
-    chmod 500 ${TOP_DIR}/build/${DEPLOYNAME}
+    chmod 550 ${TOP_DIR}/build/${DEPLOYNAME}
     cp ${TOP_DIR}/build/${DEPLOYNAME}     ${TOP_DIR}/output
 
 }
@@ -64,8 +62,13 @@ function mv_file() {
 function copy2runpackage() {
     mv ${TOP_DIR}/src/plugin/cmd/ascendplugin/${OUTPUT_NAME}   ${TOP_DIR}/makerunout
     dos2unix ${TOP_DIR}/build/${DEPLOYNAME}
-    chmod 500 ${TOP_DIR}/build/${DEPLOYNAME}
+    chmod 550 ${TOP_DIR}/build/${DEPLOYNAME}
     cp ${TOP_DIR}/build/${DEPLOYNAME}     ${TOP_DIR}/makerunout/
+    if [ ! -d "${TOP_DIR}/makerunout/script" ]; then
+        mkdir -p ${TOP_DIR}/makerunout/script
+    fi
+    chmod 550 ${TOP_DIR}/build/script/uninstall.sh
+    cp ${TOP_DIR}/build/script/uninstall.sh ${TOP_DIR}/makerunout/script/
 }
 
 function zip_file(){

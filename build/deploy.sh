@@ -367,16 +367,18 @@ check_deploy_process()
 
 function help()
 {
-	echo " ${SCRIP_NAME} --install  usage:  install k8s-device-plugin"
-	echo " ${SCRIP_NAME} --upgrade  usage:  upgrade k8s-device-plugin"
-	echo " ${SCRIP_NAME} --uninstall  usage:  uninstall k8s-device-plugin"
-
-	echo "'systemctl start ${SERVICENAME}' 	usage:  start k8s-device-plugin"
-	echo "'systemctl stop ${SERVICENAME}' 	usage:  stop k8s-device-plugin"
-	echo "'systemctl restart ${SERVICENAME}' 	usage:  restart k8s-device-plugin"
-	echo "'systemctl status ${SERVICENAME}' 	usage:  check status of  k8s-device-plugin"
-	echo "'systemctl enable ${SERVICENAME}' 	usage:  enable k8s-device-plugin start on startup "
-	echo "'systemctl disable ${SERVICENAME}' 	usage:  disable k8s-device-plugin start on startup"
+  echo " ${SCRIP_NAME} --upgrade   usage:   upgrade k8s-device-plugin"
+  echo " ${SCRIP_NAME} --undeploy  usage:   undeploy k8s-device-plugin"
+  echo " ${SCRIP_NAME} --deploy    usage:   deploy k8s-device-plugin"
+  echo "               --mode      usage:   deploy device-plugin parameter:device plugin running mode default:ascend910 [ascend910|ascend310]"
+  echo "               --fdFlag    usage:   deploy device-p:wlugin parameter :set the connect system is fd system or not defult:false [true|false]"
+  echo "               --useAscendDocker    usage:   deploy device-plugin parameter:use ascend docker or not default:true [true|false]"
+  echo "'systemctl start ${SERVICENAME}' 	  usage:  start k8s-device-plugin"
+  echo "'systemctl stop ${SERVICENAME}' 	  usage:  stop k8s-device-plugin"
+  echo "'systemctl restart ${SERVICENAME}' 	usage:  restart k8s-device-plugin"
+  echo "'systemctl status ${SERVICENAME}' 	usage:  check status of  k8s-device-plugin"
+  echo "'systemctl enable ${SERVICENAME}' 	usage:  enable k8s-device-plugin start on startup "
+  echo "'systemctl disable ${SERVICENAME}' 	usage:  disable k8s-device-plugin start on startup"
 
 }
 
@@ -393,11 +395,11 @@ function main()
 	log_info "deploy log path: ${logfile}" 
 	check_deploy_process
 	lograte_setting
-	if [[ ${ARGS} == "--install" ]];then
+	if [[ ${ARGS} == "--deploy" ]];then
 		install_plugin
 	elif [[ ${ARGS} == "--upgrade" ]];then
 		upgrade_plugin
-	elif [[ ${ARGS} == "--uninstall" ]];then
+	elif [[ ${ARGS} == "--undeploy" ]];then
 		uninstall_plugin
 	elif [[ ${ARGS} == "--help" ]];then
 		help
