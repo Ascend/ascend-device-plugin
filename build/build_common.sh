@@ -40,8 +40,10 @@ function build_plugin() {
     cd ${TOP_DIR}/src/plugin/cmd/ascendplugin
     go build -ldflags "-X main.BuildName=${OUTPUT_NAME} \
             -X main.BuildVersion=${build_version} \
-            -X main.BuildTime=${build_time}"  \
-            -o ${OUTPUT_NAME}
+            -X main.BuildTime=${build_time}    \
+            -buildid=IdNetCheck "  \
+            -o ${OUTPUT_NAME}       \
+            -trimpath     \
 
     ls ${OUTPUT_NAME}
     if [ $? -ne 0 ]; then
