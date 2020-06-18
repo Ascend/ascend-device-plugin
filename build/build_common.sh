@@ -6,7 +6,6 @@ OUTPUT_NAME="ascendplugin"
 DEPLOYNAME="deploy.sh"
 DOCKER_FILE_NAME="Dockerfile"
 PC_File="ascend_device_plugin.pc"
-docker_zip_name="ascend-device-plugin_docker.tar.gz"
 docker_images_name="ascend-k8sdeviceplugin:latest"
 export GO111MODULE="on"
 export GOPROXY="http://mirrors.tools.huawei.com/goproxy/"
@@ -38,12 +37,17 @@ function clear_env() {
 
 
 function build_plugin() {
+
+    rm -rf /tmp/gobuildplguin
+    mkdir -p /tmp/gobuildplguin
     cd ${TOP_DIR}/src/plugin/cmd/ascendplugin
     go build -ldflags "-X main.BuildName=${OUTPUT_NAME} \
             -X main.BuildVersion=${build_version} \
-            -buildid=IdNetCheck "  \
+            -buildid none     \
+            -s   \
+            -tmpdir /tmp/gobuildplguin" \
             -o ${OUTPUT_NAME}       \
-            -trimpath     \
+            -trimpath
 
     ls ${OUTPUT_NAME}
     if [ $? -ne 0 ]; then
@@ -95,9 +99,10 @@ function make_run_package() {
     cp makeself-header.sh ${CUR_DIR}/script
     cd ${CUR_DIR}/script || retrun
     patch -p0 < mkselfmodify.patch
-    cd ${TOP_DIR}/output/${dirname} || return
-    sh ${CUR_DIR}/script/makeself.sh --nomd5 --nocrc --header ${CUR_DIR}/script/makeself-header.sh  --help-header \
-    ${CUR_DIR}/script/help.info ${TOP_DIR}/makerunout "${PKGNAME}" ascendplugin ./makepackgeinstall.sh
+
+    ./makeself.sh --nomd5 --nocrc --header ./makeself-header.sh  --help-header \
+    ./help.info ../../makerunout "${PKGNAME}" ascendplugin ./makepackgeinstall.sh
+    mv ${PKGNAME} ${TOP_DIR}/output/${dirname}
     rm -rf ${TOP_DIR}/makerunout
     rm -f ${TOP_DIR}/output/${OUTPUT_NAME}  ${TOP_DIR}/output/${DEPLOYNAME}
 }
