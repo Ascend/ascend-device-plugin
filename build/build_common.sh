@@ -29,6 +29,7 @@ export PKG_CONFIG_PATH=${CONFIGDIR}:$PKG_CONFIG_PATH
 
 function clear_env() {
     rm -rf ${TOP_DIR}/output/*
+    rm -rf ~/.cache/go-build
     if [ ! -d "${TOP_DIR}/makerunout" ]; then
         mkdir -p ${TOP_DIR}/makerunout
     fi
@@ -40,7 +41,6 @@ function build_plugin() {
     cd ${TOP_DIR}/src/plugin/cmd/ascendplugin
     go build -ldflags "-X main.BuildName=${OUTPUT_NAME} \
             -X main.BuildVersion=${build_version} \
-            -X main.BuildTime=${build_time}    \
             -buildid=IdNetCheck "  \
             -o ${OUTPUT_NAME}       \
             -trimpath     \
@@ -63,8 +63,6 @@ function mv_file() {
 
 function copy2runpackage() {
     mv ${TOP_DIR}/src/plugin/cmd/ascendplugin/${OUTPUT_NAME}   ${TOP_DIR}/makerunout
-    dos2unix ${TOP_DIR}/build/${DEPLOYNAME}
-    chmod 550 ${TOP_DIR}/build/${DEPLOYNAME}
     cp ${TOP_DIR}/build/${DEPLOYNAME}     ${TOP_DIR}/makerunout/
     if [ ! -d "${TOP_DIR}/makerunout/script" ]; then
         mkdir -p ${TOP_DIR}/makerunout/script

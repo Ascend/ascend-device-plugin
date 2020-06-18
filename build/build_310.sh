@@ -38,13 +38,11 @@ function main() {
     fi
     build_plugin
     mv_file
-    copy2runpackage
-
     if [ "${DOCKER_TYPE}" == "dockerimages" ]; then
         build_docker_images
     fi
-
     if [ "${BUILD_TYPE}" = "ci" ]; then
+      copy2runpackage
       make_run_package
     else
       zip_file
