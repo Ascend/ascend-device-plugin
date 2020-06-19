@@ -7,9 +7,6 @@ DEPLOYNAME="deploy.sh"
 DOCKER_FILE_NAME="Dockerfile"
 PC_File="ascend_device_plugin.pc"
 docker_images_name="ascend-k8sdeviceplugin:latest"
-export GO111MODULE="on"
-export GOPROXY="http://mirrors.tools.huawei.com/goproxy/"
-export GONOSUMDB="*"
 
 osname=$(grep -i ^id= /etc/os-release| cut -d"=" -f2 | sed 's/"//g');
 ostype=$(arch)
@@ -31,6 +28,7 @@ function clear_env() {
     rm -rf ~/.cache/go-build
     if [ ! -d "${TOP_DIR}/makerunout" ]; then
         mkdir -p ${TOP_DIR}/makerunout
+        chmod 750 ${TOP_DIR}/makerunout
     fi
 }
 
@@ -40,6 +38,7 @@ function build_plugin() {
 
     rm -rf /tmp/gobuildplguin
     mkdir -p /tmp/gobuildplguin
+    chmod 750 /tmp/gobuildplguin
     cd ${TOP_DIR}/src/plugin/cmd/ascendplugin
     go build -ldflags "-X main.BuildName=${OUTPUT_NAME} \
             -X main.BuildVersion=${build_version} \
@@ -70,6 +69,7 @@ function copy2runpackage() {
     cp ${TOP_DIR}/build/${DEPLOYNAME}     ${TOP_DIR}/makerunout/
     if [ ! -d "${TOP_DIR}/makerunout/script" ]; then
         mkdir -p ${TOP_DIR}/makerunout/script
+        chmod 750 ${TOP_DIR}/makerunout/script
     fi
     chmod 550 ${TOP_DIR}/build/script/uninstall.sh
     cp ${TOP_DIR}/build/script/uninstall.sh ${TOP_DIR}/makerunout/script/
@@ -82,12 +82,13 @@ function zip_file(){
 }
 
 function make_run_package() {
-    chmod +x  ${CUR_DIR}/script/makepackgeinstall.sh
+    chmod 550  ${CUR_DIR}/script/makepackgeinstall.sh
     dos2unix  ${CUR_DIR}/script/makepackgeinstall.sh
     cp ${CUR_DIR}/script/makepackgeinstall.sh  ${TOP_DIR}/makerunout
     dirname="${ostype}-$(get_os_name)$(get_os_version)"
     if [ ! -d "${TOP_DIR}/output/${dirname}" ]; then
         mkdir -p "${TOP_DIR}/output/${dirname}"
+        chmod 750 ${TOP_DIR}/output/${dirname}
     fi
     if [ -d "${TOP_DIR}/tools/makeself-release-2.4.0" ]; then
         rm -rf ${TOP_DIR}/tools/makeself-release-2.4.0

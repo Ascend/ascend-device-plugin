@@ -11,5 +11,3 @@ ENV LD_LIBRARY_PATH  /usr/local/Ascend/driver/lib64/driver:/usr/local/Ascend/dri
 RUN rm -f /usr/local/bin/ascend*
 
 COPY ./ascendplugin  /usr/local/bin/
-
-

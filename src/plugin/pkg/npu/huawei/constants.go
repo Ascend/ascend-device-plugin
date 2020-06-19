@@ -24,8 +24,7 @@ const (
 	idSplitNum          = 2
 	dieIDNum            = 5
 	// The unit is seconds
-	sleepTime   = 5
-	grpcTimeOut = 10
+	sleepTime = 5
 	// if register failed three times then exit
 	registerTimeout = 3
 
@@ -35,17 +34,11 @@ const (
 	// logger setting
 
 	// LogPath save log file
-	LogPath      = "/var/log/devicePlugin/devicePlugin.log"
-	fileMaxSize  = 5                                                      // each log file size
-	maxBackups   = 20                                                     // max backup
-	maxAge       = 28                                                     // the log file last time
-	podDeviceKey = "atlas.kubectl.kubernetes.io/ascend-910-configuration" // config map name
-
-	configDir        = "/opt/deviceplugin" // file dir
-	addressFile      = "IpFile.config"     // ip file
-	configMapFile    = "configMap.config"  // configMap file
-	configDeviceFile = "devices.config"    // devicesconfig file
-
-	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES" // visible env
-	sleepFileTime           = 3                        // sleep time
+	LogPath                 = "/var/log/devicePlugin/devicePlugin.log"
+	fileMaxSize             = 1000                                                   // each log file size
+	maxBackups              = 20                                                     // max backup
+	maxAge                  = 28                                                     // the log file last time
+	podDeviceKey            = "atlas.kubectl.kubernetes.io/ascend-910-configuration" // config map name
+	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"                               // visible env
+	logChmod                = 0640
 )
