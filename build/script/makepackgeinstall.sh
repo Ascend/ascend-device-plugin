@@ -14,26 +14,20 @@ install_tool()
         echo ${install_path}
   	    install_ascend_path="${install_path}/${INSTALL_DIR}"
         if [ ! -d "${install_ascend_path}" ]; then
-
+            chmod 750 ${install_path}
             mkdir -p "${install_ascend_path}"
-            if [ ! -d ${install_ascend_path}/script ]; then
-                mkdir ${install_ascend_path}/script
-            fi
-            cp ${UNINSTALL_PATH} ${install_ascend_path}/script
-            cp ${OUTPUT_NAME} ${install_ascend_path}/
-            cp ${DEPLOYNAME} ${install_ascend_path}/
-
-        elif [ -d "${install_ascend_path}" ]; then
-            # 添加卸载脚本
-            if [ ! -d ${install_ascend_path}/script ]; then
-                mkdir ${install_ascend_path}/script
-            fi
-            cp ${UNINSTALL_PATH} ${install_ascend_path}/script
-            cp ${OUTPUT_NAME} ${install_ascend_path}/
-            cp ${DEPLOYNAME} ${install_ascend_path}/
+            chmod 750 ${install_ascend_path}
         fi
-
-      fi
+        if [ ! -d ${install_ascend_path}/script ]; then
+            mkdir ${install_ascend_path}/script
+            chmod 750 ${install_ascend_path}/script
+        fi
+        cp ${UNINSTALL_PATH} ${install_ascend_path}/script
+        chmod 550 ${install_ascend_path}/script/${UNINSTALL_PATH}
+        cp ${OUTPUT_NAME} ${install_ascend_path}
+        chmod 550 ${install_ascend_path}/${OUTPUT_NAME}
+        cp ${DEPLOYNAME} ${install_ascend_path}/
+        chmod 550  ${install_ascend_path}/${DEPLOYNAME}
       if [ "${inst}" != "n" ]&&[ -d "${install_ascend_path}/script" ]; then
 
           echo "-----------------------------------------------------------------------------------------------------"
@@ -43,6 +37,7 @@ install_tool()
       else
 	        echo "error : install is failed"
       fi
+    fi
 }
 
 while true
@@ -80,6 +75,7 @@ do
 done
 
 mkdir -p ${install_path}/${INSTALL_DIR}
+chmod 750 ${install_path}/${INSTALL_DIR}
 install_bin_path=${install_path}/${INSTALL_DIR}
 
 
@@ -143,10 +139,13 @@ if [ "${is_upgrade}" == "y" ]&&[ "${is_install_path}" == "y" ]; then
         rm -rf "${install_ascend_path}/script"
         rm -rf "${install_ascend_path}"
         mkdir -p  "${install_ascend_path}/script"
-
+        chmod 750 ${install_ascend_path}/script
         cp ${UNINSTALL_PATH} ${install_ascend_path}/script
         cp ${OUTPUT_NAME} ${install_ascend_path}/
         cp ${DEPLOYNAME} ${install_ascend_path}/
+        chmod 550  ${install_ascend_path}/script/${UNINSTALL_PATH}
+        chmod 550  ${install_ascend_path}/${OUTPUT_NAME}
+        chmod 550  ${install_ascend_path}/${DEPLOYNAME}
         echo "Upgrade successfully"
   	fi
 fi

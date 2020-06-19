@@ -31,64 +31,58 @@ HOSTNAME=$(hostname)
 
 # assign log file 
 mkdir -p  /var/log/devicePlugin
+chmod 750 /var/log/devicePlugin
 logfile=/var/log/devicePlugin/deploy.log
 
 
 function log_info()
 {
+  if [ ! -e ${logfile} ]; then
+      touch ${logfile}
+      chmod 640 ${logfile}
+  fi
 	echo "[`date +%Y-%m-%d-%H:%M:%S`] [INFO] $1"  | tee -a $logfile
 }
 
 function log_error()
 {
+  if [ ! -e {logfile} ]; then
+      touch ${logfile}
+      chmod 640 ${logfile}
+  fi
 	echo "[`date +%Y-%m-%d-%H:%M:%S`] [ERROR] $1"  | tee -a $logfile
 }
 
 function lograte_setting()
 {
 	mkdir -p ${log_bak}
-
+  chmod 750 ${log_bak}
 	if [ -e ${lograte_path}/${logrotate_file} ]
 	then
 		rm -f ${lograte_path}/${logrotate_file}
 	fi
 	cat > ${lograte_path}/${logrotate_file} <<EOF
 
-/var/log/devicePlugin/deploy.log {
-        su root root
-        daily
-        size=5M
-        rotate 20
-        missingok
-        nocompress
-        olddir   /var/log/devicePlugin/deploy_old
-        copytruncate
-    }
-
+/var/log/devicePlugin/*.log {
+    su root root
+    hourly
+    compress
+    size=10M
+    rotate 10
+    missingok
+    copytruncate
+    prerotate
+        chmod 440 /var/log/devicePlugin/*.log
+    endscript
+    sharedscripts
+    postrotate
+        chmod 640 /var/log/devicePlugin/*.log
+    endscript
+}
 EOF
 
-cron_setting
-
+chmod 640 ${lograte_path}/${logrotate_file}
 }
-
-
-function cron_setting()
-{
-	if [ -e ${cron_path}/${cron_file} ]
-	then
-		rm -f ${cron_path}/${cron_file}
-	fi
-
-	cat > ${cron_path}/${cron_file} <<EOF
-#!/usr/bin/sh
-/usr/sbin/logrotate  ${lograte_path}/${logrotate_file}
-
-EOF
-
-chmod 777 ${cron_path}/${cron_file}
-
-}
-
 
 function install_plugin()
 {
@@ -114,7 +108,7 @@ function install_plugin()
 	fi
 
 	cp ${CURRENT_PATH}/${APP_NAME} ${TARGET_DIR}
-
+  chmod 550 ${TARGET_DIR}/${APP_NAME}
 	dp_config_file
 
 	if [ -e ${TARGET_DIR}/${APP_NAME} ]
@@ -176,6 +170,11 @@ function uninstall_plugin()
     	log_error "${APP_NAME} uninstall failed"
     else
     	log_info "${APP_NAME} uninstall success"
+	fi
+
+	if [ -e ${lograte_path}/${logrotate_file} ]
+	then
+	    rm -rf ${lograte_path}/${logrotate_file}
 	fi
 }
 
@@ -298,7 +297,7 @@ WantedBy=multi-user.target
 
 EOF
 mv  -f ${SERVICENAME}  ${SERVICE_PATH}
-
+chmod 640 ${SERVICE_PATH}/${SERVICENAME}
 }
 
 function device_plugin_service_start()
@@ -358,7 +357,7 @@ check_deploy_process()
     	exit 1
     else
     	touch ${TMPFILE}
-    	chmod 600 $TMPFILE
+    	chmod 750 $TMPFILE
     fi
 
 	trap "rm -f ${TMPFILE}; exit"  0 1 2 3 9 15

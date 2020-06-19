@@ -18,6 +18,10 @@ var logger *zap.Logger
 
 func init() {
 	logger = ConfigLog(LogPath)
+	error := os.Chmod(LogPath, logChmod)
+	if error != nil {
+		logger.Error("logger is error", zap.Error(error))
+	}
 }
 
 // NewEncoderConfig is used to config log file
@@ -55,8 +59,7 @@ func ConfigLog(logPath string) *zap.Logger {
 		zapcore.NewConsoleEncoder(NewEncoderConfig()),
 		zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout),
 			w),
-		zap.DebugLevel,
+		zap.InfoLevel,
 	)
 	return zap.New(core, zap.AddCaller())
-
 }

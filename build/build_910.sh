@@ -15,14 +15,14 @@ fi
 if [ "$1" == "dockerimages" ] || [ "$2" == "dockerimages" ]; then
     DOCKER_TYPE=dockerimages
 fi
-chmod +x build_common.sh
+chmod 550 build_common.sh
 dos2unix build_common.sh
 source build_common.sh
 
 function make_lib() {
     ls ${TOP_DIR}/${DOWN_DRIVER_FILE}
     plateform=$(arch)
-    chmod +x  ${TOP_DIR}/${DOWN_DRIVER_FILE}/Ascend910-driver-*.${plateform}.run
+    chmod 550  ${TOP_DIR}/${DOWN_DRIVER_FILE}/Ascend910-driver-*.${plateform}.run
 
     ${TOP_DIR}/${DOWN_DRIVER_FILE}/Ascend910-driver-*${osname}*.${plateform}*.run \
     --noexec --extract=${TOP_DIR}/${DRIVER_FILE}

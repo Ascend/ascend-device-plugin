@@ -75,6 +75,10 @@ func (hps *HwPluginServe) Start(pluginPath, k8sSocket, pluginSocket, pluginSocke
 	if err != nil {
 		logger.Error("device plugin start failed.", zap.String("err", err.Error()))
 	}
+	err = os.Chmod(pluginSocketPath, logChmod)
+	if err != nil {
+		logger.Error("chmod error", zap.Error(err))
+	}
 	hps.socket = pluginSocketPath
 	hps.grpcServer = grpc.NewServer()
 
