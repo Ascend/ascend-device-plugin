@@ -15,7 +15,7 @@ if [ "${ostype}" = "aarch64" ]; then
 else
   ostype="x86"
 fi
-PKGNAME="Ascend-k8s_device_plugin-${build_version}-linux.run"
+PKGNAME="Ascend-k8s_device_plugin-${build_version}-${ostype}-linux.run"
 TARNAME="Ascend-K8sDevicePlugin-${build_version}-${ostype}-Linux.tar.gz"
 docker_zip_name="Ascend-K8sDevicePlugin-${build_version}-${ostype}-Docker.tar.gz"
 # export so library path

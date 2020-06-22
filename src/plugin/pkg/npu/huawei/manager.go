@@ -114,8 +114,8 @@ func (hdm *HwDevManager) Serve(devType, socketPath, k8sSocket, pluginSocket stri
 
 	restart := true
 	var hps *HwPluginServe
-
-	for {
+	nerverStop := true
+	for nerverStop {
 		if restart {
 			if hps != nil {
 				hps.Stop()
