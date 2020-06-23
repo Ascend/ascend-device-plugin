@@ -57,7 +57,7 @@ function build_plugin() {
 
 function mv_file() {
 
-    cp ${TOP_DIR}/src/plugin/cmd/ascendplugin/${OUTPUT_NAME}   ${TOP_DIR}/output
+    mv ${TOP_DIR}/src/plugin/cmd/ascendplugin/${OUTPUT_NAME}   ${TOP_DIR}/output
     dos2unix ${TOP_DIR}/build/${DEPLOYNAME}
     chmod 550 ${TOP_DIR}/build/${DEPLOYNAME}
     cp ${TOP_DIR}/build/${DEPLOYNAME}     ${TOP_DIR}/output
@@ -107,15 +107,13 @@ function make_run_package() {
     rm -rf ${TOP_DIR}/makerunout
     rm -f ${TOP_DIR}/output/${OUTPUT_NAME}  ${TOP_DIR}/output/${DEPLOYNAME}
 }
-
 function build_docker_images()
 {
-    cp ${TOP_DIR}/build/${DOCKER_FILE_NAME}     ${TOP_DIR}/output
-    cd ${TOP_DIR}/output
+    cd ${TOP_DIR}
     docker rmi ${docker_images_name}
     docker build -t ${docker_images_name} .
     docker save ${docker_images_name} | gzip > ${docker_zip_name}
-    rm -f ${DOCKER_FILE_NAME}
+    mv ${docker_zip_name} ./output/
 }
 
 function get_os_name() {
@@ -132,4 +130,9 @@ function get_os_version() {
         fi
     done
     exit 1
+}
+
+function getVendorMode() {
+    go mod download
+    go mod vendor
 }

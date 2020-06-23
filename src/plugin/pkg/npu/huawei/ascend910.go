@@ -98,24 +98,6 @@ func (hnm *HwAscend910Manager) GetDevState(DeviceName string) string {
 		unhealthyState(healthState, uint32(logicID), "healthState")
 		return pluginapi.Unhealthy
 	}
-
-	/*
-		if hnm.netDetect {
-			netHealthState, err := getDeviceNetworkHealth(logicID)
-			if err != nil {
-				logger.Error("get device %d network state failed.",
-					zap.Int32("deviceId", logicID),
-					zap.String("error", err.Error()))
-
-				return pluginapi.Unhealthy
-			}
-			if netHealthState != 0 {
-				unhealthyState(netHealthState, uint32(logicID), "netHealthState")
-				return pluginapi.Unhealthy
-			}
-		}
-	*/
-
 	return pluginapi.Healthy
 
 }
