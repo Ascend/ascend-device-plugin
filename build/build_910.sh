@@ -38,12 +38,6 @@ function main() {
     if [ "${DOCKER_TYPE}" == "dockerimages" ]; then
         build_docker_images
     fi
-
-    if [ "${BUILD_TYPE}" = "ci" ]; then
-      copy2runpackage
-      make_run_package
-    else
-      zip_file
-    fi
+    zip_file
 }
 main

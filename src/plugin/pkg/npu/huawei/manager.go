@@ -60,10 +60,8 @@ func NewHwDevManager(mode, dlogPath string) *HwDevManager {
 // GetNPUs get npu types
 func (hdm *HwDevManager) GetNPUs(timeInterval, checkNum, restoreNum, highThreshold, lowThreshold string, netDetect bool) error {
 	if hdm.runMode == "pci" {
-		// hdm.manager = NewHwPCIManager()
 		return nil
 	} else if hdm.runMode == "vnpu" {
-		// hdm.manager = NewHwVNPUManager()
 		return nil
 	} else if hdm.runMode == "ascend310" {
 		hdm.manager = NewHwAscend310Manager()
@@ -114,8 +112,8 @@ func (hdm *HwDevManager) Serve(devType, socketPath, k8sSocket, pluginSocket stri
 
 	restart := true
 	var hps *HwPluginServe
-
-	for {
+	nerverStop := true
+	for nerverStop {
 		if restart {
 			if hps != nil {
 				hps.Stop()
