@@ -8,11 +8,11 @@ SODIR=/usr/local/Ascend/driver/lib64/driver
 BUILD_TYPE=build
 DOCKER_TYPE=nodocker
 if [ "$1" == "ci" ] || [ "$2" == "ci" ]; then
-    BUILD_TYPE=ci
-    SODIR=${TOP_DIR}/${DRIVER_FILE}/driver/lib64/driver
     export GO111MODULE="on"
     export GOPROXY="http://mirrors.tools.huawei.com/goproxy/"
     export GONOSUMDB="*"
+    BUILD_TYPE=ci
+    SODIR=${TOP_DIR}/${DRIVER_FILE}/driver/lib64/driver
 fi
 if [ "$1" == "dockerimages" ] || [ "$2" == "dockerimages" ]; then
     DOCKER_TYPE=dockerimages
