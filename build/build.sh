@@ -4,6 +4,7 @@ TOP_DIR=$(realpath ${CUR_DIR}/..)
 set -x
 dos2unix build_310.sh
 chmod +x build_310.sh
+./${CUR_DIR}/build_310.sh ci
 cd ${TOP_DIR}/output/
 rm -rf *
 tar -zcvf  ascend-device-plugin.tar.gz ../src/* ../go.mod ../ascendplugin.yaml ../Dockerfile
