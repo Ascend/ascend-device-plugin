@@ -1,5 +1,4 @@
 #!/bin/bash
-set -x
 CUR_DIR=$(dirname $(readlink -f $0))
 TOP_DIR=$(realpath ${CUR_DIR}/..)
 DOWN_DRIVER_FILE="platform/Tuscany"
@@ -11,6 +10,9 @@ DOCKER_TYPE=nodocker
 if [ "$1" == "ci" ] || [ "$2" == "ci" ]; then
     BUILD_TYPE=ci
     SODIR=${TOP_DIR}/${DRIVER_FILE}/driver/lib64/driver
+    export GO111MODULE="on"
+    export GOPROXY="http://mirrors.tools.huawei.com/goproxy/"
+    export GONOSUMDB="*"
 fi
 if [ "$1" == "dockerimages" ] || [ "$2" == "dockerimages" ]; then
     DOCKER_TYPE=dockerimages
@@ -36,6 +38,9 @@ function main() {
     build_plugin
     mv_file
     if [ "${DOCKER_TYPE}" == "dockerimages" ]; then
+        getVendorMode
+        dos2unix ${CUR_DIR}/build_in_docker.sh
+        chmod 550 ${CUR_DIR}/build_in_docker.sh
         build_docker_images
     fi
     zip_file
