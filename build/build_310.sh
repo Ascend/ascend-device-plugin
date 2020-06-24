@@ -43,6 +43,9 @@ function main() {
     mv_file
     if [ "${DOCKER_TYPE}" == "dockerimages" ]; then
         build_docker_images
+        getVendorMode
+        dos2unix build_in_docker.sh
+        chmod 550 build_in_docker.sh
     fi
     zip_file
 }
