@@ -142,9 +142,13 @@ func preStart(hps *HwPluginServe, pluginSockPath string) {
 			break
 		}
 		// Use non-default level to avoid log spam.
-		logger.Error("hwPluginServe.PreStart() failed", zap.String("err", err.Error()))
+		if logFlag {
+			logger.Error("hwPluginServe.PreStart() failed", zap.String("err", err.Error()))
+		}
+		logFlag = false
 		time.Sleep(sleepTime * time.Second)
 	}
+	logFlag = true
 	logger.Info("starting device-plugin server at:", zap.String("pluginSockPath", pluginSockPath))
 }
 

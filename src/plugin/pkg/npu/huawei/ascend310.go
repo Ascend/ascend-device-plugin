@@ -70,22 +70,28 @@ func (hnm *HwAscend310Manager) GetDevState(DeviceName string) string {
 	var minorID string
 	err := getDeviceID(DeviceName, &majorID, &minorID)
 	if err != nil {
-		logger.Error("get device logicID failed.",
-			zap.String("deviceId", DeviceName),
-			zap.String("error", err.Error()))
+		if logFlag {
+			logger.Error("get device logicID failed.",
+				zap.String("deviceId", DeviceName),
+				zap.String("error", err.Error()))
+		}
 		return pluginapi.Unhealthy
 	}
 	devidCheck, err := strconv.Atoi(majorID)
 	if err != nil {
-		logger.Error("transfer device string to Integer failed", zap.String("deviceID", DeviceName))
+		if logFlag {
+			logger.Error("transfer device string to Integer failed", zap.String("deviceID", DeviceName))
+		}
 		return pluginapi.Unhealthy
 	}
 	logicID := int32(devidCheck)
 	healthState, err := getDeviceHealth(logicID)
 	if err != nil {
-		logger.Error("get device healthy state failed.",
-			zap.Int32("deviceId", logicID),
-			zap.String("error", err.Error()))
+		if logFlag {
+			logger.Error("get device healthy state failed.",
+				zap.Int32("deviceId", logicID),
+				zap.String("error", err.Error()))
+		}
 		return pluginapi.Unhealthy
 	}
 	if healthState != 0 {

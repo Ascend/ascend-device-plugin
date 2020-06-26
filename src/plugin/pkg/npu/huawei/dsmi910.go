@@ -40,17 +40,3 @@ func getDeviceIP(logicID int32) (string, error) {
 	return retIPAddress, nil
 
 }
-
-/*
-func getDeviceNetworkHealth(logicID int32) (uint32, error) {
-	var netHealth C.DSMI_NET_HEALTH_STATUS
-
-	err := C.dsmi_get_network_health(C.int(logicID), &netHealth)
-	if err != 0 {
-		return unretError, fmt.Errorf("get device network health state failed, error code: %d", int32(err))
-	}
-
-	return uint32(netHealth), nil
-
-}
-*/

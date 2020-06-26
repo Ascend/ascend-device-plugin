@@ -81,17 +81,21 @@ func (hnm *HwAscend910Manager) GetDevState(DeviceName string) string {
 
 	err := getLogicIDByName(DeviceName, &logicID)
 	if err != nil {
-		logger.Error("get device logicID failed.",
-			zap.String("deviceId", DeviceName),
-			zap.String("error", err.Error()))
+		if logFlag {
+			logger.Error("get device logicID failed.",
+				zap.String("deviceId", DeviceName),
+				zap.String("error", err.Error()))
+		}
 		return pluginapi.Unhealthy
 	}
 
 	healthState, err := getDeviceHealth(logicID)
 	if err != nil {
-		logger.Error("get device healthy state failed.",
-			zap.Int32("deviceId", logicID),
-			zap.String("error", err.Error()))
+		if logFlag {
+			logger.Error("get device healthy state failed.",
+				zap.Int32("deviceId", logicID),
+				zap.String("error", err.Error()))
+		}
 		return pluginapi.Unhealthy
 	}
 	if healthState != 0 {
