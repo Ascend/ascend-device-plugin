@@ -1,6 +1,0 @@
-  --upgrade                         Upgrade the installed device-plugin module
-  --version                         Query the  device-plugin package version
-  --full                            Install full mode
-  --run                             Install run mode
-  --install-path=<path>             Specify the path to install devieplugin module
-  --uninstall                       Uninstall device-plugin

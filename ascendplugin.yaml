@@ -30,7 +30,7 @@ spec:
       nodeSelector:
         accelerator: huawei-Ascend910
       containers:
-      - image: ascend-k8sdeviceplugin:latest
+      - image: ascend-k8sdeviceplugin:v0.0.1
         name: device-plugin-01
         command: [ "/bin/bash", "-c", "--"]
         args: [ "./build/build_in_docker.sh;ascendplugin  --useAscendDocker=${USE_ASCEND_DOCKER}" ]
