@@ -9,4 +9,4 @@ cd ${TOP_DIR}/output/
 rm -rf *
 tar -zcvf  ascend-device-plugin.tar.gz ../build ../output ../src  \
  ../ascend.yaml ../ascendplugin.yaml ../docker_run.sh ../Dockerfile ../go.mod \
- ../README.md
+ ../README.zh.md ../'Open Source Software Notice.md'
