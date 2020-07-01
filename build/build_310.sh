@@ -44,8 +44,8 @@ function main() {
     if [ "${DOCKER_TYPE}" == "dockerimages" ]; then
         build_docker_images
         getVendorMode
-        dos2unix build_in_docker.sh
-        chmod 550 build_in_docker.sh
+        dos2unix ${CUR_DIR}/build_in_docker.sh
+        chmod 550 ${CUR_DIR}/build_in_docker.sh
     fi
     zip_file
 }

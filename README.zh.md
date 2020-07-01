@@ -44,8 +44,9 @@
    ```shell 
    vi ascendplugin.yaml
    ```
-   ```yaml
- apiVersion: apps/v1
+ 
+```yaml
+apiVersion: apps/v1
    kind: DaemonSet
    metadata:
      name: ascend-device-plugin-daemonset
@@ -101,7 +102,7 @@
            - name: log-path
              hostPath:
                path: /var/log/devicePlugin
-   ```
+```
 
 7. 执行以下命令，编辑Dockerfile文件，将镜像修改为查询的镜像名及版本号。
 
