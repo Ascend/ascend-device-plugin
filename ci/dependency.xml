@@ -23,11 +23,11 @@
             <repoType>Generic</repoType>
             <id>
                 <offering>Tuscany</offering>
-                <version>Tuscany V100R001C73B050</version>
+                <version>Tuscany V100R001C73B050SPC701</version>
             </id>
             <copies>
                 <copy>
-                    <source>Gamma/Inference/InstallPackages/Ascend310-driver-*.run</source>
+                    <source>Alpha/Inference/InstallPackages/Ascend310-driver-*.run</source>
                     <dest>platform/Tuscany</dest>
                 </copy>
             </copies>
