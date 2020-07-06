@@ -1,5 +1,4 @@
 #!/bin/bash
-set -x
 CUR_DIR=$(dirname $(readlink -f $0))
 TOP_DIR=$(realpath ${CUR_DIR}/..)
 CONFIGDIR=${TOP_DIR}/src/plugin/config/config_910

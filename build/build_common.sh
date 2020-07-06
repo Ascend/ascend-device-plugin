@@ -78,6 +78,9 @@ function copy2runpackage() {
 function zip_file(){
     cd ${TOP_DIR}/output
     tar -zcvf ${TARNAME}  ${OUTPUT_NAME}  ${DEPLOYNAME}
+    if [ $? == 0 ]; then
+        echo "build device plugin success"
+    fi
     rm -f ${OUTPUT_NAME}  ${DEPLOYNAME}
 }
 

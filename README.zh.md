@@ -44,7 +44,7 @@
    ```shell 
    vi ascendplugin.yaml
    ```
- 
+
 ```yaml
 apiVersion: apps/v1
    kind: DaemonSet
@@ -247,19 +247,66 @@ apiVersion: apps/v1
   
 	如下所示，字段中对应标签及节点数量正确说明部署成功。
    ```
- Capacity:
-    cpu:                   128
-    ephemeral-storage:     3842380928Ki
-    huawei.com/Ascend910:  8
-    hugepages-2Mi:         0
-    memory:                263865068Ki
-    pods:                  110
-Allocatable:
-    cpu:                   128
-    ephemeral-storage:     3541138257382
-    huawei.com/Ascend910:  8
-    hugepages-2Mi:         0
-    memory:                263762668Ki
-    pods:                  110
-
+   Capacity:
+     cpu:                   128
+     ephemeral-storage:     3842380928Ki
+     huawei.com/Ascend910:  8
+     hugepages-2Mi:         0
+     memory:                263865068Ki
+     pods:                  110
+   Allocatable:
+     cpu:                   128
+     ephemeral-storage:     3541138257382
+     huawei.com/Ascend910:  8
+     hugepages-2Mi:         0
+     memory:                263762668Ki
+     pods:                  110
+   ```
+   ## 4 使用yaml创建带Ascend芯片的任务容器
+   ### 4.1 编写任务yaml，在resources中指定任务容器需要的芯片类型和个数
+   ``` shell
+     vi ascend.yaml
+   ```
+   
+   ``` yaml
+    apiVersion: v1  #指定api版本，此值必须在kubectl apiversion中
+    kind: Pod #指定创建资源的角色/类型
+    metadata:
+      name: rest502 #资源的名字，在同一个namespace中必须唯一
+    spec:
+      containers:
+      - name: rest502 #容器的名字
+        image: ubuntu_arm64_resnet50:18.04 #容器使用的镜像地址
+        imagePullPolicy: Never
+        resources:
+          limits: #资源限制
+            huawei.com/Ascend910: 2  #使用芯片类型和个数，如为310芯片，修改为huawei.com/Ascend310
+        volumeMounts:
+          - name: joblog
+            mountPath: /home/log/  #容器内部日志路径，根据任务需要修改。
+          - name: model
+            mountPath: /home/app/model #容器内部模型路径，根据任务需要修改。
+      volumes:
+        - name: joblog
+          hostPath:
+            path: /home/test/docker_log    #宿主机挂载日志路径，根据任务需要修改。
+        - name: model
+          hostPath:
+            path: /home/test/docker_model/  #宿主机挂载模型路径，根据任务需要修改。
+   ```
+   ### 4.2 执行命令启动Pod
+   ```shell
+   kubectl apply -f ascend.yaml
+   ```
+   ### 4.3 分别执行以下命令，进入pod查看分配信息。
+   ```shell
+   kubectl exec -it pod名称 bash
+   ```
+   pod名称为yaml中的资源名称。
+   ```shell
+   ls /dev/
+   ```
+   如下类似回显信息中可以看到davinci3和davinci4即为分配的pod。
+   ```
+   core davinci3 davinci4 davinci_manager devmm_svm fd full hisi_hdc   mqueue null ptmx
    ```
