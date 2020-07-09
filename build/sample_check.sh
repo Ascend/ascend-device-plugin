@@ -10,8 +10,6 @@ TOP_DIR=$(realpath ${CUR_DIR}/..)
 
 LD_LIBRARY_PATH_PARA1=${ASCNED_INSTALL_PATH}/driver/lib64/driver
 LD_LIBRARY_PATH_PARA2=${ASCNED_INSTALL_PATH}/driver/lib64
-apt-get install -y pkg-config
-apt-get install -y dos2unix
 TYPE=Ascend910
 PKG_PATH=${TOP_DIR}/src/plugin/config/config_910
 PKG_PATH_STRING=\$\{TOP_DIR\}/src/plugin/config/config_910
@@ -21,6 +19,7 @@ if [ ${ASCNED_TYPE} == "310"  ]; then
   LD_LIBRARY_PATH_PARA1=${ASCNED_INSTALL_PATH}/driver/lib64
   PKG_PATH=${TOP_DIR}/src/plugin/config/config_310
   PKG_PATH_STRING=\$\{TOP_DIR\}/src/plugin/config/config_310
+  sed -i "s#ascendplugin  --useAscendDocker=\${USE_ASCEND_DOCKER}#ascendplugin --mode=ascend310 --useAscendDocker=${USE_ASCEND_DOCKER}#g" ${TOP_DIR}/ascendplugin.ya
   LIBDRIVER="/driver/lib64"
 fi
 sed -i "s/Ascend[0-9]\{3\}/${TYPE}/g" ${TOP_DIR}/ascendplugin.yaml

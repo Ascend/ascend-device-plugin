@@ -6,40 +6,31 @@
 | --------------- | ------------------------------------------------------------ |
 | dos2unix        | 已安装。                                                     |
 | atlas的驱动版本 | 大于等于1.73.5.0.B050 |
-| Go语言环境版本  | 大于等于1.13.11。                                             |
+| Go语言环境版本  | 大于等于1.14.3。                                             |
 | gcc版本         | 大于等于7.3.0。                                              |
 | Kubernetes版本  | 大于等于1.13.0。                                             |
 | Docker环境      | 已安装Docker，可以从镜像仓拉取镜像或已有对应操作系统的镜像。 |
 ## 2 编译
 
-1. 下载ascend-device-plugin文件夹到本地。
-
-2. 通过WinSCP将ascend-device-plugin文件夹上传到服务器任一目录（如“/home/test”）。
-
-3. 以**root**用户登录服务器，进入ascend-device-plugin目录。
-
-   ```shell
-    cd/home/test/ascend-device-plugin
-   ```
-   
-4. 执行以下目录安装最新版本的pkg-config。
+1. 执行以下目录安装最新版本的pkg-config。
 
    ```shell 
    apt-get install -y pkg-config
    ```
 
-5. 执行以下命令，设置环境变量。
+2. 执行以下命令，设置环境变量。
 
    ``` shell 
    export GO111MODULE=on
 
-   export GOPROXY=http://mirrors.tools.huawei.com/goproxy/
+   export GOPROXY=https://gocenter.io
 
    export GONOSUMDB=\
    ```
-   GOPROXY代理地址请根据实际选择。
-
-6. 进入ascend-device-plugin目录，执行以下命令，修改yaml文件。
+   GOPROXY代理地址请根据实际选择，可通过go mod download命令进行检查。
+   如出现x509错误，需要配置证书。
+   
+3. 进入ascend-device-plugin目录，执行以下命令，修改yaml文件。
 
    ```shell 
    vi ascendplugin.yaml
@@ -104,7 +95,7 @@ apiVersion: apps/v1
                path: /var/log/devicePlugin
 ```
 
-7. 执行以下命令，编辑Dockerfile文件，将镜像修改为查询的镜像名及版本号。
+4. 执行以下命令，编辑Dockerfile文件，将镜像修改为查询的镜像名及版本号。
 
    ```shell
    vi /home/test/ascend-device-plugin/build/Dockerfile
@@ -131,7 +122,7 @@ apiVersion: apps/v1
    WORKDIR /usr/app/src/Ascend-device-plugin
    ```
    
-8. 进入ascend_device_plugin.pc文件所在目录，执行以下命令，查看以下路径是否正确，根据实际修改。
+5. 进入ascend_device_plugin.pc文件所在目录，执行以下命令，查看以下路径是否正确，根据实际修改。
 
    - Ascend 310目录：ascend-device-plugin/src/plugin/config/config_310
    - Ascend 910目录：ascend-device-plugin/src/plugin/config/config_910
@@ -156,7 +147,7 @@ apiVersion: apps/v1
    
    支持修改插件镜像的名称，build目录下build_common.sh中修改“docker_images_name”即可。
 
-9. 进入“/ascend-device-plugin/build”目录，执行以下命令，查看CONFIGDIR是否正确。
+6. 进入“/ascend-device-plugin/build”目录，执行以下命令，查看CONFIGDIR是否正确。
    ``` shell
    vi build_in_docker.sh
    ```
@@ -194,8 +185,41 @@ apiVersion: apps/v1
    }
    main
    ```
-
-10. 执行以下命令，根据实际选择执行的脚本，生成二进制和镜像文件。
+   #### 简易步骤
+   为了简化在3，4，5，6步骤，提供了一个shell脚本进行快速修改：
+   在./build/中创建并执行shell文件
+   ```shell
+     #!/bin/bash
+     ASCNED_TYPE=910 #根据芯片类型选择310或910。
+     ASCNED_INSTALL_PATH=/usr/local/Ascend  #驱动安装路径，根据实际修改。
+     USE_ASCEND_DOCKER=false  #是否使用昇腾Docker。
+     
+     
+     CUR_DIR=$(dirname $(readlink -f $0))
+     TOP_DIR=$(realpath ${CUR_DIR}/..)
+     LD_LIBRARY_PATH_PARA1=${ASCNED_INSTALL_PATH}/driver/lib64/driver
+     LD_LIBRARY_PATH_PARA2=${ASCNED_INSTALL_PATH}/driver/lib64
+     TYPE=Ascend910
+     PKG_PATH=${TOP_DIR}/src/plugin/config/config_910
+     PKG_PATH_STRING=\$\{TOP_DIR\}/src/plugin/config/config_910
+     LIBDRIVER="driver/lib64/driver"
+     if [ ${ASCNED_TYPE} == "310"  ]; then
+       TYPE=Ascend310
+       LD_LIBRARY_PATH_PARA1=${ASCNED_INSTALL_PATH}/driver/lib64
+       PKG_PATH=${TOP_DIR}/src/plugin/config/config_310
+       PKG_PATH_STRING=\$\{TOP_DIR\}/src/plugin/config/config_310
+       LIBDRIVER="/driver/lib64"
+       sed -i "s#ascendplugin  --useAscendDocker=\${USE_ASCEND_DOCKER}#ascendplugin --mode=ascend310 --useAscendDocker=${USE_ASCEND_DOCKER}#g" ${TOP_DIR}/ascendplugin.yaml
+     fi
+     sed -i "s/Ascend[0-9]\{3\}/${TYPE}/g" ${TOP_DIR}/ascendplugin.yaml
+     sed -i "s#ath: /usr/local/Ascend/driver#ath: ${ASCNED_INSTALL_PATH}/driver#g" ${TOP_DIR}/ascendplugin.yaml
+     sed -i "/^ENV LD_LIBRARY_PATH /c ENV LD_LIBRARY_PATH ${LD_LIBRARY_PATH_PARA1}:${LD_LIBRARY_PATH_PARA2}/common" ${TOP_DIR}/Dockerfile
+     sed -i "/^ENV USE_ASCEND_DOCKER /c ENV USE_ASCEND_DOCKER ${USE_ASCEND_DOCKER}" ${TOP_DIR}/Dockerfile
+     sed -i "/^libdriver=/c libdriver=$\{prefix\}/${LIBDRIVER}" ${PKG_PATH}/ascend_device_plugin.pc
+     sed -i "/^prefix=/c prefix=${ASCNED_INSTALL_PATH}" ${PKG_PATH}/ascend_device_plugin.pc
+     sed -i "/^CONFIGDIR=/c CONFIGDIR=${PKG_PATH_STRING}" ${CUR_DIR}/build_in_docker.sh
+   ```
+7. 执行以下命令，根据实际选择执行的脚本，生成二进制和镜像文件。
 
    Ascend 910请选择build910.sh，Ascend 310请选择build_310.sh。
    ```shell
@@ -203,7 +227,7 @@ apiVersion: apps/v1
    chmod +x build_910.sh
    ./build_910.sh dockerimages
    ```
-11. 执行以下命令，查看生成的软件包。
+8. 执行以下命令，查看生成的软件包。
    ``` shell
    ll /home/test/ascend-device-plugin/output
    ```
