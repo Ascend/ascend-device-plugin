@@ -42,10 +42,10 @@ function main() {
     build_plugin
     mv_file
     if [ "${DOCKER_TYPE}" == "dockerimages" ]; then
-        build_docker_images
         getVendorMode
         dos2unix ${CUR_DIR}/build_in_docker.sh
         chmod 550 ${CUR_DIR}/build_in_docker.sh
+        build_docker_images
     fi
     zip_file
 }
