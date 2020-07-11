@@ -27,7 +27,7 @@
             </id>
             <copies>
                 <copy>
-                    <source>Gamma/Inference/InstallPackages/Ascend310-driver-*.run</source>
+                    <source>RC/Inference/InstallPackages/Ascend310-driver-*.run</source>
                     <dest>platform/Tuscany</dest>
                 </copy>
             </copies>
