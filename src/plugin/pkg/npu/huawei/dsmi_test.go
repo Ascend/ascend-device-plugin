@@ -101,7 +101,6 @@ func TestGetPhyID(t *testing.T) {
 }
 
 func TestGetLogicID(t *testing.T) {
-
 	devNum, err := getDeviceCount()
 	if err != nil {
 		t.Errorf("%s", err)
@@ -116,5 +115,22 @@ func TestGetLogicID(t *testing.T) {
 		logger.Info("get device logicID", zap.Uint32("deviceID", i),
 			zap.Uint32("logicID", logicID))
 	}
+}
 
+func TestGetChipInfo(t *testing.T) {
+	devNum, err := getDeviceCount()
+	if err != nil {
+		t.Errorf("%s", err)
+	}
+
+	var i int32
+	for i = 0; i < devNum; i++ {
+		chipinfo, err := GetChipInfo(i)
+		if err != nil {
+			t.Errorf("%s", err)
+		}
+		logger.Info("the device healthy state", zap.Int32("deviceID", i), zap.String("chipNmae: ",
+			chipinfo.ChipName), zap.String("chipType: ", chipinfo.ChipType),
+			zap.String("chipVer: ", chipinfo.ChipVer))
+	}
 }

@@ -51,4 +51,9 @@ const (
 	podDeviceKey            = "atlas.kubectl.kubernetes.io/ascend-910-configuration" // config map name
 	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"                               // visible env
 	logChmod                = 0640
+
+	huaWeiAscend910  = "huawei.com/Ascend910"
+	podPredicateTime = "predicate-time"
+	runMode310       = "ascend310"
+	runMode910       = "ascend910"
 )

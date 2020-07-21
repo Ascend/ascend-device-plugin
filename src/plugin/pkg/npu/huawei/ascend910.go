@@ -55,10 +55,6 @@ func NewHwAscend910Manager(timeInterval, checkNum, restoreNum, highThreshold, lo
 // GetNPUs function discovers all HUAWEI Ascend910 devices available
 // on the local node by calling walking `/dev` directory.
 func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *[]string) error {
-	errs := enableContainerService()
-	if errs != nil {
-		logger.Error("enable containner Service failed. error", zap.String("error", errs.Error()))
-	}
 	var ids [hiAIMaxDeviceNum]uint32
 
 	devNum, err := getDeviceList(&ids)

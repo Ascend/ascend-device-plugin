@@ -22,6 +22,7 @@ import (
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"os"
 	"path"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -44,11 +45,13 @@ type HwDevManager struct {
 	defaultDevs []string
 }
 
-// GetFdFlag to describe FdFlag
-var GetFdFlag bool
-
-// UseAscendDocker to chose docker type
-var UseAscendDocker bool
+var (
+	// GetFdFlag to describe FdFlag
+	GetFdFlag bool
+	// UseAscendDocker to chose docker type
+	UseAscendDocker bool
+	useVolcanoType  bool
+)
 
 type devManager interface {
 	GetNPUs(*[]npuDevice, *[]string) error
@@ -69,13 +72,17 @@ func NewHwDevManager(mode, dlogPath string) *HwDevManager {
 
 // GetNPUs get npu types
 func (hdm *HwDevManager) GetNPUs(timeInterval, checkNum, restoreNum, highThreshold, lowThreshold string, netDetect bool) error {
-	if hdm.runMode == "pci" {
-		return nil
-	} else if hdm.runMode == "vnpu" {
-		return nil
-	} else if hdm.runMode == "ascend310" {
+	err := enableContainerService()
+	if err != nil {
+		logger.Error("enable containner Service failed. error", zap.String("error", err.Error()))
+	}
+
+	hdm.setRunMode()
+
+	switch hdm.runMode {
+	case runMode310:
 		hdm.manager = NewHwAscend310Manager()
-	} else {
+	case runMode910:
 		hdm.manager = NewHwAscend910Manager(timeInterval, checkNum, restoreNum, highThreshold, lowThreshold, netDetect)
 		logger.Info("device plugin start",
 			zap.String("time", timeInterval),
@@ -104,6 +111,8 @@ func (hdm *HwDevManager) GetDevType() []string {
 
 // Serve start grpc server
 func (hdm *HwDevManager) Serve(devType, socketPath, k8sSocket, pluginSocket string) {
+
+	// start dsmi in contaioner
 
 	// start sockPath monitor
 	logger.Info("the log path is :", zap.String("logPath", LogPath))
@@ -201,7 +210,32 @@ func (hdm *HwDevManager) signalWatch(watcher *fsnotify.Watcher, sigs chan os.Sig
 }
 
 // SetParameters to set Parameters
-func (hdm *HwDevManager) SetParameters(fdFlag, useAscendDocker *bool) {
+func (hdm *HwDevManager) SetParameters(fdFlag, useAscendDocker, volcanoType *bool) {
 	GetFdFlag = *fdFlag
 	UseAscendDocker = *useAscendDocker
+	useVolcanoType = *volcanoType
+}
+
+func (hdm *HwDevManager) setRunMode() error {
+	if hdm.runMode != "" {
+		return nil
+	}
+	devNum, err := getDeviceCount()
+	if err != nil {
+		return err
+	}
+
+	if devNum != 0 {
+		chipinfo, err := GetChipInfo(0)
+		if err != nil {
+			return err
+		}
+
+		if strings.Contains(chipinfo.ChipName, "310") {
+			hdm.runMode = runMode310
+			return nil
+		}
+	}
+	hdm.runMode = runMode910
+	return nil
 }

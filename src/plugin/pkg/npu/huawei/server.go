@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"k8s.io/apimachinery/pkg/util/sets"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"net"
 	"os"
@@ -28,23 +29,31 @@ import (
 
 // HwPluginServe show plugin data
 type HwPluginServe struct {
-	hdm         *HwDevManager
-	devices     map[string]*npuDevice
-	grpcServer  *grpc.Server
-	devType     string
-	runMode     string
-	defaultDevs []string
-	socket      string
+	hdm            *HwDevManager
+	devices        map[string]*npuDevice
+	grpcServer     *grpc.Server
+	devType        string
+	runMode        string
+	defaultDevs    []string
+	socket         string
+	kubeInteractor *KubeInteractor
+	healthDevice   sets.String
 }
 
 // NewHwPluginServe new a device plugin server
 func NewHwPluginServe(hdm *HwDevManager, devType string, socket string) *HwPluginServe {
+	ki, err := NewKubeInteractor()
+	if err != nil {
+		logger.Error("cannot create kube interactor.", zap.Error(err))
+	}
 	return &HwPluginServe{
-		devType: devType,
-		hdm:     hdm,
-		runMode: hdm.runMode,
-		devices: make(map[string]*npuDevice),
-		socket:  socket,
+		devType:        devType,
+		hdm:            hdm,
+		runMode:        hdm.runMode,
+		devices:        make(map[string]*npuDevice),
+		socket:         socket,
+		kubeInteractor: ki,
+		healthDevice:   sets.String{},
 	}
 }
 
