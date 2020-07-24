@@ -6,7 +6,7 @@
         <id>
             <offering>Atlas Platform</offering>
             <componentName>ascend-device-plugin</componentName>
-            <componentVersion>1.0.0</componentVersion>
+            <componentVersion>20.10.0.B010</componentVersion>
         </id>
         <isClear>N</isClear>
         <copies>
@@ -23,11 +23,11 @@
             <repoType>Generic</repoType>
             <id>
                 <offering>Tuscany</offering>
-                <version>Tuscany V100R001C73B050SPC705</version>
+                <version>Tuscany V100R001C75B020</version>
             </id>
             <copies>
                 <copy>
-                    <source>RC/Inference/InstallPackages/Ascend310-driver-*.run</source>
+                    <source>Alpha/Inference/InstallPackages/Ascend310-driver-*.run</source>
                     <dest>platform/Tuscany</dest>
                 </copy>
             </copies>
