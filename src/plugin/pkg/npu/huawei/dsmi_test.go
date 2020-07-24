@@ -125,7 +125,7 @@ func TestGetChipInfo(t *testing.T) {
 
 	var i int32
 	for i = 0; i < devNum; i++ {
-		chipinfo, err := GetChipInfo(i)
+		chipinfo, err := getChipInfo(i)
 		if err != nil {
 			t.Errorf("%s", err)
 		}

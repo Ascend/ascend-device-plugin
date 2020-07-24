@@ -69,7 +69,7 @@ apiVersion: apps/v1
          nodeSelector:
            accelerator: huawei-Ascend910  #根据芯片类型设置标签名称。
          containers:
-         - image: ascend-device-plugin:v1.0.1  #镜像名称及版本号。
+         - image: ascend-k8sdeviceplugin:v0.0.1  #镜像名称及版本号。
            name: device-plugin-01
            command: [ "/bin/bash", "-c", "--"]
            args: [ "./build/build_in_docker.sh;ascendplugin  --useAscendDocker=${USE_ASCEND_DOCKER}" ] #使用Ascend310，则需要增加--mode=ascend310

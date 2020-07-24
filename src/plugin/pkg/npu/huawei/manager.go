@@ -77,8 +77,10 @@ func (hdm *HwDevManager) GetNPUs(timeInterval, checkNum, restoreNum, highThresho
 		logger.Error("enable containner Service failed. error", zap.String("error", err.Error()))
 	}
 
-	hdm.setRunMode()
-
+	err = hdm.setRunMode()
+	if err != nil {
+		logger.Error("err to set Run mode ", zap.Error(err))
+	}
 	switch hdm.runMode {
 	case runMode310:
 		hdm.manager = NewHwAscend310Manager()
@@ -226,7 +228,7 @@ func (hdm *HwDevManager) setRunMode() error {
 	}
 
 	if devNum != 0 {
-		chipinfo, err := GetChipInfo(0)
+		chipinfo, err := getChipInfo(0)
 		if err != nil {
 			return err
 		}

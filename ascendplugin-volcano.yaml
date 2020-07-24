@@ -1,3 +1,16 @@
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: pods-device-plugin
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -33,7 +46,7 @@ spec:
       - image: ascend-k8sdeviceplugin:v0.0.1
         name: device-plugin-01
         command: [ "/bin/bash", "-c", "--"]
-        args: [ "./build/build_in_docker.sh;ascendplugin  --useAscendDocker=${USE_ASCEND_DOCKER}" ]
+        args: [ "./build/build_in_docker.sh;ascendplugin  --useAscendDocker=${USE_ASCEND_DOCKER} --volcanoType=true" ]
         securityContext:
           privileged: true
         imagePullPolicy: Never
@@ -44,6 +57,11 @@ spec:
             mountPath: /usr/local/Ascend/driver
           - name: log-path
             mountPath: /var/log/devicePlugin
+        env:
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
       volumes:
         - name: device-plugin
           hostPath:

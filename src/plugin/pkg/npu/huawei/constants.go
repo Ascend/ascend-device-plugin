@@ -32,7 +32,6 @@ const (
 	hiAISlogdConfig     = "/etc/slog.conf"
 	hiAIMaxDeviceNum    = 64
 	idSplitNum          = 2
-	dieIDNum            = 5
 	// The unit is seconds
 	sleepTime = 5
 	// if register failed three times then exit
@@ -56,4 +55,7 @@ const (
 	podPredicateTime = "predicate-time"
 	runMode310       = "ascend310"
 	runMode910       = "ascend910"
+	retryTime        = 3
+	interval         = 1
+	timeout          = 10
 )

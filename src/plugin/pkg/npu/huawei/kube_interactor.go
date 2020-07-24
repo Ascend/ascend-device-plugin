@@ -18,6 +18,7 @@ package huawei
 
 import (
 	"fmt"
+	"go.uber.org/zap"
 	"os"
 	"strings"
 	"time"
@@ -30,15 +31,16 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/klog"
 	nodeutil "k8s.io/kubernetes/pkg/util/node"
 )
 
+// KubeInteractor include kubeclientSet & nodeName
 type KubeInteractor struct {
 	clientset *kubernetes.Clientset
 	nodeName  string
 }
 
+// NewKubeClient get client from KUBECONFIG  or not
 func NewKubeClient() (*kubernetes.Clientset, error) {
 	clientCfg, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 	if err != nil {
@@ -53,6 +55,7 @@ func NewKubeClient() (*kubernetes.Clientset, error) {
 	return clientset, nil
 }
 
+// NewKubeInteractor create KubeInteractor
 func NewKubeInteractor() (*KubeInteractor, error) {
 	client, err := NewKubeClient()
 	if err != nil {
@@ -72,7 +75,7 @@ func (ki *KubeInteractor) getPendingPodsOnNode() ([]v1.Pod, error) {
 		err error
 	)
 	selector := fields.SelectorFromSet(fields.Set{"spec.nodeName": ki.nodeName, "status.phase": string(v1.PodPending)})
-	err = wait.PollImmediate(1*time.Second, 10*time.Second, func() (bool, error) {
+	err = wait.PollImmediate(interval*time.Second, timeout*time.Second, func() (bool, error) {
 		pl, err = ki.clientset.CoreV1().Pods(v1.NamespaceAll).List(metav1.ListOptions{
 			FieldSelector: selector.String(),
 		})
@@ -94,11 +97,12 @@ func (ki *KubeInteractor) getPendingPodsOnNode() ([]v1.Pod, error) {
 
 func (ki *KubeInteractor) patchAnnotationOnNode(allocateDevices sets.String) error {
 	var err error
-	err = wait.PollImmediate(1*time.Second, 10*time.Second, func() (bool, error) {
+	err = wait.PollImmediate(interval*time.Second, timeout*time.Second, func() (bool, error) {
 		var node *v1.Node
 		node, err = ki.clientset.CoreV1().Nodes().Get(ki.nodeName, metav1.GetOptions{})
+
 		if err != nil {
-			klog.Info("failed to get node %s: %v", ki.nodeName, err)
+			logger.Error("failed to get node: ", zap.String("nodeName", ki.nodeName), zap.Error(err))
 			return false, nil
 		}
 		var str string
@@ -109,9 +113,10 @@ func (ki *KubeInteractor) patchAnnotationOnNode(allocateDevices sets.String) err
 		annotation, isNil := node.Annotations[huaWeiAscend910]
 		if checkNeedUpdate(isNil, annotation, allocateDevices) {
 			newNode := node.DeepCopy()
+			newNode.Annotations[huaWeiAscend910] = str
 			_, _, err = nodeutil.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), node, newNode)
 			if err != nil {
-				klog.Infof("failed to patch volcano gpu resource: %v", err)
+				logger.Error("failed to patch volcano gpu resource: %v", zap.Error(err))
 				return false, nil
 			}
 		}

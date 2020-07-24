@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/klog"
 	"math"
 	"net"
 	"sort"
@@ -43,7 +42,7 @@ type pluginAPI struct {
 	hps *HwPluginServe
 }
 
-// Instance is for annoation
+// Instance is for annotation
 type Instance struct { // Instance
 	PodName  string   `json:"pod_name"`  // pod Name
 	ServerID string   `json:"server_id"` // serverdId
@@ -96,6 +95,7 @@ func (s *pluginAPI) ListAndWatch(emtpy *pluginapi.Empty, stream pluginapi.Device
 	resp := new(pluginapi.ListAndWatchResponse)
 	for _, dev := range s.hps.devices {
 		resp.Devices = append(resp.Devices, &pluginapi.Device{ID: dev.ID, Health: dev.Health})
+		s.hps.healthDevice.Insert(dev.ID)
 	}
 
 	if err := sendDevToKubelet(resp, stream); err != nil {
@@ -105,7 +105,6 @@ func (s *pluginAPI) ListAndWatch(emtpy *pluginapi.Empty, stream pluginapi.Device
 
 	outs := false
 
-	usedDevices := sets.NewString()
 	for {
 		if outs {
 			break
@@ -122,18 +121,7 @@ func (s *pluginAPI) ListAndWatch(emtpy *pluginapi.Empty, stream pluginapi.Device
 			}
 		}
 		if useVolcanoType {
-			for _, device := range s.hps.devices {
-				if device.Health != pluginapi.Healthy {
-					continue
-				}
-				s.hps.healthDevice.Insert(device.ID)
-			}
-			s.getNodeNpuUsed(&usedDevices)
-			freeDevices := s.hps.healthDevice.Difference(usedDevices)
-			err := s.hps.kubeInteractor.patchAnnotationOnNode(freeDevices)
-			if err != nil {
-				logger.Error("patch Annotation failed", zap.Error(err))
-			}
+			s.doWithVolcanoListAndWatch(stated)
 		}
 		if !stated {
 			// close log print
@@ -155,6 +143,25 @@ func (s *pluginAPI) ListAndWatch(emtpy *pluginapi.Empty, stream pluginapi.Device
 	return nil
 }
 
+func (s *pluginAPI) doWithVolcanoListAndWatch(stated bool) {
+	if stated {
+		s.hps.healthDevice = sets.String{}
+		for _, device := range s.hps.devices {
+			if device.Health != pluginapi.Healthy {
+				continue
+			}
+			s.hps.healthDevice.Insert(device.ID)
+		}
+	}
+	usedDevices := sets.NewString()
+	s.getNodeNpuUsed(&usedDevices)
+	freeDevices := s.hps.healthDevice.Difference(usedDevices)
+	err := s.hps.kubeInteractor.patchAnnotationOnNode(freeDevices)
+	if err != nil {
+		logger.Error("patch Annotation failed", zap.Error(err))
+	}
+}
+
 // Allocate is called by kubelet to mount device to k8s pod.
 func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRequest) (*pluginapi.AllocateResponse,
 	error) {
@@ -172,26 +179,22 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 		var minorID string
 		ascendVisibleDevices := ""
 		allocateNum := len(rqt.DevicesIDs)
-
+		setEnvFromKubelet(rqt, majorID, minorID, &ascendVisibleDevices)
 		// 使用volcano调度
-		switch useVolcanoType {
-		case true:
+		if useVolcanoType {
+			ascendVisibleDevices = ""
 			err := s.doWithVolcanoSchedule(allocateNum, majorID, minorID, &ascendVisibleDevices)
 			if err != nil {
-				logger.Error("doWithVolcanoSchedule failed", zap.Error(err))
 				return nil, err
 			}
-		default:
-			setEnvFromKubelet(rqt, majorID, minorID, &ascendVisibleDevices)
 		}
+
 		if s.hps.runMode == runMode910 {
 			s.mountfile(resp, dlogMountPath, devID)
 			responseAnonation(resp, ascendVisibleDevices)
 		}
-		switch UseAscendDocker {
-		case true:
-			ascendVisibleDevices = addEnv(ascendVisibleDevices, resp)
-		default:
+		ascendVisibleDevices = addEnv(ascendVisibleDevices, resp)
+		if !UseAscendDocker {
 			s.mountDefaultDevice(resp)
 			s.mountDevice(resp, ascendVisibleDevices)
 		}
@@ -227,7 +230,6 @@ func (s *pluginAPI) mountDefaultDevice(resp *pluginapi.ContainerAllocateResponse
 
 func (s *pluginAPI) getNodeNpuUsed(usedDevices *sets.String) {
 	var (
-		res    []v1.Pod
 		pl     *v1.PodList
 		err    error
 		useNpu string
@@ -239,29 +241,31 @@ func (s *pluginAPI) getNodeNpuUsed(usedDevices *sets.String) {
 	pl, err = kubeClient.CoreV1().Pods(v1.NamespaceAll).List(metav1.ListOptions{
 		FieldSelector: selector.String()})
 	if err != nil {
-		klog.V(3).Infof("%s 这里 nodeName: %s,err %v", "910", node.Name, err)
+		logger.Error("这里 nodeName:"+node.Name, zap.Error(err))
 		return
 	}
-
 	for _, pod := range pl.Items {
-		res = append(res, pod)
 		tmpNpu, ok := pod.Annotations[huaWeiAscend910]
 		if !ok {
 			continue
 		}
-		usedDevices.Insert(tmpNpu)
-		klog.V(3).Infof("%s 这里,podName: %s,useNpu %v", "910", pod.Name, pod.Annotations[huaWeiAscend910])
+		useNpu += tmpNpu + ","
 	}
-
-	klog.V(3).Infof("%s 这里,nodeName: %s,useNpu %v", "910", node.Name, useNpu)
-
+	useNpu = strings.TrimSuffix(useNpu, ",")
+	deviceString := strings.Split(useNpu, ",")
+	for _, device := range deviceString {
+		usedDevices.Insert(device)
+	}
+	logger.Debug("%s 这里,nodeName:"+node.Name, zap.String("useNpu", useNpu))
 	return
 }
 
 func addEnv(ascendVisibleDevices string, resp *pluginapi.ContainerAllocateResponse) string {
 	// add env
+	envs := make(map[string]string)
 	ascendVisibleDevices = strings.TrimSuffix(ascendVisibleDevices, ",")
-	(*resp).Envs[ascendVisibleDevicesEnv] = ascendVisibleDevices
+	envs[ascendVisibleDevicesEnv] = ascendVisibleDevices
+	(*resp).Envs = envs
 	return ascendVisibleDevices
 }
 
@@ -393,7 +397,6 @@ func (s *pluginAPI) updatePodAnnotations(pod *v1.Pod, ascendVisibleDevices strin
 	pod.Annotations[podPredicateTime] = strconv.FormatUint(math.MaxUint64, 10)
 	podDeviceValue := addAnnotation(ascendVisibleDevices, renamePod(pod.Name), serverID)
 	pod.Annotations[podDeviceKey] = podDeviceValue
-	// TODO(@hzxuzhonghu): use patch instead
 	_, err = kubeClient.CoreV1().Pods(pod.Namespace).Update(pod)
 	return err
 }
@@ -414,7 +417,7 @@ func getOldestPod(pods []v1.Pod) *v1.Pod {
 	}
 	oldest := pods[0]
 	for _, pod := range pods {
-		if GetPredicateTimeFromPodAnnotation(&oldest) > GetPredicateTimeFromPodAnnotation(&pod) {
+		if getPredicateTimeFromPodAnnotation(&oldest) > getPredicateTimeFromPodAnnotation(&pod) {
 			oldest = pod
 		}
 	}
@@ -429,7 +432,7 @@ func (s *pluginAPI) getPendingPodsOnNode() ([]v1.Pod, error) {
 	)
 	nodeName := s.hps.kubeInteractor.nodeName
 	selector := fields.SelectorFromSet(fields.Set{"spec.nodeName": nodeName, "status.phase": string(v1.PodPending)})
-	err = wait.PollImmediate(1*time.Second, 10*time.Second, func() (bool, error) {
+	err = wait.PollImmediate(interval*time.Second, timeout*time.Second, func() (bool, error) {
 		pl, err = s.hps.kubeInteractor.clientset.CoreV1().Pods(v1.NamespaceAll).List(metav1.ListOptions{
 			FieldSelector: selector.String(),
 		})
@@ -443,7 +446,7 @@ func (s *pluginAPI) getPendingPodsOnNode() ([]v1.Pod, error) {
 	}
 
 	for _, pod := range pl.Items {
-		if getNPUResourceNumOfPod(&pod) > 0 && IsGPUAssignedPod(&pod) && !IsShouldDeletePod(&pod) {
+		if getNPUResourceNumOfPod(&pod) > 0 && isAscendAssignedPod(&pod) && !isShouldDeletePod(&pod) {
 			res = append(res, pod)
 		}
 	}
@@ -464,20 +467,19 @@ func (s *pluginAPI) mountDevice(resp *pluginapi.ContainerAllocateResponse, devic
 	}
 }
 
-func IsGPUAssignedPod(pod *v1.Pod) bool {
+func isAscendAssignedPod(pod *v1.Pod) bool {
 
 	_, ok := pod.ObjectMeta.Annotations[huaWeiAscend910]
 	if !ok {
-		klog.V(4).Infof("no assigned flag",
-			pod.Name,
-			pod.Namespace)
+		logger.Info("no assigned flag",
+			zap.String("pod name", pod.Name),
+			zap.String("pod.NameSpace", pod.Namespace))
 		return false
 	}
-
 	return true
 }
 
-func IsShouldDeletePod(pod *v1.Pod) bool {
+func isShouldDeletePod(pod *v1.Pod) bool {
 	if pod.DeletionTimestamp != nil {
 		return true
 	}
@@ -493,16 +495,14 @@ func IsShouldDeletePod(pod *v1.Pod) bool {
 	return false
 }
 
-func GetPredicateTimeFromPodAnnotation(pod *v1.Pod) uint64 {
+func getPredicateTimeFromPodAnnotation(pod *v1.Pod) uint64 {
 	if assumeTimeStr, ok := pod.Annotations[podPredicateTime]; ok {
 		predicateTime, err := strconv.ParseUint(assumeTimeStr, 10, 64)
 		if err == nil {
 			return predicateTime
 		}
-	} else {
-		klog.Errorf("volcano没有写时间戳，pod name：%s", pod.Name)
 	}
-
+	logger.Info("volcano没有写时间戳，pod name：" + pod.Name)
 	return math.MaxUint64
 }
 
@@ -558,40 +558,45 @@ func responseAnonation(resp *pluginapi.ContainerAllocateResponse, devices string
 }
 
 func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int, majorID, minorID string, ascendVisibleDevices *string) error {
-	pods, err := s.getPendingPodsOnNode()
-	if err != nil {
-		klog.Errorf("获取pod列表错误，%s", err)
-		return err
-	}
-	oldPod := getOldestPod(pods)
-	if oldPod == nil {
-		klog.Infof("暂未获取到合适的pending pod")
-		return err
-	}
-	klog.Infof("筛选的pod name %s , pod annotation %v,pod create time %s", oldPod.Name, oldPod.Annotations, oldPod.CreationTimestamp.Format("2006-01-02 15:04:05"))
-	allocateDevice := sets.NewString()
-	err = getNPUAnnotationOfPOd(oldPod, &allocateDevice, allocateNum)
-	if err != nil {
-		logger.Error("get NPU Annotation failed: ", zap.Error(err))
-		return err
-	}
-	for _, id := range allocateDevice.List() {
-		err := getAscendDeviceID(id, &majorID, &minorID)
+	for i := 0; i < retryTime; i++ {
+		pods, err := s.getPendingPodsOnNode()
 		if err != nil {
-			logger.Error("getAscendDeviceID", zap.Error(err))
+			logger.Error("get pod list err", zap.Error(err))
 			return err
 		}
-		*ascendVisibleDevices += majorID + ","
-	}
-	*ascendVisibleDevices = strings.TrimSuffix(*ascendVisibleDevices, ",")
-	freeDevices := s.hps.healthDevice.Difference(allocateDevice)
-	errs := s.hps.kubeInteractor.patchAnnotationOnNode(freeDevices)
-	if errs != nil {
-		logger.Error("patch Annotations failed", zap.Error(err))
-	}
-	err = s.updatePodAnnotations(oldPod, *ascendVisibleDevices)
-	if err != nil {
-		return err
+		oldPod := getOldestPod(pods)
+		if oldPod == nil {
+			logger.Info("not get pending pod")
+			return err
+		}
+		allocateDevice := sets.NewString()
+		err = getNPUAnnotationOfPOd(oldPod, &allocateDevice, allocateNum)
+		if err != nil {
+			logger.Error("get NPU Annotation failed: ", zap.Error(err))
+			return err
+		}
+		for _, id := range allocateDevice.List() {
+			err := getAscendDeviceID(id, &majorID, &minorID)
+			if err != nil {
+				logger.Error("getAscendDeviceID", zap.Error(err))
+				return err
+			}
+			*ascendVisibleDevices += majorID + ","
+		}
+		*ascendVisibleDevices = strings.TrimSuffix(*ascendVisibleDevices, ",")
+		freeDevices := s.hps.healthDevice.Difference(allocateDevice)
+		errs := s.hps.kubeInteractor.patchAnnotationOnNode(freeDevices)
+		if errs != nil {
+			logger.Error("patch Annotations failed", zap.Error(err))
+		}
+		err = s.updatePodAnnotations(oldPod, *ascendVisibleDevices)
+		if err == nil {
+			return nil
+		}
+		if i == retryTime-1 {
+			logger.Error("doWithVolcanoSchedule failed", zap.Error(err))
+			return err
+		}
 	}
 	return nil
 }

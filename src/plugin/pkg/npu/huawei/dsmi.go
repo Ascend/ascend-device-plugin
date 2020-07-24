@@ -117,7 +117,7 @@ func getLogicID(phyID uint32) (uint32, error) {
 
 }
 
-func GetChipInfo(logicID int32) (*ChipInfo, error) {
+func getChipInfo(logicID int32) (*ChipInfo, error) {
 	var chipInfo C.struct_dsmi_chip_info_stru
 	err := C.dsmi_get_chip_info(C.int(logicID), &chipInfo)
 	if err != 0 {
