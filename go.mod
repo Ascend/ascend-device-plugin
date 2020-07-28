@@ -7,7 +7,7 @@ require (
 	github.com/stretchr/testify v1.4.0
 	go.uber.org/zap v1.14.0
 	golang.org/x/net v0.0.0-20200301022130-244492dfa37a
-	google.golang.org/grpc v1.26.0
+	google.golang.org/grpc v1.28.1
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	k8s.io/api v0.17.8
 	k8s.io/apimachinery v0.17.8

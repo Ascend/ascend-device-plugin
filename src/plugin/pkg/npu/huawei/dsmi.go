@@ -121,30 +121,27 @@ func getChipInfo(logicID int32) (*ChipInfo, error) {
 	var chipInfo C.struct_dsmi_chip_info_stru
 	err := C.dsmi_get_chip_info(C.int(logicID), &chipInfo)
 	if err != 0 {
-		return nil, fmt.Errorf("get device HBM information failed, error code: %d", int32(err))
+		return nil, fmt.Errorf("get device Chip info failed, error code: %d", int32(err))
 	}
 	var name []rune
-	var ctype []rune
+	var cType []rune
 	var ver []rune
-	for i, v := range chipInfo.chip_name {
-		if v != 0 {
-			name = append(name, rune(v))
-		}
-		c := chipInfo.chip_type[i]
-		if c != 0 {
-			ctype = append(ctype, rune(c))
-		}
-
-		r := chipInfo.chip_ver[i]
-		if r != 0 {
-			ver = append(ver, rune(r))
-		}
-	}
-
+	name = convertToCharArr(name, chipInfo.chip_name)
+	cType = convertToCharArr(cType, chipInfo.chip_type)
+	ver = convertToCharArr(ver, chipInfo.chip_ver)
 	chip := &ChipInfo{
 		ChipName: string(name),
-		ChipType: string(ctype),
+		ChipType: string(cType),
 		ChipVer:  string(ver),
 	}
 	return chip, nil
+}
+
+func convertToCharArr(charArr []rune, cgoArr [maxChipName]C.uchar) []rune {
+	for _, v := range cgoArr {
+		if v != 0 {
+			charArr = append(charArr, rune(v))
+		}
+	}
+	return charArr
 }

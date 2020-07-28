@@ -72,14 +72,16 @@ func NewHwDevManager(mode, dlogPath string) *HwDevManager {
 
 // GetNPUs get npu types
 func (hdm *HwDevManager) GetNPUs(timeInterval, checkNum, restoreNum, highThreshold, lowThreshold string, netDetect bool) error {
+	// start dsmi in contaioner
 	err := enableContainerService()
 	if err != nil {
-		logger.Error("enable containner Service failed. error", zap.String("error", err.Error()))
+		logger.Error("enable container Service failed. error", zap.String("error", err.Error()))
 	}
 
 	err = hdm.setRunMode()
 	if err != nil {
 		logger.Error("err to set Run mode ", zap.Error(err))
+		return err
 	}
 	switch hdm.runMode {
 	case runMode310:
@@ -113,9 +115,6 @@ func (hdm *HwDevManager) GetDevType() []string {
 
 // Serve start grpc server
 func (hdm *HwDevManager) Serve(devType, socketPath, k8sSocket, pluginSocket string) {
-
-	// start dsmi in contaioner
-
 	// start sockPath monitor
 	logger.Info("the log path is :", zap.String("logPath", LogPath))
 	pluginSockPath := path.Join(socketPath, pluginSocket)
@@ -223,21 +222,20 @@ func (hdm *HwDevManager) setRunMode() error {
 		return nil
 	}
 	devNum, err := getDeviceCount()
+	if err != nil && devNum == 0 {
+		return err
+	}
+
+	chipinfo, err := getChipInfo(0)
 	if err != nil {
 		return err
 	}
 
-	if devNum != 0 {
-		chipinfo, err := getChipInfo(0)
-		if err != nil {
-			return err
-		}
-
-		if strings.Contains(chipinfo.ChipName, "310") {
-			hdm.runMode = runMode310
-			return nil
-		}
+	if strings.Contains(chipinfo.ChipName, "310") {
+		hdm.runMode = runMode310
+		return nil
 	}
+
 	hdm.runMode = runMode910
 	return nil
 }

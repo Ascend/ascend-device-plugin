@@ -51,11 +51,12 @@ const (
 	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"                               // visible env
 	logChmod                = 0640
 
-	huaWeiAscend910  = "huawei.com/Ascend910"
+	huaweiAscend910  = "huawei.com/Ascend910"
 	podPredicateTime = "predicate-time"
 	runMode310       = "ascend310"
 	runMode910       = "ascend910"
 	retryTime        = 3
 	interval         = 1
 	timeout          = 10
+	maxChipName      = 32
 )

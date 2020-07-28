@@ -110,13 +110,13 @@ func (ki *KubeInteractor) patchAnnotationOnNode(allocateDevices sets.String) err
 			str += k + ","
 		}
 		str = strings.TrimSuffix(str, ",")
-		annotation, isNil := node.Annotations[huaWeiAscend910]
+		annotation, isNil := node.Annotations[huaweiAscend910]
 		if checkNeedUpdate(isNil, annotation, allocateDevices) {
 			newNode := node.DeepCopy()
-			newNode.Annotations[huaWeiAscend910] = str
+			newNode.Annotations[huaweiAscend910] = str
 			_, _, err = nodeutil.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), node, newNode)
 			if err != nil {
-				logger.Error("failed to patch volcano gpu resource: %v", zap.Error(err))
+				logger.Error("failed to patch volcano npu resource: %v", zap.Error(err))
 				return false, nil
 			}
 		}

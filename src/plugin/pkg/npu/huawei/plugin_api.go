@@ -241,11 +241,11 @@ func (s *pluginAPI) getNodeNpuUsed(usedDevices *sets.String) {
 	pl, err = kubeClient.CoreV1().Pods(v1.NamespaceAll).List(metav1.ListOptions{
 		FieldSelector: selector.String()})
 	if err != nil {
-		logger.Error("这里 nodeName:"+node.Name, zap.Error(err))
+		logger.Error(fmt.Sprintf("nodeName: %s", node.Name), zap.Error(err))
 		return
 	}
 	for _, pod := range pl.Items {
-		tmpNpu, ok := pod.Annotations[huaWeiAscend910]
+		tmpNpu, ok := pod.Annotations[huaweiAscend910]
 		if !ok {
 			continue
 		}
@@ -256,7 +256,7 @@ func (s *pluginAPI) getNodeNpuUsed(usedDevices *sets.String) {
 	for _, device := range deviceString {
 		usedDevices.Insert(device)
 	}
-	logger.Debug("%s 这里,nodeName:"+node.Name, zap.String("useNpu", useNpu))
+	logger.Debug(fmt.Sprintf("nodeName: %s", node.Name), zap.String("useNpu", useNpu))
 	return
 }
 
@@ -384,6 +384,9 @@ func GetSlogConfigFilePath() string {
 func (s *pluginAPI) updatePodAnnotations(pod *v1.Pod, ascendVisibleDevices string) error {
 	kubeClient := s.hps.kubeInteractor.clientset
 	node, err := kubeClient.CoreV1().Nodes().Get(s.hps.kubeInteractor.nodeName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
 	var serverID string
 	for _, addresses := range node.Status.Addresses {
 		if addresses.Type == v1.NodeInternalIP {
@@ -394,11 +397,34 @@ func (s *pluginAPI) updatePodAnnotations(pod *v1.Pod, ascendVisibleDevices strin
 		pod.Annotations = map[string]string{}
 	}
 
-	pod.Annotations[podPredicateTime] = strconv.FormatUint(math.MaxUint64, 10)
 	podDeviceValue := addAnnotation(ascendVisibleDevices, renamePod(pod.Name), serverID)
-	pod.Annotations[podDeviceKey] = podDeviceValue
-	_, err = kubeClient.CoreV1().Pods(pod.Namespace).Update(pod)
+	pod2, err := s.updatePod(pod, podDeviceValue)
+	for i := 0; err != nil && i < retryTime; i++ {
+		logger.Info("try again ...")
+		pod2, err = s.updatePod(pod2, podDeviceValue)
+		if err == nil {
+			return nil
+		}
+		time.Sleep(interval * time.Second)
+	}
+
 	return err
+}
+
+func (s *pluginAPI) updatePod(pod *v1.Pod, podDeviceValue string) (*v1.Pod, error) {
+	pod1, err := s.hps.kubeInteractor.clientset.CoreV1().Pods(pod.Namespace).Get(pod.Name, metav1.GetOptions{})
+	if err != nil {
+		logger.Error("query pod info failed,", zap.Error(err))
+		return nil, fmt.Errorf("query pod info failed,%v", err)
+	}
+	pod1.Annotations[podPredicateTime] = strconv.FormatUint(math.MaxUint64, 10)
+	pod1.Annotations[podDeviceKey] = podDeviceValue
+	pod2, err := s.hps.kubeInteractor.clientset.CoreV1().Pods(pod.Namespace).Update(pod1)
+	if err != nil {
+		logger.Error("update pod failed,%v", zap.Error(err))
+		return nil, fmt.Errorf("update pod failed,%v", err)
+	}
+	return pod2, nil
 }
 
 func renamePod(podName string) string {
@@ -469,7 +495,7 @@ func (s *pluginAPI) mountDevice(resp *pluginapi.ContainerAllocateResponse, devic
 
 func isAscendAssignedPod(pod *v1.Pod) bool {
 
-	_, ok := pod.ObjectMeta.Annotations[huaWeiAscend910]
+	_, ok := pod.ObjectMeta.Annotations[huaweiAscend910]
 	if !ok {
 		logger.Info("no assigned flag",
 			zap.String("pod name", pod.Name),
@@ -510,15 +536,15 @@ func getNPUResourceNumOfPod(pod *v1.Pod) uint {
 	var total uint
 	containers := pod.Spec.Containers
 	for _, container := range containers {
-		if val, ok := container.Resources.Limits[huaWeiAscend910]; ok {
+		if val, ok := container.Resources.Limits[huaweiAscend910]; ok {
 			total += uint(val.Value())
 		}
 	}
 	return total
 }
 
-func getNPUAnnotationOfPOd(pod *v1.Pod, allocateDevice *sets.String, allocateNum int) error {
-	annotation, exist := pod.Annotations[huaWeiAscend910]
+func getNPUAnnotationOfPod(pod *v1.Pod, allocateDevice *sets.String, allocateNum int) error {
+	annotation, exist := pod.Annotations[huaweiAscend910]
 	if !exist {
 		return fmt.Errorf("cannot find the annotation")
 	}
@@ -558,45 +584,41 @@ func responseAnonation(resp *pluginapi.ContainerAllocateResponse, devices string
 }
 
 func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int, majorID, minorID string, ascendVisibleDevices *string) error {
-	for i := 0; i < retryTime; i++ {
-		pods, err := s.getPendingPodsOnNode()
+
+	pods, err := s.getPendingPodsOnNode()
+	if err != nil {
+		logger.Error("get pod list err", zap.Error(err))
+		return err
+	}
+	oldPod := getOldestPod(pods)
+	if oldPod == nil {
+		logger.Info("not get pending pod")
+		return err
+	}
+	allocateDevice := sets.NewString()
+	err = getNPUAnnotationOfPod(oldPod, &allocateDevice, allocateNum)
+	if err != nil {
+		logger.Error("get NPU Annotation failed: ", zap.Error(err))
+		return err
+	}
+	for _, id := range allocateDevice.List() {
+		err := getAscendDeviceID(id, &majorID, &minorID)
 		if err != nil {
-			logger.Error("get pod list err", zap.Error(err))
+			logger.Error("getAscendDeviceID", zap.Error(err))
 			return err
 		}
-		oldPod := getOldestPod(pods)
-		if oldPod == nil {
-			logger.Info("not get pending pod")
-			return err
-		}
-		allocateDevice := sets.NewString()
-		err = getNPUAnnotationOfPOd(oldPod, &allocateDevice, allocateNum)
-		if err != nil {
-			logger.Error("get NPU Annotation failed: ", zap.Error(err))
-			return err
-		}
-		for _, id := range allocateDevice.List() {
-			err := getAscendDeviceID(id, &majorID, &minorID)
-			if err != nil {
-				logger.Error("getAscendDeviceID", zap.Error(err))
-				return err
-			}
-			*ascendVisibleDevices += majorID + ","
-		}
-		*ascendVisibleDevices = strings.TrimSuffix(*ascendVisibleDevices, ",")
-		freeDevices := s.hps.healthDevice.Difference(allocateDevice)
-		errs := s.hps.kubeInteractor.patchAnnotationOnNode(freeDevices)
-		if errs != nil {
-			logger.Error("patch Annotations failed", zap.Error(err))
-		}
-		err = s.updatePodAnnotations(oldPod, *ascendVisibleDevices)
-		if err == nil {
-			return nil
-		}
-		if i == retryTime-1 {
-			logger.Error("doWithVolcanoSchedule failed", zap.Error(err))
-			return err
-		}
+		*ascendVisibleDevices += majorID + ","
+	}
+	*ascendVisibleDevices = strings.TrimSuffix(*ascendVisibleDevices, ",")
+	freeDevices := s.hps.healthDevice.Difference(allocateDevice)
+	errs := s.hps.kubeInteractor.patchAnnotationOnNode(freeDevices)
+	if errs != nil {
+		logger.Error("patch Annotations failed", zap.Error(err))
+		return err
+	}
+	err = s.updatePodAnnotations(oldPod, *ascendVisibleDevices)
+	if err != nil {
+		return err
 	}
 	return nil
 }
