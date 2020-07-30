@@ -33,6 +33,13 @@ const (
 	unretError = 100
 )
 
+// ChipInfo chip info
+type ChipInfo struct {
+	ChipType string
+	ChipName string
+	ChipVer  string
+}
+
 func enableContainerService() error {
 	err := C.dsmi_enable_container_service()
 	if err != 0 {
@@ -110,18 +117,31 @@ func getLogicID(phyID uint32) (uint32, error) {
 
 }
 
-// to be fix
-func getDeviceDie(logicID int32, dieID *[dieIDNum]uint32) error {
-	var deviceDie C.struct_dsmi_soc_die_stru
-
-	err := C.dsmi_get_device_die(C.int(logicID), &deviceDie)
+func getChipInfo(logicID int32) (*ChipInfo, error) {
+	var chipInfo C.struct_dsmi_chip_info_stru
+	err := C.dsmi_get_chip_info(C.int(logicID), &chipInfo)
 	if err != 0 {
-		return fmt.Errorf("get logic id failed ,error code is : %d", int32(err))
+		return nil, fmt.Errorf("get device Chip info failed, error code: %d", int32(err))
 	}
-
-	for i := 0; i < dieIDNum; i++ {
-		dieID[i] = uint32(deviceDie.soc_die[i])
+	var name []rune
+	var cType []rune
+	var ver []rune
+	name = convertToCharArr(name, chipInfo.chip_name)
+	cType = convertToCharArr(cType, chipInfo.chip_type)
+	ver = convertToCharArr(ver, chipInfo.chip_ver)
+	chip := &ChipInfo{
+		ChipName: string(name),
+		ChipType: string(cType),
+		ChipVer:  string(ver),
 	}
-	return nil
+	return chip, nil
+}
 
+func convertToCharArr(charArr []rune, cgoArr [maxChipName]C.uchar) []rune {
+	for _, v := range cgoArr {
+		if v != 0 {
+			charArr = append(charArr, rune(v))
+		}
+	}
+	return charArr
 }

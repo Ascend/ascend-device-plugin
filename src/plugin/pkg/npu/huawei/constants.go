@@ -32,7 +32,6 @@ const (
 	hiAISlogdConfig     = "/etc/slog.conf"
 	hiAIMaxDeviceNum    = 64
 	idSplitNum          = 2
-	dieIDNum            = 5
 	// The unit is seconds
 	sleepTime = 5
 	// if register failed three times then exit
@@ -51,4 +50,13 @@ const (
 	podDeviceKey            = "atlas.kubectl.kubernetes.io/ascend-910-configuration" // config map name
 	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"                               // visible env
 	logChmod                = 0640
+
+	huaweiAscend910  = "huawei.com/Ascend910"
+	podPredicateTime = "predicate-time"
+	runMode310       = "ascend310"
+	runMode910       = "ascend910"
+	retryTime        = 3
+	interval         = 1
+	timeout          = 10
+	maxChipName      = 32
 )

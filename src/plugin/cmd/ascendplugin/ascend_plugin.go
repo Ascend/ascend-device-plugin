@@ -28,17 +28,13 @@ import (
 const (
 	// socket name
 	kubeletSocket = "kubelet.sock"
-	cmdHead       = "ps -ef | grep "
-	cmdTail       = " | grep -v grep | awk '{print $2}'"
-	// one single process string length is 7
-	oneCheckIDLen = 2
 )
 
 var (
 	dlogPath   = flag.String("dlog-path", "/var/dlog", "Path on the host that contains log")
 	socketPath = flag.String("plugin-directory", "/var/lib/kubelet/device-plugins",
 		"Path to create plugin socket")
-	mode           = flag.String("mode", "ascend910", "device plugin running mode")
+	mode           = flag.String("mode", "", "device plugin running mode")
 	timeInterval   = flag.String("timeInterval", "1", "check frequency of AI core health")
 	checkNum       = flag.String("checkNum", "5", "check num of AI core health")
 	restoreNum     = flag.String("restoreNum", "3", "restore num of AI core health")
@@ -48,6 +44,7 @@ var (
 	version        = flag.Bool("version", false, "show k8s device plugin version ")
 	fdFlag         = flag.Bool("fdFlag", false, "set the connect system is fd system")
 	useAscendDocer = flag.Bool("useAscendDocker", true, "use ascend docker or not")
+	volcanoType    = flag.Bool("volcanoType", false, "use volcano to schedue")
 )
 
 var (
@@ -71,9 +68,8 @@ func main() {
 	}
 
 	neverStop := make(chan struct{})
-
 	switch *mode {
-	case "ascend310", "pci", "vnpu", "ascend910":
+	case "ascend310", "pci", "vnpu", "ascend910", "":
 		log.Info("ascend device plugin running mode", zap.String("mode", *mode))
 	default:
 		log.Info("unSupport mode, waiting indefinitely", zap.String("mode", *mode))
@@ -81,7 +77,7 @@ func main() {
 	}
 
 	hdm := hwmanager.NewHwDevManager(*mode, *dlogPath)
-	hdm.SetParameters(fdFlag, useAscendDocer)
+	hdm.SetParameters(fdFlag, useAscendDocer, volcanoType)
 	if err := hdm.GetNPUs(*timeInterval, *checkNum, *restoreNum, *highThreshold, *lowThreshold,
 		*netDetect); err != nil {
 		log.Error("no devices found. waiting indefinitely", zap.String("err", err.Error()))
