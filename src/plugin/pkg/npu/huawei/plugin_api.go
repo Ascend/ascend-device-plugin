@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
 	"math"
 	"net"
 	"sort"
@@ -155,6 +156,9 @@ func (s *pluginAPI) doWithVolcanoListAndWatch(stated bool) {
 	}
 	usedDevices := sets.NewString()
 	s.getNodeNpuUsed(&usedDevices)
+	for _, device := range usedDevices.List() {
+		logger.Debug("useDevice" + device)
+	}
 	freeDevices := s.hps.healthDevice.Difference(usedDevices)
 	err := s.hps.kubeInteractor.patchAnnotationOnNode(freeDevices)
 	if err != nil {
@@ -230,27 +234,27 @@ func (s *pluginAPI) mountDefaultDevice(resp *pluginapi.ContainerAllocateResponse
 
 func (s *pluginAPI) getNodeNpuUsed(usedDevices *sets.String) {
 	var (
-		pl     *v1.PodList
 		err    error
 		useNpu string
 	)
 
 	kubeClient := s.hps.kubeInteractor.clientset
 	node, err := kubeClient.CoreV1().Nodes().Get(s.hps.kubeInteractor.nodeName, metav1.GetOptions{})
-	selector := fields.SelectorFromSet(fields.Set{"spec.nodeName": node.Name, "status.phase": string(v1.PodRunning)})
-	pl, err = kubeClient.CoreV1().Pods(v1.NamespaceAll).List(metav1.ListOptions{
-		FieldSelector: selector.String()})
 	if err != nil {
-		logger.Error(fmt.Sprintf("nodeName: %s", node.Name), zap.Error(err))
+		logger.Error("get node from k8s error", zap.Error(err))
 		return
 	}
-	for _, pod := range pl.Items {
-		tmpNpu, ok := pod.Annotations[huaweiAscend910]
-		if !ok {
-			continue
-		}
-		useNpu += tmpNpu + ","
+	npuListRunning, getFailed := getNPUByStatus(kubeClient, node.Name, string(v1.PodRunning))
+	if getFailed {
+		return
 	}
+
+	useNpu += npuListRunning
+	npuListPending, getFailed := getNPUByStatus(kubeClient, node.Name, string(v1.PodPending))
+	if getFailed {
+		return
+	}
+	useNpu += npuListPending
 	useNpu = strings.TrimSuffix(useNpu, ",")
 	deviceString := strings.Split(useNpu, ",")
 	for _, device := range deviceString {
@@ -258,6 +262,26 @@ func (s *pluginAPI) getNodeNpuUsed(usedDevices *sets.String) {
 	}
 	logger.Debug(fmt.Sprintf("nodeName: %s", node.Name), zap.String("useNpu", useNpu))
 	return
+}
+
+func getNPUByStatus(kubeClient *kubernetes.Clientset, nodeName, status string) (string, bool) {
+	selector := fields.SelectorFromSet(fields.Set{"spec.nodeName": nodeName, "status.phase": status})
+	podList, err := kubeClient.CoreV1().Pods(v1.NamespaceAll).List(metav1.ListOptions{
+		FieldSelector: selector.String()})
+	if err != nil {
+		logger.Error(fmt.Sprintf("nodeName: %s", nodeName), zap.Error(err))
+		return "", true
+	}
+	var useNpu string
+	for _, pod := range podList.Items {
+		tmpNpu, ok := pod.Annotations[huaweiAscend910]
+		if !ok {
+			continue
+		}
+		useNpu += tmpNpu + ","
+	}
+	logger.Debug("useNpu: " + useNpu)
+	return useNpu, false
 }
 
 func addEnv(ascendVisibleDevices string, resp *pluginapi.ContainerAllocateResponse) string {

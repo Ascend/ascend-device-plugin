@@ -95,7 +95,7 @@ func (ki *KubeInteractor) getPendingPodsOnNode() ([]v1.Pod, error) {
 	return res, nil
 }
 
-func (ki *KubeInteractor) patchAnnotationOnNode(allocateDevices sets.String) error {
+func (ki *KubeInteractor) patchAnnotationOnNode(allocatableDevices sets.String) error {
 	var err error
 	err = wait.PollImmediate(interval*time.Second, timeout*time.Second, func() (bool, error) {
 		var node *v1.Node
@@ -106,12 +106,12 @@ func (ki *KubeInteractor) patchAnnotationOnNode(allocateDevices sets.String) err
 			return false, nil
 		}
 		var str string
-		for k := range allocateDevices {
+		for k := range allocatableDevices {
 			str += k + ","
 		}
 		str = strings.TrimSuffix(str, ",")
 		annotation, isNil := node.Annotations[huaweiAscend910]
-		if checkNeedUpdate(isNil, annotation, allocateDevices) {
+		if checkNeedUpdate(isNil, annotation, allocatableDevices) {
 			newNode := node.DeepCopy()
 			newNode.Annotations[huaweiAscend910] = str
 			_, _, err = nodeutil.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), node, newNode)
@@ -124,6 +124,15 @@ func (ki *KubeInteractor) patchAnnotationOnNode(allocateDevices sets.String) err
 	})
 	return err
 }
-func checkNeedUpdate(isNil bool, annotation string, allocate sets.String) bool {
-	return !isNil || len(strings.Split(annotation, ",")) != allocate.Len() || strings.TrimSpace(annotation) == ""
+
+func checkNeedUpdate(isNil bool, annotation string, allocatableDevices sets.String) bool {
+	return !isNil || !judegeSameAscend(annotation, allocatableDevices) || strings.TrimSpace(annotation) == ""
+}
+
+func judegeSameAscend(annotation string, allocatableDevices sets.String) bool {
+	annotationSet := sets.String{}
+	for _, device := range strings.Split(annotation, ",") {
+		annotationSet.Insert(device)
+	}
+	return annotationSet.Equal(allocatableDevices)
 }
