@@ -17,21 +17,35 @@
 package huawei
 
 import (
+	"fmt"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"os"
+	"path/filepath"
+	"regexp"
 	"time"
 )
 
 var logger *zap.Logger
 
-func init() {
-	logger = ConfigLog(LogPath)
-	error := os.Chmod(LogPath, logChmod)
-	if error != nil {
-		logger.Error("logger is error", zap.Error(error))
+// NewLogger to create logger
+func NewLogger(loggerPath string) error {
+	if !validate(loggerPath) {
+		return fmt.Errorf("log path is error")
 	}
+	logger = ConfigLog(loggerPath)
+	error := os.Chmod(loggerPath, logChmod)
+	if error != nil && logger != nil {
+		logger.Error("logger is error", zap.Error(error))
+		return error
+	}
+	return nil
+}
+
+// GetLogger to get Logger
+func GetLogger() *zap.Logger {
+	return logger
 }
 
 // NewEncoderConfig is used to config log file
@@ -72,4 +86,15 @@ func ConfigLog(logPath string) *zap.Logger {
 		zap.InfoLevel,
 	)
 	return zap.New(core, zap.AddCaller())
+}
+
+func validate(path string) bool {
+	relpath, err := filepath.Abs(path)
+	if err != nil {
+		fmt.Println("It's error when converted to an absolute path.")
+		return false
+	}
+	pattern := `^/*`
+	reg := regexp.MustCompile(pattern)
+	return reg.MatchString(relpath)
 }
