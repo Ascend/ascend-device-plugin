@@ -10,6 +10,8 @@ ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
 
 ENV LD_LIBRARY_PATH  /usr/local/Ascend/driver/lib64/driver:/usr/local/Ascend/driver/lib64/common
 
+ENV  LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/Ascend/driver/lib64/
+
 RUN mkdir -p /usr/app/src/ascend-device-plugin
 
 COPY . /usr/app/src/Ascend-device-plugin

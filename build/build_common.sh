@@ -136,6 +136,5 @@ function get_os_version() {
 }
 
 function getVendorMode() {
-    go mod download
     go mod vendor
 }
