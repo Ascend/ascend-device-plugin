@@ -145,9 +145,10 @@ func (hdm *HwDevManager) Serve(devType, socketPath, k8sSocket, pluginSocket stri
 			// end
 			if err := hps.Start(socketPath, k8sSocket, pluginSocket, pluginSockPath); err != nil {
 				logger.Error("Could not contact Kubelet, retrying. Did you enable the device plugin feature gate?")
+				restart = true
+			} else {
+				restart = false
 			}
-			restart = false
-
 		}
 		// Monitor file signals and system signals
 		restart = hdm.signalWatch(watcher.fileWatcher, osSignChan, restart, hps)
