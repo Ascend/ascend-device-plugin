@@ -634,7 +634,9 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int, majorID, minorID stri
 		*ascendVisibleDevices += majorID + ","
 	}
 	*ascendVisibleDevices = strings.TrimSuffix(*ascendVisibleDevices, ",")
-	freeDevices := s.hps.healthDevice.Difference(allocateDevice)
+	usedDevices := sets.NewString()
+	s.getNodeNpuUsed(&usedDevices)
+	freeDevices := s.hps.healthDevice.Difference(usedDevices)
 	errs := s.hps.kubeInteractor.patchAnnotationOnNode(freeDevices)
 	if errs != nil {
 		logger.Error("patch Annotations failed", zap.Error(err))

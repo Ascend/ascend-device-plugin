@@ -86,27 +86,14 @@ func (hps *HwPluginServe) GetDevByType() error {
 
 // Start starts the gRPC server of the device plugin
 func (hps *HwPluginServe) Start(pluginPath, k8sSocket, pluginSocket, pluginSocketPath string) error {
-	if _, err := os.Stat(pluginSocketPath); err == nil {
-		logger.Info("Found exist sock file,now remove it.", zap.String("sockName", pluginSocketPath))
-		os.Remove(pluginSocketPath)
-	}
-	lis, err := net.Listen("unix", pluginSocketPath)
+	netListen, err := createNetListen(pluginSocketPath)
 	if err != nil {
-		logger.Error("device plugin start failed.", zap.String("err", err.Error()))
+		return err
 	}
-	err = os.Chmod(pluginSocketPath, logChmod)
-	if err != nil {
-		logger.Error("chmod error", zap.Error(err))
-	}
-	hps.socket = pluginSocketPath
-	hps.grpcServer = grpc.NewServer()
-
-	// Registers service.
-	plugin := &pluginAPI{hps: hps}
-	pluginapi.RegisterDevicePluginServer(plugin.hps.grpcServer, plugin)
+	hps.setSocket(pluginSocketPath)
 
 	// noinspection ALL
-	go hps.grpcServer.Serve(lis)
+	go hps.grpcServer.Serve(netListen)
 
 	// Wait for grpcServer
 	for len(hps.grpcServer.GetServiceInfo()) <= 0 {
@@ -117,24 +104,40 @@ func (hps *HwPluginServe) Start(pluginPath, k8sSocket, pluginSocket, pluginSocke
 	// Registers To Kubelet.
 	resourceName := fmt.Sprintf("%s%s", resourceNamePrefix, hps.devType)
 	k8sSocketPath := pluginapi.KubeletSocket
-	countRegister := 0
-
-reRegister:
 	err = Register(k8sSocketPath, pluginSocket, resourceName)
-
-	if err != nil {
-		hps.grpcServer.Stop()
-		logger.Error("register to kubelet failed.", zap.String("err", err.Error()))
-		if countRegister < registerTimeout {
-			countRegister++
-			logger.Error("k8s device plugin register failed.", zap.Int("failed time", countRegister))
-			time.Sleep(sleepTime * time.Second)
-			goto reRegister
-		}
+	if err == nil {
+		logger.Info("register to kubelet success.")
 		return nil
 	}
-	logger.Info("register to kubelet success.")
-	return nil
+	hps.grpcServer.Stop()
+	time.Sleep(sleepTime * time.Second)
+	logger.Error("register to kubelet failed.", zap.String("err", err.Error()))
+	return err
+}
+
+func (hps *HwPluginServe) setSocket(pluginSocketPath string) {
+	hps.socket = pluginSocketPath
+	hps.grpcServer = grpc.NewServer()
+	// Registers service.
+	plugin := &pluginAPI{hps: hps}
+	pluginapi.RegisterDevicePluginServer(plugin.hps.grpcServer, plugin)
+}
+
+func createNetListen(pluginSocketPath string) (net.Listener, error) {
+	if _, err := os.Stat(pluginSocketPath); err == nil {
+		logger.Info("Found exist sock file,now remove it.", zap.String("sockName", pluginSocketPath))
+		os.Remove(pluginSocketPath)
+	}
+	netListen, err := net.Listen("unix", pluginSocketPath)
+	if err != nil {
+		logger.Error("device plugin start failed.", zap.String("err", err.Error()))
+		return nil, err
+	}
+	err = os.Chmod(pluginSocketPath, logChmod)
+	if err != nil {
+		logger.Error("chmod error", zap.Error(err))
+	}
+	return netListen, err
 }
 
 // Stop the gRPC server
