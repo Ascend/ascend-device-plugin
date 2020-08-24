@@ -574,8 +574,9 @@ func getNPUAnnotationOfPod(pod *v1.Pod, allocateDevice *sets.String, allocateNum
 	}
 	devices := strings.Split(annotation, ",")
 	if len(devices) != allocateNum {
-		return fmt.Errorf("device num is not equal with annotation num", zap.String("annotation", annotation),
-			zap.Int("allocateNum", allocateNum))
+		return fmt.Errorf("device num %v is not equal with annotation num%v",
+			zap.Int("allocateNum", allocateNum), zap.String("annotation", annotation),
+		)
 	}
 
 	for _, device := range devices {
