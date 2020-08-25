@@ -4,7 +4,7 @@
         <versionType>Component</versionType>
         <repoType>Generic</repoType>
         <id>
-            <offering>Atlas Platform</offering>
+            <offering>CANN</offering>
             <componentName>ascend-device-plugin</componentName>
             <componentVersion>20.10.0.B010</componentVersion>
         </id>
