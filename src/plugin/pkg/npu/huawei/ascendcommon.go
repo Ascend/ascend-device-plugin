@@ -101,3 +101,20 @@ func unhealthyState(healthyState uint32, logicID uint32, healthyType string) {
 			zap.Uint32(healthyType, healthyState))
 	}
 }
+
+func getPhyIDFromDeviceID(deviceID string) (string, error) {
+	devidCheck, err := strconv.Atoi(deviceID)
+	if err != nil {
+		logger.Error("transfer device string to Integer failed", zap.String("deviceID", deviceID))
+		return "", err
+	}
+	devID := uint32(devidCheck)
+
+	phyID, err := getPhyID(devID)
+	if err != nil {
+		logger.Error("get PhyID failed", zap.String("deviceID", deviceID))
+		return "", err
+	}
+
+	return strconv.Itoa(int(phyID)), nil
+}

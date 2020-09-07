@@ -28,20 +28,19 @@ import (
 const (
 	// socket name
 	kubeletSocket = "kubelet.sock"
+	dlogPath      = "/var/dlog"
+	socketPath    = "/var/lib/kubelet/device-plugins"
+	timeInterval  = "1"
+	checkNum      = "5"
+	restoreNum    = "3"
+	highThreshold = "90"
+	lowThreshold  = "80"
+	netDetect     = false
+	version       = false
 )
 
 var (
-	dlogPath   = flag.String("dlog-path", "/var/dlog", "Path on the host that contains log")
-	socketPath = flag.String("plugin-directory", "/var/lib/kubelet/device-plugins",
-		"Path to create plugin socket")
 	mode           = flag.String("mode", "", "device plugin running mode")
-	timeInterval   = flag.String("timeInterval", "1", "check frequency of AI core health")
-	checkNum       = flag.String("checkNum", "5", "check num of AI core health")
-	restoreNum     = flag.String("restoreNum", "3", "restore num of AI core health")
-	highThreshold  = flag.String("highThreshold", "90", "AI core high-level threshold of frequency")
-	lowThreshold   = flag.String("lowThreshold", "80", "AI core low-level threshold of frequency")
-	netDetect      = flag.Bool("netDetect", false, "detect device network health ")
-	version        = flag.Bool("version", false, "show k8s device plugin version ")
 	fdFlag         = flag.Bool("fdFlag", false, "set the connect system is fd system")
 	useAscendDocer = flag.Bool("useAscendDocker", true, "use ascend docker or not")
 	volcanoType    = flag.Bool("volcanoType", false, "use volcano to schedue")
@@ -62,7 +61,7 @@ func main() {
 
 	flag.Parse()
 
-	if *version {
+	if version {
 		fmt.Printf("%s version: %s   buildTime:%s\n", BuildName, BuildVersion, BuildTime)
 		os.Exit(0)
 	}
@@ -76,10 +75,10 @@ func main() {
 		<-neverStop
 	}
 
-	hdm := hwmanager.NewHwDevManager(*mode, *dlogPath)
+	hdm := hwmanager.NewHwDevManager(*mode, dlogPath)
 	hdm.SetParameters(fdFlag, useAscendDocer, volcanoType)
-	if err := hdm.GetNPUs(*timeInterval, *checkNum, *restoreNum, *highThreshold, *lowThreshold,
-		*netDetect); err != nil {
+	if err := hdm.GetNPUs(timeInterval, checkNum, restoreNum, highThreshold, lowThreshold,
+		netDetect); err != nil {
 		log.Error("no devices found. waiting indefinitely", zap.String("err", err.Error()))
 		<-neverStop
 	}
@@ -93,7 +92,7 @@ func main() {
 	for _, devType := range devTypes {
 		log.Info("ascend device serve started", zap.String("devType", devType))
 		pluginSocket := fmt.Sprintf("%s.sock", devType)
-		go hdm.Serve(devType, *socketPath, kubeletSocket, pluginSocket)
+		go hdm.Serve(devType, socketPath, kubeletSocket, pluginSocket)
 	}
 
 	<-neverStop

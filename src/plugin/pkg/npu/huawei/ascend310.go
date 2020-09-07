@@ -125,9 +125,11 @@ func (hnm *HwAscend310Manager) GetDevPath(id string, hostPath *string, container
 		return fmt.Errorf("cannot get device exact id from input id string %s", id)
 	}
 
-	fmt.Printf("major: %s, minor: %s.", majorID, minorID)
-
-	*hostPath = fmt.Sprintf("%s%s", "/dev/davinci", majorID)
+	phyID, err := getPhyIDFromDeviceID(majorID)
+	if err != nil {
+		return err
+	}
+	*hostPath = fmt.Sprintf("%s%s", "/dev/davinci", phyID)
 	*containerPath = *hostPath
 	return nil
 }

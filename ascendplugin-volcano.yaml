@@ -45,8 +45,15 @@ spec:
       containers:
       - image: ascend-k8sdeviceplugin:v0.0.1
         name: device-plugin-01
+        resources:
+          requests:
+            memory: 500Mi
+            cpu: 500m
+          limits:
+            memory: 500Mi
+            cpu: 500m
         command: [ "/bin/bash", "-c", "--"]
-        args: [ "./build/build_in_docker.sh;ascendplugin  --useAscendDocker=${USE_ASCEND_DOCKER} --volcanoType=true" ]
+        args: [ "umask 0027;./build/build_in_docker.sh;ascendplugin  --useAscendDocker=${USE_ASCEND_DOCKER} --volcanoType=true" ]
         securityContext:
           privileged: true
         imagePullPolicy: Never
