@@ -22,7 +22,6 @@ import (
 	"google.golang.org/grpc"
 	"k8s.io/apimachinery/pkg/util/sets"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
-	"net"
 	"os"
 	"time"
 )
@@ -121,23 +120,6 @@ func (hps *HwPluginServe) setSocket(pluginSocketPath string) {
 	// Registers service.
 	plugin := &pluginAPI{hps: hps}
 	pluginapi.RegisterDevicePluginServer(plugin.hps.grpcServer, plugin)
-}
-
-func createNetListen(pluginSocketPath string) (net.Listener, error) {
-	if _, err := os.Stat(pluginSocketPath); err == nil {
-		logger.Info("Found exist sock file,now remove it.", zap.String("sockName", pluginSocketPath))
-		os.Remove(pluginSocketPath)
-	}
-	netListen, err := net.Listen("unix", pluginSocketPath)
-	if err != nil {
-		logger.Error("device plugin start failed.", zap.String("err", err.Error()))
-		return nil, err
-	}
-	err = os.Chmod(pluginSocketPath, logChmod)
-	if err != nil {
-		logger.Error("chmod error", zap.Error(err))
-	}
-	return netListen, err
 }
 
 // Stop the gRPC server

@@ -4,9 +4,12 @@ go 1.14
 
 require (
 	github.com/fsnotify/fsnotify v1.4.8-0.20191012010759-4bf2d1fec783
+	github.com/golang/mock v1.4.4 // indirect
 	github.com/stretchr/testify v1.4.0
 	go.uber.org/zap v1.14.0
-	golang.org/x/net v0.0.0-20200301022130-244492dfa37a
+	golang.org/x/net v0.0.0-20200625001655-4c5254603344
+	golang.org/x/tools v0.0.0-20200828161849-5deb26317202 // indirect
+	golang.org/x/xerrors v0.0.0-20200806184451-1a77d5e9f316 // indirect
 	google.golang.org/grpc v1.28.1
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	k8s.io/api v0.17.8
