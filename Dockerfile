@@ -1,5 +1,9 @@
 FROM golang:1.13.11-buster as build
 
+RUN useradd -d /home/dls-user -u 9000 -m -s /bin/bash dls-user && \
+    useradd -d /home/HwHiAiUser -u 1000 -m -s /bin/bash HwHiAiUser && \
+    groupadd -g 9900 dls-grp
+
 ENV USE_ASCEND_DOCKER true
 
 ENV GOPATH /usr/app/
