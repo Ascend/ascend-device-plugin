@@ -48,5 +48,4 @@ func getDeviceIP(logicID int32) (string, error) {
 
 	retIPAddress = fmt.Sprintf("%d.%d.%d.%d", ipString[0], ipString[1], ipString[2], ipString[3])
 	return retIPAddress, nil
-
 }

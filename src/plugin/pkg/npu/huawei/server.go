@@ -84,7 +84,7 @@ func (hps *HwPluginServe) GetDevByType() error {
 }
 
 // Start starts the gRPC server of the device plugin
-func (hps *HwPluginServe) Start(pluginPath, k8sSocket, pluginSocket, pluginSocketPath string) error {
+func (hps *HwPluginServe) Start(pluginSocket, pluginSocketPath string) error {
 	netListen, err := createNetListen(pluginSocketPath)
 	if err != nil {
 		return err

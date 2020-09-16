@@ -18,41 +18,8 @@ package huawei
 
 import (
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-
-	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
 func TestNPU(t *testing.T) {
-	testManager := NewHwDevManager("ascend910", "/var/dlog")
-	as := assert.New(t)
-	as.NotNil(testManager)
-
-	testManager.manager = NewHwPCIManager()
-
-	testManager.allDevTypes = append(testManager.allDevTypes, "davinci-cloud")
-	deviceType := testManager.allDevTypes[0]
-	as.Equal(deviceType, "davinci-mini")
-
-	device1 := npuDevice{
-		devType: deviceType,
-		pciID:   "0000",
-		ID:      "0000",
-		Health:  pluginapi.Healthy,
-	}
-	device2 := npuDevice{
-		devType: deviceType,
-		pciID:   "0001",
-		ID:      "0001",
-		Health:  pluginapi.Healthy,
-	}
-	device3 := npuDevice{
-		devType: deviceType,
-		pciID:   "0002",
-		ID:      "0002",
-		Health:  pluginapi.Healthy,
-	}
-	testManager.allDevs = append(testManager.allDevs, device1, device2, device3)
 
 }

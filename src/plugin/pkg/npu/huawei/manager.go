@@ -43,6 +43,7 @@ type HwDevManager struct {
 	allDevTypes []string
 	allDevs     []npuDevice
 	defaultDevs []string
+	dmgr        *DeviceManager
 }
 
 var (
@@ -67,13 +68,14 @@ func NewHwDevManager(mode, dlogPath string) *HwDevManager {
 		dlogPath: dlogPath,
 		runMode:  mode,
 		serves:   make(map[string]*HwPluginServe),
+		dmgr:     NewDeviceManager(),
 	}
 }
 
 // GetNPUs get npu types
 func (hdm *HwDevManager) GetNPUs(timeInterval, checkNum, restoreNum, highThreshold, lowThreshold string, netDetect bool) error {
 	// start dsmi in contaioner
-	err := enableContainerService()
+	err := hdm.dmgr.EnableContainerService()
 	if err != nil {
 		logger.Error("enable container Service failed. error", zap.String("error", err.Error()))
 	}
@@ -114,7 +116,7 @@ func (hdm *HwDevManager) GetDevType() []string {
 }
 
 // Serve start grpc server
-func (hdm *HwDevManager) Serve(devType, socketPath, k8sSocket, pluginSocket string) {
+func (hdm *HwDevManager) Serve(devType, socketPath, pluginSocket string) {
 	// start sockPath monitor
 	logger.Info("the log path is :", zap.String("logPath", LogPath))
 	pluginSockPath := path.Join(socketPath, pluginSocket)
@@ -143,7 +145,7 @@ func (hdm *HwDevManager) Serve(devType, socketPath, k8sSocket, pluginSocket stri
 			hdm.serves[devType] = hps
 			preStart(hps, pluginSockPath)
 			// end
-			if err := hps.Start(socketPath, k8sSocket, pluginSocket, pluginSockPath); err != nil {
+			if err := hps.Start(pluginSocket, pluginSockPath); err != nil {
 				logger.Error("Could not contact Kubelet, retrying. Did you enable the device plugin feature gate?")
 				restart = true
 			} else {
@@ -182,8 +184,10 @@ func (hdm *HwDevManager) signalWatch(watcher *fsnotify.Watcher, sigs chan os.Sig
 			logger.Info("no watcher event, channel closed")
 			return restart
 		}
-		if event.Name == serverSock && event.Op&fsnotify.Remove == fsnotify.Remove {
+		if (event.Name == serverSock || event.Name == serverSockfd || event.Name == serverSock310) &&
+			event.Op&fsnotify.Remove == fsnotify.Remove {
 			logger.Warn("notify: file deleted, please check !", zap.String("fileName", serverSock))
+			return restart
 		}
 		if event.Name == pluginapi.KubeletSocket && event.Op&fsnotify.Create == fsnotify.Create {
 			logger.Info("notify: file created, restarting.", zap.String("fileName", pluginapi.KubeletSocket))
@@ -222,12 +226,13 @@ func (hdm *HwDevManager) setRunMode() error {
 	if hdm.runMode != "" {
 		return nil
 	}
-	devNum, err := getDeviceCount()
+	dmgr := NewDeviceManager()
+	devNum, err := dmgr.GetDeviceCount()
 	if err != nil && devNum == 0 {
 		return err
 	}
 
-	chipinfo, err := getChipInfo(0)
+	chipinfo, err := dmgr.GetChipInfo(0)
 	if err != nil {
 		return err
 	}

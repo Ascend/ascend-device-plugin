@@ -37,6 +37,7 @@ type HwAscend910Manager struct {
 	highThreshold string
 	lowThreshold  string
 	netDetect     bool
+	dmgr          *DeviceManager
 }
 
 // NewHwAscend910Manager is used to create ascend 910 manager
@@ -49,6 +50,7 @@ func NewHwAscend910Manager(timeInterval, checkNum, restoreNum, highThreshold, lo
 		highThreshold: highThreshold,
 		lowThreshold:  lowThreshold,
 		netDetect:     netDetect,
+		dmgr:          &DeviceManager{},
 	}
 }
 
@@ -57,13 +59,13 @@ func NewHwAscend910Manager(timeInterval, checkNum, restoreNum, highThreshold, lo
 func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *[]string) error {
 	var ids [hiAIMaxDeviceNum]uint32
 
-	devNum, err := getDeviceList(&ids)
+	devNum, err := hnm.dmgr.GetDeviceList(&ids)
 	if err != nil {
 		return err
 	}
 	for i := int32(0); i < devNum; i++ {
 		devID := fmt.Sprintf("%s-%d", hiAIAscend910Prefix, ids[i])
-		phyID, err := getPhyID(uint32(ids[i]))
+		phyID, err := hnm.dmgr.GetPhyID(ids[i])
 		if err != nil {
 			return err
 		}
@@ -94,8 +96,7 @@ func (hnm *HwAscend910Manager) GetDevState(DeviceName string) string {
 		}
 		return pluginapi.Unhealthy
 	}
-
-	healthState, err := getDeviceHealth(logicID)
+	healthState, err := hnm.dmgr.GetDeviceHealth(logicID)
 	if err != nil {
 		if logFlag {
 			logger.Error("get device healthy state failed.",
@@ -105,7 +106,7 @@ func (hnm *HwAscend910Manager) GetDevState(DeviceName string) string {
 		return pluginapi.Unhealthy
 	}
 	if healthState != 0 {
-		unhealthyState(healthState, uint32(logicID), "healthState")
+		unhealthyState(healthState, uint32(logicID), "healthState", hnm.dmgr)
 		return pluginapi.Unhealthy
 	}
 	return pluginapi.Healthy

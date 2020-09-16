@@ -16,44 +16,20 @@
 
 package huawei
 
-//
-import (
-	"testing"
+import "testing"
 
-	"github.com/stretchr/testify/assert"
+type fakeHwAscend310Manager struct {
+	dmgr *fakeDeviceManager
+}
 
-	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
-)
-
-func TestAscend310(t *testing.T) {
-	testManager := NewHwDevManager("ascend310", "/var/dlog")
-	as := assert.New(t)
-	as.NotNil(testManager)
-
-	testManager.manager = NewHwPCIManager()
-
-	testManager.allDevTypes = append(testManager.allDevTypes, "davinci-mini")
-	deviceType := testManager.allDevTypes[0]
-	as.Equal(deviceType, "davinci-mini")
-
-	device1 := npuDevice{
-		devType: deviceType,
-		pciID:   "0000",
-		ID:      "0000",
-		Health:  pluginapi.Healthy,
+// NewHwAscend310Manager used to create ascend 310 manager
+func NewFakeHwAscend310Manager() *fakeHwAscend310Manager {
+	return &fakeHwAscend310Manager{
+		dmgr: newFakeDeviceManager(),
 	}
-	device2 := npuDevice{
-		devType: deviceType,
-		pciID:   "0001",
-		ID:      "0001",
-		Health:  pluginapi.Healthy,
-	}
-	device3 := npuDevice{
-		devType: deviceType,
-		pciID:   "0002",
-		ID:      "0002",
-		Health:  pluginapi.Healthy,
-	}
-	testManager.allDevs = append(testManager.allDevs, device1, device2, device3)
+}
+
+func TestHwAscend310Manager_GetNPUs(t *testing.T) {
+	NewHwDevManager("", "/")
 
 }

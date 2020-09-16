@@ -40,7 +40,26 @@ type ChipInfo struct {
 	ChipVer  string
 }
 
-func enableContainerService() error {
+// DeviceMgrInterface interface for dsmi
+type DeviceMgrInterface interface {
+	EnableContainerService() error
+	GetDeviceCount() (int32, error)
+	GetDeviceList(*[hiAIMaxDeviceNum]uint32) (int32, error)
+	GetDeviceHealth(int32) (uint32, error)
+	GetPhyID(uint32) (uint32, error)
+	GetLogicID(uint32) (uint32, error)
+	GetChipInfo(int32) (*ChipInfo, error)
+}
+
+// DeviceManager struct definition
+type DeviceManager struct{}
+
+// NewDeviceManager new DeviceManager instance
+func NewDeviceManager() *DeviceManager {
+	return &DeviceManager{}
+}
+
+func (d *DeviceManager) EnableContainerService() error {
 	err := C.dsmi_enable_container_service()
 	if err != 0 {
 		return fmt.Errorf("enable container service faild , error code: %d", int32(err))
@@ -49,7 +68,7 @@ func enableContainerService() error {
 }
 
 // get ascend910 device quantity
-func getDeviceCount() (int32, error) {
+func (d *DeviceManager) GetDeviceCount() (int32, error) {
 	var count C.int
 
 	err := C.dsmi_get_device_count(&count)
@@ -60,8 +79,8 @@ func getDeviceCount() (int32, error) {
 }
 
 // device get list
-func getDeviceList(devices *[hiAIMaxDeviceNum]uint32) (int32, error) {
-	devNum, err := getDeviceCount()
+func (d *DeviceManager) GetDeviceList(devices *[hiAIMaxDeviceNum]uint32) (int32, error) {
+	devNum, err := d.GetDeviceCount()
 	if err != nil {
 		return devNum, err
 	}
@@ -80,7 +99,7 @@ func getDeviceList(devices *[hiAIMaxDeviceNum]uint32) (int32, error) {
 }
 
 // get device health by id
-func getDeviceHealth(logicID int32) (uint32, error) {
+func (d *DeviceManager) GetDeviceHealth(logicID int32) (uint32, error) {
 	var health C.uint
 
 	err := C.dsmi_get_device_health(C.int(logicID), &health)
@@ -93,7 +112,7 @@ func getDeviceHealth(logicID int32) (uint32, error) {
 }
 
 // get physic id form logic id
-func getPhyID(logicID uint32) (uint32, error) {
+func (d *DeviceManager) GetPhyID(logicID uint32) (uint32, error) {
 	var phyID C.uint
 
 	err := C.dsmi_get_phyid_from_logicid(C.uint(logicID), &phyID)
@@ -105,7 +124,7 @@ func getPhyID(logicID uint32) (uint32, error) {
 }
 
 // get logic id form physic id
-func getLogicID(phyID uint32) (uint32, error) {
+func (d *DeviceManager) GetLogicID(phyID uint32) (uint32, error) {
 	var logicID C.uint
 
 	err := C.dsmi_get_logicid_from_phyid(C.uint(phyID), &logicID)
@@ -117,7 +136,7 @@ func getLogicID(phyID uint32) (uint32, error) {
 
 }
 
-func getChipInfo(logicID int32) (*ChipInfo, error) {
+func (d *DeviceManager) GetChipInfo(logicID int32) (*ChipInfo, error) {
 	var chipInfo C.struct_dsmi_chip_info_stru
 	err := C.dsmi_get_chip_info(C.int(logicID), &chipInfo)
 	if err != 0 {

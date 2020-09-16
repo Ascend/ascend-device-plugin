@@ -1,136 +1,118 @@
-/*
-* Copyright(C) 2020. Huawei Technologies Co.,Ltd. All rights reserved.
-*
- * Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
-
 package huawei
 
 import (
-	"go.uber.org/zap"
+	"github.com/golang/protobuf/ptypes/empty"
+	"os"
 	"testing"
 )
 
-// deviceGetCount function unit test
-func TestDeviceGetCount(t *testing.T) {
+type fakeDeviceManager struct{}
 
-	deviceCount, err := getDeviceCount()
-	if err != nil {
-		t.Errorf("%s", err)
-	}
-	// result
-	logger.Info("the AI server found device", zap.Int32("device quantity", deviceCount))
+func newFakeDeviceManager() *fakeDeviceManager {
+	return &fakeDeviceManager{}
 }
 
-func TestGetDeviceList(t *testing.T) {
-	var ids [hiAIMaxDeviceNum]uint32
-
-	devNum, err := getDeviceList(&ids)
-	if err != nil {
-		t.Errorf("%s", err)
-	}
-
-	logger.Info("device quantity:", zap.Int32("device quantity", devNum), zap.Any("device list", ids))
+func (d *fakeDeviceManager) EnableContainerService() error {
+	return nil
 }
 
-// test the get device health function
-func TestGetDeviceHealth(t *testing.T) {
-	devNum, err := getDeviceCount()
-	if err != nil {
-		t.Errorf("%s", err)
-	}
+// get ascend910 device quantity
+func (d *fakeDeviceManager) GetDeviceCount() (int32, error) {
+	return int32(8), nil
+}
 
+// device get list
+func (d *fakeDeviceManager) GetDeviceList(devices *[hiAIMaxDeviceNum]uint32) (int32, error) {
+	devNum, err := d.GetDeviceCount()
+	if err != nil {
+		return devNum, err
+	}
+	// transfer device list
 	var i int32
 	for i = 0; i < devNum; i++ {
-		health, err := getDeviceHealth(i)
-		if err != nil {
-			t.Errorf("%s", err)
-		}
-		logger.Info("the device healthy state", zap.Int32("deviceID", i), zap.Uint32("healthy state", health))
+		(*devices)[i] = uint32(i)
 	}
+
+	return devNum, nil
+}
+
+// get device health by id
+func (d *fakeDeviceManager) GetDeviceHealth(logicID int32) (uint32, error) {
+	if logicID == 3 {
+		return uint32(3), nil
+	}
+	return uint32(0), nil
 
 }
 
-// test get device ip address
-func TestGetDeviceIp(t *testing.T) {
-	devNum, err := getDeviceCount()
-	if err != nil {
-		t.Errorf("%s", err)
-	}
+// get physic id form logic id
+func (d *fakeDeviceManager) GetPhyID(logicID uint32) (uint32, error) {
+	return logicID, nil
+}
 
-	var i int32
-	for i = 0; i < devNum; i++ {
-		retIPAddress, err := getDeviceIP(i)
-		if err != nil {
-			t.Errorf("%s", err)
-		}
-		logger.Info("the device ip address is:",
-			zap.Int32("deviceID", i),
-			zap.String("healthy state", retIPAddress))
-	}
+// get logic id form physic id
+func (d *fakeDeviceManager) GetLogicID(phyID uint32) (uint32, error) {
+	return phyID, nil
 
 }
 
-func TestGetPhyID(t *testing.T) {
-
-	devNum, err := getDeviceCount()
-	if err != nil {
-		t.Errorf("%s", err)
+func (d *fakeDeviceManager) GetChipInfo(logicID int32) (*ChipInfo, error) {
+	chip := &ChipInfo{
+		ChipName: "310",
+		ChipType: "ASCEND",
+		ChipVer:  "",
 	}
-
-	var i uint32
-	for i = 0; i < uint32(devNum); i++ {
-		phyID, err := getPhyID(i)
-		if err != nil {
-			t.Errorf("%s", err)
-		}
-		logger.Info("get device PhyID", zap.Uint32("deviceID", i),
-			zap.Uint32("phyID", phyID))
-	}
-
+	return chip, nil
 }
 
-func TestGetLogicID(t *testing.T) {
-	devNum, err := getDeviceCount()
+func TestUnhealthyState(t *testing.T) {
+	err := unhealthyState(1, uint32(1), "healthState", newFakeDeviceManager())
 	if err != nil {
-		t.Errorf("%s", err)
+		t.Errorf("TestUnhealthyState Run Failed")
 	}
-
-	var i uint32
-	for i = 0; i < uint32(devNum); i++ {
-		logicID, err := getLogicID(i)
-		if err != nil {
-			t.Errorf("%s", err)
-		}
-		logger.Info("get device logicID", zap.Uint32("deviceID", i),
-			zap.Uint32("logicID", logicID))
-	}
+	t.Logf("TestUnhealthyState Run Pass")
 }
 
-func TestGetChipInfo(t *testing.T) {
-	devNum, err := getDeviceCount()
-	if err != nil {
-		t.Errorf("%s", err)
+func TestGetLogicIDByName(t *testing.T) {
+	var logicID int32
+	err := getLogicIDByName("Ascend310-1", &logicID)
+	if err != nil || 1 != logicID {
+		t.Errorf("TestGetLogicIDByName Run Failed")
 	}
 
-	var i int32
-	for i = 0; i < devNum; i++ {
-		chipinfo, err := getChipInfo(i)
-		if err != nil {
-			t.Errorf("%s", err)
-		}
-		logger.Info("the device healthy state", zap.Int32("deviceID", i), zap.String("chipNmae: ",
-			chipinfo.ChipName), zap.String("chipType: ", chipinfo.ChipType),
-			zap.String("chipVer: ", chipinfo.ChipVer))
+	err = getLogicIDByName("Ascend310-1000", &logicID)
+	if err == nil {
+		t.Errorf("TestGetLogicIDByName Run Failed")
 	}
+	t.Logf("TestGetLogicIDByName Run Pass")
+}
+
+func TestGetDefaultDevices(t *testing.T) {
+	if _, err := os.Stat(hiAIHDCDevice); err != nil {
+		os.Create(hiAIHDCDevice)
+	}
+
+	if _, err := os.Stat(hiAIManagerDevice); err != nil {
+		os.Create(hiAIManagerDevice)
+	}
+
+	if _, err := os.Stat(hiAISVMDevice); err == nil {
+		os.Create(hiAISVMDevice)
+	}
+	var defaultDeivces []string
+	err := getDefaultDevices(&defaultDeivces)
+	if err != nil {
+		t.Errorf("TestGetDefaultDevices Run Failed")
+	}
+	defaultMap := make(map[string]empty.Empty)
+	defaultMap[hiAIHDCDevice] = empty.Empty{}
+	defaultMap[hiAIManagerDevice] = empty.Empty{}
+	defaultMap[hiAISVMDevice] = empty.Empty{}
+	for _, str := range defaultDeivces {
+		_, ok := defaultMap[str]
+		if !ok {
+			t.Errorf("TestGetDefaultDevices Run Failed")
+		}
+	}
+	t.Logf("TestGetDefaultDevices Run Pass")
 }

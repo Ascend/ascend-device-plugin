@@ -93,7 +93,7 @@ func main() {
 	for _, devType := range devTypes {
 		log.Info("ascend device serve started", zap.String("devType", devType))
 		pluginSocket := fmt.Sprintf("%s.sock", devType)
-		go hdm.Serve(devType, *socketPath, kubeletSocket, pluginSocket)
+		go hdm.Serve(devType, *socketPath, pluginSocket)
 	}
 
 	<-neverStop

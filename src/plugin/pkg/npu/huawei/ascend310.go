@@ -31,11 +31,15 @@ import (
 )
 
 // HwAscend310Manager manages huawei Ascend310 devices.
-type HwAscend310Manager struct{}
+type HwAscend310Manager struct {
+	dmgr *DeviceManager
+}
 
 // NewHwAscend310Manager used to create ascend 310 manager
 func NewHwAscend310Manager() *HwAscend310Manager {
-	return &HwAscend310Manager{}
+	return &HwAscend310Manager{
+		dmgr: &DeviceManager{},
+	}
 }
 
 // GetNPUs Discovers all HUAWEI Ascend310 devices available on the local node by calling walking `/dev` directory.
@@ -43,11 +47,10 @@ func (hnm *HwAscend310Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *
 	var ids [hiAIMaxDeviceNum]uint32
 
 	if err := ContainerAssignmentNotify(); err != nil {
-		log.Printf("cannot set device manager into container devices assignment mode.\n")
 		return fmt.Errorf("cannot set device manager into container devices assignment mode")
 	}
 
-	devNum, err := getDeviceList(&ids)
+	devNum, err := hnm.dmgr.GetDeviceList(&ids)
 	if err != nil {
 		return err
 	}
@@ -95,7 +98,7 @@ func (hnm *HwAscend310Manager) GetDevState(DeviceName string) string {
 		return pluginapi.Unhealthy
 	}
 	logicID := int32(devidCheck)
-	healthState, err := getDeviceHealth(logicID)
+	healthState, err := hnm.dmgr.GetDeviceHealth(logicID)
 	if err != nil {
 		if logFlag {
 			logger.Error("get device healthy state failed.",
@@ -105,7 +108,10 @@ func (hnm *HwAscend310Manager) GetDevState(DeviceName string) string {
 		return pluginapi.Unhealthy
 	}
 	if healthState != 0 {
-		unhealthyState(healthState, uint32(logicID), "healthState")
+		err = unhealthyState(healthState, uint32(logicID), "healthState", hnm.dmgr)
+		if err != nil {
+			logger.Error("unhealthyState ", zap.Error(err))
+		}
 		return pluginapi.Unhealthy
 	}
 	return pluginapi.Healthy
@@ -186,6 +192,5 @@ func getDeviceID(id string, majorID *string, minorID *string) error {
 		*minorID = idSplit[2]
 		*majorID = *minorID
 	}
-
 	return nil
 }
