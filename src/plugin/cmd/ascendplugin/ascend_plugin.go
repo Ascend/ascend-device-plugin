@@ -30,13 +30,6 @@ const (
 	kubeletSocket = "kubelet.sock"
 	dlogPath      = "/var/dlog"
 	socketPath    = "/var/lib/kubelet/device-plugins"
-	timeInterval  = "1"
-	checkNum      = "5"
-	restoreNum    = "3"
-	highThreshold = "90"
-	lowThreshold  = "80"
-	netDetect     = false
-	version       = false
 )
 
 var (
@@ -44,6 +37,7 @@ var (
 	fdFlag         = flag.Bool("fdFlag", false, "set the connect system is fd system")
 	useAscendDocer = flag.Bool("useAscendDocker", true, "use ascend docker or not")
 	volcanoType    = flag.Bool("volcanoType", false, "use volcano to schedue")
+	version        = flag.Bool("version", false, "show k8s device plugin version ")
 )
 
 var (
@@ -61,8 +55,8 @@ func main() {
 
 	flag.Parse()
 
-	if version {
-		fmt.Printf("%s version: %s   buildTime:%s\n", BuildName, BuildVersion, BuildTime)
+	if *version {
+		fmt.Printf("%s version: %s\n", BuildName, BuildVersion)
 		os.Exit(0)
 	}
 
@@ -76,9 +70,8 @@ func main() {
 	}
 
 	hdm := hwmanager.NewHwDevManager(*mode, dlogPath)
-	hdm.SetParameters(fdFlag, useAscendDocer, volcanoType)
-	if err := hdm.GetNPUs(timeInterval, checkNum, restoreNum, highThreshold, lowThreshold,
-		netDetect); err != nil {
+	hdm.SetParameters(*fdFlag, *useAscendDocer, *volcanoType)
+	if err := hdm.GetNPUs(); err != nil {
 		log.Error("no devices found. waiting indefinitely", zap.String("err", err.Error()))
 		<-neverStop
 	}
@@ -92,7 +85,7 @@ func main() {
 	for _, devType := range devTypes {
 		log.Info("ascend device serve started", zap.String("devType", devType))
 		pluginSocket := fmt.Sprintf("%s.sock", devType)
-		go hdm.Serve(devType, socketPath, kubeletSocket, pluginSocket)
+		go hdm.Serve(devType, socketPath, pluginSocket, hwmanager.NewHwPluginServe)
 	}
 
 	<-neverStop

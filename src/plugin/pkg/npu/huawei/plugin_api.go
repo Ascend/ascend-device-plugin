@@ -19,6 +19,7 @@ package huawei
 import (
 	"encoding/json"
 	"fmt"
+	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -40,7 +41,8 @@ import (
 )
 
 type pluginAPI struct {
-	hps *HwPluginServe
+	hps      *HwPluginServe
+	outbreak *atomic.Bool
 }
 
 // Instance is for annotation
@@ -59,7 +61,7 @@ type Device struct { // Device
 var ip string
 
 // Register function is use to register k8s devicePlugin to kubelet.
-func Register(k8sSocketPath, pluginSocket, resourceName string) error {
+func (hps *HwPluginServe) Register(k8sSocketPath, pluginSocket, resourceName string) error {
 	conn, err := grpc.Dial(k8sSocketPath, grpc.WithInsecure(),
 		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
 			return net.DialTimeout("unix", addr, timeout)
@@ -104,10 +106,8 @@ func (s *pluginAPI) ListAndWatch(emtpy *pluginapi.Empty, stream pluginapi.Device
 			zap.String("err", err.Error()))
 	}
 
-	outs := false
-
 	for {
-		if outs {
+		if s.outbreak.Load() {
 			break
 		}
 		time.Sleep(sleepTime * time.Second)
@@ -140,7 +140,6 @@ func (s *pluginAPI) ListAndWatch(emtpy *pluginapi.Empty, stream pluginapi.Device
 			}
 		}
 	}
-
 	return nil
 }
 
@@ -199,7 +198,7 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 
 		if s.hps.runMode == runMode910 {
 			s.mountfile(resp, dlogMountPath, devID)
-			responseAnonation(resp, ascendVisibleDevices)
+			s.responseAnonation(resp, ascendVisibleDevices)
 		}
 		ascendVisibleDevices = addEnv(ascendVisibleDevices, resp)
 		if !UseAscendDocker {
@@ -224,7 +223,7 @@ func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest, m
 			logger.Error("getAscendDeviceID", zap.Error(err))
 			return err
 		}
-		phyID, err := getPhyIDFromDeviceID(majorID)
+		phyID, err := getPhyIDFromDeviceID(majorID, s.hps.hdm.dmgr)
 		if err != nil {
 			logger.Error("get phyID failed", zap.Error(err))
 			return err
@@ -278,7 +277,7 @@ func (s *pluginAPI) getNodeNpuUsed(usedDevices *sets.String) {
 	return
 }
 
-func getNPUByStatus(kubeClient *kubernetes.Clientset, nodeName, status string) (string, bool) {
+func getNPUByStatus(kubeClient kubernetes.Interface, nodeName, status string) (string, bool) {
 	selector := fields.SelectorFromSet(fields.Set{"spec.nodeName": nodeName, "status.phase": status})
 	podList, err := kubeClient.CoreV1().Pods(v1.NamespaceAll).List(metav1.ListOptions{
 		FieldSelector: selector.String()})
@@ -307,12 +306,12 @@ func addEnv(ascendVisibleDevices string, resp *pluginapi.ContainerAllocateRespon
 	return ascendVisibleDevices
 }
 
-func addAnnotation(devices, podName, serverID string) string {
+func (s *pluginAPI) addAnnotation(devices, podName, serverID string) string {
 	// Annotations
 	var instance Instance
 	instance.PodName = podName
 	instance.ServerID = serverID
-	err := setDevices(&instance, devices)
+	err := s.setDevices(&instance, devices)
 	if err != nil {
 		logger.Error("Add annotation failed", zap.String("error", err.Error()))
 		return ""
@@ -326,7 +325,7 @@ func addAnnotation(devices, podName, serverID string) string {
 	return instanceInfo
 }
 
-func setDevices(instance *Instance, devices string) error {
+func (s *pluginAPI) setDevices(instance *Instance, devices string) error {
 	idSplit := strings.Split(devices, ",")
 	sort.Sort(sort.StringSlice(idSplit))
 	for _, deviceID := range idSplit {
@@ -336,7 +335,7 @@ func setDevices(instance *Instance, devices string) error {
 			return err
 		}
 		logicID := int32(logicID64)
-		deviceIP, err := getDeviceIP(logicID)
+		deviceIP, err := s.hps.hdm.dmgr.GetDeviceIP(logicID)
 		if err != nil {
 			logger.Error("Get device ip failed:->", zap.Int("deviceId", int(logicID)), zap.Error(err))
 			return err
@@ -435,7 +434,7 @@ func (s *pluginAPI) updatePodAnnotations(pod *v1.Pod, ascendVisibleDevices strin
 		pod.Annotations = map[string]string{}
 	}
 
-	podDeviceValue := addAnnotation(ascendVisibleDevices, renamePod(pod.Name), serverID)
+	podDeviceValue := s.addAnnotation(ascendVisibleDevices, renamePod(pod.Name), serverID)
 	pod2, err := s.updatePod(pod, podDeviceValue)
 	for i := 0; err != nil && i < retryTime; i++ {
 		logger.Info("try again ...")
@@ -520,9 +519,10 @@ func (s *pluginAPI) getPendingPodsOnNode() ([]v1.Pod, error) {
 
 func (s *pluginAPI) mountDevice(resp *pluginapi.ContainerAllocateResponse, deviceID string) {
 	devices := strings.Split(deviceID, ",")
+	var hostPath string
+	var containerPath string
 	for _, device := range devices {
-		hostPath := fmt.Sprintf("%s%s", "/dev/davinci", device)
-		containerPath := hostPath
+		s.hps.hdm.manager.GetDevPath(device, &hostPath, &containerPath)
 		resp.Devices = append(resp.Devices, &pluginapi.DeviceSpec{
 			HostPath:      hostPath,
 			ContainerPath: containerPath,
@@ -599,7 +599,7 @@ func getNPUAnnotationOfPod(pod *v1.Pod, allocateDevice *sets.String, allocateNum
 	return nil
 }
 
-func responseAnonation(resp *pluginapi.ContainerAllocateResponse, devices string) {
+func (s *pluginAPI) responseAnonation(resp *pluginapi.ContainerAllocateResponse, devices string) {
 	// Annotations
 	annotation := make(map[string]string)
 	var instance Instance
@@ -607,7 +607,7 @@ func responseAnonation(resp *pluginapi.ContainerAllocateResponse, devices string
 
 	instance.ServerID = ""
 
-	err := setDevices(&instance, devices)
+	err := s.setDevices(&instance, devices)
 	if err != nil {
 		logger.Error("Add annotation failed", zap.String("error", err.Error()))
 		return
@@ -646,7 +646,7 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int, majorID, minorID stri
 			logger.Error("getAscendDeviceID", zap.Error(err))
 			return err
 		}
-		phyID, err := getPhyIDFromDeviceID(majorID)
+		phyID, err := getPhyIDFromDeviceID(majorID, s.hps.hdm.dmgr)
 		if err != nil {
 			logger.Error("get phyID failed", zap.Error(err))
 			return err

@@ -31,27 +31,12 @@ var logFlag = true
 
 // HwAscend910Manager manages huawei Ascend910 devices.
 type HwAscend910Manager struct {
-	timeInterval  string
-	checkNum      string
-	restoreNum    string
-	highThreshold string
-	lowThreshold  string
-	netDetect     bool
-	dmgr          *DeviceManager
+	dmgr DeviceMgrInterface
 }
 
 // NewHwAscend910Manager is used to create ascend 910 manager
-func NewHwAscend910Manager(timeInterval, checkNum, restoreNum, highThreshold, lowThreshold string,
-	netDetect bool) *HwAscend910Manager {
-	return &HwAscend910Manager{
-		timeInterval:  timeInterval,
-		checkNum:      checkNum,
-		restoreNum:    restoreNum,
-		highThreshold: highThreshold,
-		lowThreshold:  lowThreshold,
-		netDetect:     netDetect,
-		dmgr:          &DeviceManager{},
-	}
+func NewHwAscend910Manager() *HwAscend910Manager {
+	return &HwAscend910Manager{}
 }
 
 // GetNPUs function discovers all HUAWEI Ascend910 devices available
@@ -119,20 +104,9 @@ func (hnm *HwAscend910Manager) GetDefaultDevs(defaultDeivces *[]string) error {
 }
 
 // GetDevPath get dev path
-func (hnm *HwAscend910Manager) GetDevPath(id string, hostPath *string, containerPath *string) error {
-	var majorID string
-	var minorID string
-
-	if err := getAscendDeviceID(id, &majorID, &minorID); err != nil {
-		return fmt.Errorf("cannot get device exact id from input id string: %s", id)
-	}
-	phyID, err := getPhyIDFromDeviceID(majorID)
-	if err != nil {
-		return err
-	}
-	*hostPath = fmt.Sprintf("%s%s", "/dev/davinci", phyID)
+func (hnm *HwAscend910Manager) GetDevPath(id string, hostPath *string, containerPath *string) {
+	*hostPath = fmt.Sprintf("%s%s", "/dev/davinci", id)
 	*containerPath = *hostPath
-	return nil
 }
 
 // GetLogPath get log path
@@ -162,4 +136,9 @@ func (hnm *HwAscend910Manager) GetLogPath(devID []string, defaultLogPath string,
 	}
 	logger.Info("log dir is:", zap.String("logDir", *newLogPath))
 	return nil
+}
+
+// SetDmgr to set dmgr
+func (hnm *HwAscend910Manager) SetDmgr(dmgr DeviceMgrInterface) {
+	hnm.dmgr = dmgr
 }

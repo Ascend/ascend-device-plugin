@@ -38,9 +38,8 @@ const (
 	registerTimeout = 3
 
 	// device socket path
-	serverSock    = "/var/lib/kubelet/device-plugins/Ascend910.sock"
-	serverSockfd  = "/var/lib/kubelet/device-plugins/davinci-mini.sock"
-	serverSock310 = "/var/lib/kubelet/device-plugins/Ascend310.sock"
+	serverSock = "/var/lib/kubelet/device-plugins/Ascend910.sock"
+
 	// logger setting
 
 	// LogPath save log file

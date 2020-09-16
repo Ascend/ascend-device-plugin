@@ -18,6 +18,7 @@ package huawei
 
 import (
 	"fmt"
+	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -39,8 +40,18 @@ type HwPluginServe struct {
 	healthDevice   sets.String
 }
 
+// HwPluginServeInterface the interface of PluginServer
+type HwPluginServeInterface interface {
+	GetDevByType() error
+	Start(pluginSocket, pluginSocketPath string) error
+	setSocket(pluginSocketPath string)
+	Stop() error
+	cleanSock() error
+	Register(k8sSocketPath, pluginSocket, resourceName string) error
+}
+
 // NewHwPluginServe new a device plugin server
-func NewHwPluginServe(hdm *HwDevManager, devType string, socket string) *HwPluginServe {
+func NewHwPluginServe(hdm *HwDevManager, devType string, socket string) HwPluginServeInterface {
 	ki, err := NewKubeInteractor()
 	if err != nil {
 		logger.Error("cannot create kube interactor.", zap.Error(err))
@@ -103,7 +114,7 @@ func (hps *HwPluginServe) Start(pluginSocket, pluginSocketPath string) error {
 	// Registers To Kubelet.
 	resourceName := fmt.Sprintf("%s%s", resourceNamePrefix, hps.devType)
 	k8sSocketPath := pluginapi.KubeletSocket
-	err = Register(k8sSocketPath, pluginSocket, resourceName)
+	err = hps.Register(k8sSocketPath, pluginSocket, resourceName)
 	if err == nil {
 		logger.Info("register to kubelet success.")
 		return nil
@@ -118,7 +129,7 @@ func (hps *HwPluginServe) setSocket(pluginSocketPath string) {
 	hps.socket = pluginSocketPath
 	hps.grpcServer = grpc.NewServer()
 	// Registers service.
-	plugin := &pluginAPI{hps: hps}
+	plugin := &pluginAPI{hps: hps, outbreak: atomic.NewBool(false)}
 	pluginapi.RegisterDevicePluginServer(plugin.hps.grpcServer, plugin)
 }
 

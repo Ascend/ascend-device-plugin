@@ -32,14 +32,12 @@ import (
 
 // HwAscend310Manager manages huawei Ascend310 devices.
 type HwAscend310Manager struct {
-	dmgr *DeviceManager
+	dmgr DeviceMgrInterface
 }
 
 // NewHwAscend310Manager used to create ascend 310 manager
 func NewHwAscend310Manager() *HwAscend310Manager {
-	return &HwAscend310Manager{
-		dmgr: &DeviceManager{},
-	}
+	return &HwAscend310Manager{}
 }
 
 // GetNPUs Discovers all HUAWEI Ascend310 devices available on the local node by calling walking `/dev` directory.
@@ -123,21 +121,9 @@ func (hnm *HwAscend310Manager) GetDefaultDevs(defaultDeivces *[]string) error {
 }
 
 // GetDevPath is used to get device path
-func (hnm *HwAscend310Manager) GetDevPath(id string, hostPath *string, containerPath *string) error {
-	var majorID string
-	var minorID string
-
-	if err := getDeviceID(id, &majorID, &minorID); err != nil {
-		return fmt.Errorf("cannot get device exact id from input id string %s", id)
-	}
-
-	phyID, err := getPhyIDFromDeviceID(majorID)
-	if err != nil {
-		return err
-	}
-	*hostPath = fmt.Sprintf("%s%s", "/dev/davinci", phyID)
+func (hnm *HwAscend310Manager) GetDevPath(id string, hostPath *string, containerPath *string) {
+	*hostPath = fmt.Sprintf("%s%s", "/dev/davinci", id)
 	*containerPath = *hostPath
-	return nil
 }
 
 // GetLogPath is used to get log path
@@ -149,7 +135,7 @@ func (hnm *HwAscend310Manager) GetLogPath(devID []string, defaultLogPath string,
 		var major string
 		var minor string
 		if err := getDeviceID(item, &major, &minor); err != nil {
-			log.Printf("dev ID %s is invalid", item)
+			logger.Error("getdevice", zap.String("devid", item))
 			return fmt.Errorf("dev ID %s is invalid", item)
 		}
 		subdir += fmt.Sprintf("-%s", major)
@@ -195,4 +181,9 @@ func getDeviceID(id string, majorID *string, minorID *string) error {
 		*majorID = *minorID
 	}
 	return nil
+}
+
+// SetDmgr to set dmgr
+func (hnm *HwAscend310Manager) SetDmgr(dmgr DeviceMgrInterface) {
+	hnm.dmgr = dmgr
 }

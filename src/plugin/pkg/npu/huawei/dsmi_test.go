@@ -1,9 +1,32 @@
+/*
+* Copyright(C) 2020. Huawei Technologies Co.,Ltd. All rights reserved.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+ */
+
 package huawei
 
 import (
+	"fmt"
 	"github.com/golang/protobuf/ptypes/empty"
 	"os"
 	"testing"
+)
+
+const (
+	unHealthyTestLogicID = 3
+	serverSockFd         = "/var/lib/kubelet/device-plugins/davinci-mini.sock"
+	serverSock310        = "/var/lib/kubelet/device-plugins/Ascend310.sock"
 )
 
 type fakeDeviceManager struct{}
@@ -12,16 +35,17 @@ func newFakeDeviceManager() *fakeDeviceManager {
 	return &fakeDeviceManager{}
 }
 
+// EnableContainerService for enableContainerService
 func (d *fakeDeviceManager) EnableContainerService() error {
 	return nil
 }
 
-// get ascend910 device quantity
+// GetDeviceCount get ascend910 device quantity
 func (d *fakeDeviceManager) GetDeviceCount() (int32, error) {
-	return int32(8), nil
+	return int32(npuTestNum), nil
 }
 
-// device get list
+// GetDeviceList device get list
 func (d *fakeDeviceManager) GetDeviceList(devices *[hiAIMaxDeviceNum]uint32) (int32, error) {
 	devNum, err := d.GetDeviceCount()
 	if err != nil {
@@ -36,26 +60,26 @@ func (d *fakeDeviceManager) GetDeviceList(devices *[hiAIMaxDeviceNum]uint32) (in
 	return devNum, nil
 }
 
-// get device health by id
+//  GetDeviceHealth get device health by id
 func (d *fakeDeviceManager) GetDeviceHealth(logicID int32) (uint32, error) {
-	if logicID == 3 {
-		return uint32(3), nil
+	if logicID == unHealthyTestLogicID {
+		return uint32(unHealthyTestLogicID), nil
 	}
 	return uint32(0), nil
-
 }
 
-// get physic id form logic id
+// GetPhyID get physic id form logic id
 func (d *fakeDeviceManager) GetPhyID(logicID uint32) (uint32, error) {
 	return logicID, nil
 }
 
-// get logic id form physic id
+// GetLogicID get logic id form physic id
 func (d *fakeDeviceManager) GetLogicID(phyID uint32) (uint32, error) {
 	return phyID, nil
 
 }
 
+// GetChipInfo for fakeDeviceManager
 func (d *fakeDeviceManager) GetChipInfo(logicID int32) (*ChipInfo, error) {
 	chip := &ChipInfo{
 		ChipName: "310",
@@ -65,18 +89,26 @@ func (d *fakeDeviceManager) GetChipInfo(logicID int32) (*ChipInfo, error) {
 	return chip, nil
 }
 
+// GetDeviceIP get deviceIP
+func (d *fakeDeviceManager) GetDeviceIP(logicID int32) (string, error) {
+	retIPAddress := fmt.Sprintf("%d.%d.%d.%d", 0, 0, 0, logicID)
+	return retIPAddress, nil
+}
+
+// TestUnhealthyState for UnhealthyState
 func TestUnhealthyState(t *testing.T) {
-	err := unhealthyState(1, uint32(1), "healthState", newFakeDeviceManager())
+	err := unhealthyState(1, uint32(3), "healthState", newFakeDeviceManager())
 	if err != nil {
 		t.Errorf("TestUnhealthyState Run Failed")
 	}
 	t.Logf("TestUnhealthyState Run Pass")
 }
 
+// TestGetLogicIDByName for LogicIDByName
 func TestGetLogicIDByName(t *testing.T) {
 	var logicID int32
-	err := getLogicIDByName("Ascend310-1", &logicID)
-	if err != nil || 1 != logicID {
+	err := getLogicIDByName("Ascend310-3", &logicID)
+	if err != nil || unHealthyTestLogicID != logicID {
 		t.Errorf("TestGetLogicIDByName Run Failed")
 	}
 
@@ -87,17 +119,24 @@ func TestGetLogicIDByName(t *testing.T) {
 	t.Logf("TestGetLogicIDByName Run Pass")
 }
 
+// TestGetDefaultDevices for GetDefaultDevices
 func TestGetDefaultDevices(t *testing.T) {
 	if _, err := os.Stat(hiAIHDCDevice); err != nil {
-		os.Create(hiAIHDCDevice)
+		if err = createFile(hiAIHDCDevice); err != nil {
+			t.Fatal("TestGetDefaultDevices Run Failed")
+		}
 	}
 
 	if _, err := os.Stat(hiAIManagerDevice); err != nil {
-		os.Create(hiAIManagerDevice)
+		if err = createFile(hiAIManagerDevice); err != nil {
+			t.Fatal("TestGetDefaultDevices Run Failed")
+		}
 	}
 
 	if _, err := os.Stat(hiAISVMDevice); err == nil {
-		os.Create(hiAISVMDevice)
+		if err = createFile(hiAISVMDevice); err != nil {
+			t.Fatal("TestGetDefaultDevices Run Failed")
+		}
 	}
 	var defaultDeivces []string
 	err := getDefaultDevices(&defaultDeivces)
@@ -115,4 +154,11 @@ func TestGetDefaultDevices(t *testing.T) {
 		}
 	}
 	t.Logf("TestGetDefaultDevices Run Pass")
+}
+
+func createFile(filePath string) error {
+	f, err := os.Create(filePath)
+	f.Chmod(logChmod)
+	f.Close()
+	return err
 }

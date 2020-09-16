@@ -21,6 +21,7 @@ package huawei
 import "C"
 import (
 	"fmt"
+	"unsafe"
 )
 
 const (
@@ -49,6 +50,7 @@ type DeviceMgrInterface interface {
 	GetPhyID(uint32) (uint32, error)
 	GetLogicID(uint32) (uint32, error)
 	GetChipInfo(int32) (*ChipInfo, error)
+	GetDeviceIP(logicID int32) (string, error)
 }
 
 // DeviceManager struct definition
@@ -59,6 +61,7 @@ func NewDeviceManager() *DeviceManager {
 	return &DeviceManager{}
 }
 
+// EnableContainerService enable container service
 func (d *DeviceManager) EnableContainerService() error {
 	err := C.dsmi_enable_container_service()
 	if err != 0 {
@@ -67,7 +70,7 @@ func (d *DeviceManager) EnableContainerService() error {
 	return nil
 }
 
-// get ascend910 device quantity
+// GetDeviceCount get ascend910 device quantity
 func (d *DeviceManager) GetDeviceCount() (int32, error) {
 	var count C.int
 
@@ -78,7 +81,7 @@ func (d *DeviceManager) GetDeviceCount() (int32, error) {
 	return int32(count), nil
 }
 
-// device get list
+// GetDeviceList device get list
 func (d *DeviceManager) GetDeviceList(devices *[hiAIMaxDeviceNum]uint32) (int32, error) {
 	devNum, err := d.GetDeviceCount()
 	if err != nil {
@@ -98,7 +101,7 @@ func (d *DeviceManager) GetDeviceList(devices *[hiAIMaxDeviceNum]uint32) (int32,
 	return devNum, nil
 }
 
-// get device health by id
+// GetDeviceHealth get device health by id
 func (d *DeviceManager) GetDeviceHealth(logicID int32) (uint32, error) {
 	var health C.uint
 
@@ -111,7 +114,7 @@ func (d *DeviceManager) GetDeviceHealth(logicID int32) (uint32, error) {
 
 }
 
-// get physic id form logic id
+// GetPhyID get physic id form logic id
 func (d *DeviceManager) GetPhyID(logicID uint32) (uint32, error) {
 	var phyID C.uint
 
@@ -123,7 +126,7 @@ func (d *DeviceManager) GetPhyID(logicID uint32) (uint32, error) {
 	return uint32(phyID), nil
 }
 
-// get logic id form physic id
+// GetLogicID get logic id form physic id
 func (d *DeviceManager) GetLogicID(phyID uint32) (uint32, error) {
 	var logicID C.uint
 
@@ -136,6 +139,7 @@ func (d *DeviceManager) GetLogicID(phyID uint32) (uint32, error) {
 
 }
 
+// GetChipInfo get chipInfo
 func (d *DeviceManager) GetChipInfo(logicID int32) (*ChipInfo, error) {
 	var chipInfo C.struct_dsmi_chip_info_stru
 	err := C.dsmi_get_chip_info(C.int(logicID), &chipInfo)
@@ -163,4 +167,28 @@ func convertToCharArr(charArr []rune, cgoArr [maxChipName]C.uchar) []rune {
 		}
 	}
 	return charArr
+}
+
+// GetDeviceIP get deviceIP
+func (d *DeviceManager) GetDeviceIP(logicID int32) (string, error) {
+	var portType C.int = 1
+	var portID C.int
+	var ipAddress [hiAIMaxDeviceNum]C.ip_addr_t
+	var maskAddress [hiAIMaxDeviceNum]C.ip_addr_t
+	var retIPAddress string
+	var ipString [4]uint8
+
+	err := C.dsmi_get_device_ip_address(C.int(logicID), portType, portID, &ipAddress[C.int(logicID)],
+		&maskAddress[C.int(logicID)])
+	if err != 0 {
+		return ERROR, fmt.Errorf("getDevice IP address failed, error code: %d", int32(err))
+	}
+
+	unionPara := ipAddress[C.int(logicID)].u_addr
+	for i := 0; i < len(ipString); i++ {
+		ipString[i] = uint8(*(*C.uchar)(unsafe.Pointer(&unionPara[i])))
+	}
+
+	retIPAddress = fmt.Sprintf("%d.%d.%d.%d", ipString[0], ipString[1], ipString[2], ipString[3])
+	return retIPAddress, nil
 }

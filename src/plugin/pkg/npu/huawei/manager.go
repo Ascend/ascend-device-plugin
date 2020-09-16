@@ -18,6 +18,7 @@ package huawei
 
 import (
 	"github.com/fsnotify/fsnotify"
+	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"os"
@@ -36,14 +37,15 @@ type npuDevice struct {
 
 // HwDevManager manages huawei device devices.
 type HwDevManager struct {
-	serves      map[string]*HwPluginServe
+	serves      map[string]HwPluginServeInterface
 	manager     devManager
 	dlogPath    string
 	runMode     string
 	allDevTypes []string
 	allDevs     []npuDevice
 	defaultDevs []string
-	dmgr        *DeviceManager
+	stopFlag    *atomic.Bool
+	dmgr        DeviceMgrInterface
 }
 
 var (
@@ -58,8 +60,9 @@ type devManager interface {
 	GetNPUs(*[]npuDevice, *[]string) error
 	GetDefaultDevs(*[]string) error
 	GetDevState(string) string
-	GetDevPath(string, *string, *string) error
+	GetDevPath(string, *string, *string)
 	GetLogPath([]string, string, *string) error
+	SetDmgr(DeviceMgrInterface)
 }
 
 // NewHwDevManager function is used to new a dev manager.
@@ -67,13 +70,14 @@ func NewHwDevManager(mode, dlogPath string) *HwDevManager {
 	return &HwDevManager{
 		dlogPath: dlogPath,
 		runMode:  mode,
-		serves:   make(map[string]*HwPluginServe),
+		serves:   make(map[string]HwPluginServeInterface),
 		dmgr:     NewDeviceManager(),
+		stopFlag: atomic.NewBool(false),
 	}
 }
 
 // GetNPUs get npu types
-func (hdm *HwDevManager) GetNPUs(timeInterval, checkNum, restoreNum, highThreshold, lowThreshold string, netDetect bool) error {
+func (hdm *HwDevManager) GetNPUs() error {
 	// start dsmi in contaioner
 	err := hdm.dmgr.EnableContainerService()
 	if err != nil {
@@ -85,19 +89,15 @@ func (hdm *HwDevManager) GetNPUs(timeInterval, checkNum, restoreNum, highThresho
 		logger.Error("err to set Run mode ", zap.Error(err))
 		return err
 	}
+
 	switch hdm.runMode {
 	case runMode310:
 		hdm.manager = NewHwAscend310Manager()
 	case runMode910:
-		hdm.manager = NewHwAscend910Manager(timeInterval, checkNum, restoreNum, highThreshold, lowThreshold, netDetect)
-		logger.Info("device plugin start",
-			zap.String("time", timeInterval),
-			zap.String("check", checkNum),
-			zap.String("restore", restoreNum),
-			zap.String("high_threshold", highThreshold),
-			zap.String("low_threshold", lowThreshold),
-			zap.Bool("netDetect", netDetect))
+		hdm.manager = NewHwAscend910Manager()
+		logger.Info("device plugin start")
 	}
+	hdm.manager.SetDmgr(hdm.dmgr)
 
 	if err := hdm.manager.GetDefaultDevs(&hdm.defaultDevs); err != nil {
 		return err
@@ -116,7 +116,7 @@ func (hdm *HwDevManager) GetDevType() []string {
 }
 
 // Serve start grpc server
-func (hdm *HwDevManager) Serve(devType, socketPath, pluginSocket string) {
+func (hdm *HwDevManager) Serve(devType, socketPath, pluginSocket string, pluginServerFunc func(*HwDevManager, string, string) HwPluginServeInterface) {
 	// start sockPath monitor
 	logger.Info("the log path is :", zap.String("logPath", LogPath))
 	pluginSockPath := path.Join(socketPath, pluginSocket)
@@ -133,15 +133,17 @@ func (hdm *HwDevManager) Serve(devType, socketPath, pluginSocket string) {
 	osSignChan := newSignWatcher(syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	restart := true
-	var hps *HwPluginServe
-	nerverStop := true
-	for nerverStop {
+	var hps HwPluginServeInterface
+	for !hdm.stopFlag.Load() {
+		if hdm.stopFlag.Load() {
+			break
+		}
 		if restart {
 			if hps != nil {
 				hps.Stop()
 			}
 			// start
-			hps = NewHwPluginServe(hdm, devType, pluginSockPath)
+			hps = pluginServerFunc(hdm, devType, pluginSockPath)
 			hdm.serves[devType] = hps
 			preStart(hps, pluginSockPath)
 			// end
@@ -153,12 +155,12 @@ func (hdm *HwDevManager) Serve(devType, socketPath, pluginSocket string) {
 			}
 		}
 		// Monitor file signals and system signals
-		restart = hdm.signalWatch(watcher.fileWatcher, osSignChan, restart, hps)
+		restart = hdm.signalWatch(watcher.fileWatcher, osSignChan, restart, hps, pluginSockPath)
 	}
 
 }
 
-func preStart(hps *HwPluginServe, pluginSockPath string) {
+func preStart(hps HwPluginServeInterface, pluginSockPath string) {
 	for {
 		err := hps.GetDevByType()
 		if err == nil {
@@ -175,8 +177,7 @@ func preStart(hps *HwPluginServe, pluginSockPath string) {
 	logger.Info("starting device-plugin server at:", zap.String("pluginSockPath", pluginSockPath))
 }
 
-func (hdm *HwDevManager) signalWatch(watcher *fsnotify.Watcher, sigs chan os.Signal, restart bool, hps *HwPluginServe) bool {
-
+func (hdm *HwDevManager) signalWatch(watcher *fsnotify.Watcher, sigs chan os.Signal, restart bool, hps HwPluginServeInterface, pluginSockPath string) bool {
 	// start sockPath monitor
 	select {
 	case event, signEnd := <-watcher.Events:
@@ -184,15 +185,13 @@ func (hdm *HwDevManager) signalWatch(watcher *fsnotify.Watcher, sigs chan os.Sig
 			logger.Info("no watcher event, channel closed")
 			return restart
 		}
-		if (event.Name == serverSock || event.Name == serverSockfd || event.Name == serverSock310) &&
-			event.Op&fsnotify.Remove == fsnotify.Remove {
+		if event.Name == pluginSockPath && event.Op&fsnotify.Remove == fsnotify.Remove {
 			logger.Warn("notify: file deleted, please check !", zap.String("fileName", serverSock))
-			return restart
+			return true
 		}
 		if event.Name == pluginapi.KubeletSocket && event.Op&fsnotify.Create == fsnotify.Create {
 			logger.Info("notify: file created, restarting.", zap.String("fileName", pluginapi.KubeletSocket))
-			restart = true
-			return restart
+			return true
 		}
 
 	case s, signEnd := <-sigs:
@@ -203,8 +202,7 @@ func (hdm *HwDevManager) signalWatch(watcher *fsnotify.Watcher, sigs chan os.Sig
 		switch s {
 		case syscall.SIGHUP:
 			logger.Info("Received SIGHUP, restarting.")
-			restart = true
-			return restart
+			return true
 		default:
 			logger.Info("Received signal, shutting down.", zap.String("signal", s.String()))
 			hps.Stop()
@@ -212,27 +210,24 @@ func (hdm *HwDevManager) signalWatch(watcher *fsnotify.Watcher, sigs chan os.Sig
 		}
 	}
 	return restart
-
 }
 
 // SetParameters to set Parameters
-func (hdm *HwDevManager) SetParameters(fdFlag, useAscendDocker, volcanoType *bool) {
-	GetFdFlag = *fdFlag
-	UseAscendDocker = *useAscendDocker
-	useVolcanoType = *volcanoType
+func (hdm *HwDevManager) SetParameters(fdFlag, useAscendDocker, volcanoType bool) {
+	GetFdFlag = fdFlag
+	UseAscendDocker = useAscendDocker
+	useVolcanoType = volcanoType
 }
 
 func (hdm *HwDevManager) setRunMode() error {
 	if hdm.runMode != "" {
 		return nil
 	}
-	dmgr := NewDeviceManager()
-	devNum, err := dmgr.GetDeviceCount()
+	devNum, err := hdm.dmgr.GetDeviceCount()
 	if err != nil && devNum == 0 {
 		return err
 	}
-
-	chipinfo, err := dmgr.GetChipInfo(0)
+	chipinfo, err := hdm.dmgr.GetChipInfo(0)
 	if err != nil {
 		return err
 	}

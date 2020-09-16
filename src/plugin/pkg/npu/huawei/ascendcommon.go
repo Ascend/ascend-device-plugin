@@ -103,15 +103,14 @@ func unhealthyState(healthyState uint32, logicID uint32, healthyType string, dmg
 	return nil
 }
 
-func getPhyIDFromDeviceID(deviceID string) (string, error) {
+func getPhyIDFromDeviceID(deviceID string, dmgr DeviceMgrInterface) (string, error) {
 	devidCheck, err := strconv.Atoi(deviceID)
 	if err != nil {
 		logger.Error("transfer device string to Integer failed", zap.String("deviceID", deviceID))
 		return "", err
 	}
 	devID := uint32(devidCheck)
-
-	phyID, err := getPhyID(devID)
+	phyID, err := dmgr.GetPhyID(devID)
 	if err != nil {
 		logger.Error("get PhyID failed", zap.String("deviceID", deviceID))
 		return "", err
