@@ -1,16 +1,3 @@
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: pods-device-plugin
-subjects:
-  - kind: ServiceAccount
-    name: default
-    namespace: kube-system
-roleRef:
-  kind: ClusterRole
-  name: cluster-admin
-  apiGroup: rbac.authorization.k8s.io
----
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -32,7 +19,7 @@ spec:
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
-        - key: huawei.com/Ascend910
+        - key: huawei.com/Ascend310
           operator: Exists
           effect: NoSchedule
         - key: "ascendplugin"
@@ -41,7 +28,7 @@ spec:
           effect: NoSchedule
       priorityClassName: "system-node-critical"
       nodeSelector:
-        accelerator: huawei-Ascend910
+        accelerator: huawei-Ascend310
       containers:
       - image: ascend-k8sdeviceplugin:v0.0.1
         name: device-plugin-01
@@ -53,7 +40,7 @@ spec:
             memory: 500Mi
             cpu: 500m
         command: [ "/bin/bash", "-c", "--"]
-        args: [ "umask 0027;./build/build_in_docker.sh;ascendplugin  --useAscendDocker=${USE_ASCEND_DOCKER} --volcanoType=true" ]
+        args: [ "umask 0027;./build/build_in_docker.sh;ascendplugin  --useAscendDocker=${USE_ASCEND_DOCKER}" ]
         securityContext:
           privileged: true
         imagePullPolicy: Never
@@ -68,11 +55,6 @@ spec:
             mountPath: /etc/timezone
           - name: localtime
             mountPath: /etc/localtime
-        env:
-          - name: NODE_NAME
-            valueFrom:
-              fieldRef:
-                fieldPath: spec.nodeName
       volumes:
         - name: device-plugin
           hostPath:
