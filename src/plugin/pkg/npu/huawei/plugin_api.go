@@ -183,7 +183,11 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 		var minorID string
 		ascendVisibleDevices := ""
 		allocateNum := len(rqt.DevicesIDs)
-		setEnvFromKubelet(rqt, majorID, minorID, &ascendVisibleDevices)
+		error := s.setEnvFromKubelet(rqt, majorID, minorID, &ascendVisibleDevices)
+		if error != nil {
+			logger.Error("plugin doesn't have device", zap.Error(error))
+			return nil, error
+		}
 		// 使用volcano调度
 		if useVolcanoType {
 			ascendVisibleDevices = ""
@@ -208,17 +212,27 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 	return resps, nil
 }
 
-func setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest, majorID, minorID string, ascendVisibleDevices *string) {
+func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest, majorID, minorID string, ascendVisibleDevices *string) error {
 	// 从kubelet获取id
 	for _, id := range rqt.DevicesIDs {
+		_, ok := s.hps.devices[id]
+		if !ok {
+			return fmt.Errorf("plugin doesn't have device %s", id)
+		}
 		err := getAscendDeviceID(id, &majorID, &minorID)
 		if err != nil {
 			logger.Error("getAscendDeviceID", zap.Error(err))
+			return err
 		}
-		*ascendVisibleDevices += majorID + ","
+		phyID, err := getPhyIDFromDeviceID(majorID)
+		if err != nil {
+			logger.Error("get phyID failed", zap.Error(err))
+			return err
+		}
+		*ascendVisibleDevices += phyID + ","
 	}
 	*ascendVisibleDevices = strings.TrimSuffix(*ascendVisibleDevices, ",")
-	return
+	return nil
 }
 
 func (s *pluginAPI) mountDefaultDevice(resp *pluginapi.ContainerAllocateResponse) {
@@ -632,7 +646,12 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int, majorID, minorID stri
 			logger.Error("getAscendDeviceID", zap.Error(err))
 			return err
 		}
-		*ascendVisibleDevices += majorID + ","
+		phyID, err := getPhyIDFromDeviceID(majorID)
+		if err != nil {
+			logger.Error("get phyID failed", zap.Error(err))
+			return err
+		}
+		*ascendVisibleDevices += phyID + ","
 	}
 	*ascendVisibleDevices = strings.TrimSuffix(*ascendVisibleDevices, ",")
 	usedDevices := sets.NewString()
