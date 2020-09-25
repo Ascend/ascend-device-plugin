@@ -24,6 +24,14 @@ const (
 	hiAIDavinciPrefix = "/dev/davinci"
 	hiAISVMDevice     = "/dev/devmm_svm"
 
+	hiAi200RCSVM0            = "/dev/svm0"
+	hiAi200RCLog             = "/dev/log_drv"
+	hiAi200RCEventSched      = "/dev/event_sched"
+	hiAi200RCUpgrade         = "/dev/upgrade"
+	hiAi200RCHiDvpp          = "/dev/hi_dvpp"
+	hiAi200RCMemoryBandwidth = "/dev/memory_bandwidth"
+	hiAi200RCTsAisle         = "/dev/ts_aisle"
+
 	// resource Name
 	resourceNamePrefix  = "huawei.com/"
 	hiAIAscend310Prefix = "Ascend310"
