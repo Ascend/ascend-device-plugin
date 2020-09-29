@@ -18,6 +18,8 @@ package huawei
 
 import (
 	"github.com/fsnotify/fsnotify"
+	"go.uber.org/zap"
+	"net"
 	"os"
 	"os/signal"
 )
@@ -58,4 +60,21 @@ func newSignWatcher(osSigns ...os.Signal) chan os.Signal {
 	}
 
 	return signChan
+}
+
+func createNetListen(pluginSocketPath string) (net.Listener, error) {
+	if _, err := os.Stat(pluginSocketPath); err == nil {
+		logger.Info("Found exist sock file,now remove it.", zap.String("sockName", pluginSocketPath))
+		os.Remove(pluginSocketPath)
+	}
+	netListen, err := net.Listen("unix", pluginSocketPath)
+	if err != nil {
+		logger.Error("device plugin start failed.", zap.String("err", err.Error()))
+		return nil, err
+	}
+	err = os.Chmod(pluginSocketPath, logChmod)
+	if err != nil {
+		logger.Error("chmod error", zap.Error(err))
+	}
+	return netListen, err
 }

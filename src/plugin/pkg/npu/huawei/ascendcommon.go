@@ -101,10 +101,10 @@ func getLogicIDByName(DeviceName string, logicID *int32) error {
 
 }
 
-func unhealthyState(healthyState uint32, logicID uint32, healthyType string) {
-	phyID, err := getPhyID(logicID)
+func unhealthyState(healthyState uint32, logicID uint32, healthyType string, dmgr DeviceMgrInterface) error {
+	phyID, err := dmgr.GetPhyID(logicID)
 	if err != nil {
-		logger.Error("get phyID failed", zap.String("err", err.Error()))
+		return fmt.Errorf("get phyID failed %v", err)
 	}
 	// if logFlag is true,print device error message
 	if logFlag {
@@ -113,17 +113,17 @@ func unhealthyState(healthyState uint32, logicID uint32, healthyType string) {
 			zap.Uint32("phyID", phyID),
 			zap.Uint32(healthyType, healthyState))
 	}
+	return nil
 }
 
-func getPhyIDFromDeviceID(deviceID string) (string, error) {
+func getPhyIDFromDeviceID(deviceID string, dmgr DeviceMgrInterface) (string, error) {
 	devidCheck, err := strconv.Atoi(deviceID)
 	if err != nil {
 		logger.Error("transfer device string to Integer failed", zap.String("deviceID", deviceID))
 		return "", err
 	}
 	devID := uint32(devidCheck)
-
-	phyID, err := getPhyID(devID)
+	phyID, err := dmgr.GetPhyID(devID)
 	if err != nil {
 		logger.Error("get PhyID failed", zap.String("deviceID", deviceID))
 		return "", err

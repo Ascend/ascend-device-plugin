@@ -21,6 +21,7 @@ package huawei
 import "C"
 import (
 	"fmt"
+	"unsafe"
 )
 
 const (
@@ -40,7 +41,28 @@ type ChipInfo struct {
 	ChipVer  string
 }
 
-func enableContainerService() error {
+// DeviceMgrInterface interface for dsmi
+type DeviceMgrInterface interface {
+	EnableContainerService() error
+	GetDeviceCount() (int32, error)
+	GetDeviceList(*[hiAIMaxDeviceNum]uint32) (int32, error)
+	GetDeviceHealth(int32) (uint32, error)
+	GetPhyID(uint32) (uint32, error)
+	GetLogicID(uint32) (uint32, error)
+	GetChipInfo(int32) (*ChipInfo, error)
+	GetDeviceIP(logicID int32) (string, error)
+}
+
+// DeviceManager struct definition
+type DeviceManager struct{}
+
+// NewDeviceManager new DeviceManager instance
+func NewDeviceManager() *DeviceManager {
+	return &DeviceManager{}
+}
+
+// EnableContainerService enable container service
+func (d *DeviceManager) EnableContainerService() error {
 	err := C.dsmi_enable_container_service()
 	if err != 0 {
 		return fmt.Errorf("enable container service faild , error code: %d", int32(err))
@@ -48,8 +70,8 @@ func enableContainerService() error {
 	return nil
 }
 
-// get ascend910 device quantity
-func getDeviceCount() (int32, error) {
+// GetDeviceCount get ascend910 device quantity
+func (d *DeviceManager) GetDeviceCount() (int32, error) {
 	var count C.int
 
 	err := C.dsmi_get_device_count(&count)
@@ -59,9 +81,9 @@ func getDeviceCount() (int32, error) {
 	return int32(count), nil
 }
 
-// device get list
-func getDeviceList(devices *[hiAIMaxDeviceNum]uint32) (int32, error) {
-	devNum, err := getDeviceCount()
+// GetDeviceList device get list
+func (d *DeviceManager) GetDeviceList(devices *[hiAIMaxDeviceNum]uint32) (int32, error) {
+	devNum, err := d.GetDeviceCount()
 	if err != nil {
 		return devNum, err
 	}
@@ -79,8 +101,8 @@ func getDeviceList(devices *[hiAIMaxDeviceNum]uint32) (int32, error) {
 	return devNum, nil
 }
 
-// get device health by id
-func getDeviceHealth(logicID int32) (uint32, error) {
+// GetDeviceHealth get device health by id
+func (d *DeviceManager) GetDeviceHealth(logicID int32) (uint32, error) {
 	var health C.uint
 
 	err := C.dsmi_get_device_health(C.int(logicID), &health)
@@ -92,8 +114,8 @@ func getDeviceHealth(logicID int32) (uint32, error) {
 
 }
 
-// get physic id form logic id
-func getPhyID(logicID uint32) (uint32, error) {
+// GetPhyID get physic id form logic id
+func (d *DeviceManager) GetPhyID(logicID uint32) (uint32, error) {
 	var phyID C.uint
 
 	err := C.dsmi_get_phyid_from_logicid(C.uint(logicID), &phyID)
@@ -104,8 +126,8 @@ func getPhyID(logicID uint32) (uint32, error) {
 	return uint32(phyID), nil
 }
 
-// get logic id form physic id
-func getLogicID(phyID uint32) (uint32, error) {
+// GetLogicID get logic id form physic id
+func (d *DeviceManager) GetLogicID(phyID uint32) (uint32, error) {
 	var logicID C.uint
 
 	err := C.dsmi_get_logicid_from_phyid(C.uint(phyID), &logicID)
@@ -117,7 +139,8 @@ func getLogicID(phyID uint32) (uint32, error) {
 
 }
 
-func getChipInfo(logicID int32) (*ChipInfo, error) {
+// GetChipInfo get chipInfo
+func (d *DeviceManager) GetChipInfo(logicID int32) (*ChipInfo, error) {
 	var chipInfo C.struct_dsmi_chip_info_stru
 	err := C.dsmi_get_chip_info(C.int(logicID), &chipInfo)
 	if err != 0 {
@@ -144,4 +167,28 @@ func convertToCharArr(charArr []rune, cgoArr [maxChipName]C.uchar) []rune {
 		}
 	}
 	return charArr
+}
+
+// GetDeviceIP get deviceIP
+func (d *DeviceManager) GetDeviceIP(logicID int32) (string, error) {
+	var portType C.int = 1
+	var portID C.int
+	var ipAddress [hiAIMaxDeviceNum]C.ip_addr_t
+	var maskAddress [hiAIMaxDeviceNum]C.ip_addr_t
+	var retIPAddress string
+	var ipString [4]uint8
+
+	err := C.dsmi_get_device_ip_address(C.int(logicID), portType, portID, &ipAddress[C.int(logicID)],
+		&maskAddress[C.int(logicID)])
+	if err != 0 {
+		return ERROR, fmt.Errorf("getDevice IP address failed, error code: %d", int32(err))
+	}
+
+	unionPara := ipAddress[C.int(logicID)].u_addr
+	for i := 0; i < len(ipString); i++ {
+		ipString[i] = uint8(*(*C.uchar)(unsafe.Pointer(&unionPara[i])))
+	}
+
+	retIPAddress = fmt.Sprintf("%d.%d.%d.%d", ipString[0], ipString[1], ipString[2], ipString[3])
+	return retIPAddress, nil
 }

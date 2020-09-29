@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	github.com/fsnotify/fsnotify v1.4.8-0.20191012010759-4bf2d1fec783
-	github.com/stretchr/testify v1.4.0
+	go.uber.org/atomic v1.6.0
 	go.uber.org/zap v1.14.0
 	golang.org/x/net v0.0.0-20200301022130-244492dfa37a
 	google.golang.org/grpc v1.28.1

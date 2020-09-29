@@ -1,12 +1,12 @@
 #!/bin/bash
 
-build_version="0.0.1"
+build_version="V20.1.0"
 build_time=$(date +'%Y-%m-%d_%T')
 OUTPUT_NAME="ascendplugin"
 DEPLOYNAME="deploy.sh"
 DOCKER_FILE_NAME="Dockerfile"
 PC_File="ascend_device_plugin.pc"
-docker_images_name="ascend-k8sdeviceplugin:v0.0.1"
+docker_images_name="ascend-k8sdeviceplugin:V20.1.0"
 
 osname=$(grep -i ^id= /etc/os-release| cut -d"=" -f2 | sed 's/"//g');
 ostype=$(arch)

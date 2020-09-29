@@ -17,42 +17,95 @@
 package huawei
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-
+	"fmt"
+	"github.com/golang/protobuf/ptypes/empty"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+	"strings"
+	"testing"
 )
 
-func TestNPU(t *testing.T) {
-	testManager := NewHwDevManager("ascend910", "/var/dlog")
-	as := assert.New(t)
-	as.NotNil(testManager)
-
-	testManager.manager = NewHwPCIManager()
-
-	testManager.allDevTypes = append(testManager.allDevTypes, "davinci-cloud")
-	deviceType := testManager.allDevTypes[0]
-	as.Equal(deviceType, "davinci-mini")
-
-	device1 := npuDevice{
-		devType: deviceType,
-		pciID:   "0000",
-		ID:      "0000",
-		Health:  pluginapi.Healthy,
+// NewFakeHwAscend910Manager for newFakeHwAscend910
+func NewFakeHwAscend910Manager() *HwAscend910Manager {
+	return &HwAscend910Manager{
+		dmgr: newFakeDeviceManager(),
 	}
-	device2 := npuDevice{
-		devType: deviceType,
-		pciID:   "0001",
-		ID:      "0001",
-		Health:  pluginapi.Healthy,
-	}
-	device3 := npuDevice{
-		devType: deviceType,
-		pciID:   "0002",
-		ID:      "0002",
-		Health:  pluginapi.Healthy,
-	}
-	testManager.allDevs = append(testManager.allDevs, device1, device2, device3)
+}
 
+// TestHwAscend910Manager_GetNPUs for getNpus
+func TestHwAscend910Manager_GetNPUs(t *testing.T) {
+	resultDevMap := make(map[string]empty.Empty)
+	for i := 0; i < npuTestNum; i++ {
+		resultDevMap[fmt.Sprintf("Ascend910-%d", i)] = empty.Empty{}
+	}
+	hdm := createFake910HwDevManager("ascend910", false, false, false)
+	err := hdm.manager.GetNPUs(&hdm.allDevs, &hdm.allDevTypes)
+	if err != nil {
+		t.Fatalf("TestHwAscend910Manager_GetNPUs Run Failed")
+	}
+	if hdm.allDevTypes[0] != "Ascend910" {
+		t.Fatalf("TestHwAscend910Manager_GetNPUs Run Failed")
+	}
+	for _, dev := range hdm.allDevs {
+		_, ok := resultDevMap[dev.ID]
+		if !ok {
+			t.Fatalf("TestHwAscend910Manager_GetNPUs Run Failed")
+		}
+	}
+	t.Logf("TestHwAscend910Manager_GetNPUs Run Pass")
+}
+
+// TestHwAscend910Manager_GetDevPath for getDevPath
+func TestHwAscend910Manager_GetDevPath(t *testing.T) {
+	hdm := createFake910HwDevManager("", true, false, false)
+	err := hdm.manager.GetNPUs(&hdm.allDevs, &hdm.allDevTypes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, dev := range hdm.allDevs {
+		state := hdm.manager.GetDevState(dev.ID)
+		if strings.Contains(dev.ID, "3") && state != pluginapi.Unhealthy {
+			t.Fatalf("TestHwAscend910Manager_GetDevPath Run Failed %v", dev)
+		} else if !strings.Contains(dev.ID, "3") && state == pluginapi.Unhealthy {
+			t.Fatalf("TestHwAscend910Manager_GetDevPath Run Failed %v", dev)
+		}
+	}
+	t.Logf("TestHwAscend910Manager_GetDevPath Run Pass")
+}
+
+// TestHwAscend910Manager_GetDevState for get DevState
+func TestHwAscend910Manager_GetDevState(t *testing.T) {
+	hdm := createFake910HwDevManager("", true, false, false)
+	var hostPath string
+	var containerPath string
+	hdm.manager.GetDevPath("0", &hostPath, &containerPath)
+	if hostPath != containerPath && hostPath != "/dev/davinci0" {
+		t.Fatal("TestHwAscend910Manager_GetDevState Run Failed")
+	}
+	t.Logf("TestHwAscend910Manager_GetDevState Run Pass")
+}
+
+// TestHwAscend910Manager_GetLogPath for getLogPath
+func TestHwAscend910Manager_GetLogPath(t *testing.T) {
+	hdm := createFake910HwDevManager("", true, false, false)
+
+	var logPath string
+	devID := make([]string, 0)
+	devID = append(devID, "Ascend910-0")
+	fmt.Printf("deviceId%v, %d", devID, len(devID))
+	err := hdm.manager.GetLogPath(devID, "/var/dlog", &logPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	splitstring := strings.Split(logPath, "_")
+	if len(splitstring) != splitTestStringNum || !strings.Contains(logPath, "0") {
+		t.Fail()
+	}
+	t.Logf("TestHwAscend910Manager_GetLogPath Run Pass ")
+}
+
+func createFake910HwDevManager(mode string, fdFlag, useAscendDocker, volcanoType bool) *HwDevManager {
+	hdm := NewHwDevManager(mode, "/var/dlog")
+	hdm.SetParameters(fdFlag, useAscendDocker, volcanoType)
+	hdm.manager = NewFakeHwAscend910Manager()
+	return hdm
 }

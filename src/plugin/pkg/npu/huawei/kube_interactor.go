@@ -25,7 +25,6 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -36,7 +35,7 @@ import (
 
 // KubeInteractor include kubeclientSet & nodeName
 type KubeInteractor struct {
-	clientset *kubernetes.Clientset
+	clientset kubernetes.Interface
 	nodeName  string
 }
 
@@ -66,33 +65,6 @@ func NewKubeInteractor() (*KubeInteractor, error) {
 		clientset: client,
 		nodeName:  os.Getenv("NODE_NAME"),
 	}, nil
-}
-
-func (ki *KubeInteractor) getPendingPodsOnNode() ([]v1.Pod, error) {
-	var (
-		res []v1.Pod
-		pl  *v1.PodList
-		err error
-	)
-	selector := fields.SelectorFromSet(fields.Set{"spec.nodeName": ki.nodeName, "status.phase": string(v1.PodPending)})
-	err = wait.PollImmediate(interval*time.Second, timeout*time.Second, func() (bool, error) {
-		pl, err = ki.clientset.CoreV1().Pods(v1.NamespaceAll).List(metav1.ListOptions{
-			FieldSelector: selector.String(),
-		})
-		if err != nil {
-			return false, nil
-		}
-		return true, nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("kube interactor timedout: %v", err)
-	}
-
-	for _, pod := range pl.Items {
-		res = append(res, pod)
-	}
-
-	return res, nil
 }
 
 func (ki *KubeInteractor) patchAnnotationOnNode(allocatableDevices sets.String) error {
