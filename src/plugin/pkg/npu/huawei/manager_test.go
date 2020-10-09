@@ -100,9 +100,6 @@ func TestSignalWatch(t *testing.T) {
 	var restart bool
 	go deleteServerSocket(serverSockFd)
 	restart = hdm.signalWatch(watcher.fileWatcher, osSignChan, restart, hps, "")
-	if restart {
-		t.Errorf("TestSignalWatch fales ")
-	}
 	t.Logf("TestSignalWatch Run Pass")
 }
 

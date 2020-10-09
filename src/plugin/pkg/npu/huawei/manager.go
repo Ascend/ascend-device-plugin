@@ -186,8 +186,7 @@ func (hdm *HwDevManager) signalWatch(watcher *fsnotify.Watcher, sigs chan os.Sig
 			return restart
 		}
 		if event.Name == pluginSockPath && event.Op&fsnotify.Remove == fsnotify.Remove {
-			logger.Warn("notify: file deleted, please check !", zap.String("fileName", serverSock))
-			return true
+			logger.Warn("notify: file deleted, please check !", zap.String("fileName", pluginSockPath))
 		}
 		if event.Name == pluginapi.KubeletSocket && event.Op&fsnotify.Create == fsnotify.Create {
 			logger.Info("notify: file created, restarting.", zap.String("fileName", pluginapi.KubeletSocket))
