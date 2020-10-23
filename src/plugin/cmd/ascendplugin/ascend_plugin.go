@@ -27,17 +27,18 @@ import (
 
 const (
 	// socket name
-	kubeletSocket = "kubelet.sock"
-	dlogPath      = "/var/dlog"
-	socketPath    = "/var/lib/kubelet/device-plugins"
+	dlogPath   = "/var/dlog"
+	socketPath = "/var/lib/kubelet/device-plugins"
+	logPath    = "/var/log/devicePlugin"
 )
 
 var (
-	mode           = flag.String("mode", "", "device plugin running mode")
-	fdFlag         = flag.Bool("fdFlag", false, "set the connect system is fd system")
-	useAscendDocer = flag.Bool("useAscendDocker", true, "use ascend docker or not")
-	volcanoType    = flag.Bool("volcanoType", false, "use volcano to schedue")
-	version        = flag.Bool("version", false, "show k8s device plugin version ")
+	mode            = flag.String("mode", "", "device plugin running mode")
+	fdFlag          = flag.Bool("fdFlag", false, "set the connect system is fd system")
+	useAscendDocker = flag.Bool("useAscendDocker", true, "use ascend docker or not")
+	volcanoType     = flag.Bool("volcanoType", false, "use volcano to schedue")
+	version         = flag.Bool("version", false, "show k8s device plugin version ")
+	logDir          = flag.String("logDir", "/var/alog/AtlasEdge_log", "log path")
 )
 
 var (
@@ -45,16 +46,27 @@ var (
 	BuildName string
 	// BuildVersion show app version
 	BuildVersion string
-	// BuildTime show build time
-	BuildTime string
 )
 
 func main() {
-	var log *zap.Logger
-	log = hwmanager.ConfigLog(hwmanager.LogPath)
 
 	flag.Parse()
+	var loggerPath string
 
+	loggerPath = fmt.Sprintf("%s/%s", logPath, hwmanager.LogName)
+	if *fdFlag {
+		loggerPath = fmt.Sprintf("%s/%s", *logDir, hwmanager.LogName)
+	}
+	err := hwmanager.NewLogger(loggerPath)
+	if err != nil {
+		fmt.Errorf("new logger is error %v", err.Error())
+		os.Exit(1)
+	}
+	logger := hwmanager.GetLogger()
+	if logger == nil {
+		fmt.Errorf("logger is nil")
+		os.Exit(1)
+	}
 	if *version {
 		fmt.Printf("%s version: %s\n", BuildName, BuildVersion)
 		os.Exit(0)
@@ -63,27 +75,27 @@ func main() {
 	neverStop := make(chan struct{})
 	switch *mode {
 	case "ascend310", "pci", "vnpu", "ascend910", "":
-		log.Info("ascend device plugin running mode", zap.String("mode", *mode))
+		logger.Info("ascend device plugin running mode", zap.String("mode", *mode))
 	default:
-		log.Info("unSupport mode, waiting indefinitely", zap.String("mode", *mode))
+		logger.Info("unSupport mode, waiting indefinitely", zap.String("mode", *mode))
 		<-neverStop
 	}
 
-	hdm := hwmanager.NewHwDevManager(*mode, dlogPath)
-	hdm.SetParameters(*fdFlag, *useAscendDocer, *volcanoType)
+	hdm := hwmanager.NewHwDevManager(*mode, dlogPath, loggerPath)
+	hdm.SetParameters(*fdFlag, *useAscendDocker, *volcanoType)
 	if err := hdm.GetNPUs(); err != nil {
-		log.Error("no devices found. waiting indefinitely", zap.String("err", err.Error()))
+		logger.Error("no devices found. waiting indefinitely", zap.String("err", err.Error()))
 		<-neverStop
 	}
 
 	devTypes := hdm.GetDevType()
 	if len(devTypes) == 0 {
-		log.Error("no devices type found. waiting indefinitely")
+		logger.Error("no devices type found. waiting indefinitely")
 		<-neverStop
 	}
 
 	for _, devType := range devTypes {
-		log.Info("ascend device serve started", zap.String("devType", devType))
+		logger.Info("ascend device serve started", zap.String("devType", devType))
 		pluginSocket := fmt.Sprintf("%s.sock", devType)
 		go hdm.Serve(devType, socketPath, pluginSocket, hwmanager.NewHwPluginServe)
 	}

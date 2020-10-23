@@ -66,7 +66,8 @@ type devManager interface {
 }
 
 // NewHwDevManager function is used to new a dev manager.
-func NewHwDevManager(mode, dlogPath string) *HwDevManager {
+func NewHwDevManager(mode, dlogPath, logPath string) *HwDevManager {
+	logger.Info("the log path is :", zap.String("logPath", logPath))
 	return &HwDevManager{
 		dlogPath: dlogPath,
 		runMode:  mode,
@@ -118,7 +119,6 @@ func (hdm *HwDevManager) GetDevType() []string {
 // Serve start grpc server
 func (hdm *HwDevManager) Serve(devType, socketPath, pluginSocket string, pluginServerFunc func(*HwDevManager, string, string) HwPluginServeInterface) {
 	// start sockPath monitor
-	logger.Info("the log path is :", zap.String("logPath", LogPath))
 	pluginSockPath := path.Join(socketPath, pluginSocket)
 
 	logger.Info("Starting socket file watcher.")

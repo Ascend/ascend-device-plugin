@@ -50,11 +50,11 @@ const (
 
 	// logger setting
 
-	// LogPath save log file
-	LogPath                 = "/var/log/devicePlugin/devicePlugin.log"
-	fileMaxSize             = 1000                                                   // each log file size
+	// LogName save log file
+	LogName                 = "devicePlugin.log"
+	fileMaxSize             = 30                                                     // each log file size
 	maxBackups              = 20                                                     // max backup
-	maxAge                  = 28                                                     // the log file last time
+	maxAge                  = 10                                                     // the log file last time
 	podDeviceKey            = "atlas.kubectl.kubernetes.io/ascend-910-configuration" // config map name
 	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"                               // visible env
 	logChmod                = 0640
