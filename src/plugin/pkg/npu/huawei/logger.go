@@ -38,7 +38,6 @@ func NewLogger(loggerPath string) error {
 	error := os.Chmod(loggerPath, logChmod)
 	if error != nil && logger != nil {
 		logger.Error("logger is error", zap.Error(error))
-		return error
 	}
 	return nil
 }
