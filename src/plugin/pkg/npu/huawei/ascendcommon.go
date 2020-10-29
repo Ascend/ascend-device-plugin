@@ -25,22 +25,35 @@ import (
 	"strings"
 )
 
-func getDefaultDevices(defaultDeivces *[]string) error {
-	if _, err := os.Stat(hiAIHDCDevice); err != nil {
-		return err
-	}
-
+func getDefaultDevices(defaultDevices *[]string) error {
+	// hiAIManagerDevice is required
 	if _, err := os.Stat(hiAIManagerDevice); err != nil {
 		return err
 	}
+	*defaultDevices = append(*defaultDevices, hiAIManagerDevice)
 
-	*defaultDeivces = append(*defaultDeivces, hiAIHDCDevice, hiAIManagerDevice)
-
-	if _, err := os.Stat(hiAISVMDevice); err == nil {
-		*defaultDeivces = append(*defaultDeivces, hiAISVMDevice)
+	setDeviceByPath(defaultDevices, hiAIHDCDevice)
+	setDeviceByPath(defaultDevices, hiAISVMDevice)
+	if GetFdFlag {
+		setDeviceByPathWhen200RC(defaultDevices)
 	}
-
 	return nil
+}
+
+func setDeviceByPathWhen200RC(defaultDevices *[]string) {
+	setDeviceByPath(defaultDevices, hiAi200RCEventSched)
+	setDeviceByPath(defaultDevices, hiAi200RCHiDvpp)
+	setDeviceByPath(defaultDevices, hiAi200RCLog)
+	setDeviceByPath(defaultDevices, hiAi200RCMemoryBandwidth)
+	setDeviceByPath(defaultDevices, hiAi200RCSVM0)
+	setDeviceByPath(defaultDevices, hiAi200RCTsAisle)
+	setDeviceByPath(defaultDevices, hiAi200RCUpgrade)
+}
+
+func setDeviceByPath(defaultDevices *[]string, device string) {
+	if _, err := os.Stat(device); err == nil {
+		*defaultDevices = append(*defaultDevices, device)
+	}
 }
 
 func getAscendDeviceID(id string, majorID *string, minorID *string) error {
