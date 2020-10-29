@@ -35,11 +35,7 @@ func NewLogger(loggerPath string) error {
 		return fmt.Errorf("log path is error")
 	}
 	logger = ConfigLog(loggerPath)
-	error := os.Chmod(loggerPath, logChmod)
-	if error != nil && logger != nil {
-		logger.Error("logger is error", zap.Error(error))
-		return error
-	}
+	os.Chmod(loggerPath, logChmod)
 	return nil
 }
 
