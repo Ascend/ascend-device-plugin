@@ -16,8 +16,107 @@
 
 package huawei
 
-// #cgo pkg-config: ascend_device_plugin
-// #include "dsmi_common_interface.h"
+// #cgo LDFLAGS: -ldl
+/*
+ #include <stddef.h>
+#include <dlfcn.h>
+#include <stdlib.h>
+
+#include "dsmi_common_interface.h"
+
+// dsmiHandle is the handle for dynamically loaded libdrvdsmi_host.so
+void *dsmiHandle;
+#define SO_NOT_FOUND  -99999
+#define FUNCTION_NOT_FOUND  -99998
+#define SUCCESS  0
+#define ERROR_UNKNOWN  -99997
+#define CALL_FUNC(func_name, ...) 						\
+	if (func_name##_func == NULL){  					\
+			return FUNCTION_NOT_FOUND; 					\
+		}  												\
+    return func_name##_func(__VA_ARGS__);				\
+
+int (*dsmi_get_device_count_func)(int *device_count);
+int dsmi_get_device_count(int *device_count){
+    CALL_FUNC(dsmi_get_device_count,device_count)
+}
+
+int (*dsmi_list_device_func)(int device_id_list[], int count);
+int dsmi_list_device(int device_id_list[], int count){
+	CALL_FUNC(dsmi_list_device,device_id_list,count)
+}
+
+int (*dsmi_get_device_health_func)(int device_id, unsigned int *phealth);
+int dsmi_get_device_health(int device_id, unsigned int *phealth){
+	CALL_FUNC(dsmi_get_device_health,device_id,phealth)
+}
+
+int (*dsmi_get_phyid_from_logicid_func)(unsigned int logicid, unsigned int *phyid);
+int dsmi_get_phyid_from_logicid(unsigned int logicid, unsigned int *phyid){
+	CALL_FUNC(dsmi_get_phyid_from_logicid,logicid,phyid)
+}
+
+int (*dsmi_get_logicid_from_phyid_func)(unsigned int phyid, unsigned int *logicid);
+int dsmi_get_logicid_from_phyid(unsigned int phyid, unsigned int *logicid){
+	CALL_FUNC(dsmi_get_logicid_from_phyid,phyid,logicid)
+}
+
+int (*dsmi_get_device_errorcode_func)(int device_id, int *errorcount, unsigned int *perrorcode);
+int dsmi_get_device_errorcode(int device_id, int *errorcount, unsigned int *perrorcode){
+	CALL_FUNC(dsmi_get_device_errorcode,device_id,errorcount,perrorcode)
+}
+
+int (*dsmi_get_chip_info_func)(int device_id, struct dsmi_chip_info_stru *chip_info);
+int dsmi_get_chip_info(int device_id, struct dsmi_chip_info_stru *chip_info){
+	CALL_FUNC(dsmi_get_chip_info,device_id,chip_info)
+}
+
+int (*dsmi_get_device_ip_address_func)(int device_id, int port_type, int port_id, ip_addr_t *ip_address,
+    ip_addr_t *mask_address);
+int dsmi_get_device_ip_address(int device_id, int port_type, int port_id, ip_addr_t *ip_address,
+    ip_addr_t *mask_address){
+	CALL_FUNC(dsmi_get_device_ip_address,device_id,port_type,port_id,ip_address,mask_address)
+}
+
+
+// load .so files and functions
+int dsmiInit_dl(void){
+	dsmiHandle = dlopen("libdrvdsmi_host.so",RTLD_LAZY);
+	if (dsmiHandle == NULL) {
+		dsmiHandle = dlopen("libdrvdsmi.so",RTLD_LAZY);
+
+	}
+
+	if (dsmiHandle == NULL){
+		return SO_NOT_FOUND;
+	}
+
+	dsmi_list_device_func = dlsym(dsmiHandle,"dsmi_list_device");
+
+	dsmi_get_device_count_func = dlsym(dsmiHandle,"dsmi_get_device_count");
+
+ 	dsmi_get_device_health_func = dlsym(dsmiHandle,"dsmi_get_device_health");
+
+	dsmi_get_phyid_from_logicid_func = dlsym(dsmiHandle,"dsmi_get_phyid_from_logicid");
+
+	dsmi_get_logicid_from_phyid_func = dlsym(dsmiHandle,"dsmi_get_logicid_from_phyid");
+
+	dsmi_get_device_errorcode_func = dlsym(dsmiHandle,"dsmi_get_device_errorcode");
+
+	dsmi_get_chip_info_func = dlsym(dsmiHandle,"dsmi_get_chip_info");
+
+	dsmi_get_device_ip_address_func = dlsym(dsmiHandle,"dsmi_get_device_ip_address");
+
+	return SUCCESS;
+}
+
+int dsmiShutDown(void){
+	if (dsmiHandle == NULL) {
+   	 	return SUCCESS;
+  	}
+	return (dlclose(dsmiHandle) ? ERROR_UNKNOWN : SUCCESS);
+}
+*/
 import "C"
 import (
 	"fmt"
@@ -43,7 +142,6 @@ type ChipInfo struct {
 
 // DeviceMgrInterface interface for dsmi
 type DeviceMgrInterface interface {
-	EnableContainerService() error
 	GetDeviceCount() (int32, error)
 	GetDeviceList(*[hiAIMaxDeviceNum]uint32) (int32, error)
 	GetDeviceHealth(int32) (uint32, error)
@@ -56,18 +154,13 @@ type DeviceMgrInterface interface {
 // DeviceManager struct definition
 type DeviceManager struct{}
 
+func init() {
+	C.dsmiInit_dl()
+}
+
 // NewDeviceManager new DeviceManager instance
 func NewDeviceManager() *DeviceManager {
 	return &DeviceManager{}
-}
-
-// EnableContainerService enable container service
-func (d *DeviceManager) EnableContainerService() error {
-	err := C.dsmi_enable_container_service()
-	if err != 0 {
-		return fmt.Errorf("enable container service faild , error code: %d", int32(err))
-	}
-	return nil
 }
 
 // GetDeviceCount get ascend910 device quantity
@@ -191,4 +284,9 @@ func (d *DeviceManager) GetDeviceIP(logicID int32) (string, error) {
 
 	retIPAddress = fmt.Sprintf("%d.%d.%d.%d", ipString[0], ipString[1], ipString[2], ipString[3])
 	return retIPAddress, nil
+}
+
+// ShutDown clean the dynamically loaded resource
+func ShutDown() {
+	C.dsmiShutDown()
 }

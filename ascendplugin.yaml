@@ -40,7 +40,7 @@ spec:
             memory: 500Mi
             cpu: 500m
         command: [ "/bin/bash", "-c", "--"]
-        args: [ "umask 0027;./build/build_in_docker.sh;ascendplugin  --useAscendDocker=${USE_ASCEND_DOCKER}" ]
+        args: [ "umask 0027;ascendplugin  --useAscendDocker=${USE_ASCEND_DOCKER}" ]
         securityContext:
           privileged: true
         imagePullPolicy: Never

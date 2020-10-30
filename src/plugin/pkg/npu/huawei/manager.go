@@ -79,13 +79,8 @@ func NewHwDevManager(mode, dlogPath, logPath string) *HwDevManager {
 
 // GetNPUs get npu types
 func (hdm *HwDevManager) GetNPUs() error {
-	// start dsmi in contaioner
-	err := hdm.dmgr.EnableContainerService()
-	if err != nil {
-		logger.Error("enable container Service failed. error", zap.String("error", err.Error()))
-	}
 
-	err = hdm.setRunMode()
+	err := hdm.setRunMode()
 	if err != nil {
 		logger.Error("err to set Run mode ", zap.Error(err))
 		return err
