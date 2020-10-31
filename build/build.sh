@@ -64,7 +64,7 @@ function zip_file(){
 
 function build_docker_images(){
     cd "${TOP_DIR}"
-    docker rmi "${docker_images_name}"
+    docker rmi "${docker_images_name}" || true
     docker build -t "${docker_images_name}" .
     docker save "${docker_images_name}" | gzip > "${docker_zip_name}"
     mv "${docker_zip_name}" ./output/

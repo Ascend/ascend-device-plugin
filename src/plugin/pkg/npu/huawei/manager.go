@@ -200,6 +200,7 @@ func (hdm *HwDevManager) signalWatch(watcher *fsnotify.Watcher, sigs chan os.Sig
 		default:
 			logger.Info("Received signal, shutting down.", zap.String("signal", s.String()))
 			hps.Stop()
+			hdm.dmgr.ShutDown()
 			os.Exit(0)
 		}
 	}

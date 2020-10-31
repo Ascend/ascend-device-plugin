@@ -149,6 +149,7 @@ type DeviceMgrInterface interface {
 	GetLogicID(uint32) (uint32, error)
 	GetChipInfo(int32) (*ChipInfo, error)
 	GetDeviceIP(logicID int32) (string, error)
+	ShutDown()
 }
 
 // DeviceManager struct definition
@@ -287,6 +288,6 @@ func (d *DeviceManager) GetDeviceIP(logicID int32) (string, error) {
 }
 
 // ShutDown clean the dynamically loaded resource
-func ShutDown() {
+func (d *DeviceManager) ShutDown() {
 	C.dsmiShutDown()
 }
