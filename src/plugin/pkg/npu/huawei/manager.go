@@ -79,13 +79,8 @@ func NewHwDevManager(mode, dlogPath, logPath string) *HwDevManager {
 
 // GetNPUs get npu types
 func (hdm *HwDevManager) GetNPUs() error {
-	// start dsmi in contaioner
-	err := hdm.dmgr.EnableContainerService()
-	if err != nil {
-		logger.Error("enable container Service failed. error", zap.String("error", err.Error()))
-	}
 
-	err = hdm.setRunMode()
+	err := hdm.setRunMode()
 	if err != nil {
 		logger.Error("err to set Run mode ", zap.Error(err))
 		return err
@@ -205,6 +200,7 @@ func (hdm *HwDevManager) signalWatch(watcher *fsnotify.Watcher, sigs chan os.Sig
 		default:
 			logger.Info("Received signal, shutting down.", zap.String("signal", s.String()))
 			hps.Stop()
+			hdm.dmgr.ShutDown()
 			os.Exit(0)
 		}
 	}

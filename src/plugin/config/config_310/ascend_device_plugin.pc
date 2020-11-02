@@ -1,9 +1,0 @@
-#Package Information for pkg-config
-prefix=/usr/local/Ascend
-libdriver=${prefix}/driver/lib64
-includedir=${prefix}/driver/kernel/inc/driver/
-Name: ascend_docker_plugin
-Description: Ascend device plugin
-Version: 0.0.1
-Libs: -L${libdriver}/    -ldrvdsmi_host
-Cflags: -I${includedir}

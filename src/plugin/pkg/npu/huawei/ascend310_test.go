@@ -29,6 +29,10 @@ const (
 	splitTestStringNum = 2
 )
 
+func init() {
+	NewLogger("/var/log/devicePlugin")
+}
+
 // NewHwAscend310Manager used to create ascend 310 manager
 func NewFakeHwAscend310Manager() *HwAscend310Manager {
 	return &HwAscend310Manager{
@@ -110,7 +114,7 @@ func TestHwAscend310Manager_GetLogPath(t *testing.T) {
 }
 
 func createFakeHwDevManager(mode string, fdFlag, useAscendDocker, volcanoType bool) *HwDevManager {
-	hdm := NewHwDevManager(mode, "/var/dlog")
+	hdm := NewHwDevManager(mode, "/var/dlog", "/var/log/devicePlugin/")
 	hdm.SetParameters(fdFlag, useAscendDocker, volcanoType)
 	hdm.manager = NewFakeHwAscend310Manager()
 	return hdm
