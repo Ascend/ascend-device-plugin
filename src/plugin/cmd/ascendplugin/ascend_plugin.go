@@ -59,12 +59,12 @@ func main() {
 	}
 	err := hwmanager.NewLogger(loggerPath)
 	if err != nil {
-		fmt.Errorf("new logger is error %v", err.Error())
+		fmt.Printf("new logger is error %v", err.Error())
 		os.Exit(1)
 	}
 	logger := hwmanager.GetLogger()
 	if logger == nil {
-		fmt.Errorf("logger is nil")
+		fmt.Printf("logger is nil")
 		os.Exit(1)
 	}
 	if *version {
