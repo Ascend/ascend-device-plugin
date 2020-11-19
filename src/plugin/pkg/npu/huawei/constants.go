@@ -52,11 +52,11 @@ const (
 
 	// LogName save log file
 	LogName                 = "devicePlugin.log"
-	fileMaxSize             = 30                                                     // each log file size
-	maxBackups              = 20                                                     // max backup
-	maxAge                  = 10                                                     // the log file last time
-	podDeviceKey            = "atlas.kubectl.kubernetes.io/ascend-910-configuration" // config map name
-	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"                               // visible env
+	fileMaxSize             = 30                                                      // each log file size
+	maxBackups              = 20                                                      // max backup
+	maxAge                  = 10                                                      // the log file last time
+	podDeviceKey            = "ascend.kubectl.kubernetes.io/ascend-910-configuration" // config map name
+	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"                                // visible env
 	logChmod                = 0640
 
 	huaweiAscend910  = "huawei.com/Ascend910"

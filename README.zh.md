@@ -211,7 +211,7 @@
         
         ```
 
-    -   Atlas深度学习组件使用yaml文件。
+    -   深度学习组件使用yaml文件。
 
         **ascendplugin-volcano.yaml**
 
