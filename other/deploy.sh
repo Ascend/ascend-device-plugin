@@ -357,7 +357,7 @@ check_deploy_process()
     	exit 1
     else
     	touch ${TMPFILE}
-    	chmod 750 $TMPFILE
+    	chmod 600 $TMPFILE
     fi
 
 	trap "rm -f ${TMPFILE}; exit"  0 1 2 3 9 15
