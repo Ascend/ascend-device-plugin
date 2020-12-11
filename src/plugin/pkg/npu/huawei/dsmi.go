@@ -264,7 +264,11 @@ func convertToCharArr(charArr []rune, cgoArr [maxChipName]C.uchar) []rune {
 }
 
 // GetDeviceIP get deviceIP
-func (d *DeviceManager) GetDeviceIP(logicID int32) (string, error) {
+func (d *DeviceManager) GetDeviceIP(phyID int32) (string, error) {
+	logicID, err := d.GetLogicID(uint32(phyID))
+	if err != nil {
+		return ERROR, fmt.Errorf("transfor phyID %d to logicID failed, error code: %v", phyID, err)
+	}
 	var portType C.int = 1
 	var portID C.int
 	var ipAddress [hiAIMaxDeviceNum]C.ip_addr_t
@@ -272,10 +276,10 @@ func (d *DeviceManager) GetDeviceIP(logicID int32) (string, error) {
 	var retIPAddress string
 	var ipString [4]uint8
 
-	err := C.dsmi_get_device_ip_address(C.int(logicID), portType, portID, &ipAddress[C.int(logicID)],
+	retCode := C.dsmi_get_device_ip_address(C.int(logicID), portType, portID, &ipAddress[C.int(logicID)],
 		&maskAddress[C.int(logicID)])
-	if err != 0 {
-		return ERROR, fmt.Errorf("getDevice IP address failed, error code: %d", int32(err))
+	if retCode != 0 {
+		return ERROR, fmt.Errorf("getDevice IP address failed, error code: %d", int32(retCode))
 	}
 
 	unionPara := ipAddress[C.int(logicID)].u_addr
