@@ -219,7 +219,7 @@ func (hdm *HwDevManager) setRunMode() error {
 		return nil
 	}
 	devNum, err := hdm.dmgr.GetDeviceCount()
-	if err != nil && devNum == 0 {
+	if err != nil || devNum == 0 {
 		return err
 	}
 	chipinfo, err := hdm.dmgr.GetChipInfo(0)
