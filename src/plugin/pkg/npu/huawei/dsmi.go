@@ -30,11 +30,7 @@ void *dsmiHandle;
 #define FUNCTION_NOT_FOUND  -99998
 #define SUCCESS  0
 #define ERROR_UNKNOWN  -99997
-#define CALL_FUNC(func_name, ...) 						\
-	if (func_name##_func == NULL){  					\
-			return FUNCTION_NOT_FOUND; 					\
-		}  												\
-    return func_name##_func(__VA_ARGS__);				\
+#define CALL_FUNC(name,...) if(name##_func==NULL){return FUNCTION_NOT_FOUND;}return name##_func(__VA_ARGS__);
 
 int (*dsmi_get_device_count_func)(int *device_count);
 int dsmi_get_device_count(int *device_count){
