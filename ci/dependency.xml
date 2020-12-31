@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project>
+    <artifact>
+        <versionType>Component</versionType>
+        <repoType>Generic</repoType>
+        <id>
+            <offering>CANN</offering>
+            <componentName>ascend-device-plugin</componentName>
+            <componentVersion>20.10.0.B010</componentVersion>
+        </id>
+        <isClear>N</isClear>
+        <copies>
+            <copy>
+                <source>output/</source>
+                <dest />
+            </copy>
+        </copies>
+    </artifact>
+    <dependencies>
+        <!-- aicpu_kernels infer -->
+        <dependency>
+            <versionType>BVersion</versionType>
+            <repoType>Generic</repoType>
+            <id>
+                <offering>Tuscany</offering>
+                <version>Tuscany V100R001C75B020</version>
+            </id>
+            <copies>
+                <copy>
+                    <source>Alpha/Inference/InstallPackages/Ascend310-driver-*.run</source>
+                    <dest>platform/Tuscany</dest>
+                </copy>
+            </copies>
+        </dependency>
+    </dependencies>
+</project>
