@@ -114,7 +114,7 @@
         
         ```
 
-    -   深度学习组件使用yaml文件。
+    -   MindX DL使用yaml文件。
 
         **ascendplugin-volcano.yaml**
 
@@ -203,6 +203,7 @@
         
         ```
 
+
 3.  执行以下命令，编辑Dockerfile文件，将镜像修改为查询的镜像名及版本号。
 
     **vi** _/home/test/_ascend-device-plugin**/Dockerfile**
@@ -275,10 +276,10 @@
 
     localhost.localdomain为有Ascend 910（或Ascend 310）的节点名称，可通过**kubectl get node**命令查看。
 
-    标签名称需要和[2](#编译Ascend-Device-Plugin.md#zh-cn_topic_0252775101_li8538035183714)中的nodeSelector标签名称保持一致。
+    标签名称需要和“编译Ascend Device Plugin”章节中yaml文件里的nodeSelector标签名称保持一致。
 
     >![](figures/icon-note.gif) **说明：** 
-    >如需扩容集群节点，请参考[2](#zh-cn_topic_0269670254_li1372334715567)\~[3](#zh-cn_topic_0269670254_li26268471380)操作将新节点加入集群。
+    >如有新节点需要部署K8s插件，请执行[2](#zh-cn_topic_0269670254_li1372334715567)\~[3](#zh-cn_topic_0269670254_li26268471380)。
 
 4.  执行以下命令，部署DaemonSet。
 
@@ -469,7 +470,14 @@
 </th>
 </tr>
 </thead>
-<tbody><tr id="zh-cn_topic_0280467800_row118567425441"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="zh-cn_topic_0280467800_p08571442174415"><a name="zh-cn_topic_0280467800_p08571442174415"></a><a name="zh-cn_topic_0280467800_p08571442174415"></a>v20.2.0</p>
+<tbody><tr id="row137501013384"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="p137501613585"><a name="p137501613585"></a><a name="p137501613585"></a>v20.2.0</p>
+</td>
+<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.2 "><p id="p1675010135811"><a name="p1675010135811"></a><a name="p1675010135811"></a>2021-01-08</p>
+</td>
+<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.3 "><p id="p3750813889"><a name="p3750813889"></a><a name="p3750813889"></a>优化“创建DaemonSet”描述。</p>
+</td>
+</tr>
+<tr id="zh-cn_topic_0280467800_row118567425441"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="zh-cn_topic_0280467800_p08571442174415"><a name="zh-cn_topic_0280467800_p08571442174415"></a><a name="zh-cn_topic_0280467800_p08571442174415"></a>v20.2.0</p>
 </td>
 <td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.2 "><p id="zh-cn_topic_0280467800_p38571542154414"><a name="zh-cn_topic_0280467800_p38571542154414"></a><a name="zh-cn_topic_0280467800_p38571542154414"></a>2020-11-18</p>
 </td>
