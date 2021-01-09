@@ -114,7 +114,7 @@ The device management plug-in provides the following functions:
         
         ```
 
-    -   The YAML file used by the  deep learning component
+    -   YAML file of MindX DL
 
         **ascendplugin-volcano.yaml**
 
@@ -203,6 +203,7 @@ The device management plug-in provides the following functions:
         
         ```
 
+
 3.  Run the following command to edit the  **Dockerfile**  file and change the image name and version to the obtained values:
 
     **vi** _/home/test/_ascend-device-plugin**/Dockerfile**
@@ -275,10 +276,10 @@ The device management plug-in provides the following functions:
 
     **localhost.localdomain**  is the name of the node with Ascend 910 or  Ascend 310. You can run the  **kubectl get node**  command to view the node name.
 
-    The label name must be the same as the name specified by  **nodeSelector**  in  [2](#compiling-the-ascend-device-plugin.md#en-us_topic_0252775101_li8538035183714).
+    The label name must be the same as the  **nodeSelector**  label name in the YAML file in "Compiling the Ascend Device Plugin."
 
     >![](figures/icon-note.gif) **NOTE:** 
-    >You can perform  [2](#en-us_topic_0269670254_li1372334715567)  to  [3](#en-us_topic_0269670254_li26268471380)  to add new nodes to the cluster.
+    >If the K8s plugin needs to be deployed on a new node, perform  [2](#en-us_topic_0269670254_li1372334715567)  to  [3](#en-us_topic_0269670254_li26268471380).
 
 4.  Run the following commands to deploy DaemonSet:
 
@@ -469,11 +470,18 @@ The device management plug-in provides the following functions:
 </th>
 </tr>
 </thead>
-<tbody><tr id="en-us_topic_0280467800_row118567425441"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="en-us_topic_0280467800_p08571442174415"><a name="en-us_topic_0280467800_p08571442174415"></a><a name="en-us_topic_0280467800_p08571442174415"></a>v20.2.0</p>
+<tbody><tr id="row137501013384"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="p137501613585"><a name="p137501613585"></a><a name="p137501613585"></a>v20.2.0</p>
 </td>
-<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.2 "><p id="en-us_topic_0280467800_p38571542154414"><a name="en-us_topic_0280467800_p38571542154414"></a><a name="en-us_topic_0280467800_p38571542154414"></a>2020-11-27</p>
+<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.2 "><p id="p1675010135811"><a name="p1675010135811"></a><a name="p1675010135811"></a>2021-01-08</p>
 </td>
-<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.3 "><p id="en-us_topic_0280467800_p5857142154415"><a name="en-us_topic_0280467800_p5857142154415"></a><a name="en-us_topic_0280467800_p5857142154415"></a>This issue is the first official release.</p>
+<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.3 "><p id="p3750813889"><a name="p3750813889"></a><a name="p3750813889"></a>Optimized the description in "Creating DaemonSet."</p>
+</td>
+</tr>
+<tr id="en-us_topic_0280467800_row118567425441"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="en-us_topic_0280467800_p08571442174415"><a name="en-us_topic_0280467800_p08571442174415"></a><a name="en-us_topic_0280467800_p08571442174415"></a>v20.2.0</p>
+</td>
+<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.2 "><p id="en-us_topic_0280467800_p38571542154414"><a name="en-us_topic_0280467800_p38571542154414"></a><a name="en-us_topic_0280467800_p38571542154414"></a>2020-11-18</p>
+</td>
+<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.3 "><p id="en-us_topic_0280467800_p5857142154415"><a name="en-us_topic_0280467800_p5857142154415"></a><a name="en-us_topic_0280467800_p5857142154415"></a>This is the first official release.</p>
 </td>
 </tr>
 </tbody>
