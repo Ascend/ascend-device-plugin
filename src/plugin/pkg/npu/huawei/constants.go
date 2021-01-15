@@ -55,7 +55,7 @@ const (
 	fileMaxSize             = 1000                                                   // each log file size
 	maxBackups              = 20                                                     // max backup
 	maxAge                  = 28                                                     // the log file last time
-	podDeviceKey            = "atlas.kubectl.kubernetes.io/ascend-910-configuration" // config map name
+	podDeviceKey            = "ascend.kubectl.kubernetes.io/ascend-910-configuration" // config map name
 	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"                               // visible env
 	logChmod                = 0640
 
