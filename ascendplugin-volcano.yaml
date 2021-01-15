@@ -43,7 +43,7 @@ spec:
       nodeSelector:
         accelerator: huawei-Ascend910
       containers:
-      - image: ascend-k8sdeviceplugin:V20.1.0
+      - image: ascend-k8sdeviceplugin:v20.2.0
         name: device-plugin-01
         resources:
           requests:
@@ -53,7 +53,7 @@ spec:
             memory: 500Mi
             cpu: 500m
         command: [ "/bin/bash", "-c", "--"]
-        args: [ "umask 0027;./build/build_in_docker.sh;ascendplugin  --useAscendDocker=${USE_ASCEND_DOCKER} --volcanoType=true" ]
+        args: [ "umask 0027;ascendplugin  --useAscendDocker=${USE_ASCEND_DOCKER} --volcanoType=true" ]
         securityContext:
           privileged: true
         imagePullPolicy: Never
@@ -64,8 +64,6 @@ spec:
             mountPath: /usr/local/Ascend/driver
           - name: log-path
             mountPath: /var/log/devicePlugin
-          - name: timezone
-            mountPath: /etc/timezone
           - name: localtime
             mountPath: /etc/localtime
         env:
@@ -83,9 +81,6 @@ spec:
         - name: log-path
           hostPath:
             path: /var/log/devicePlugin
-        - name: timezone
-          hostPath:
-            path: /etc/timezone
         - name: localtime
           hostPath:
             path: /etc/localtime
