@@ -67,6 +67,22 @@ typedef struct ip_addr {
     enum ip_addr_type ip_type;
 } ip_addr_t;
 
+#define DSMI_MAX_VDEV_NUM 8
+
+struct vdev_info {
+    unsigned int status;
+    unsigned int id;
+    unsigned int vfid;
+    unsigned long int cid;
+    unsigned int core_num;
+}vdev[DSMI_MAX_VDEV_NUM];
+
+struct dsmi_vdev_info {
+    unsigned int vdev_num;
+    unsigned int core_num_unused;
+    struct vdev_info vdev[DSMI_MAX_VDEV_NUM];
+};
+
 /**
 * @ingroup driver
 * @brief Get the number of devices
@@ -173,6 +189,17 @@ int dsmi_get_chip_info(int device_id, struct dsmi_chip_info_stru *chip_info);
 * @note Support:Ascend910
 */
 int dsmi_get_network_health(int device_id, DSMI_NET_HEALTH_STATUS *presult);
+
+/**
+* @ingroup driver
+* @brief Query the virtual device info by device_id(logicID)
+* @attention NULL
+* @param [in] device_id The device id
+* @param [out] result return the virtual device info wants to query
+* @return  0 for success, DRV_ERROR_NOT_SUPPORT: not support function, others for fail
+* @note Support:Ascend910
+*/
+int dsmi_get_vdevice_info(unsigned int device_id, struct dsmi_vdev_info *vdevice_info);
 
 #ifdef __cplusplus
 }

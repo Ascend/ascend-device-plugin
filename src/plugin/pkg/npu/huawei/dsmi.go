@@ -74,6 +74,10 @@ int dsmi_get_device_ip_address(int device_id, int port_type, int port_id, ip_add
 	CALL_FUNC(dsmi_get_device_ip_address,device_id,port_type,port_id,ip_address,mask_address)
 }
 
+int (*dsmi_get_vdevice_info_func)(unsigned int device_id, struct dsmi_vdev_info *vdevice_info);
+int dsmi_get_vdevice_info(unsigned int device_id, struct dsmi_vdev_info *vdevice_info){
+	CALL_FUNC(dsmi_get_vdevice_info,device_id,vdevice_info)
+}
 
 // load .so files and functions
 int dsmiInit_dl(void){
@@ -102,6 +106,8 @@ int dsmiInit_dl(void){
 	dsmi_get_chip_info_func = dlsym(dsmiHandle,"dsmi_get_chip_info");
 
 	dsmi_get_device_ip_address_func = dlsym(dsmiHandle,"dsmi_get_device_ip_address");
+
+	dsmi_get_vdevice_info_func = dlsym(dsmiHandle,"dsmi_get_vdevice_info");
 
 	return SUCCESS;
 }
@@ -136,6 +142,22 @@ type ChipInfo struct {
 	ChipVer  string
 }
 
+// VDevInfo single VDevInfo info
+type VDevInfo struct {
+	status uint32
+	id uint32
+	vfid uint32
+	cid uint64
+	coreNum uint32
+}
+
+// TotalVDevInfos total VDevInfos info
+type TotalVDevInfos struct {
+	vDevNum uint32
+	coreNumUnused uint32
+	vDevInfos []VDevInfo
+}
+
 // DeviceMgrInterface interface for dsmi
 type DeviceMgrInterface interface {
 	GetDeviceCount() (int32, error)
@@ -145,6 +167,7 @@ type DeviceMgrInterface interface {
 	GetLogicID(uint32) (uint32, error)
 	GetChipInfo(int32) (*ChipInfo, error)
 	GetDeviceIP(logicID int32) (string, error)
+	GetVDevicesInfo(logicID uint32) (TotalVDevInfos, error)
 	ShutDown()
 }
 
@@ -290,4 +313,30 @@ func (d *DeviceManager) GetDeviceIP(phyID int32) (string, error) {
 // ShutDown clean the dynamically loaded resource
 func (d *DeviceManager) ShutDown() {
 	C.dsmiShutDown()
+}
+
+// GetVDevicesInfo get the virtual device info by logicID
+func (d *DeviceManager) GetVDevicesInfo(logicID uint32) (TotalVDevInfos, error) {
+	var vDeviceInfos C.struct_dsmi_vdev_info
+	err := C.dsmi_get_vdevice_info(C.uint(logicID), &vDeviceInfos)
+	if err != 0 {
+		return TotalVDevInfos{}, fmt.Errorf("from device %d get virtual device info failed, error code: %d", logicID, int32(err))
+	}
+	vDevInfos := TotalVDevInfos{
+		vDevNum: uint32(vDeviceInfos.vdev_num),
+		coreNumUnused: uint32(vDeviceInfos.core_num_unused),
+	}
+
+	for i := uint32(0); i < vDevInfos.vDevNum; i++ {
+		p := *(*C.struct_vdev_info)(unsafe.Pointer(uintptr(unsafe.Pointer(&vDeviceInfos.vdev)) + uintptr(C.sizeof_struct_vdev_info * C.int(i))))
+		vDevInfos.vDevInfos= append(vDevInfos.vDevInfos, VDevInfo{
+			status: uint32(p.status),
+			id: uint32(p.id),
+			vfid: uint32(p.vfid),
+			cid: uint64(p.cid),
+			coreNum: uint32(p.core_num),
+		})
+	}
+
+	return vDevInfos, nil
 }

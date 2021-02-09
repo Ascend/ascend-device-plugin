@@ -20,9 +20,10 @@ package huawei
 import (
 	"fmt"
 	"go.uber.org/zap"
+	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"os"
+	"regexp"
 	"strconv"
-	"strings"
 )
 
 func getDefaultDevices(defaultDevices *[]string) error {
@@ -56,30 +57,11 @@ func setDeviceByPath(defaultDevices *[]string, device string) {
 	}
 }
 
-func getAscendDeviceID(id string, majorID *string, minorID *string) error {
-	idSplit := strings.Split(id, "-")
-
-	if len(idSplit) < idSplitNum {
-		return fmt.Errorf("id: %s is invalid", id)
-	}
-
-	*majorID = idSplit[1]
-
-	if len(idSplit) > idSplitNum {
-		*minorID = idSplit[2]
-		*majorID = *minorID
-	}
-	*minorID = ""
-
-	return nil
-}
-
 func getLogicIDByName(DeviceName string, logicID *int32) error {
-	var major string
-	var minor string
 	var phyID int32
 
-	if err := getAscendDeviceID(DeviceName, &major, &minor); err != nil {
+	major, err := getDeviceID(DeviceName);
+	if err != nil {
 		logger.Error("dev ID is invalid", zap.String("deviceID", DeviceName))
 		return err
 	}
@@ -130,4 +112,21 @@ func getPhyIDFromDeviceID(deviceID string, dmgr DeviceMgrInterface) (string, err
 	}
 
 	return strconv.Itoa(int(phyID)), nil
+}
+
+func assembleNpuDeviceStruct(deviType, devID string, phyID uint32) npuDevice {
+	logger.Info("Found Huawei Ascend:", zap.String("deviType", deviType), zap.String("logicID", devID), zap.Uint32("phyID", phyID))
+	return npuDevice{
+		devType: deviType,
+		pciID:   "",
+		ID:      devID,
+		Health:  pluginapi.Healthy,
+	}
+}
+
+// IsOneOfVirtualDeviceType used to judge whether a physical device or a virtual device
+func IsOneOfVirtualDeviceType(devType string) bool {
+	pattern := virtualDevicesPattern
+	reg := regexp.MustCompile(pattern)
+	return reg.MatchString(devType)
 }

@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"github.com/golang/protobuf/ptypes/empty"
 	"os"
+	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -27,6 +29,11 @@ const (
 	unHealthyTestLogicID = 3
 	serverSockFd         = "/var/lib/kubelet/device-plugins/davinci-mini.sock"
 	serverSock310        = "/var/lib/kubelet/device-plugins/Ascend310.sock"
+	maxAiCoreNum		 = 32
+	testAiCoreNum		 = 20
+	defaultVDevNum		 = 0
+	testVDevNum		 	 = 2
+	testComputeCoreNum	 = 4
 )
 
 type fakeDeviceManager struct{}
@@ -100,6 +107,32 @@ func (d *fakeDeviceManager) GetDeviceIP(logicID int32) (string, error) {
 	return retIPAddress, nil
 }
 
+// GetVDevicesInfo for fakeDeviceManager
+func (d *fakeDeviceManager) GetVDevicesInfo(logicID uint32) (TotalVDevInfos, error) {
+	var totalVDevInfos TotalVDevInfos
+	if strings.Contains("024567", strconv.Itoa(int(logicID))) {
+		totalVDevInfos = TotalVDevInfos{
+			vDevNum: uint32(defaultVDevNum),
+			coreNumUnused: uint32(maxAiCoreNum),
+		}
+		return totalVDevInfos, nil;
+	}
+	totalVDevInfos = TotalVDevInfos{
+		vDevNum: uint32(testVDevNum),
+		coreNumUnused: uint32(testAiCoreNum),
+	}
+	for i := 0; i < 2; i++{
+		totalVDevInfos.vDevInfos= append(totalVDevInfos.vDevInfos, VDevInfo{
+			status: uint32(0),
+			id: uint32(int(logicID) + i),
+			vfid: uint32(int(logicID) + i),
+			cid: uint64(i),
+			coreNum: uint32(testComputeCoreNum * (i + 1)),
+		})
+	}
+	return totalVDevInfos, nil
+}
+
 // TestUnhealthyState for UnhealthyState
 func TestUnhealthyState(t *testing.T) {
 	err := unhealthyState(1, uint32(3), "healthState", newFakeDeviceManager())
@@ -152,6 +185,14 @@ func TestGetDefaultDevices(t *testing.T) {
 	defaultMap[hiAIHDCDevice] = empty.Empty{}
 	defaultMap[hiAIManagerDevice] = empty.Empty{}
 	defaultMap[hiAISVMDevice] = empty.Empty{}
+	defaultMap[hiAi200RCEventSched] = empty.Empty{}
+	defaultMap[hiAi200RCHiDvpp] = empty.Empty{}
+	defaultMap[hiAi200RCLog] = empty.Empty{}
+	defaultMap[hiAi200RCMemoryBandwidth] = empty.Empty{}
+	defaultMap[hiAi200RCSVM0] = empty.Empty{}
+	defaultMap[hiAi200RCTsAisle] = empty.Empty{}
+	defaultMap[hiAi200RCUpgrade] = empty.Empty{}
+
 	for _, str := range defaultDeivces {
 		_, ok := defaultMap[str]
 		if !ok {
