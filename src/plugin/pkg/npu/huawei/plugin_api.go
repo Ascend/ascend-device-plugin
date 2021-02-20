@@ -112,15 +112,15 @@ func (s *pluginAPI) ListAndWatch(emtpy *pluginapi.Empty, stream pluginapi.Device
 			break
 		}
 		time.Sleep(sleepTime * time.Second)
-		stated := s.isDeviceStatusChange()
+		isStateChange := s.isDeviceStatusChange()
 		if useVolcanoType {
-			s.doWithVolcanoListAndWatch(stated)
+			s.doWithVolcanoListAndWatch(isStateChange)
 		}
-		if !stated {
+		if !isStateChange {
 			// close log print
 			logFlag = false
 		}
-		if stated {
+		if isStateChange {
 			// turn on log print
 			logFlag = true
 			resp.Devices = resp.Devices[:0]
@@ -144,25 +144,25 @@ func (s *pluginAPI) isDeviceStatusChange() bool {
 }
 
 func (s *pluginAPI) listenVirtualDevices() bool {
-	stated := false
+	isStateChange := false
 	var deviceIDs [hiAIMaxDeviceNum]uint32
 	devNum, err := s.hps.hdm.dmgr.GetDeviceList(&deviceIDs)
 	if err != nil {
 		logger.Error("Get device list fail")
-		return stated
+		return isStateChange
 	}
 	for idx := int32(0); idx < devNum; idx++ {
 		deviceName := fmt.Sprintf("%s-%d", hiAIAscend910Prefix, deviceIDs[idx])
 		healthStatus := s.hps.hdm.manager.GetDevState(deviceName)
 		for devID, device := range s.hps.devices {
 			if s.isPhyDevOwnThisVirtualDevice(device, deviceIDs[idx]) && healthStatus != device.Health {
-				stated = true
+				isStateChange = true
 				device.Health = healthStatus
 				s.hps.devices[devID] = device
 			}
 		}
 	}
-	return stated
+	return isStateChange
 }
 
 func (s *pluginAPI) isPhyDevOwnThisVirtualDevice(device *npuDevice, logicID uint32) bool {
@@ -170,20 +170,20 @@ func (s *pluginAPI) isPhyDevOwnThisVirtualDevice(device *npuDevice, logicID uint
 }
 
 func (s *pluginAPI) listenPhysicalDevices() bool {
-	stated := false
+	isStateChange := false
 	for id, dev := range s.hps.devices {
 		state := s.hps.hdm.manager.GetDevState(id)
 		if dev.Health != state {
-			stated = true
+			isStateChange = true
 			dev.Health = state
 			s.hps.devices[id] = dev
 		}
 	}
-	return stated
+	return isStateChange
 }
 
-func (s *pluginAPI) doWithVolcanoListAndWatch(stated bool) {
-	if stated {
+func (s *pluginAPI) doWithVolcanoListAndWatch(isStateChange bool) {
+	if isStateChange {
 		s.hps.healthDevice = sets.String{}
 		for _, device := range s.hps.devices {
 			if device.Health != pluginapi.Healthy {
