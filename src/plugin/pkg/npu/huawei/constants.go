@@ -72,4 +72,5 @@ const (
 	virtualDevicesPattern = `Ascend910-[4, 8, 16]c`
 	placeholder = 9999
 	logicIDIndexInVirtualDevID910 = 2
+	FunctionNotFound  = "-99998"
 )

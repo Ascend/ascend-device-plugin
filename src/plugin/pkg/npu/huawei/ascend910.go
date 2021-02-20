@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"go.uber.org/zap"
 	"os"
+	"strings"
 	"time"
 
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
@@ -61,8 +62,9 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *
 		}
 
 		totalVDevInfos, err := hnm.queryVirtualDevice(ids[i])
-		if err != nil {
+		if err != nil && !strings.Contains(err.Error(), FunctionNotFound) {
 			logger.Error("Query virtual device info failure!", zap.String("err",err.Error()))
+			continue
 		}
 		var devices []npuDevice
 		if totalVDevInfos.vDevNum == 0 {
