@@ -44,30 +44,16 @@ func NewHwAscend310Manager() *HwAscend310Manager {
 func (hnm *HwAscend310Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *[]string) error {
 	var ids [hiAIMaxDeviceNum]uint32
 
-	if err := ContainerAssignmentNotify(); err != nil {
-		return fmt.Errorf("cannot set device manager into container devices assignment mode")
-	}
-
 	devNum, err := hnm.dmgr.GetDeviceList(&ids)
 	if err != nil {
 		return err
 	}
-	var deviType string
-	if GetFdFlag {
-		deviType = hiAIAscendfdPrefix
-	} else {
-		deviType = hiAIAscend310Prefix
-	}
+	deviType := hnm.getMatchingDeviType()
 	logger.Info("--->< ", zap.String("deviType", deviType))
+
 	for i := int32(0); i < devNum; i++ {
 		dev := fmt.Sprintf("%s-%d", deviType, ids[i])
-		log.Printf("Found Huawei Ascend310 %s\n", dev)
-		device := npuDevice{
-			devType: deviType,
-			pciID:   "",
-			ID:      dev,
-			Health:  pluginapi.Healthy,
-		}
+		device := assembleNpuDeviceStruct(deviType, dev, placeholder)
 		*allDevices = append(*allDevices, device)
 	}
 	*allDeviceTypes = append(*allDeviceTypes, deviType)
@@ -75,11 +61,16 @@ func (hnm *HwAscend310Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *
 	return nil
 }
 
+func (hnm *HwAscend310Manager) getMatchingDeviType() string {
+	if GetFdFlag {
+		return hiAIAscendfdPrefix
+	}
+	return hiAIAscend310Prefix
+}
+
 // GetDevState is used to get device state
 func (hnm *HwAscend310Manager) GetDevState(DeviceName string) string {
-	var majorID string
-	var minorID string
-	err := getDeviceID(DeviceName, &majorID, &minorID)
+	majorID, err := getDeviceID(DeviceName)
 	if err != nil {
 		if logFlag {
 			logger.Error("get device logicID failed.",
@@ -121,7 +112,7 @@ func (hnm *HwAscend310Manager) GetDefaultDevs(defaultDeivces *[]string) error {
 }
 
 // GetDevPath is used to get device path
-func (hnm *HwAscend310Manager) GetDevPath(id string, hostPath *string, containerPath *string) {
+func (hnm *HwAscend310Manager) GetDevPath(id, ascendRuntimeOptions string, hostPath *string, containerPath *string) {
 	*hostPath = fmt.Sprintf("%s%s", "/dev/davinci", id)
 	*containerPath = *hostPath
 }
@@ -132,9 +123,8 @@ func (hnm *HwAscend310Manager) GetLogPath(devID []string, defaultLogPath string,
 	*newLogPath = defaultLogPath
 	var subdir = "/device"
 	for _, item := range devID {
-		var major string
-		var minor string
-		if err := getDeviceID(item, &major, &minor); err != nil {
+		major, err := getDeviceID(item)
+		if err != nil {
 			logger.Error("getdevice", zap.String("devid", item))
 			return fmt.Errorf("dev ID %s is invalid", item)
 		}
@@ -159,28 +149,20 @@ func ContainerAssignmentNotify() error {
 	return nil
 }
 
-func getDeviceID(id string, majorID *string, minorID *string) error {
+func getDeviceID(deviceName string) (string, error) {
 
 	// hiAIAscend310Prefix: davinci-mini
 	// vnpu: davinci-mini0-0
 	// ascend310:  davinci-mini0
 
-	idSplit := strings.Split(id, "-")
+	idSplit := strings.Split(deviceName, "-")
 
 	if len(idSplit) < idSplitNum {
-		return fmt.Errorf("id: %s is invalid", id)
+		return "", fmt.Errorf("deviceName: %s is invalid", deviceName)
 	}
 
-	major := strings.TrimLeft(strings.TrimSpace(idSplit[1]), "mini")
-	*majorID = major
-
-	*minorID = ""
-
-	if len(idSplit) > idSplitNum {
-		*minorID = idSplit[2]
-		*majorID = *minorID
-	}
-	return nil
+	majorID := idSplit[len(idSplit)-1]
+	return majorID, nil
 }
 
 // SetDmgr to set dmgr

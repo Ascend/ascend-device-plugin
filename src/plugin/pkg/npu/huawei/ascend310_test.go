@@ -87,7 +87,7 @@ func TestHwAscend310Manager_GetDevState(t *testing.T) {
 	hdm := createFakeHwDevManager("", true, false, false)
 	var hostPath string
 	var containerPath string
-	hdm.manager.GetDevPath("0", &hostPath, &containerPath)
+	hdm.manager.GetDevPath("0", "", &hostPath, &containerPath)
 	if hostPath != containerPath && hostPath != "/dev/davinci0" {
 		t.Fatal("TestHwAscend310Manager_GetDevState Run Failed")
 	}

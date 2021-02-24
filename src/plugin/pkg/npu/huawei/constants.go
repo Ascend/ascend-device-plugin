@@ -57,6 +57,7 @@ const (
 	maxAge                  = 10                                                      // the log file last time
 	podDeviceKey            = "ascend.kubectl.kubernetes.io/ascend-910-configuration" // config map name
 	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"                                // visible env
+	ascendRuntimeOptionsEnv = "ASCEND_RUNTIME_OPTIONS"								  // virtual runtime option env
 	logChmod                = 0640
 
 	huaweiAscend910  = "huawei.com/Ascend910"
@@ -67,4 +68,11 @@ const (
 	interval         = 1
 	timeout          = 10
 	maxChipName      = 32
+
+	virtualDevicesPattern = `Ascend910-[4, 8, 16]c`
+	placeholder = 9999
+	logicIDIndexInVirtualDevID910 = 2
+
+	// FunctionNotFound for describe dsmi interface function is exist or not
+	FunctionNotFound  = "-99998"
 )

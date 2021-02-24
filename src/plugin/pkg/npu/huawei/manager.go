@@ -60,7 +60,7 @@ type devManager interface {
 	GetNPUs(*[]npuDevice, *[]string) error
 	GetDefaultDevs(*[]string) error
 	GetDevState(string) string
-	GetDevPath(string, *string, *string)
+	GetDevPath(string, string, *string, *string)
 	GetLogPath([]string, string, *string) error
 	SetDmgr(DeviceMgrInterface)
 }
@@ -125,7 +125,7 @@ func (hdm *HwDevManager) Serve(devType, socketPath, pluginSocket string, pluginS
 	defer watcher.fileWatcher.Close()
 
 	logger.Info("Starting OS signs watcher.")
-	osSignChan := newSignWatcher(syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	osSignChan := newSignWatcher(syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGKILL)
 
 	restart := true
 	var hps HwPluginServeInterface
