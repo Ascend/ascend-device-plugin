@@ -20,11 +20,8 @@ package huawei
 import (
 	"fmt"
 	"go.uber.org/zap"
-	"os"
-	"strings"
-	"time"
-
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+	"strings"
 )
 
 // switch error log
@@ -156,11 +153,6 @@ func (hnm *HwAscend910Manager) GetDevState(DeviceName string) string {
 
 }
 
-// GetDefaultDevs Discovers Huawei Ascend910 devices and sets up device access environment.
-func (hnm *HwAscend910Manager) GetDefaultDevs(defaultDeivces *[]string) error {
-	return getDefaultDevices(defaultDeivces)
-}
-
 // GetDevPath get dev path
 func (hnm *HwAscend910Manager) GetDevPath(id, ascendRuntimeOptions string, hostPath *string, containerPath *string) {
 	*containerPath = fmt.Sprintf("%s%s", "/dev/davinci", id)
@@ -174,28 +166,15 @@ func (hnm *HwAscend910Manager) GetDevPath(id, ascendRuntimeOptions string, hostP
 
 // GetLogPath get log path
 func (hnm *HwAscend910Manager) GetLogPath(devID []string, defaultLogPath string, newLogPath *string) error {
-
+	subdir, err := createLogSubDir(devID)
+	if err != nil {
+		return err
+	}
+	err = createLogDirectory(&defaultLogPath, subdir)
+	if err != nil {
+		return err
+	}
 	*newLogPath = defaultLogPath
-	var subdir = "/device"
-	for _, item := range devID {
-		major, err := getDeviceID(item);
-		if err != nil {
-			logger.Error("dev ID is invalid", zap.String("deviceID", item))
-			return fmt.Errorf("dev ID %s is invalid", item)
-		}
-		subdir += fmt.Sprintf("-%s", major)
-	}
-	*newLogPath += subdir
-	t := time.Now()
-	*newLogPath += t.UTC().Format("_2006-01-02-15-04-05.999")
-	if _, err := os.Stat(*newLogPath); os.IsNotExist(err) {
-		if err := os.MkdirAll(*newLogPath, os.ModePerm); err != nil {
-			logger.Error("create directory %s failed.",
-				zap.String("path", *newLogPath),
-				zap.String("err", err.Error()))
-			return fmt.Errorf("create directory %s failed: %s", *newLogPath, err)
-		}
-	}
 	logger.Info("log dir is:", zap.String("logDir", *newLogPath))
 	return nil
 }

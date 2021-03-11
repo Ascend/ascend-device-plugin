@@ -24,6 +24,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"time"
 )
 
 func getDefaultDevices(defaultDevices *[]string) error {
@@ -129,4 +130,32 @@ func IsOneOfVirtualDeviceType(devType string) bool {
 	pattern := virtualDevicesPattern
 	reg := regexp.MustCompile(pattern)
 	return reg.MatchString(devType)
+}
+
+func createLogDirectory(newLogPath *string, subdir string) error {
+	*newLogPath += subdir
+	t := time.Now()
+	*newLogPath += t.UTC().Format("_2006-01-02-15-04-05.999")
+	if _, err := os.Stat(*newLogPath); os.IsNotExist(err) {
+		if err := os.MkdirAll(*newLogPath, os.ModePerm); err != nil {
+			logger.Error("create directory %s failed.",
+				zap.String("path", *newLogPath),
+				zap.String("err", err.Error()))
+			return fmt.Errorf("create directory %s failed: %s", *newLogPath, err)
+		}
+	}
+	return nil
+}
+
+func createLogSubDir(devID []string) (string, error) {
+	var subdir = "/device"
+	for _, item := range devID {
+		major, err := getDeviceID(item)
+		if err != nil {
+			logger.Error("dev ID is invalid", zap.String("deviceID", item))
+			return subdir, fmt.Errorf("dev ID %s is invalid", item)
+		}
+		subdir += fmt.Sprintf("-%s", major)
+	}
+	return subdir, nil
 }

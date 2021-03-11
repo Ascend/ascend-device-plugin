@@ -1,5 +1,5 @@
 /*
-* Copyright(C) 2020. Huawei Technologies Co.,Ltd. All rights reserved.
+* Copyright(C) 2021. Huawei Technologies Co.,Ltd. All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -23,21 +23,20 @@ import (
 	"go.uber.org/zap"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"strconv"
-	"strings"
 )
 
-// HwAscend310Manager manages huawei Ascend310 devices.
-type HwAscend310Manager struct {
+// HwAscend710Manager manages huawei Ascend710 devices.
+type HwAscend710Manager struct {
 	dmgr DeviceMgrInterface
 }
 
-// NewHwAscend310Manager used to create ascend 310 manager
-func NewHwAscend310Manager() *HwAscend310Manager {
-	return &HwAscend310Manager{}
+// NewHwAscend710Manager used to create ascend 710 manager
+func NewHwAscend710Manager() *HwAscend710Manager {
+	return &HwAscend710Manager{}
 }
 
-// GetNPUs Discovers all HUAWEI Ascend310 devices available on the local node by calling walking `/dev` directory.
-func (hnm *HwAscend310Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *[]string) error {
+// GetNPUs Discovers all HUAWEI Ascend710 devices available on the local node by calling walking `/dev` directory.
+func (hnm *HwAscend710Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *[]string) error {
 	var ids [hiAIMaxDeviceNum]uint32
 
 	devNum, err := hnm.dmgr.GetDeviceList(&ids)
@@ -57,15 +56,12 @@ func (hnm *HwAscend310Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *
 	return nil
 }
 
-func (hnm *HwAscend310Manager) getMatchingDeviType() string {
-	if GetFdFlag {
-		return hiAIAscendfdPrefix
-	}
-	return hiAIAscend310Prefix
+func (hnm *HwAscend710Manager) getMatchingDeviType() string {
+	return hiAIAscend710Prefix
 }
 
 // GetDevState is used to get device state
-func (hnm *HwAscend310Manager) GetDevState(DeviceName string) string {
+func (hnm *HwAscend710Manager) GetDevState(DeviceName string) string {
 	majorID, err := getDeviceID(DeviceName)
 	if err != nil {
 		if logFlag {
@@ -103,13 +99,13 @@ func (hnm *HwAscend310Manager) GetDevState(DeviceName string) string {
 }
 
 // GetDevPath is used to get device path
-func (hnm *HwAscend310Manager) GetDevPath(id, ascendRuntimeOptions string, hostPath *string, containerPath *string) {
+func (hnm *HwAscend710Manager) GetDevPath(id, ascendRuntimeOptions string, hostPath *string, containerPath *string) {
 	*hostPath = fmt.Sprintf("%s%s", "/dev/davinci", id)
 	*containerPath = *hostPath
 }
 
 // GetLogPath is used to get log path
-func (hnm *HwAscend310Manager) GetLogPath(devID []string, defaultLogPath string, newLogPath *string) error {
+func (hnm *HwAscend710Manager) GetLogPath(devID []string, defaultLogPath string, newLogPath *string) error {
 	subdir, err := createLogSubDir(devID)
 	if err != nil {
 		return err
@@ -123,23 +119,7 @@ func (hnm *HwAscend310Manager) GetLogPath(devID []string, defaultLogPath string,
 	return nil
 }
 
-func getDeviceID(deviceName string) (string, error) {
-
-	// hiAIAscend310Prefix: davinci-mini
-	// vnpu: davinci-mini0-0
-	// ascend310:  davinci-mini0
-
-	idSplit := strings.Split(deviceName, "-")
-
-	if len(idSplit) < idSplitNum {
-		return "", fmt.Errorf("deviceName: %s is invalid", deviceName)
-	}
-
-	majorID := idSplit[len(idSplit)-1]
-	return majorID, nil
-}
-
 // SetDmgr to set dmgr
-func (hnm *HwAscend310Manager) SetDmgr(dmgr DeviceMgrInterface) {
+func (hnm *HwAscend710Manager) SetDmgr(dmgr DeviceMgrInterface) {
 	hnm.dmgr = dmgr
 }
