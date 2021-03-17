@@ -631,7 +631,7 @@ func getPredicateTimeFromPodAnnotation(pod *v1.Pod) uint64 {
 			return predicateTime
 		}
 	}
-	logger.Info("volcano没有写时间戳，pod name：" + pod.Name)
+	logger.Info("volcano not write timestamp, pod name：" + pod.Name)
 	return math.MaxUint64
 }
 
