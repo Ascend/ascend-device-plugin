@@ -57,11 +57,13 @@ var (
 )
 
 type devManager interface {
-	GetNPUs(*[]npuDevice, *[]string) error
-	GetDevState(string) string
-	GetDevPath(string, string, *string, *string)
+	GetNPUs(*[]npuDevice, *[]string, string) error
 	GetLogPath([]string, string, *string) error
+	GetDevPath(string, string, *string, *string)
+	GetDevState(string, DeviceMgrInterface) string
 	SetDmgr(DeviceMgrInterface)
+	GetDmgr() DeviceMgrInterface
+	GetMatchingDeviType() string
 }
 
 // NewHwDevManager function is used to new a dev manager.
@@ -96,12 +98,11 @@ func (hdm *HwDevManager) GetNPUs() error {
 	logger.Info("device plugin start")
 	hdm.manager.SetDmgr(hdm.dmgr)
 
-
 	if err := getDefaultDevices(&hdm.defaultDevs); err != nil {
 		return err
 	}
 
-	if err := hdm.manager.GetNPUs(&hdm.allDevs, &hdm.allDevTypes); err != nil {
+	if err := hdm.manager.GetNPUs(&hdm.allDevs, &hdm.allDevTypes, hdm.manager.GetMatchingDeviType()); err != nil {
 		return err
 	}
 

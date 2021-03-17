@@ -153,7 +153,7 @@ func (s *pluginAPI) listenVirtualDevices() bool {
 	}
 	for idx := int32(0); idx < devNum; idx++ {
 		deviceName := fmt.Sprintf("%s-%d", hiAIAscend910Prefix, deviceIDs[idx])
-		healthStatus := s.hps.hdm.manager.GetDevState(deviceName)
+		healthStatus := s.hps.hdm.manager.GetDevState(deviceName, s.hps.hdm.dmgr)
 		for devID, device := range s.hps.devices {
 			if s.isPhyDevOwnThisVirtualDevice(device, deviceIDs[idx]) && healthStatus != device.Health {
 				isStateChange = true
@@ -172,7 +172,7 @@ func (s *pluginAPI) isPhyDevOwnThisVirtualDevice(device *npuDevice, logicID uint
 func (s *pluginAPI) listenPhysicalDevices() bool {
 	isStateChange := false
 	for id, dev := range s.hps.devices {
-		state := s.hps.hdm.manager.GetDevState(id)
+		state := s.hps.hdm.manager.GetDevState(id, s.hps.hdm.dmgr)
 		if dev.Health != state {
 			isStateChange = true
 			dev.Health = state
