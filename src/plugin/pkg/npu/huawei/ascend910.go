@@ -46,13 +46,13 @@ func NewHwAscend910Manager() *HwAscend910Manager {
 func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *[]string, matchingDeviType string) error {
 	var ids [hiAIMaxDeviceNum]uint32
 
-	devNum, err := hnm.ascendCommonFunction.dmgr.GetDeviceList(&ids)
+	devNum, err := hnm.dmgr.GetDeviceList(&ids)
 	if err != nil {
 		return err
 	}
 	var deviTypes []string
 	for i := int32(0); i < devNum; i++ {
-		phyID, err := hnm.ascendCommonFunction.dmgr.GetPhyID(ids[i])
+		phyID, err := hnm.dmgr.GetPhyID(ids[i])
 		if err != nil {
 			return err
 		}
@@ -91,7 +91,7 @@ func (hnm *HwAscend910Manager) assemblePhyDevices(logicID, phyID uint32) ([]npuD
 	var devices []npuDevice
 	var deviTypes [] string
 	devID := fmt.Sprintf("%s-%d", hiAIAscend910Prefix, logicID)
-	device := hnm.ascendCommonFunction.AssembleNpuDeviceStruct(hiAIAscend910Prefix, devID, phyID)
+	device := hnm.AssembleNpuDeviceStruct(hiAIAscend910Prefix, devID, phyID)
 	devices = append(devices, device)
 	deviTypes = append(deviTypes, hiAIAscend910Prefix)
 	return devices, deviTypes
@@ -103,7 +103,7 @@ func (hnm *HwAscend910Manager) assembleVirtualDevices(logicID, phyID uint32, tot
 	for _, vDevInfo := range totalVDevInfos.vDevInfos {
 		vDeviType := fmt.Sprintf("%s-%dc", hiAIAscend910Prefix, vDevInfo.coreNum)
 		devID := fmt.Sprintf("%s-%dc-%d-%d", hiAIAscend910Prefix, vDevInfo.coreNum, logicID, vDevInfo.id)
-		device := hnm.ascendCommonFunction.AssembleNpuDeviceStruct(vDeviType, devID, phyID)
+		device := hnm.AssembleNpuDeviceStruct(vDeviType, devID, phyID)
 		devices = append(devices, device)
 		vDeviTypes = append(vDeviTypes, vDeviType)
 	}
@@ -115,7 +115,7 @@ func (hnm *HwAscend910Manager) queryVirtualDevice(logicID uint32) (TotalVDevInfo
 	if useVolcanoType {
 		return totalVDevInfos, nil
 	}
-	totalVDevInfos, err := hnm.ascendCommonFunction.dmgr.GetVDevicesInfo(logicID)
+	totalVDevInfos, err := hnm.dmgr.GetVDevicesInfo(logicID)
 	if err != nil {
 		return TotalVDevInfos{}, fmt.Errorf("query virtual device info failure: %s", err)
 	}
