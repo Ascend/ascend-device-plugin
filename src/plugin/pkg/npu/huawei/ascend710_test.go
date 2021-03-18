@@ -29,8 +29,8 @@ func NewFakeHwAscend710Manager() *HwAscend710Manager {
 	return &HwAscend710Manager{}
 }
 
-// TestHwAscend710Manager_GetNPUs for GetNPUs
-func TestHwAscend710Manager_GetNPUs(t *testing.T) {
+// TestHwAscend710ManagerGetNPUs for GetNPUs
+func TestHwAscend710ManagerGetNPUs(t *testing.T) {
 	resultDevMap := make(map[string]empty.Empty)
 	for i := 0; i < npuTestNum; i++ {
 		resultDevMap[fmt.Sprintf("Ascend710-%d", i)] = empty.Empty{}
@@ -38,22 +38,22 @@ func TestHwAscend710Manager_GetNPUs(t *testing.T) {
 	hdm := createFake710HwDevManager("ascend710", false, false, false)
 	err := hdm.manager.GetNPUs(&hdm.allDevs, &hdm.allDevTypes, hdm.manager.GetMatchingDeviType())
 	if err != nil {
-		t.Fatalf("TestHwAscend710Manager_GetNPUs Run Failed")
+		t.Fatalf("TestHwAscend710ManagerGetNPUs Run Failed")
 	}
 	if hdm.allDevTypes[0] != "Ascend710" {
-		t.Fatalf("TestHwAscend710Manager_GetNPUs Run Failed")
+		t.Fatalf("TestHwAscend710ManagerGetNPUs Run Failed")
 	}
 	for _, dev := range hdm.allDevs {
 		_, ok := resultDevMap[dev.ID]
 		if !ok {
-			t.Fatalf("TestHwAscend710Manager_GetNPUs Run Failed")
+			t.Fatalf("TestHwAscend710ManagerGetNPUs Run Failed")
 		}
 	}
-	t.Logf("TestHwAscend710Manager_GetNPUs Run Pass")
+	t.Logf("TestHwAscend710ManagerGetNPUs Run Pass")
 }
 
-// TestHwAscend710Manager_GetDevState for GetDevState
-func TestHwAscend710Manager_GetDevState(t *testing.T) {
+// TestHwAscend710ManagerGetDevState for GetDevState
+func TestHwAscend710ManagerGetDevState(t *testing.T) {
 	hdm := createFake710HwDevManager("ascend710", false, false, false)
 	err := hdm.manager.GetNPUs(&hdm.allDevs, &hdm.allDevTypes, hdm.manager.GetMatchingDeviType())
 	if err != nil {
@@ -62,29 +62,31 @@ func TestHwAscend710Manager_GetDevState(t *testing.T) {
 	for _, dev := range hdm.allDevs {
 		state := hdm.manager.GetDevState(dev.ID, hdm.manager.GetDmgr())
 		if strings.Contains(dev.ID, "3") && state != pluginapi.Unhealthy {
-			t.Fatalf("TestHwAscend710Manager_GetDevState Run Failed %v", dev)
+			t.Fatalf("TestHwAscend710ManagerGetDevState Run Failed %v", dev)
 
 		} else if !strings.Contains(dev.ID, "3") && state == pluginapi.Unhealthy {
-			t.Fatalf("TestHwAscend710Manager_GetDevState Run Failed %v", dev)
+			t.Fatalf("TestHwAscend710ManagerGetDevState Run Failed %v", dev)
+		} else {
+			continue
 		}
 	}
-	t.Logf("TestHwAscend710Manager_GetDevState Run Pass")
+	t.Logf("TestHwAscend710ManagerGetDevState Run Pass")
 }
 
-// TestHwAscend710Manager_GetDevPath for GetDevPath
-func TestHwAscend710Manager_GetDevPath(t *testing.T) {
+// TestHwAscend710ManagerGetDevPath for GetDevPath
+func TestHwAscend710ManagerGetDevPath(t *testing.T) {
 	hdm := createFake710HwDevManager("ascend710", false, false, false)
 	var hostPath string
 	var containerPath string
 	hdm.manager.GetDevPath("0", "", &hostPath, &containerPath)
 	if hostPath != containerPath && hostPath != "/dev/davinci0" {
-		t.Fatal("TestHwAscend710Manager_GetDevPath Run Failed")
+		t.Fatal("TestHwAscend710ManagerGetDevPath Run Failed")
 	}
-	t.Logf("TestHwAscend710Manager_GetDevPath Run Pass")
+	t.Logf("TestHwAscend710ManagerGetDevPath Run Pass")
 }
 
-// TestHwAscend710Manager_GetLogPath for getLogPath
-func TestHwAscend710Manager_GetLogPath(t *testing.T) {
+// TestHwAscend710ManagerGetLogPath for getLogPath
+func TestHwAscend710ManagerGetLogPath(t *testing.T) {
 	hdm := createFake710HwDevManager("ascend710", false, false, false)
 
 	var logPath string
@@ -99,7 +101,7 @@ func TestHwAscend710Manager_GetLogPath(t *testing.T) {
 	if len(splitstring) != splitTestStringNum || !strings.Contains(logPath, "0") {
 		t.Fail()
 	}
-	t.Logf("TestHwAscend710Manager_GetLogPath Run Pass ")
+	t.Logf("TestHwAscend710ManagerGetLogPath Run Pass ")
 }
 
 func createFake710HwDevManager(mode string, fdFlag, useAscendDocker, volcanoType bool) *HwDevManager {

@@ -36,7 +36,7 @@ func NewHwAscend910Manager() *HwAscend910Manager {
 
 // GetNPUs function discovers all HUAWEI Ascend910 devices available
 // on the local node by calling walking `/dev` directory.
-func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *[]string, matchingDeviType string) error {
+func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *[]string, deviType string) error {
 	var ids [hiAIMaxDeviceNum]uint32
 
 	devNum, err := hnm.dmgr.GetDeviceList(&ids)

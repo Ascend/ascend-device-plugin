@@ -67,7 +67,7 @@ func setDeviceByPath(defaultDevices *[]string, device string) {
 func getLogicIDByName(DeviceName string, logicID *int32) error {
 	var phyID int32
 
-	major, err := getDeviceID(DeviceName);
+	major, err := getDeviceID(DeviceName)
 	if err != nil {
 		logger.Error("dev ID is invalid", zap.String("deviceID", DeviceName))
 		return err
@@ -146,7 +146,8 @@ func IsOneOfVirtualDeviceType(devType string) bool {
 
 // AssembleNpuDeviceStruct is used to create a struct of npuDevice
 func (adc *ascendCommonFunction) AssembleNpuDeviceStruct(deviType, devID string, phyID uint32) npuDevice {
-	logger.Info("Found Huawei Ascend:", zap.String("deviType", deviType), zap.String("logicID", devID), zap.Uint32("phyID", phyID))
+	logger.Info("Found Huawei Ascend:", zap.String("deviType", deviType),
+		zap.String("logicID", devID), zap.Uint32("phyID", phyID))
 	return npuDevice{
 		devType: deviType,
 		pciID:   "",
@@ -243,22 +244,23 @@ func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr DeviceMgrIn
 	return pluginapi.Healthy
 }
 
-// GetNPUs Discovers all HUAWEI Ascend310/Ascend710/Ascend910 devices available on the local node by calling walking `/dev` directory.
-func (adc *ascendCommonFunction) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *[]string, matchingDeviType string) error {
+// GetNPUs function discovers all HUAWEI Ascend910 devices available
+// on the local node by calling walking `/dev` directory.
+func (adc *ascendCommonFunction) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *[]string, deviType string) error {
 	var ids [hiAIMaxDeviceNum]uint32
 
 	devNum, err := adc.dmgr.GetDeviceList(&ids)
 	if err != nil {
 		return err
 	}
-	logger.Info("--->< ", zap.String("deviType", matchingDeviType))
+	logger.Info("--->< ", zap.String("deviType", deviType))
 
 	for i := int32(0); i < devNum; i++ {
-		dev := fmt.Sprintf("%s-%d", matchingDeviType, ids[i])
-		device := adc.AssembleNpuDeviceStruct(matchingDeviType, dev, placeholder)
+		dev := fmt.Sprintf("%s-%d", deviType, ids[i])
+		device := adc.AssembleNpuDeviceStruct(deviType, dev, placeholder)
 		*allDevices = append(*allDevices, device)
 	}
-	*allDeviceTypes = append(*allDeviceTypes, matchingDeviType)
+	*allDeviceTypes = append(*allDeviceTypes, deviType)
 
 	return nil
 }
