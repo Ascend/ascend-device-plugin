@@ -141,18 +141,6 @@ int dsmi_get_device_health(int device_id, unsigned int *phealth);
 
 /**
 * @ingroup driver
-* @brief Query device fault code
-* @attention NULL
-* @param [in] device_id The device id.
-* @param [out] errorcount Number of error codes, count:0~128
-* @param [out] perrorcode error codes
-* @return  0 for success, others for fail
-* @note Support:Ascend310,Ascend910
-*/
-int dsmi_get_device_errorcode(int device_id, int *errorcount, unsigned int *perrorcode);
-
-/**
-* @ingroup driver
 * @brief get the ip address and mask address.
 * @attention NULL
 * @param [in] device_id  The device id

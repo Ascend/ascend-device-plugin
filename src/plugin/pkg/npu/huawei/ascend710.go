@@ -1,5 +1,5 @@
 /*
-* Copyright(C) 2020. Huawei Technologies Co.,Ltd. All rights reserved.
+* Copyright(C) 2021. Huawei Technologies Co.,Ltd. All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -19,20 +19,12 @@ package huawei
 
 import "C"
 
-// HwAscend310Manager manages huawei Ascend310 devices.
-type HwAscend310Manager struct {
+// HwAscend710Manager manages huawei Ascend710 devices.
+type HwAscend710Manager struct {
 	ascendCommonFunction
 }
 
-// NewHwAscend310Manager used to create ascend 310 manager
-func NewHwAscend310Manager() *HwAscend310Manager {
-	return &HwAscend310Manager{}
-}
-
-// GetMatchingDeviType to get match device type
-func (hnm *HwAscend310Manager) GetMatchingDeviType() string {
-	if GetFdFlag {
-		return hiAIAscendfdPrefix
-	}
-	return hiAIAscend310Prefix
+// NewHwAscend710Manager used to create ascend 710 manager
+func NewHwAscend710Manager() *HwAscend710Manager {
+	return &HwAscend710Manager{}
 }

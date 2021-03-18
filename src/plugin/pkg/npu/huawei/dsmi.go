@@ -57,11 +57,6 @@ int dsmi_get_logicid_from_phyid(unsigned int phyid, unsigned int *logicid){
 	CALL_FUNC(dsmi_get_logicid_from_phyid,phyid,logicid)
 }
 
-int (*dsmi_get_device_errorcode_func)(int device_id, int *errorcount, unsigned int *perrorcode);
-int dsmi_get_device_errorcode(int device_id, int *errorcount, unsigned int *perrorcode){
-	CALL_FUNC(dsmi_get_device_errorcode,device_id,errorcount,perrorcode)
-}
-
 int (*dsmi_get_chip_info_func)(int device_id, struct dsmi_chip_info_stru *chip_info);
 int dsmi_get_chip_info(int device_id, struct dsmi_chip_info_stru *chip_info){
 	CALL_FUNC(dsmi_get_chip_info,device_id,chip_info)
@@ -100,8 +95,6 @@ int dsmiInit_dl(void){
 	dsmi_get_phyid_from_logicid_func = dlsym(dsmiHandle,"dsmi_get_phyid_from_logicid");
 
 	dsmi_get_logicid_from_phyid_func = dlsym(dsmiHandle,"dsmi_get_logicid_from_phyid");
-
-	dsmi_get_device_errorcode_func = dlsym(dsmiHandle,"dsmi_get_device_errorcode");
 
 	dsmi_get_chip_info_func = dlsym(dsmiHandle,"dsmi_get_chip_info");
 

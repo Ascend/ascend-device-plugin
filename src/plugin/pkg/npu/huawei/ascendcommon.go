@@ -24,7 +24,14 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
+	"time"
 )
+
+// ascendCommonFunction struct definition
+type ascendCommonFunction struct{
+	dmgr DeviceMgrInterface
+}
 
 func getDefaultDevices(defaultDevices *[]string) error {
 	// hiAIManagerDevice is required
@@ -60,7 +67,7 @@ func setDeviceByPath(defaultDevices *[]string, device string) {
 func getLogicIDByName(DeviceName string, logicID *int32) error {
 	var phyID int32
 
-	major, err := getDeviceID(DeviceName);
+	major, err := getDeviceID(DeviceName)
 	if err != nil {
 		logger.Error("dev ID is invalid", zap.String("deviceID", DeviceName))
 		return err
@@ -114,7 +121,31 @@ func getPhyIDFromDeviceID(deviceID string, dmgr DeviceMgrInterface) (string, err
 	return strconv.Itoa(int(phyID)), nil
 }
 
-func assembleNpuDeviceStruct(deviType, devID string, phyID uint32) npuDevice {
+func getDeviceID(deviceName string) (string, error) {
+
+	// hiAIAscend310Prefix: davinci-mini
+	// vnpu: davinci-mini0-0
+	// ascend310:  davinci-mini0
+
+	idSplit := strings.Split(deviceName, "-")
+
+	if len(idSplit) < idSplitNum {
+		return "", fmt.Errorf("deviceName: %s is invalid", deviceName)
+	}
+
+	majorID := idSplit[len(idSplit)-1]
+	return majorID, nil
+}
+
+// IsOneOfVirtualDeviceType used to judge whether a physical device or a virtual device
+func IsOneOfVirtualDeviceType(devType string) bool {
+	pattern := virtualDevicesPattern
+	reg := regexp.MustCompile(pattern)
+	return reg.MatchString(devType)
+}
+
+// AssembleNpuDeviceStruct is used to create a struct of npuDevice
+func (adc *ascendCommonFunction) AssembleNpuDeviceStruct(deviType, devID string, phyID uint32) npuDevice {
 	logger.Info("Found Huawei Ascend:", zap.String("deviType", deviType), zap.String("logicID", devID), zap.Uint32("phyID", phyID))
 	return npuDevice{
 		devType: deviType,
@@ -124,9 +155,125 @@ func assembleNpuDeviceStruct(deviType, devID string, phyID uint32) npuDevice {
 	}
 }
 
-// IsOneOfVirtualDeviceType used to judge whether a physical device or a virtual device
-func IsOneOfVirtualDeviceType(devType string) bool {
-	pattern := virtualDevicesPattern
-	reg := regexp.MustCompile(pattern)
-	return reg.MatchString(devType)
+// CreateLogDirectory is used to create log complete path
+func (adc *ascendCommonFunction) CreateLogDirectory(newLogPath *string, subdir string) error {
+	*newLogPath += subdir
+	t := time.Now()
+	*newLogPath += t.UTC().Format("_2006-01-02-15-04-05.999")
+	if _, err := os.Stat(*newLogPath); os.IsNotExist(err) {
+		if err := os.MkdirAll(*newLogPath, os.ModePerm); err != nil {
+			logger.Error("create directory %s failed.",
+				zap.String("path", *newLogPath),
+				zap.String("err", err.Error()))
+			return fmt.Errorf("create directory %s failed: %s", *newLogPath, err)
+		}
+	}
+	return nil
+}
+
+// CreateLogSubDir is used to create log sub path
+func (adc *ascendCommonFunction) CreateLogSubDir(devID []string) (string, error) {
+	var subdir = "/device"
+	for _, item := range devID {
+		major, err := getDeviceID(item)
+		if err != nil {
+			logger.Error("dev ID is invalid", zap.String("deviceID", item))
+			return subdir, fmt.Errorf("dev ID %s is invalid", item)
+		}
+		subdir += fmt.Sprintf("-%s", major)
+	}
+	return subdir, nil
+}
+
+// GetDevPath is used to get device path
+func (adc *ascendCommonFunction) GetDevPath(id, ascendRuntimeOptions string, hostPath *string, containerPath *string) {
+	*containerPath = fmt.Sprintf("%s%s", "/dev/davinci", id)
+	if ascendRuntimeOptions == "VIRTUAL" {
+		*hostPath = fmt.Sprintf("%s%s", "/dev/vdavinci", id)
+		return
+	}
+	*hostPath = *containerPath
+	return
+}
+
+// GetLogPath is used to get log path
+func (adc *ascendCommonFunction) GetLogPath(devID []string, defaultLogPath string, newLogPath *string) error {
+	subdir, err := adc.CreateLogSubDir(devID)
+	if err != nil {
+		return err
+	}
+	err = adc.CreateLogDirectory(&defaultLogPath, subdir)
+	if err != nil {
+		return err
+	}
+	*newLogPath = defaultLogPath
+	logger.Info("log dir is:", zap.String("logDir", *newLogPath))
+	return nil
+}
+
+// GetDevState get device state
+func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr DeviceMgrInterface) string {
+	var logicID int32
+
+	err := getLogicIDByName(DeviceName, &logicID)
+	if err != nil {
+		if logFlag {
+			logger.Error("get device logicID failed.",
+				zap.String("deviceId", DeviceName),
+				zap.String("error", err.Error()))
+		}
+		return pluginapi.Unhealthy
+	}
+	healthState, err := dmgr.GetDeviceHealth(logicID)
+	if err != nil {
+		if logFlag {
+			logger.Error("get device healthy state failed.",
+				zap.Int32("deviceId", logicID),
+				zap.String("error", err.Error()))
+		}
+		return pluginapi.Unhealthy
+	}
+	if healthState != 0 {
+		err = unhealthyState(healthState, uint32(logicID), "healthState", dmgr)
+		if err != nil {
+			logger.Error("unhealthyState ", zap.Error(err))
+		}
+		return pluginapi.Unhealthy
+	}
+	return pluginapi.Healthy
+}
+
+// GetNPUs Discovers all HUAWEI Ascend310/Ascend710/Ascend910 devices available on the local node by calling walking `/dev` directory.
+func (adc *ascendCommonFunction) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *[]string, matchingDeviType string) error {
+	var ids [hiAIMaxDeviceNum]uint32
+
+	devNum, err := adc.dmgr.GetDeviceList(&ids)
+	if err != nil {
+		return err
+	}
+	logger.Info("--->< ", zap.String("deviType", matchingDeviType))
+
+	for i := int32(0); i < devNum; i++ {
+		dev := fmt.Sprintf("%s-%d", matchingDeviType, ids[i])
+		device := adc.AssembleNpuDeviceStruct(matchingDeviType, dev, placeholder)
+		*allDevices = append(*allDevices, device)
+	}
+	*allDeviceTypes = append(*allDeviceTypes, matchingDeviType)
+
+	return nil
+}
+
+// GetMatchingDeviType to get match device type
+func (adc *ascendCommonFunction) GetMatchingDeviType() string {
+	return hiAIAscend710Prefix
+}
+
+// SetDmgr to set dmgr
+func (adc *ascendCommonFunction) SetDmgr(dmgr DeviceMgrInterface) {
+	adc.dmgr = dmgr
+}
+
+// GetDmgr to get dmgr
+func (adc *ascendCommonFunction) GetDmgr() DeviceMgrInterface {
+	return adc.dmgr
 }
