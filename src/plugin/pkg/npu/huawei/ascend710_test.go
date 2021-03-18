@@ -37,10 +37,7 @@ func TestHwAscend710ManagerGetNPUs(t *testing.T) {
 	}
 	hdm := createFake710HwDevManager("ascend710", false, false, false)
 	err := hdm.manager.GetNPUs(&hdm.allDevs, &hdm.allDevTypes, hdm.manager.GetMatchingDeviType())
-	if err != nil {
-		t.Fatalf("TestHwAscend710ManagerGetNPUs Run Failed")
-	}
-	if hdm.allDevTypes[0] != "Ascend710" {
+	if err != nil || hdm.allDevTypes[0] != "Ascend710" {
 		t.Fatalf("TestHwAscend710ManagerGetNPUs Run Failed")
 	}
 	for _, dev := range hdm.allDevs {
@@ -87,7 +84,7 @@ func TestHwAscend710ManagerGetDevPath(t *testing.T) {
 
 // TestHwAscend710ManagerGetLogPath for getLogPath
 func TestHwAscend710ManagerGetLogPath(t *testing.T) {
-	hdm := createFake710HwDevManager("ascend710", false, false, false)
+	hdm := createFake710HwDevManager("", true, false, false)
 
 	var logPath string
 	devID := make([]string, 0)
