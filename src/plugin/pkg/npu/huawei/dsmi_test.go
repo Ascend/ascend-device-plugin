@@ -79,6 +79,11 @@ func (d *fakeDeviceManager) GetLogicID(phyID uint32) (uint32, error) {
 
 }
 
+// ShutDown the function
+func (d *fakeDeviceManager) ShutDown() {
+	fmt.Printf("use fake DeviceManager function ShutDown")
+}
+
 // GetChipInfo for fakeDeviceManager
 func (d *fakeDeviceManager) GetChipInfo(logicID int32) (*ChipInfo, error) {
 	chip := &ChipInfo{

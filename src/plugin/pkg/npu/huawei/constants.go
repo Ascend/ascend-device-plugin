@@ -21,7 +21,6 @@ const (
 	// If the driver installed correctly, these two devices will be there.
 	hiAIHDCDevice     = "/dev/hisi_hdc"
 	hiAIManagerDevice = "/dev/davinci_manager"
-	hiAIDavinciPrefix = "/dev/davinci"
 	hiAISVMDevice     = "/dev/devmm_svm"
 
 	hiAi200RCSVM0            = "/dev/svm0"
@@ -36,17 +35,13 @@ const (
 	resourceNamePrefix  = "huawei.com/"
 	hiAIAscend310Prefix = "Ascend310"
 	hiAIAscend910Prefix = "Ascend910"
+	hiAIAscend710Prefix = "Ascend710"
 	hiAIAscendfdPrefix  = "davinci-mini"
 	hiAISlogdConfig     = "/etc/slog.conf"
 	hiAIMaxDeviceNum    = 64
 	idSplitNum          = 2
 	// The unit is seconds
 	sleepTime = 5
-	// if register failed three times then exit
-	registerTimeout = 3
-
-	// device socket path
-	serverSock = "/var/lib/kubelet/device-plugins/Ascend910.sock"
 
 	// logger setting
 
@@ -57,14 +52,19 @@ const (
 	maxAge                  = 28                                                     // the log file last time
 	podDeviceKey            = "ascend.kubectl.kubernetes.io/ascend-910-configuration" // config map name
 	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"                               // visible env
+	ascendRuntimeOptionsEnv = "ASCEND_RUNTIME_OPTIONS"                               // virtual runtime option env
 	logChmod                = 0640
 
 	huaweiAscend910  = "huawei.com/Ascend910"
 	podPredicateTime = "predicate-time"
 	runMode310       = "ascend310"
 	runMode910       = "ascend910"
+	runMode710       = "ascend710"
 	retryTime        = 3
 	interval         = 1
 	timeout          = 10
 	maxChipName      = 32
+
+	virtualDevicesPattern = `Ascend910-[4, 8, 16]c`
+	placeholder = 9999
 )

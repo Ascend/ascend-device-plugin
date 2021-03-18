@@ -19,11 +19,6 @@ package huawei
 
 import (
 	"fmt"
-	"go.uber.org/zap"
-	"os"
-	"time"
-
-	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
 // switch error log
@@ -31,7 +26,7 @@ var logFlag = true
 
 // HwAscend910Manager manages huawei Ascend910 devices.
 type HwAscend910Manager struct {
-	dmgr DeviceMgrInterface
+	ascendCommonFunction
 }
 
 // NewHwAscend910Manager is used to create ascend 910 manager
@@ -41,7 +36,7 @@ func NewHwAscend910Manager() *HwAscend910Manager {
 
 // GetNPUs function discovers all HUAWEI Ascend910 devices available
 // on the local node by calling walking `/dev` directory.
-func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *[]string) error {
+func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *[]string, matchingDeviType string) error {
 	var ids [hiAIMaxDeviceNum]uint32
 
 	devNum, err := hnm.dmgr.GetDeviceList(&ids)
@@ -49,96 +44,36 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *
 		return err
 	}
 	for i := int32(0); i < devNum; i++ {
-		devID := fmt.Sprintf("%s-%d", hiAIAscend910Prefix, ids[i])
 		phyID, err := hnm.dmgr.GetPhyID(ids[i])
 		if err != nil {
 			return err
 		}
-		logger.Info("Found Huawei Ascend910:", zap.String("logicID", devID), zap.Uint32("phyID", phyID))
-		device := npuDevice{
-			devType: hiAIAscend910Prefix,
-			pciID:   "",
-			ID:      devID,
-			Health:  pluginapi.Healthy,
-		}
-		*allDevices = append(*allDevices, device)
+		devices, deviTypes := hnm.assemblePhyDevices(ids[i], phyID)
+		*allDevices = append(*allDevices, devices...)
+		*allDeviceTypes = append(*allDeviceTypes, deviTypes...)
 	}
-	*allDeviceTypes = append(*allDeviceTypes, hiAIAscend910Prefix)
-
+	*allDeviceTypes =hnm.removeDuplicate(allDeviceTypes)
 	return nil
 }
 
-// GetDevState get device state
-func (hnm *HwAscend910Manager) GetDevState(DeviceName string) string {
-	var logicID int32
-
-	err := getLogicIDByName(DeviceName, &logicID)
-	if err != nil {
-		if logFlag {
-			logger.Error("get device logicID failed.",
-				zap.String("deviceId", DeviceName),
-				zap.String("error", err.Error()))
-		}
-		return pluginapi.Unhealthy
+func (hnm *HwAscend910Manager) removeDuplicate(allDeviceTypes *[]string) []string {
+	deviceTypesMap := make(map[string]string)
+	var rmDupDeviceTypes []string
+	for _, deviType := range *allDeviceTypes {
+		deviceTypesMap[deviType] = deviType
 	}
-	healthState, err := hnm.dmgr.GetDeviceHealth(logicID)
-	if err != nil {
-		if logFlag {
-			logger.Error("get device healthy state failed.",
-				zap.Int32("deviceId", logicID),
-				zap.String("error", err.Error()))
-		}
-		return pluginapi.Unhealthy
+	for _, deviType := range deviceTypesMap {
+		rmDupDeviceTypes = append(rmDupDeviceTypes, deviType)
 	}
-	if healthState != 0 {
-		unhealthyState(healthState, uint32(logicID), "healthState", hnm.dmgr)
-		return pluginapi.Unhealthy
-	}
-	return pluginapi.Healthy
-
+	return rmDupDeviceTypes
 }
 
-// GetDefaultDevs Discovers Huawei Ascend910 devices and sets up device access environment.
-func (hnm *HwAscend910Manager) GetDefaultDevs(defaultDeivces *[]string) error {
-	return getDefaultDevices(defaultDeivces)
-}
-
-// GetDevPath get dev path
-func (hnm *HwAscend910Manager) GetDevPath(id string, hostPath *string, containerPath *string) {
-	*hostPath = fmt.Sprintf("%s%s", "/dev/davinci", id)
-	*containerPath = *hostPath
-}
-
-// GetLogPath get log path
-func (hnm *HwAscend910Manager) GetLogPath(devID []string, defaultLogPath string, newLogPath *string) error {
-
-	*newLogPath = defaultLogPath
-	var subdir = "/device"
-	for _, item := range devID {
-		var major string
-		var minor string
-		if err := getAscendDeviceID(item, &major, &minor); err != nil {
-			logger.Error("dev ID is invalid", zap.String("deviceID", item))
-			return fmt.Errorf("dev ID %s is invalid", item)
-		}
-		subdir += fmt.Sprintf("-%s", major)
-	}
-	*newLogPath += subdir
-	t := time.Now()
-	*newLogPath += t.UTC().Format("_2006-01-02-15-04-05.999")
-	if _, err := os.Stat(*newLogPath); os.IsNotExist(err) {
-		if err := os.MkdirAll(*newLogPath, os.ModePerm); err != nil {
-			logger.Error("create directory %s failed.",
-				zap.String("path", *newLogPath),
-				zap.String("err", err.Error()))
-			return fmt.Errorf("create directory %s failed: %s", *newLogPath, err)
-		}
-	}
-	logger.Info("log dir is:", zap.String("logDir", *newLogPath))
-	return nil
-}
-
-// SetDmgr to set dmgr
-func (hnm *HwAscend910Manager) SetDmgr(dmgr DeviceMgrInterface) {
-	hnm.dmgr = dmgr
+func (hnm *HwAscend910Manager) assemblePhyDevices(logicID, phyID uint32) ([]npuDevice, []string) {
+	var devices []npuDevice
+	var deviTypes []string
+	devID := fmt.Sprintf("%s-%d", hiAIAscend910Prefix, logicID)
+	device := hnm.AssembleNpuDeviceStruct(hiAIAscend910Prefix, devID, phyID)
+	devices = append(devices, device)
+	deviTypes = append(deviTypes, hiAIAscend910Prefix)
+	return devices, deviTypes
 }

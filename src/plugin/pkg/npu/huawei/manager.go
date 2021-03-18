@@ -57,12 +57,13 @@ var (
 )
 
 type devManager interface {
-	GetNPUs(*[]npuDevice, *[]string) error
-	GetDefaultDevs(*[]string) error
-	GetDevState(string) string
-	GetDevPath(string, *string, *string)
+	GetNPUs(*[]npuDevice, *[]string, string) error
+	GetDevState(string, DeviceMgrInterface) string
+	GetDevPath(string, string, *string, *string)
 	GetLogPath([]string, string, *string) error
 	SetDmgr(DeviceMgrInterface)
+	GetDmgr() DeviceMgrInterface
+	GetMatchingDeviType() string
 }
 
 // NewHwDevManager function is used to new a dev manager.
@@ -89,15 +90,17 @@ func (hdm *HwDevManager) GetNPUs() error {
 		hdm.manager = NewHwAscend310Manager()
 	case runMode910:
 		hdm.manager = NewHwAscend910Manager()
-		logger.Info("device plugin start")
+	case runMode710:
+		hdm.manager = NewHwAscend710Manager()
 	}
+	logger.Info("device plugin start")
 	hdm.manager.SetDmgr(hdm.dmgr)
 
-	if err := hdm.manager.GetDefaultDevs(&hdm.defaultDevs); err != nil {
+	if err := getDefaultDevices(&hdm.defaultDevs); err != nil {
 		return err
 	}
 
-	if err := hdm.manager.GetNPUs(&hdm.allDevs, &hdm.allDevTypes); err != nil {
+	if err := hdm.manager.GetNPUs(&hdm.allDevs, &hdm.allDevTypes, hdm.manager.GetMatchingDeviType()); err != nil {
 		return err
 	}
 
@@ -228,6 +231,11 @@ func (hdm *HwDevManager) setRunMode() error {
 
 	if strings.Contains(chipinfo.ChipName, "310") {
 		hdm.runMode = runMode310
+		return nil
+	}
+
+	if strings.Contains(chipinfo.ChipName, "710") {
+		hdm.runMode = runMode710
 		return nil
 	}
 
