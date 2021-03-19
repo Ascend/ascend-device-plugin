@@ -31,9 +31,7 @@ const (
 
 // NewHwAscend310Manager used to create ascend 310 manager
 func NewFakeHwAscend310Manager() *HwAscend310Manager {
-	return &HwAscend310Manager{
-		dmgr: newFakeDeviceManager(),
-	}
+	return &HwAscend310Manager{}
 }
 
 // TestHwAscend310Manager_GetNPUs for GetNPUs
@@ -43,7 +41,7 @@ func TestHwAscend310Manager_GetNPUs(t *testing.T) {
 		resultDevMap[fmt.Sprintf("davinci-mini-%d", i)] = empty.Empty{}
 	}
 	hdm := createFakeHwDevManager("", true, false, false)
-	err := hdm.manager.GetNPUs(&hdm.allDevs, &hdm.allDevTypes)
+	err := hdm.manager.GetNPUs(&hdm.allDevs, &hdm.allDevTypes, hdm.manager.GetMatchingDeviType())
 	if err != nil {
 		t.Fatalf("TestHwAscend310Manager_GetNPUs Run Failed")
 	}
@@ -59,35 +57,35 @@ func TestHwAscend310Manager_GetNPUs(t *testing.T) {
 	t.Logf("TestHwAscend310Manager_GetNPUs Run Pass")
 }
 
-// TestHwAscend310Manager_GetDevPath for GetDevPath
-func TestHwAscend310Manager_GetDevPath(t *testing.T) {
+// TestHwAscend310Manager_GetDevState for GetDevState
+func TestHwAscend310Manager_GetDevState(t *testing.T) {
 	hdm := createFakeHwDevManager("", true, false, false)
-	err := hdm.manager.GetNPUs(&hdm.allDevs, &hdm.allDevTypes)
+	err := hdm.manager.GetNPUs(&hdm.allDevs, &hdm.allDevTypes, hdm.manager.GetMatchingDeviType())
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, dev := range hdm.allDevs {
-		state := hdm.manager.GetDevState(dev.ID)
+		state := hdm.manager.GetDevState(dev.ID, hdm.manager.GetDmgr())
 		if strings.Contains(dev.ID, "3") && state != pluginapi.Unhealthy {
-			t.Fatalf("TestHwAscend310Manager_GetDevPath Run Failed %v", dev)
+			t.Fatalf("TestHwAscend310Manager_GetDevState Run Failed %v", dev)
 
 		} else if !strings.Contains(dev.ID, "3") && state == pluginapi.Unhealthy {
-			t.Fatalf("TestHwAscend310Manager_GetDevPath Run Failed %v", dev)
+			t.Fatalf("TestHwAscend310Manager_GetDevState Run Failed %v", dev)
 		}
 	}
-	t.Logf("TestHwAscend310Manager_GetDevPath Run Pass")
+	t.Logf("TestHwAscend310Manager_GetDevState Run Pass")
 }
 
-// TestHwAscend310Manager_GetDevState for GetDevState
-func TestHwAscend310Manager_GetDevState(t *testing.T) {
+// TestHwAscend310Manager_GetDevPath for GetDevPath
+func TestHwAscend310Manager_GetDevPath(t *testing.T) {
 	hdm := createFakeHwDevManager("", true, false, false)
 	var hostPath string
 	var containerPath string
-	hdm.manager.GetDevPath("0", &hostPath, &containerPath)
+	hdm.manager.GetDevPath("0", "", &hostPath, &containerPath)
 	if hostPath != containerPath && hostPath != "/dev/davinci0" {
-		t.Fatal("TestHwAscend310Manager_GetDevState Run Failed")
+		t.Fatal("TestHwAscend310Manager_GetDevPath Run Failed")
 	}
-	t.Logf("TestHwAscend310Manager_GetDevState Run Pass")
+	t.Logf("TestHwAscend310Manager_GetDevPath Run Pass")
 }
 
 // TestHwAscend310Manager_GetLogPath for getLogPath
@@ -113,5 +111,6 @@ func createFakeHwDevManager(mode string, fdFlag, useAscendDocker, volcanoType bo
 	hdm := NewHwDevManager(mode, "/var/dlog")
 	hdm.SetParameters(fdFlag, useAscendDocker, volcanoType)
 	hdm.manager = NewFakeHwAscend310Manager()
+	hdm.manager.SetDmgr(newFakeDeviceManager())
 	return hdm
 }
