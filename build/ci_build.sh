@@ -28,7 +28,7 @@ sed -i "s/x86/amd64/" "$TOP_DIR"/ascend-device-plugin/build/build.sh
 sed -i "s/ascend_k8sdeviceplugin:.*/ascend_k8sdeviceplugin:${version}/" "$TOP_DIR"/ascend-device-plugin/ascendplugin.yaml
 sed -i "s/ascend_k8sdeviceplugin:.*/ascend_k8sdeviceplugin:${version}/" "$TOP_DIR"/ascend-device-plugin/ascendplugin-volcano.yaml
 sed -i "s/ascend_k8sdeviceplugin:.*/ascend_k8sdeviceplugin:${version}/" "$TOP_DIR"/ascend-device-plugin/ascendplugin-310.yaml
-
+sed -i "s/ascend_k8sdeviceplugin:.*/ascend_k8sdeviceplugin:${version}/" "$TOP_DIR"/ascend-device-plugin/ascendplugin-710.yaml
 # 执行构建
 bash -x "$TOP_DIR"/ascend-device-plugin/build/build.sh dockerimages
 
@@ -36,3 +36,4 @@ bash -x "$TOP_DIR"/ascend-device-plugin/build/build.sh dockerimages
 cp "$TOP_DIR"/ascend-device-plugin/ascendplugin.yaml "$TOP_DIR"/ascend-device-plugin/output/ascendplugin-"${version}".yaml
 cp "$TOP_DIR"/ascend-device-plugin/ascendplugin-volcano.yaml "$TOP_DIR"/ascend-device-plugin/output/ascendplugin-volcano-"${version}".yaml
 cp "$TOP_DIR"/ascend-device-plugin/ascendplugin-310.yaml "$TOP_DIR"/ascend-device-plugin/output/ascendplugin-310-"${version}".yaml
+cp "$TOP_DIR"/ascend-device-plugin/ascendplugin-710.yaml "$TOP_DIR"/ascend-device-plugin/output/ascendplugin-710-"${version}".yaml

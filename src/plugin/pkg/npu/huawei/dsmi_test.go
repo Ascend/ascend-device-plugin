@@ -152,6 +152,13 @@ func TestGetDefaultDevices(t *testing.T) {
 	defaultMap[hiAIHDCDevice] = empty.Empty{}
 	defaultMap[hiAIManagerDevice] = empty.Empty{}
 	defaultMap[hiAISVMDevice] = empty.Empty{}
+	defaultMap[hiAi200RCSVM0] = empty.Empty{}
+	defaultMap[hiAi200RCLog] = empty.Empty{}
+	defaultMap[hiAi200RCEventSched] = empty.Empty{}
+	defaultMap[hiAi200RCUpgrade] = empty.Empty{}
+	defaultMap[hiAi200RCHiDvpp] = empty.Empty{}
+	defaultMap[hiAi200RCMemoryBandwidth] = empty.Empty{}
+	defaultMap[hiAi200RCTsAisle] = empty.Empty{}
 	for _, str := range defaultDeivces {
 		_, ok := defaultMap[str]
 		if !ok {

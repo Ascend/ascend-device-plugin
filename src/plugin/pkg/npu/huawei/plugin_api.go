@@ -667,15 +667,15 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int, ascendVisibleDevices 
 		return err
 	}
 	for _, id := range allocateDevice.List() {
-		majorID, err := getDeviceID(id)
-		if err != nil {
-			logger.Error("getDeviceID", zap.Error(err))
-			return err
-		}
-		phyID, errs := getPhyIDFromDeviceID(majorID, s.hps.hdm.dmgr)
+		majorID, errs := getDeviceID(id)
 		if errs != nil {
-			logger.Error("get phyID failed", zap.Error(errs))
+			logger.Error("getDeviceID", zap.Error(errs))
 			return errs
+		}
+		phyID, errors := getPhyIDFromDeviceID(majorID, s.hps.hdm.dmgr)
+		if errors != nil {
+			logger.Error("get phyID failed", zap.Error(errors))
+			return errors
 		}
 		*ascendVisibleDevices += phyID + ","
 	}
