@@ -57,7 +57,7 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *
 }
 
 func (hnm *HwAscend910Manager) removeDuplicate(allDeviceTypes *[]string) []string {
-	deviceTypesMap := make(map[string]string)
+	deviceTypesMap := make(map[string]string, 100)
 	var rmDupDeviceTypes []string
 	for _, deviType := range *allDeviceTypes {
 		deviceTypesMap[deviType] = deviType

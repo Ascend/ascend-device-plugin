@@ -67,4 +67,8 @@ const (
 
 	virtualDevicesPattern = `Ascend910-[4, 8, 16]c`
 	placeholder = 9999
+
+	// Ascend device type identification
+	Infer710 = "710"
+	Infer310 = "310"
 )

@@ -5,10 +5,10 @@ set -e
 CUR_DIR=$(dirname $(readlink -f "$0"))
 TOP_DIR=$(realpath "${CUR_DIR}"/..)
 
-build_version="v20.2.0"
+build_version="v2.0.1"
 output_name="ascendplugin"
 deploy_name="deploy.sh"
-docker_images_name="ascend-k8sdeviceplugin:v20.2.0"
+docker_images_name="ascend-k8sdeviceplugin:v2.0.1"
 ostype=$(arch)
 if [ "${ostype}" = "aarch64" ]; then
   ostype="arm64"
@@ -28,7 +28,10 @@ function clear_env() {
 
 function build_plugin() {
     cd ${TOP_DIR}/src/plugin/cmd/ascendplugin
-    go build -ldflags "-X main.BuildName=${output_name} \
+    export CGO_ENABLED=1
+    export CGO_CFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
+    export CGO_CPPFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
+    go build -buildmode=pie -ldflags "-X main.BuildName=${output_name} \
             -X main.BuildVersion=${build_version} \
             -buildid none     \
             -s   \

@@ -16,19 +16,19 @@ dos2unix "$TOP_DIR"/ascend-device-plugin/build/build.sh
 chmod 550 "$TOP_DIR"/ascend-device-plugin/build/*
 cd "$TOP_DIR"/ascend-device-plugin/build/
 
-version="v20.2.0" 
+version="v2.0.1"
 
 # 修改build.sh文件
 sed -i "s/build_verison=.*/build_verison=\"${version}\"/" "$TOP_DIR"/ascend-device-plugin/build/build.sh
-sed -i "s/docker_images_name=.*/docker_images_name=\"ascend_k8sdeviceplugin:${version}\"/" "$TOP_DIR"/ascend-device-plugin/build/build.sh
+sed -i "s/docker_images_name=.*/docker_images_name=\"ascend-k8sdeviceplugin:${version}\"/" "$TOP_DIR"/ascend-device-plugin/build/build.sh
 
 sed -i "s/x86/amd64/" "$TOP_DIR"/ascend-device-plugin/build/build.sh
 
 # 修改三个yaml的镜像
-sed -i "s/ascend_k8sdeviceplugin:.*/ascend_k8sdeviceplugin:${version}/" "$TOP_DIR"/ascend-device-plugin/ascendplugin.yaml
-sed -i "s/ascend_k8sdeviceplugin:.*/ascend_k8sdeviceplugin:${version}/" "$TOP_DIR"/ascend-device-plugin/ascendplugin-volcano.yaml
-sed -i "s/ascend_k8sdeviceplugin:.*/ascend_k8sdeviceplugin:${version}/" "$TOP_DIR"/ascend-device-plugin/ascendplugin-310.yaml
-sed -i "s/ascend_k8sdeviceplugin:.*/ascend_k8sdeviceplugin:${version}/" "$TOP_DIR"/ascend-device-plugin/ascendplugin-710.yaml
+sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/ascend-device-plugin/ascendplugin.yaml
+sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/ascend-device-plugin/ascendplugin-volcano.yaml
+sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/ascend-device-plugin/ascendplugin-310.yaml
+sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/ascend-device-plugin/ascendplugin-710.yaml
 # 执行构建
 bash -x "$TOP_DIR"/ascend-device-plugin/build/build.sh dockerimages
 
