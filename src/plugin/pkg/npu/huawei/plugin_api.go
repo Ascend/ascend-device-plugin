@@ -267,7 +267,7 @@ func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (
 		if !ok {
 			return "", fmt.Errorf("plugin doesn't have device %s", id)
 		}
-		majorID, err := getDeviceID(id)
+		majorID, err := getDeviceID(id, s.ascendRuntimeOptions)
 		if err != nil {
 			logger.Error("getDeviceID", zap.Error(err))
 			return "", err
@@ -421,7 +421,7 @@ func (s *pluginAPI) PreStartContainer(ctx context.Context,
 }
 
 func (s *pluginAPI) mountfile(resp *pluginapi.ContainerAllocateResponse, dlogMountPath string, devID []string) {
-	if err := s.hps.hdm.manager.GetLogPath(devID, s.hps.hdm.dlogPath, &dlogMountPath); err != nil {
+	if err := s.hps.hdm.manager.GetLogPath(devID, s.hps.hdm.dlogPath, s.ascendRuntimeOptions, &dlogMountPath); err != nil {
 		logger.Error("get logPath failed.", zap.String("err", err.Error()))
 		dlogMountPath = s.hps.hdm.dlogPath
 	}
@@ -706,7 +706,7 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int, ascendVisibleDevices 
 		return err
 	}
 	for _, id := range allocateDevice.List() {
-		majorID, err := getDeviceID(id)
+		majorID, err := getDeviceID(id, s.ascendRuntimeOptions)
 		if err != nil {
 			logger.Error("getDeviceID", zap.Error(err))
 			return err
