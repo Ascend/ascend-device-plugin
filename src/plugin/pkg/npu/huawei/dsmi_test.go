@@ -122,7 +122,7 @@ func (d *fakeDeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, er
 		coreNumUnused: uint32(testAiCoreNum),
 	}
 	for i := 0; i < 2; i++{
-		coreNum := fmt.Sprintf("%v", testComputeCoreNum * (i + 1))
+		coreNum := fmt.Sprintf("%d", testComputeCoreNum * (i + 1))
 		cgoDsmiVDevInfos.cgoDsmiSubVDevInfos= append(cgoDsmiVDevInfos.cgoDsmiSubVDevInfos, CgoDsmiSubVDevInfo{
 			status: uint32(0),
 			vdevid: uint32(int(logicID) + i),

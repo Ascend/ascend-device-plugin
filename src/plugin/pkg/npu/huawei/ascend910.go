@@ -101,8 +101,8 @@ func (hnm *HwAscend910Manager) assembleVirtualDevices(logicID, phyID uint32, cgo
 	var devices []npuDevice
 	var vDeviTypes [] string
 	for _, dsmiSubVDevInfo := range cgoDsmiVDevInfos.cgoDsmiSubVDevInfos {
-		vDeviType := fmt.Sprintf("%s-%vc", hiAIAscend910Prefix, dsmiSubVDevInfo.spec.coreNum)
-		devID := fmt.Sprintf("%s-%vc-%d-%d", hiAIAscend910Prefix, dsmiSubVDevInfo.spec.coreNum, dsmiSubVDevInfo.vdevid, logicID)
+		vDeviType := fmt.Sprintf("%s-%sc", hiAIAscend910Prefix, dsmiSubVDevInfo.spec.coreNum)
+		devID := fmt.Sprintf("%s-%sc-%d-%d", hiAIAscend910Prefix, dsmiSubVDevInfo.spec.coreNum, dsmiSubVDevInfo.vdevid, logicID)
 		device := hnm.AssembleNpuDeviceStruct(vDeviType, devID, phyID)
 		devices = append(devices, device)
 		vDeviTypes = append(vDeviTypes, vDeviType)
