@@ -470,14 +470,14 @@ The device management plug-in provides the following functions:
 </th>
 </tr>
 </thead>
-<tbody><tr id="row137501013384"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="p137501613585"><a name="p137501613585"></a><a name="p137501613585"></a>v20.2.0</p>
+<tbody><tr id="row137501013384"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="p137501613585"><a name="p137501613585"></a><a name="p137501613585"></a>v2.0.1</p>
 </td>
 <td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.2 "><p id="p1675010135811"><a name="p1675010135811"></a><a name="p1675010135811"></a>2021-01-08</p>
 </td>
 <td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.3 "><p id="p3750813889"><a name="p3750813889"></a><a name="p3750813889"></a>Optimized the description in "Creating DaemonSet."</p>
 </td>
 </tr>
-<tr id="en-us_topic_0280467800_row118567425441"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="en-us_topic_0280467800_p08571442174415"><a name="en-us_topic_0280467800_p08571442174415"></a><a name="en-us_topic_0280467800_p08571442174415"></a>v20.2.0</p>
+<tr id="en-us_topic_0280467800_row118567425441"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="en-us_topic_0280467800_p08571442174415"><a name="en-us_topic_0280467800_p08571442174415"></a><a name="en-us_topic_0280467800_p08571442174415"></a>v2.0.1</p>
 </td>
 <td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.2 "><p id="en-us_topic_0280467800_p38571542154414"><a name="en-us_topic_0280467800_p38571542154414"></a><a name="en-us_topic_0280467800_p38571542154414"></a>2020-11-18</p>
 </td>

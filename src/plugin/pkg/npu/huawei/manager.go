@@ -229,12 +229,12 @@ func (hdm *HwDevManager) setRunMode() error {
 		return err
 	}
 
-	if strings.Contains(chipinfo.ChipName, "310") {
+	if strings.Contains(chipinfo.ChipName, Infer310) {
 		hdm.runMode = runMode310
 		return nil
 	}
 
-	if strings.Contains(chipinfo.ChipName, "710") {
+	if strings.Contains(chipinfo.ChipName, Infer710) {
 		hdm.runMode = runMode710
 		return nil
 	}
