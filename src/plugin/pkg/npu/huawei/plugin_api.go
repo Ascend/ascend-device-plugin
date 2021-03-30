@@ -257,10 +257,9 @@ func (s *pluginAPI) setAscendRuntimeOptions(requests *pluginapi.AllocateRequest)
 			if IsOneOfVirtualDeviceType(deviceName) {
 				if len(rqt.DevicesIDs) > interval {
 					return fmt.Errorf("request more than one virtual device, current is %d", len(rqt.DevicesIDs))
-				}else {
-					s.ascendRuntimeOptions = "VIRTUAL"
-					break
 				}
+				s.ascendRuntimeOptions = "VIRTUAL"
+				break
 			}
 		}
 	}
