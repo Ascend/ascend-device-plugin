@@ -254,10 +254,10 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 func (s *pluginAPI) setAscendRuntimeOptions(requests *pluginapi.AllocateRequest) error {
 	for _, rqt := range requests.ContainerRequests {
 		for _, deviceName := range rqt.DevicesIDs {
+			if IsOneOfVirtualDeviceType(deviceName) && len(rqt.DevicesIDs) > interval {
+				return fmt.Errorf("request more than one virtual device, current is %d", len(rqt.DevicesIDs))
+			}
 			if IsOneOfVirtualDeviceType(deviceName) {
-				if len(rqt.DevicesIDs) > interval {
-					return fmt.Errorf("request more than one virtual device, current is %d", len(rqt.DevicesIDs))
-				}
 				s.ascendRuntimeOptions = "VIRTUAL"
 				break
 			}
