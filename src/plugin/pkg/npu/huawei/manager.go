@@ -60,7 +60,7 @@ type devManager interface {
 	GetNPUs(*[]npuDevice, *[]string, string) error
 	GetDevState(string, DeviceMgrInterface) string
 	GetDevPath(string, string, *string, *string)
-	GetLogPath([]string, string, *string) error
+	GetLogPath([]string, string, string, *string) error
 	SetDmgr(DeviceMgrInterface)
 	GetDmgr() DeviceMgrInterface
 	GetMatchingDeviType() string

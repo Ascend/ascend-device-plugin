@@ -66,6 +66,9 @@ func TestHwAscend910Manager_GetDevState(t *testing.T) {
 	}
 	for _, dev := range hdm.allDevs {
 		state := hdm.manager.GetDevState(dev.ID, hdm.manager.GetDmgr())
+		if IsOneOfVirtualDeviceType(dev.ID) {
+			continue
+		}
 		if strings.Contains(dev.ID, "3") && state != pluginapi.Unhealthy {
 			t.Fatalf("TestHwAscend910Manager_GetDevState Run Failed %v", dev)
 		} else if !strings.Contains(dev.ID, "3") && state == pluginapi.Unhealthy {
@@ -94,8 +97,8 @@ func TestHwAscend910Manager_GetLogPath(t *testing.T) {
 	var logPath string
 	devID := make([]string, 0)
 	devID = append(devID, "Ascend910-0")
-	fmt.Printf("deviceId%v, %d", devID, len(devID))
-	err := hdm.manager.GetLogPath(devID, "/var/dlog", &logPath)
+	t.Logf("deviceId%v, %d", devID, len(devID))
+	err := hdm.manager.GetLogPath(devID, "/var/dlog", "", &logPath)
 	if err != nil {
 		t.Fatal(err)
 	}

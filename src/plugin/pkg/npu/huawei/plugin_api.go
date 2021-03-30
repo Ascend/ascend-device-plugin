@@ -112,23 +112,15 @@ func (s *pluginAPI) ListAndWatch(emtpy *pluginapi.Empty, stream pluginapi.Device
 			break
 		}
 		time.Sleep(sleepTime * time.Second)
-		stated := false
-		for id, dev := range s.hps.devices {
-			state := s.hps.hdm.manager.GetDevState(id, s.hps.hdm.dmgr)
-			if dev.Health != state {
-				stated = true
-				dev.Health = state
-				s.hps.devices[id] = dev
-			}
-		}
+		isStatusChange := s.isDeviceStatusChange()
 		if useVolcanoType {
-			s.doWithVolcanoListAndWatch(stated)
+			s.doWithVolcanoListAndWatch(isStatusChange)
 		}
-		if !stated {
+		if !isStatusChange {
 			// close log print
 			logFlag = false
 		}
-		if stated {
+		if isStatusChange {
 			// turn on log print
 			logFlag = true
 			resp.Devices = resp.Devices[:0]
@@ -144,8 +136,54 @@ func (s *pluginAPI) ListAndWatch(emtpy *pluginapi.Empty, stream pluginapi.Device
 	return nil
 }
 
-func (s *pluginAPI) doWithVolcanoListAndWatch(stated bool) {
-	if stated {
+func (s *pluginAPI) isDeviceStatusChange() bool {
+	if IsOneOfVirtualDeviceType(s.hps.devType) {
+		return s.listenVirtualDevices()
+	}
+	return s.listenPhysicalDevices()
+}
+
+func (s *pluginAPI) listenVirtualDevices() bool {
+	isStatusChange := false
+	var deviceIDs [hiAIMaxDeviceNum]uint32
+	devNum, err := s.hps.hdm.dmgr.GetDeviceList(&deviceIDs)
+	if err != nil {
+		logger.Error("Get device list fail")
+		return isStatusChange
+	}
+	for idx := int32(0); idx < devNum; idx++ {
+		deviceName := fmt.Sprintf("%s-%d", hiAIAscend910Prefix, deviceIDs[idx])
+		healthStatus := s.hps.hdm.manager.GetDevState(deviceName, s.hps.hdm.dmgr)
+		for devID, device := range s.hps.devices {
+			if s.isPhyDevOwnThisVirtualDevice(device, deviceIDs[idx]) &&healthStatus != device.Health {
+				isStatusChange = true
+				device.Health = healthStatus
+				s.hps.devices[devID] = device
+			}
+		}
+	}
+	return isStatusChange
+}
+
+func (s *pluginAPI) isPhyDevOwnThisVirtualDevice(device *npuDevice, logicID uint32) bool {
+	return strings.Split(device.ID, "-")[logicIDIndexInVirtualDevID910] == fmt.Sprintf("%d", logicID)
+}
+
+func (s *pluginAPI) listenPhysicalDevices() bool {
+	isStatusChange := false
+	for devID, device := range s.hps.devices {
+		healthStatus := s.hps.hdm.manager.GetDevState(devID, s.hps.hdm.dmgr)
+		if device.Health != healthStatus {
+			isStatusChange = true
+			device.Health = healthStatus
+			s.hps.devices[devID] = device
+		}
+	}
+	return isStatusChange
+}
+
+func (s *pluginAPI) doWithVolcanoListAndWatch(isStatusChange bool) {
+	if isStatusChange {
 		s.hps.healthDevice = sets.String{}
 		for _, device := range s.hps.devices {
 			if device.Health != pluginapi.Healthy {
@@ -172,7 +210,10 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 
 	resps := new(pluginapi.AllocateResponse)
 	logger.Info("allocate request:", zap.String("request", requests.String()))
-	s.setAscendRuntimeOptions(requests)
+	requestErrs := s.setAscendRuntimeOptions(requests)
+	if requestErrs != nil {
+		return nil, requestErrs
+	}
 
 	for _, rqt := range requests.ContainerRequests {
 		resp := new(pluginapi.ContainerAllocateResponse)
@@ -210,15 +251,19 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 	return resps, nil
 }
 
-func (s* pluginAPI) setAscendRuntimeOptions(requests *pluginapi.AllocateRequest)  {
+func (s* pluginAPI) setAscendRuntimeOptions(requests *pluginapi.AllocateRequest) error {
 	for _, rqt := range requests.ContainerRequests {
 		for _, deviceName := range rqt.DevicesIDs {
-			if IsOneOfVirtualDeviceType(deviceName) {
+			if IsOneOfVirtualDeviceType(deviceName) && len(rqt.DevicesIDs) > interval {
+				return fmt.Errorf("request more than one virtual device, current is %d", len(rqt.DevicesIDs))
+			}
+			if IsOneOfVirtualDeviceType(deviceName){
 				s.ascendRuntimeOptions = "VIRTUAL"
-				return
+				break
 			}
 		}
 	}
+	return nil
 }
 
 func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (string, error) {
@@ -229,7 +274,7 @@ func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (
 		if !ok {
 			return "", fmt.Errorf("plugin doesn't have device %s", id)
 		}
-		majorID, err := getDeviceID(id)
+		majorID, err := getDeviceID(id, s.ascendRuntimeOptions)
 		if err != nil {
 			logger.Error("getDeviceID", zap.Error(err))
 			return "", err
@@ -359,6 +404,7 @@ func (s *pluginAPI) setDevices(instance *Instance, devices string) error {
 			logger.Error("Get device ip failed:->", zap.Int("deviceId", int(logicID)), zap.Error(err))
 			return err
 		}
+
 		var device Device
 		device.DeviceID = deviceID
 		device.DeviceIP = deviceIP
@@ -382,7 +428,7 @@ func (s *pluginAPI) PreStartContainer(ctx context.Context,
 }
 
 func (s *pluginAPI) mountfile(resp *pluginapi.ContainerAllocateResponse, dlogMountPath string, devID []string) {
-	if err := s.hps.hdm.manager.GetLogPath(devID, s.hps.hdm.dlogPath, &dlogMountPath); err != nil {
+	if err := s.hps.hdm.manager.GetLogPath(devID, s.hps.hdm.dlogPath, s.ascendRuntimeOptions, &dlogMountPath); err != nil {
 		logger.Error("get logPath failed.", zap.String("err", err.Error()))
 		dlogMountPath = s.hps.hdm.dlogPath
 	}
@@ -667,7 +713,7 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int, ascendVisibleDevices 
 		return err
 	}
 	for _, id := range allocateDevice.List() {
-		majorID, errs := getDeviceID(id)
+		majorID, errs := getDeviceID(id, s.ascendRuntimeOptions)
 		if errs != nil {
 			logger.Error("getDeviceID", zap.Error(errs))
 			return errs

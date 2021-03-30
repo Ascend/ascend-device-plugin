@@ -65,10 +65,14 @@ const (
 	timeout          = 10
 	maxChipName      = 32
 
-	virtualDevicesPattern = `Ascend910-[4, 8, 16]c`
+	virtualDevicesPattern = `Ascend910-(4|8|16)c`
 	placeholder = 9999
+	logicIDIndexInVirtualDevID910 = 3
 
 	// Ascend device type identification
 	Infer710 = "710"
 	Infer310 = "310"
+
+	// FunctionNotFound for describe dsmi interface function is exist or not
+	FunctionNotFound = "-99998"
 )
