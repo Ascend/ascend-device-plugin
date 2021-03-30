@@ -210,7 +210,10 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 
 	resps := new(pluginapi.AllocateResponse)
 	logger.Info("allocate request:", zap.String("request", requests.String()))
-	s.setAscendRuntimeOptions(requests)
+	requestErrs := s.setAscendRuntimeOptions(requests)
+	if requestErrs != nil {
+		return nil, requestErrs
+	}
 
 	for _, rqt := range requests.ContainerRequests {
 		resp := new(pluginapi.ContainerAllocateResponse)
@@ -248,15 +251,20 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 	return resps, nil
 }
 
-func (s *pluginAPI) setAscendRuntimeOptions(requests *pluginapi.AllocateRequest) {
+func (s *pluginAPI) setAscendRuntimeOptions(requests *pluginapi.AllocateRequest) error {
 	for _, rqt := range requests.ContainerRequests {
 		for _, deviceName := range rqt.DevicesIDs {
 			if IsOneOfVirtualDeviceType(deviceName) {
-				s.ascendRuntimeOptions = "VIRTUAL"
-				return
+				if len(rqt.DevicesIDs) > interval {
+					return fmt.Errorf("request more than one virtual device, current is %d", len(rqt.DevicesIDs))
+				}else {
+					s.ascendRuntimeOptions = "VIRTUAL"
+					break
+				}
 			}
 		}
 	}
+	return nil
 }
 
 func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (string, error) {

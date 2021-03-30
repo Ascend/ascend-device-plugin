@@ -312,7 +312,7 @@ func (d *DeviceManager) ShutDown() {
 	C.dsmiShutDown()
 }
 
-// GetVDevicesInfo get the virtual device info by physical device id
+// GetVDevicesInfo get the virtual device info by logicid
 func (d *DeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error) {
 	var dsmiVDevInfo C.struct_dsmi_vdev_info
 	err := C.dsmi_get_vdevice_info(C.uint(logicID), &dsmiVDevInfo)
