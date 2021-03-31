@@ -108,29 +108,32 @@ func (d *fakeDeviceManager) GetDeviceIP(logicID int32) (string, error) {
 }
 
 // GetVDevicesInfo for fakeDeviceManager
-func (d *fakeDeviceManager) GetVDevicesInfo(logicID uint32) (TotalVDevInfos, error) {
-	var totalVDevInfos TotalVDevInfos
+func (d *fakeDeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error) {
+	var cgoDsmiVDevInfos CgoDsmiVDevInfo
 	if strings.Contains("024567", strconv.Itoa(int(logicID))) {
-		totalVDevInfos = TotalVDevInfos{
+		cgoDsmiVDevInfos = CgoDsmiVDevInfo{
 			vDevNum: uint32(defaultVDevNum),
 			coreNumUnused: uint32(maxAiCoreNum),
 		}
-		return totalVDevInfos, nil;
+		return cgoDsmiVDevInfos, nil;
 	}
-	totalVDevInfos = TotalVDevInfos{
+	cgoDsmiVDevInfos = CgoDsmiVDevInfo{
 		vDevNum: uint32(testVDevNum),
 		coreNumUnused: uint32(testAiCoreNum),
 	}
 	for i := 0; i < 2; i++{
-		totalVDevInfos.vDevInfos= append(totalVDevInfos.vDevInfos, VDevInfo{
+		coreNum := fmt.Sprintf("%d", testComputeCoreNum * (i + 1))
+		cgoDsmiVDevInfos.cgoDsmiSubVDevInfos= append(cgoDsmiVDevInfos.cgoDsmiSubVDevInfos, CgoDsmiSubVDevInfo{
 			status: uint32(0),
-			id: uint32(int(logicID) + i),
+			vdevid: uint32(int(logicID) + i),
 			vfid: uint32(int(logicID) + i),
 			cid: uint64(i),
-			coreNum: uint32(testComputeCoreNum * (i + 1)),
+			spec: CgoDsmiVdevSpecInfo{
+				coreNum: coreNum,
+			},
 		})
 	}
-	return totalVDevInfos, nil
+	return cgoDsmiVDevInfos, nil
 }
 
 // TestUnhealthyState for UnhealthyState

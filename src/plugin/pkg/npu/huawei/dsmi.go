@@ -69,9 +69,9 @@ int dsmi_get_device_ip_address(int device_id, int port_type, int port_id, ip_add
 	CALL_FUNC(dsmi_get_device_ip_address,device_id,port_type,port_id,ip_address,mask_address)
 }
 
-int (*dsmi_get_vdevice_info_func)(unsigned int device_id, struct dsmi_vdev_info *vdevice_info);
-int dsmi_get_vdevice_info(unsigned int device_id, struct dsmi_vdev_info *vdevice_info){
-	CALL_FUNC(dsmi_get_vdevice_info,device_id,vdevice_info)
+int (*dsmi_get_vdevice_info_func)(unsigned int devid, struct dsmi_vdev_info *vdevice_info);
+int dsmi_get_vdevice_info(unsigned int devid, struct dsmi_vdev_info *vdevice_info){
+	CALL_FUNC(dsmi_get_vdevice_info,devid,vdevice_info)
 }
 
 // load .so files and functions
@@ -79,9 +79,7 @@ int dsmiInit_dl(void){
 	dsmiHandle = dlopen("libdrvdsmi_host.so",RTLD_LAZY);
 	if (dsmiHandle == NULL) {
 		dsmiHandle = dlopen("libdrvdsmi.so",RTLD_LAZY);
-
 	}
-
 	if (dsmiHandle == NULL){
 		return SO_NOT_FOUND;
 	}
@@ -135,20 +133,26 @@ type ChipInfo struct {
 	ChipVer  string
 }
 
-// VDevInfo single VDevInfo info
-type VDevInfo struct {
+// CgoDsmiSubVDevInfo single VDevInfo info
+type CgoDsmiSubVDevInfo struct {
 	status uint32
-	id uint32
+	vdevid uint32
 	vfid uint32
 	cid uint64
-	coreNum uint32
+	spec CgoDsmiVdevSpecInfo
 }
 
-// TotalVDevInfos total VDevInfos info
-type TotalVDevInfos struct {
+// CgoDsmiVdevSpecInfo is special info
+type CgoDsmiVdevSpecInfo struct {
+	coreNum string
+	reserved string
+}
+
+// CgoDsmiVDevInfo total VDevInfos info
+type CgoDsmiVDevInfo struct {
 	vDevNum uint32
 	coreNumUnused uint32
-	vDevInfos []VDevInfo
+	cgoDsmiSubVDevInfos []CgoDsmiSubVDevInfo
 }
 
 // DeviceMgrInterface interface for dsmi
@@ -160,7 +164,7 @@ type DeviceMgrInterface interface {
 	GetLogicID(uint32) (uint32, error)
 	GetChipInfo(int32) (*ChipInfo, error)
 	GetDeviceIP(logicID int32) (string, error)
-	GetVDevicesInfo(logicID uint32) (TotalVDevInfos, error)
+	GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error)
 	ShutDown()
 }
 
@@ -308,28 +312,31 @@ func (d *DeviceManager) ShutDown() {
 	C.dsmiShutDown()
 }
 
-// GetVDevicesInfo get the virtual device info by logicID
-func (d *DeviceManager) GetVDevicesInfo(logicID uint32) (TotalVDevInfos, error) {
-	var vDeviceInfos C.struct_dsmi_vdev_info
-	err := C.dsmi_get_vdevice_info(C.uint(logicID), &vDeviceInfos)
+// GetVDevicesInfo get the virtual device info by logicid
+func (d *DeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error) {
+	var dsmiVDevInfo C.struct_dsmi_vdev_info
+	err := C.dsmi_get_vdevice_info(C.uint(logicID), &dsmiVDevInfo)
+
 	if err != 0 {
-		return TotalVDevInfos{}, fmt.Errorf("from device %d get virtual device info failed, error code: %d", logicID, int32(err))
+		return CgoDsmiVDevInfo{}, fmt.Errorf("get virtual device info failed, error code: %d", int32(err))
 	}
-	vDevInfos := TotalVDevInfos{
-		vDevNum: uint32(vDeviceInfos.vdev_num),
-		coreNumUnused: uint32(vDeviceInfos.core_num_unused),
+	cgoDsmiVDevInfos := CgoDsmiVDevInfo{
+		vDevNum: uint32(dsmiVDevInfo.vdev_num),
+		coreNumUnused: uint32(dsmiVDevInfo.spec_unused.core_num),
 	}
 
-	for i := uint32(0); i < vDevInfos.vDevNum; i++ {
-		p := *(*C.struct_vdev_info)(unsafe.Pointer(uintptr(unsafe.Pointer(&vDeviceInfos.vdev)) + uintptr(C.sizeof_struct_vdev_info * C.int(i))))
-		vDevInfos.vDevInfos= append(vDevInfos.vDevInfos, VDevInfo{
-			status: uint32(p.status),
-			id: uint32(p.id),
-			vfid: uint32(p.vfid),
-			cid: uint64(p.cid),
-			coreNum: uint32(p.core_num),
+	for i := uint32(0); i < cgoDsmiVDevInfos.vDevNum; i++ {
+		dsmiSubVDevInfo := *(*C.struct_dsmi_sub_vdev_info)(unsafe.Pointer(uintptr(unsafe.Pointer(&dsmiVDevInfo.vdev)) + uintptr(C.sizeof_struct_dsmi_sub_vdev_info * C.int(i))))
+		coreNum := fmt.Sprintf("%v", dsmiSubVDevInfo.spec.core_num)
+		cgoDsmiVDevInfos.cgoDsmiSubVDevInfos= append(cgoDsmiVDevInfos.cgoDsmiSubVDevInfos, CgoDsmiSubVDevInfo{
+			status: uint32(dsmiSubVDevInfo.status),
+			vdevid: uint32(dsmiSubVDevInfo.vdevid),
+			vfid: uint32(dsmiSubVDevInfo.vfid),
+			cid: uint64(dsmiSubVDevInfo.cid),
+			spec: CgoDsmiVdevSpecInfo{
+				coreNum: coreNum,
+			},
 		})
 	}
-
-	return vDevInfos, nil
+	return cgoDsmiVDevInfos, nil
 }

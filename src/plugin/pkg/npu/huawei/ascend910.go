@@ -57,16 +57,16 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *
 			return err
 		}
 
-		totalVDevInfos, err := hnm.queryVirtualDevice(ids[i])
+		cgoDsmiVDevInfos, err := hnm.queryVirtualDevice(ids[i])
 		if err != nil && !strings.Contains(err.Error(), FunctionNotFound) {
 			logger.Error("Query virtual device info failure!", zap.String("err",err.Error()))
 			continue
 		}
 		var devices []npuDevice
-		if totalVDevInfos.vDevNum == 0 {
+		if cgoDsmiVDevInfos.vDevNum == 0 {
 			devices, deviTypes = hnm.assemblePhyDevices(ids[i], phyID)
 		}else {
-			devices, deviTypes = hnm.assembleVirtualDevices(ids[i], phyID, totalVDevInfos)
+			devices, deviTypes = hnm.assembleVirtualDevices(ids[i], phyID, cgoDsmiVDevInfos)
 		}
 		*allDevices = append(*allDevices, devices...)
 		*allDeviceTypes = append(*allDeviceTypes, deviTypes...)
@@ -97,12 +97,12 @@ func (hnm *HwAscend910Manager) assemblePhyDevices(logicID, phyID uint32) ([]npuD
 	return devices, deviTypes
 }
 
-func (hnm *HwAscend910Manager) assembleVirtualDevices(logicID, phyID uint32, totalVDevInfos TotalVDevInfos) ([]npuDevice, []string) {
+func (hnm *HwAscend910Manager) assembleVirtualDevices(logicID, phyID uint32, cgoDsmiVDevInfos CgoDsmiVDevInfo) ([]npuDevice, []string) {
 	var devices []npuDevice
 	var vDeviTypes [] string
-	for _, vDevInfo := range totalVDevInfos.vDevInfos {
-		vDeviType := fmt.Sprintf("%s-%dc", hiAIAscend910Prefix, vDevInfo.coreNum)
-		devID := fmt.Sprintf("%s-%dc-%d-%d", hiAIAscend910Prefix, vDevInfo.coreNum, logicID, vDevInfo.id)
+	for _, dsmiSubVDevInfo := range cgoDsmiVDevInfos.cgoDsmiSubVDevInfos {
+		vDeviType := fmt.Sprintf("%s-%sc", hiAIAscend910Prefix, dsmiSubVDevInfo.spec.coreNum)
+		devID := fmt.Sprintf("%s-%sc-%d-%d", hiAIAscend910Prefix, dsmiSubVDevInfo.spec.coreNum, dsmiSubVDevInfo.vdevid, logicID)
 		device := hnm.AssembleNpuDeviceStruct(vDeviType, devID, phyID)
 		devices = append(devices, device)
 		vDeviTypes = append(vDeviTypes, vDeviType)
@@ -110,14 +110,14 @@ func (hnm *HwAscend910Manager) assembleVirtualDevices(logicID, phyID uint32, tot
 	return devices, vDeviTypes
 }
 
-func (hnm *HwAscend910Manager) queryVirtualDevice(logicID uint32) (TotalVDevInfos, error) {
-	var totalVDevInfos TotalVDevInfos
+func (hnm *HwAscend910Manager) queryVirtualDevice(logicID uint32) (CgoDsmiVDevInfo, error) {
+	var cgoDsmiVDevInfos CgoDsmiVDevInfo
 	if useVolcanoType {
-		return totalVDevInfos, nil
+		return cgoDsmiVDevInfos, nil
 	}
-	totalVDevInfos, err := hnm.dmgr.GetVDevicesInfo(logicID)
+	cgoDsmiVDevInfos, err := hnm.dmgr.GetVDevicesInfo(logicID)
 	if err != nil {
-		return TotalVDevInfos{}, fmt.Errorf("query virtual device info failure: %s", err)
+		return CgoDsmiVDevInfo{}, fmt.Errorf("query virtual device info failure: %s", err)
 	}
-	return totalVDevInfos, nil
+	return cgoDsmiVDevInfos, nil
 }

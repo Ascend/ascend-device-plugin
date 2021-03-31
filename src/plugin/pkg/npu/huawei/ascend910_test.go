@@ -78,7 +78,6 @@ func TestHwAscend910Manager_GetDevState(t *testing.T) {
 	t.Logf("TestHwAscend910Manager_GetDevState Run Pass")
 }
 
-
 // TestHwAscend910Manager_GetDevPath for getDevPath
 func TestHwAscend910Manager_GetDevPath(t *testing.T) {
 	hdm := createFake910HwDevManager("", true, false, false)
@@ -98,8 +97,8 @@ func TestHwAscend910Manager_GetLogPath(t *testing.T) {
 	var logPath string
 	devID := make([]string, 0)
 	devID = append(devID, "Ascend910-0")
-	fmt.Printf("deviceId%v, %d", devID, len(devID))
-	err := hdm.manager.GetLogPath(devID, "/var/dlog", &logPath)
+	t.Logf("deviceId%v, %d", devID, len(devID))
+	err := hdm.manager.GetLogPath(devID, "/var/dlog", "", &logPath)
 	if err != nil {
 		t.Fatal(err)
 	}

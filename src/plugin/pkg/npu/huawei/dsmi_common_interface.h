@@ -67,20 +67,28 @@ typedef struct ip_addr {
     enum ip_addr_type ip_type;
 } ip_addr_t;
 
-#define DSMI_MAX_VDEV_NUM 8
+#define DSMI_MAX_VDEV_NUM 16
+#define DSMI_MAX_SPEC_RESERVE 8
 
-struct vdev_info {
-    unsigned int status;
-    unsigned int id;
+struct dsmi_vdev_spec_info {
+    unsigned char core_num;                         /**< aicore num for virtual device */
+    unsigned char reservesd[DSMI_MAX_SPEC_RESERVE]; /**< reserved */
+};
+
+// Dsmi each virtual device info
+struct dsmi_sub_vdev_info {
+    unsigned int status;                                /**< whether the vdevice used by container */
+    unsigned int vdevid;                                /**< id number of vdevice */
     unsigned int vfid;
-    unsigned long int cid;
-    unsigned int core_num;
-}vdev[DSMI_MAX_VDEV_NUM];
+    unsigned long int cid;                              /**< container id */
+    struct dsmi_vdev_spec_info spec;                    /**< specification of vdevice */
+};
 
+// Dsmi physical device split info
 struct dsmi_vdev_info {
-    unsigned int vdev_num;
-    unsigned int core_num_unused;
-    struct vdev_info vdev[DSMI_MAX_VDEV_NUM];
+    unsigned int vdev_num;                              /**< number of vdevice the devid had created */
+    struct dsmi_vdev_spec_info spec_unused;             /**< resource the devid unallocated */
+    struct dsmi_sub_vdev_info vdev[DSMI_MAX_VDEV_NUM];
 };
 
 /**
@@ -187,7 +195,7 @@ int dsmi_get_network_health(int device_id, DSMI_NET_HEALTH_STATUS *presult);
 * @return  0 for success, DRV_ERROR_NOT_SUPPORT: not support function, others for fail
 * @note Support:Ascend910
 */
-int dsmi_get_vdevice_info(unsigned int device_id, struct dsmi_vdev_info *vdevice_info);
+int dsmi_get_vdevice_info(unsigned int devid, struct dsmi_vdev_info *info);
 
 #ifdef __cplusplus
 }

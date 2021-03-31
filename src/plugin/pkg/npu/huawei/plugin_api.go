@@ -210,7 +210,10 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 
 	resps := new(pluginapi.AllocateResponse)
 	logger.Info("allocate request:", zap.String("request", requests.String()))
-	s.setAscendRuntimeOptions(requests)
+	requestErrs := s.setAscendRuntimeOptions(requests)
+	if requestErrs != nil {
+		return nil, requestErrs
+	}
 
 	for _, rqt := range requests.ContainerRequests {
 		resp := new(pluginapi.ContainerAllocateResponse)
@@ -248,15 +251,19 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 	return resps, nil
 }
 
-func (s *pluginAPI) setAscendRuntimeOptions(requests *pluginapi.AllocateRequest) {
+func (s *pluginAPI) setAscendRuntimeOptions(requests *pluginapi.AllocateRequest) error {
 	for _, rqt := range requests.ContainerRequests {
 		for _, deviceName := range rqt.DevicesIDs {
+			if IsOneOfVirtualDeviceType(deviceName) && len(rqt.DevicesIDs) > interval {
+				return fmt.Errorf("request more than one virtual device, current is %d", len(rqt.DevicesIDs))
+			}
 			if IsOneOfVirtualDeviceType(deviceName) {
 				s.ascendRuntimeOptions = "VIRTUAL"
-				return
+				break
 			}
 		}
 	}
+	return nil
 }
 
 func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (string, error) {
@@ -267,7 +274,7 @@ func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (
 		if !ok {
 			return "", fmt.Errorf("plugin doesn't have device %s", id)
 		}
-		majorID, err := getDeviceID(id)
+		majorID, err := getDeviceID(id, s.ascendRuntimeOptions)
 		if err != nil {
 			logger.Error("getDeviceID", zap.Error(err))
 			return "", err
@@ -421,7 +428,7 @@ func (s *pluginAPI) PreStartContainer(ctx context.Context,
 }
 
 func (s *pluginAPI) mountfile(resp *pluginapi.ContainerAllocateResponse, dlogMountPath string, devID []string) {
-	if err := s.hps.hdm.manager.GetLogPath(devID, s.hps.hdm.dlogPath, &dlogMountPath); err != nil {
+	if err := s.hps.hdm.manager.GetLogPath(devID, s.hps.hdm.dlogPath, s.ascendRuntimeOptions, &dlogMountPath); err != nil {
 		logger.Error("get logPath failed.", zap.String("err", err.Error()))
 		dlogMountPath = s.hps.hdm.dlogPath
 	}
@@ -706,7 +713,7 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int, ascendVisibleDevices 
 		return err
 	}
 	for _, id := range allocateDevice.List() {
-		majorID, err := getDeviceID(id)
+		majorID, err := getDeviceID(id, s.ascendRuntimeOptions)
 		if err != nil {
 			logger.Error("getDeviceID", zap.Error(err))
 			return err

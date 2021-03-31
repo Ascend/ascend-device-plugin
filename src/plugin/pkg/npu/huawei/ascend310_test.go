@@ -99,8 +99,8 @@ func TestHwAscend310Manager_GetLogPath(t *testing.T) {
 	var logPath string
 	devID := make([]string, 0)
 	devID = append(devID, "davinci-mini-0")
-	fmt.Printf("deviceId%v, %d", devID, len(devID))
-	err := hdm.manager.GetLogPath(devID, "/var/dlog", &logPath)
+	t.Logf("deviceId%v, %d", devID, len(devID))
+	err := hdm.manager.GetLogPath(devID, "/var/dlog", "", &logPath)
 	if err != nil {
 		t.Fatal(err)
 	}
