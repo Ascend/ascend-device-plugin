@@ -52,7 +52,7 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *
 	}
 	var deviTypes []string
 	for i := int32(0); i < devNum; i++ {
-		phyID, err := hnm.dmgr.GetPhyID(ids[i])
+		phyID, err := hnm.GetPhyIDFromLogicID(ids[i])
 		if err != nil {
 			return err
 		}
@@ -64,9 +64,9 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *
 		}
 		var devices []npuDevice
 		if cgoDsmiVDevInfos.vDevNum == 0 {
-			devices, deviTypes = hnm.assemblePhyDevices(ids[i], phyID)
+			devices, deviTypes = hnm.assemblePhyDevices(phyID)
 		}else {
-			devices, deviTypes = hnm.assembleVirtualDevices(ids[i], phyID, cgoDsmiVDevInfos)
+			devices, deviTypes = hnm.assembleVirtualDevices(phyID, cgoDsmiVDevInfos)
 		}
 		*allDevices = append(*allDevices, devices...)
 		*allDeviceTypes = append(*allDeviceTypes, deviTypes...)
@@ -87,23 +87,23 @@ func (hnm *HwAscend910Manager) removeDuplicate(allDeviceTypes *[]string) []strin
 	return rmDupDeviceTypes
 }
 
-func (hnm *HwAscend910Manager) assemblePhyDevices(logicID, phyID uint32) ([]npuDevice, []string) {
+func (hnm *HwAscend910Manager) assemblePhyDevices(phyID uint32) ([]npuDevice, []string) {
 	var devices []npuDevice
 	var deviTypes [] string
-	devID := fmt.Sprintf("%s-%d", hiAIAscend910Prefix, logicID)
-	device := hnm.AssembleNpuDeviceStruct(hiAIAscend910Prefix, devID, phyID)
+	devID := fmt.Sprintf("%s-%d", hiAIAscend910Prefix, phyID)
+	device := hnm.AssembleNpuDeviceStruct(hiAIAscend910Prefix, devID)
 	devices = append(devices, device)
 	deviTypes = append(deviTypes, hiAIAscend910Prefix)
 	return devices, deviTypes
 }
 
-func (hnm *HwAscend910Manager) assembleVirtualDevices(logicID, phyID uint32, cgoDsmiVDevInfos CgoDsmiVDevInfo) ([]npuDevice, []string) {
+func (hnm *HwAscend910Manager) assembleVirtualDevices(phyID uint32, cgoDsmiVDevInfos CgoDsmiVDevInfo) ([]npuDevice, []string) {
 	var devices []npuDevice
 	var vDeviTypes [] string
 	for _, dsmiSubVDevInfo := range cgoDsmiVDevInfos.cgoDsmiSubVDevInfos {
 		vDeviType := fmt.Sprintf("%s-%sc", hiAIAscend910Prefix, dsmiSubVDevInfo.spec.coreNum)
-		devID := fmt.Sprintf("%s-%sc-%d-%d", hiAIAscend910Prefix, dsmiSubVDevInfo.spec.coreNum, dsmiSubVDevInfo.vdevid, logicID)
-		device := hnm.AssembleNpuDeviceStruct(vDeviType, devID, phyID)
+		devID := fmt.Sprintf("%s-%sc-%d-%d", hiAIAscend910Prefix, dsmiSubVDevInfo.spec.coreNum, dsmiSubVDevInfo.vdevid, phyID)
+		device := hnm.AssembleNpuDeviceStruct(vDeviType, devID)
 		devices = append(devices, device)
 		vDeviTypes = append(vDeviTypes, vDeviType)
 	}

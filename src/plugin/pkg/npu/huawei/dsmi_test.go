@@ -102,8 +102,8 @@ func (d *fakeDeviceManager) GetChipInfo(logicID int32) (*ChipInfo, error) {
 }
 
 // GetDeviceIP get deviceIP
-func (d *fakeDeviceManager) GetDeviceIP(logicID int32) (string, error) {
-	retIPAddress := fmt.Sprintf("%d.%d.%d.%d", 0, 0, 0, logicID)
+func (d *fakeDeviceManager) GetDeviceIP(phyID int32) (string, error) {
+	retIPAddress := fmt.Sprintf("%d.%d.%d.%d", 0, 0, 0, phyID)
 	return retIPAddress, nil
 }
 
@@ -145,15 +145,14 @@ func TestUnhealthyState(t *testing.T) {
 	t.Logf("TestUnhealthyState Run Pass")
 }
 
-// TestGetLogicIDByName for LogicIDByName
-func TestGetLogicIDByName(t *testing.T) {
-	var logicID int32
-	err := getLogicIDByName("Ascend310-3", &logicID)
-	if err != nil || unHealthyTestLogicID != logicID {
+// TestGetPhyIDByName for PhyIDByName
+func TestGetPhyIDByName(t *testing.T) {
+	phyID, err := getPhyIDByName("Ascend310-3")
+	if err != nil || unHealthyTestLogicID != phyID {
 		t.Errorf("TestGetLogicIDByName Run Failed")
 	}
 
-	err = getLogicIDByName("Ascend310-1000", &logicID)
+	_, err = getPhyIDByName("Ascend310-1000")
 	if err == nil {
 		t.Errorf("TestGetLogicIDByName Run Failed")
 	}

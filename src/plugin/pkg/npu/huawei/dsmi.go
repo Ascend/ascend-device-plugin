@@ -163,7 +163,7 @@ type DeviceMgrInterface interface {
 	GetPhyID(uint32) (uint32, error)
 	GetLogicID(uint32) (uint32, error)
 	GetChipInfo(int32) (*ChipInfo, error)
-	GetDeviceIP(logicID int32) (string, error)
+	GetDeviceIP(phyID int32) (string, error)
 	GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error)
 	ShutDown()
 }

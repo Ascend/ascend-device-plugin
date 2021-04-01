@@ -64,30 +64,27 @@ func setDeviceByPath(defaultDevices *[]string, device string) {
 	}
 }
 
-func getLogicIDByName(DeviceName string, logicID *int32) error {
-	var phyID int32
+func getPhyIDByName(DeviceName string) (uint32, error) {
+	var phyID uint32
 
 	major, err := getDeviceID(DeviceName, "")
 	if err != nil {
 		logger.Error("dev ID is invalid", zap.String("deviceID", DeviceName))
-		return err
+		return phyID, err
 	}
 
 	devidCheck, err := strconv.Atoi(major)
 	if err != nil {
 		logger.Error("transfer device string to Integer failed", zap.String("deviceID", DeviceName))
-		return err
+		return phyID, err
 	}
-	phyID = int32(devidCheck)
+	phyID = uint32(devidCheck)
 	if phyID > hiAIMaxDeviceNum || phyID < 0 {
-		logger.Error("GetDeviceState phyID overflow", zap.Int32("phyID", phyID))
-		return fmt.Errorf("GetDevice phyid %d overflow", phyID)
+		logger.Error("GetDeviceState phyID overflow", zap.Uint32("phyID", phyID))
+		return phyID, fmt.Errorf("GetDevice phyid %d overflow", phyID)
 	}
 
-	*logicID = phyID
-
-	return nil
-
+	return phyID, nil
 }
 
 func unhealthyState(healthyState uint32, logicID uint32, healthyType string, dmgr DeviceMgrInterface) error {
@@ -103,22 +100,6 @@ func unhealthyState(healthyState uint32, logicID uint32, healthyType string, dmg
 			zap.Uint32(healthyType, healthyState))
 	}
 	return nil
-}
-
-func getPhyIDFromDeviceID(deviceID string, dmgr DeviceMgrInterface) (string, error) {
-	devidCheck, err := strconv.Atoi(deviceID)
-	if err != nil {
-		logger.Error("transfer device string to Integer failed", zap.String("deviceID", deviceID))
-		return "", err
-	}
-	devID := uint32(devidCheck)
-	phyID, err := dmgr.GetPhyID(devID)
-	if err != nil {
-		logger.Error("get PhyID failed", zap.String("deviceID", deviceID))
-		return "", err
-	}
-
-	return strconv.Itoa(int(phyID)), nil
 }
 
 func getDeviceID(deviceName string, ascendRuntimeOptions string) (string, error) {
@@ -147,8 +128,8 @@ func IsOneOfVirtualDeviceType(devType string) bool {
 }
 
 // AssembleNpuDeviceStruct is used to create a struct of npuDevice
-func (adc *ascendCommonFunction) AssembleNpuDeviceStruct(deviType, devID string, phyID uint32) npuDevice {
-	logger.Info("Found Huawei Ascend:", zap.String("deviType", deviType), zap.String("logicID", devID), zap.Uint32("phyID", phyID))
+func (adc *ascendCommonFunction) AssembleNpuDeviceStruct(deviType, devID string) npuDevice {
+	logger.Info("Found Huawei Ascend:", zap.String("deviType", deviType), zap.String("deviceID", devID))
 	return npuDevice{
 		devType: deviType,
 		pciID:   "",
@@ -215,22 +196,28 @@ func (adc *ascendCommonFunction) GetLogPath(devID []string, defaultLogPath, asce
 
 // GetDevState get device state
 func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr DeviceMgrInterface) string {
-	var logicID int32
-
-	err := getLogicIDByName(DeviceName, &logicID)
+	phyID, err := getPhyIDByName(DeviceName)
 	if err != nil {
 		if logFlag {
-			logger.Error("get device logicID failed.",
-				zap.String("deviceId", DeviceName),
+			logger.Error("get device phyID failed.", zap.String("deviceId", DeviceName),
 				zap.String("error", err.Error()))
 		}
 		return pluginapi.Unhealthy
 	}
+
+	logicID, err := adc.GetLogicIDFromPhyID(phyID)
+	if err != nil {
+		if logFlag {
+			logger.Error("get device logicID failed.", zap.String("deviceId", DeviceName),
+				zap.String("error", err.Error()))
+		}
+		return pluginapi.Unhealthy
+	}
+
 	healthState, err := dmgr.GetDeviceHealth(logicID)
 	if err != nil {
 		if logFlag {
-			logger.Error("get device healthy state failed.",
-				zap.Int32("deviceId", logicID),
+			logger.Error("get device healthy state failed.", zap.Int32("deviceId", logicID),
 				zap.String("error", err.Error()))
 		}
 		return pluginapi.Unhealthy
@@ -246,21 +233,25 @@ func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr DeviceMgrIn
 }
 
 // GetNPUs Discovers all HUAWEI Ascend310/Ascend710/Ascend910 devices available on the local node by calling walking `/dev` directory.
-func (adc *ascendCommonFunction) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *[]string, matchingDeviType string) error {
-	var ids [hiAIMaxDeviceNum]uint32
+func (adc *ascendCommonFunction) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *[]string, deviType string) error {
+	logger.Info("--->< ", zap.String("deviType", deviType))
 
-	devNum, err := adc.dmgr.GetDeviceList(&ids)
-	if err != nil {
-		return err
+	var ids [hiAIMaxDeviceNum]uint32
+	devNum, getDevListErrInfo := adc.dmgr.GetDeviceList(&ids)
+	if getDevListErrInfo != nil {
+		return getDevListErrInfo
 	}
-	logger.Info("--->< ", zap.String("deviType", matchingDeviType))
 
 	for i := int32(0); i < devNum; i++ {
-		dev := fmt.Sprintf("%s-%d", matchingDeviType, ids[i])
-		device := adc.AssembleNpuDeviceStruct(matchingDeviType, dev, placeholder)
+		phyID, err := adc.GetPhyIDFromLogicID(ids[i])
+		if err != nil {
+			return err
+		}
+		dev := fmt.Sprintf("%s-%d", deviType, phyID)
+		device := adc.AssembleNpuDeviceStruct(deviType, dev)
 		*allDevices = append(*allDevices, device)
 	}
-	*allDeviceTypes = append(*allDeviceTypes, matchingDeviType)
+	*allDeviceTypes = append(*allDeviceTypes, deviType)
 
 	return nil
 }
@@ -278,4 +269,24 @@ func (adc *ascendCommonFunction) SetDmgr(dmgr DeviceMgrInterface) {
 // GetDmgr to get dmgr
 func (adc *ascendCommonFunction) GetDmgr() DeviceMgrInterface {
 	return adc.dmgr
+}
+
+// GetPhyIDFromLogicID is get phyId from logic id
+func (adc *ascendCommonFunction) GetPhyIDFromLogicID(logicID uint32) (uint32, error) {
+	phyID, err := adc.dmgr.GetPhyID(logicID)
+	if err != nil {
+		logger.Error("get PhyID failed", zap.Uint32("logicID", logicID))
+		return phyID, err
+	}
+	return phyID, nil
+}
+
+// GetLogicIDFromPhyID is get logic Id from physical id
+func (adc *ascendCommonFunction) GetLogicIDFromPhyID(phyID uint32) (int32, error) {
+	logicID, err := adc.dmgr.GetLogicID(phyID)
+	if err != nil {
+		logger.Error("get logicID failed", zap.Uint32("logicID", logicID))
+		return int32(logicID), err
+	}
+	return int32(logicID), nil
 }
