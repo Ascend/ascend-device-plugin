@@ -152,7 +152,7 @@ func (s *pluginAPI) listenVirtualDevices() bool {
 		return isStateChange
 	}
 	for idx := int32(0); idx < devNum; idx++ {
-		phyID, err := s.hps.hdm.manager.GetPhyIDFromLogicID(deviceIDs[idx])
+		phyID, err := s.hps.hdm.dmgr.GetPhyIDFromLogicID(deviceIDs[idx])
 		if err != nil {
 			logger.Error("Get PhyID fail")
 			return isStateChange
@@ -496,7 +496,7 @@ func (s *pluginAPI) updatePodAnnotations(pod *v1.Pod, ascendVisibleDevices strin
 		pod.Annotations = map[string]string{}
 	}
 
-	podDeviceValue := s.addAnnotation(ascendVisibleDevices, renamePod(pod.Name), serverID)
+	podDeviceValue := s.addAnnotation(ascendVisibleDevices, pod.Name, serverID)
 	pod2, err := s.updatePod(pod, podDeviceValue)
 	for i := 0; err != nil && i < retryTime; i++ {
 		logger.Info("try again ...")
@@ -524,16 +524,6 @@ func (s *pluginAPI) updatePod(pod *v1.Pod, podDeviceValue string) (*v1.Pod, erro
 		return nil, fmt.Errorf("update pod failed,%v", err)
 	}
 	return pod2, nil
-}
-
-func renamePod(podName string) string {
-	suffix := strings.Split(podName, "-")
-	lastIndex := len(suffix) - 1
-	_, err := strconv.Atoi(suffix[lastIndex])
-	if err == nil {
-		return suffix[lastIndex]
-	}
-	return "0"
 }
 
 func getOldestPod(pods []v1.Pod) *v1.Pod {

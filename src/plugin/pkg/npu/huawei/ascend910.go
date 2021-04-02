@@ -52,7 +52,7 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *
 	}
 	var deviTypes []string
 	for i := int32(0); i < devNum; i++ {
-		phyID, err := hnm.GetPhyIDFromLogicID(ids[i])
+		phyID, err := hnm.dmgr.GetPhyIDFromLogicID(ids[i])
 		if err != nil {
 			return err
 		}

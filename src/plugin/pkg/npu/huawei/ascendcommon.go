@@ -205,7 +205,7 @@ func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr DeviceMgrIn
 		return pluginapi.Unhealthy
 	}
 
-	logicID, err := adc.GetLogicIDFromPhyID(phyID)
+	logicID, err := dmgr.GetLogicIDFromPhyID(phyID)
 	if err != nil {
 		if logFlag {
 			logger.Error("get device logicID failed.", zap.String("deviceId", DeviceName),
@@ -243,7 +243,7 @@ func (adc *ascendCommonFunction) GetNPUs(allDevices *[]npuDevice, allDeviceTypes
 	}
 
 	for i := int32(0); i < devNum; i++ {
-		phyID, err := adc.GetPhyIDFromLogicID(ids[i])
+		phyID, err := adc.dmgr.GetPhyIDFromLogicID(ids[i])
 		if err != nil {
 			return err
 		}
@@ -269,24 +269,4 @@ func (adc *ascendCommonFunction) SetDmgr(dmgr DeviceMgrInterface) {
 // GetDmgr to get dmgr
 func (adc *ascendCommonFunction) GetDmgr() DeviceMgrInterface {
 	return adc.dmgr
-}
-
-// GetPhyIDFromLogicID is get phyId from logic id
-func (adc *ascendCommonFunction) GetPhyIDFromLogicID(logicID uint32) (uint32, error) {
-	phyID, err := adc.dmgr.GetPhyID(logicID)
-	if err != nil {
-		logger.Error("get PhyID failed", zap.Uint32("logicID", logicID))
-		return phyID, err
-	}
-	return phyID, nil
-}
-
-// GetLogicIDFromPhyID is get logic Id from physical id
-func (adc *ascendCommonFunction) GetLogicIDFromPhyID(phyID uint32) (int32, error) {
-	logicID, err := adc.dmgr.GetLogicID(phyID)
-	if err != nil {
-		logger.Error("get logicID failed", zap.Uint32("logicID", logicID))
-		return int32(logicID), err
-	}
-	return int32(logicID), nil
 }

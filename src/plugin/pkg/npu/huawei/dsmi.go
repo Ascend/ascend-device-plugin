@@ -113,6 +113,7 @@ int dsmiShutDown(void){
 import "C"
 import (
 	"fmt"
+	"go.uber.org/zap"
 	"unsafe"
 )
 
@@ -165,6 +166,8 @@ type DeviceMgrInterface interface {
 	GetChipInfo(int32) (*ChipInfo, error)
 	GetDeviceIP(phyID int32) (string, error)
 	GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error)
+	GetPhyIDFromLogicID(logicID uint32) (uint32, error)
+	GetLogicIDFromPhyID(phyID uint32) (int32, error)
 	ShutDown()
 }
 
@@ -339,4 +342,24 @@ func (d *DeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error)
 		})
 	}
 	return cgoDsmiVDevInfos, nil
+}
+
+// GetPhyIDFromLogicID is get phyId from logic id
+func (d *DeviceManager) GetPhyIDFromLogicID(logicID uint32) (uint32, error) {
+	phyID, err := d.GetPhyID(logicID)
+	if err != nil {
+		logger.Error("get PhyID failed", zap.Uint32("logicID", logicID))
+		return phyID, err
+	}
+	return phyID, nil
+}
+
+// GetLogicIDFromPhyID is get logic Id from physical id
+func (d *DeviceManager) GetLogicIDFromPhyID(phyID uint32) (int32, error) {
+	logicID, err := d.GetLogicID(phyID)
+	if err != nil {
+		logger.Error("get logicID failed", zap.Uint32("logicID", logicID))
+		return int32(logicID), err
+	}
+	return int32(logicID), nil
 }

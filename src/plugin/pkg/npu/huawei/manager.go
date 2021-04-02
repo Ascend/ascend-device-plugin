@@ -64,8 +64,6 @@ type devManager interface {
 	SetDmgr(DeviceMgrInterface)
 	GetDmgr() DeviceMgrInterface
 	GetMatchingDeviType() string
-	GetPhyIDFromLogicID(logicID uint32) (uint32, error)
-	GetLogicIDFromPhyID(phyID uint32) (int32, error)
 }
 
 // NewHwDevManager function is used to new a dev manager.
