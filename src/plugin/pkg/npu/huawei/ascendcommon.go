@@ -205,7 +205,7 @@ func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr DeviceMgrIn
 		return pluginapi.Unhealthy
 	}
 
-	logicID, err := dmgr.GetLogicIDFromPhyID(phyID)
+	logicID, err := dmgr.GetLogicID(phyID)
 	if err != nil {
 		if logFlag {
 			logger.Error("get device logicID failed.", zap.String("deviceId", DeviceName),
@@ -214,10 +214,10 @@ func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr DeviceMgrIn
 		return pluginapi.Unhealthy
 	}
 
-	healthState, err := dmgr.GetDeviceHealth(logicID)
+	healthState, err := dmgr.GetDeviceHealth(int32(logicID))
 	if err != nil {
 		if logFlag {
-			logger.Error("get device healthy state failed.", zap.Int32("deviceId", logicID),
+			logger.Error("get device healthy state failed.", zap.Int32("deviceId", int32(logicID)),
 				zap.String("error", err.Error()))
 		}
 		return pluginapi.Unhealthy
@@ -243,7 +243,7 @@ func (adc *ascendCommonFunction) GetNPUs(allDevices *[]npuDevice, allDeviceTypes
 	}
 
 	for i := int32(0); i < devNum; i++ {
-		phyID, err := adc.dmgr.GetPhyIDFromLogicID(ids[i])
+		phyID, err := adc.dmgr.GetPhyID(ids[i])
 		if err != nil {
 			return err
 		}

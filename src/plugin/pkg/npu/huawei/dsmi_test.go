@@ -102,8 +102,8 @@ func (d *fakeDeviceManager) GetChipInfo(logicID int32) (*ChipInfo, error) {
 }
 
 // GetDeviceIP get deviceIP
-func (d *fakeDeviceManager) GetDeviceIP(phyID int32) (string, error) {
-	retIPAddress := fmt.Sprintf("%d.%d.%d.%d", 0, 0, 0, phyID)
+func (d *fakeDeviceManager) GetDeviceIP(logicID int32) (string, error) {
+	retIPAddress := fmt.Sprintf("%d.%d.%d.%d", 0, 0, 0, logicID)
 	return retIPAddress, nil
 }
 

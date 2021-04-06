@@ -52,12 +52,12 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *
 	}
 	var deviTypes []string
 	for i := int32(0); i < devNum; i++ {
-		phyID, err := hnm.dmgr.GetPhyIDFromLogicID(ids[i])
+		phyID, err := hnm.dmgr.GetPhyID(ids[i])
 		if err != nil {
 			return err
 		}
 
-		cgoDsmiVDevInfos, err := hnm.queryVirtualDevice(ids[i])
+		cgoDsmiVDevInfos, err := hnm.getVirtualDevice(ids[i])
 		if err != nil && !strings.Contains(err.Error(), FunctionNotFound) {
 			logger.Error("Query virtual device info failure!", zap.String("err",err.Error()))
 			continue
@@ -110,7 +110,7 @@ func (hnm *HwAscend910Manager) assembleVirtualDevices(phyID uint32, cgoDsmiVDevI
 	return devices, vDeviTypes
 }
 
-func (hnm *HwAscend910Manager) queryVirtualDevice(logicID uint32) (CgoDsmiVDevInfo, error) {
+func (hnm *HwAscend910Manager) getVirtualDevice(logicID uint32) (CgoDsmiVDevInfo, error) {
 	var cgoDsmiVDevInfos CgoDsmiVDevInfo
 	if useVolcanoType {
 		return cgoDsmiVDevInfos, nil

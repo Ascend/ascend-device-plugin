@@ -113,7 +113,6 @@ int dsmiShutDown(void){
 import "C"
 import (
 	"fmt"
-	"go.uber.org/zap"
 	"unsafe"
 )
 
@@ -164,10 +163,8 @@ type DeviceMgrInterface interface {
 	GetPhyID(uint32) (uint32, error)
 	GetLogicID(uint32) (uint32, error)
 	GetChipInfo(int32) (*ChipInfo, error)
-	GetDeviceIP(phyID int32) (string, error)
-	GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error)
-	GetPhyIDFromLogicID(logicID uint32) (uint32, error)
-	GetLogicIDFromPhyID(phyID uint32) (int32, error)
+	GetDeviceIP(int32) (string, error)
+	GetVDevicesInfo(uint32) (CgoDsmiVDevInfo, error)
 	ShutDown()
 }
 
@@ -283,11 +280,7 @@ func convertToCharArr(charArr []rune, cgoArr [maxChipName]C.uchar) []rune {
 }
 
 // GetDeviceIP get deviceIP
-func (d *DeviceManager) GetDeviceIP(phyID int32) (string, error) {
-	logicID, err := d.GetLogicID(uint32(phyID))
-	if err != nil {
-		return ERROR, fmt.Errorf("transfor phyID %d to logicID failed, error code: %v", phyID, err)
-	}
+func (d *DeviceManager) GetDeviceIP(logicID int32) (string, error) {
 	var portType C.int = 1
 	var portID C.int
 	var ipAddress [hiAIMaxDeviceNum]C.ip_addr_t
@@ -342,24 +335,4 @@ func (d *DeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error)
 		})
 	}
 	return cgoDsmiVDevInfos, nil
-}
-
-// GetPhyIDFromLogicID is get phyId from logic id
-func (d *DeviceManager) GetPhyIDFromLogicID(logicID uint32) (uint32, error) {
-	phyID, err := d.GetPhyID(logicID)
-	if err != nil {
-		logger.Error("get PhyID failed", zap.Uint32("logicID", logicID))
-		return phyID, err
-	}
-	return phyID, nil
-}
-
-// GetLogicIDFromPhyID is get logic Id from physical id
-func (d *DeviceManager) GetLogicIDFromPhyID(phyID uint32) (int32, error) {
-	logicID, err := d.GetLogicID(phyID)
-	if err != nil {
-		logger.Error("get logicID failed", zap.Uint32("logicID", logicID))
-		return int32(logicID), err
-	}
-	return int32(logicID), nil
 }

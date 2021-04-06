@@ -152,7 +152,7 @@ func (s *pluginAPI) listenVirtualDevices() bool {
 		return isStateChange
 	}
 	for idx := int32(0); idx < devNum; idx++ {
-		phyID, err := s.hps.hdm.dmgr.GetPhyIDFromLogicID(deviceIDs[idx])
+		phyID, err := s.hps.hdm.dmgr.GetPhyID(deviceIDs[idx])
 		if err != nil {
 			logger.Error("Get PhyID fail")
 			return isStateChange
@@ -407,7 +407,12 @@ func (s *pluginAPI) getDeviceIP(phyID int32) (string, error) {
 	if s.ascendRuntimeOptions == "VIRTUAL" {
 		return "", nil
 	}
-	return s.hps.hdm.dmgr.GetDeviceIP(phyID)
+
+	logicID, err := s.hps.hdm.dmgr.GetLogicID(uint32(phyID))
+	if err != nil {
+		return ERROR, fmt.Errorf("transfor phyID %d to logicID failed, error code: %v", phyID, err)
+	}
+	return s.hps.hdm.dmgr.GetDeviceIP(int32(logicID))
 }
 
 // PreStartContainer is Standard interface to kubelet with empty implement.
