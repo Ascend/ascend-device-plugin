@@ -152,10 +152,15 @@ func (s *pluginAPI) listenVirtualDevices() bool {
 		return isStateChange
 	}
 	for idx := int32(0); idx < devNum; idx++ {
-		deviceName := fmt.Sprintf("%s-%d", hiAIAscend910Prefix, deviceIDs[idx])
+		phyID, err := s.hps.hdm.dmgr.GetPhyID(deviceIDs[idx])
+		if err != nil {
+			logger.Error("Get PhyID fail")
+			return isStateChange
+		}
+		deviceName := fmt.Sprintf("%s-%d", hiAIAscend910Prefix, phyID)
 		healthStatus := s.hps.hdm.manager.GetDevState(deviceName, s.hps.hdm.dmgr)
 		for devID, device := range s.hps.devices {
-			if s.isPhyDevOwnThisVirtualDevice(device, deviceIDs[idx]) && healthStatus != device.Health {
+			if s.isPhyDevOwnThisVirtualDevice(device, phyID) && healthStatus != device.Health {
 				isStateChange = true
 				device.Health = healthStatus
 				s.hps.devices[devID] = device
@@ -165,8 +170,8 @@ func (s *pluginAPI) listenVirtualDevices() bool {
 	return isStateChange
 }
 
-func (s *pluginAPI) isPhyDevOwnThisVirtualDevice(device *npuDevice, logicID uint32) bool {
-	return strings.Split(device.ID, "-")[logicIDIndexInVirtualDevID910] == fmt.Sprintf("%d", logicID)
+func (s *pluginAPI) isPhyDevOwnThisVirtualDevice(device *npuDevice, phyID uint32) bool {
+	return strings.Split(device.ID, "-")[logicIDIndexInVirtualDevID910] == fmt.Sprintf("%d", phyID)
 }
 
 func (s *pluginAPI) listenPhysicalDevices() bool {
@@ -214,7 +219,6 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 	if requestErrs != nil {
 		return nil, requestErrs
 	}
-
 	for _, rqt := range requests.ContainerRequests {
 		resp := new(pluginapi.ContainerAllocateResponse)
 
@@ -222,17 +226,16 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 		var dlogMountPath string
 
 		allocateNum := len(rqt.DevicesIDs)
-		ascendVisibleDevices, error := s.setEnvFromKubelet(rqt)
-		if error != nil {
-			logger.Error("plugin doesn't have device", zap.Error(error))
-			return nil, error
+		ascendVisibleDevices, errs := s.setEnvFromKubelet(rqt)
+		if errs != nil {
+			logger.Error("plugin doesn't have device", zap.Error(errs))
+			return nil, errs
 		}
 		// 使用volcano调度
 		if useVolcanoType {
-			ascendVisibleDevices = ""
-			err := s.doWithVolcanoSchedule(allocateNum, &ascendVisibleDevices)
-			if err != nil {
-				return nil, err
+			ascendVisibleDevices, errs = s.doWithVolcanoSchedule(allocateNum)
+			if errs != nil {
+				return nil, errs
 			}
 		}
 
@@ -268,20 +271,15 @@ func (s *pluginAPI) setAscendRuntimeOptions(requests *pluginapi.AllocateRequest)
 
 func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (string, error) {
 	// 从kubelet获取id
-	var ascendVisibleDevices []string
+	var  ascendVisibleDevices []string
 	for _, id := range rqt.DevicesIDs {
 		_, ok := s.hps.devices[id]
 		if !ok {
 			return "", fmt.Errorf("plugin doesn't have device %s", id)
 		}
-		majorID, err := getDeviceID(id, s.ascendRuntimeOptions)
+		phyID, err := getDeviceID(id, s.ascendRuntimeOptions)
 		if err != nil {
 			logger.Error("getDeviceID", zap.Error(err))
-			return "", err
-		}
-		phyID, err := s.getPhyID(majorID)
-		if err != nil {
-			logger.Error("get phyID failed", zap.Error(err))
 			return "", err
 		}
 
@@ -289,13 +287,6 @@ func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (
 	}
 	logger.Info("Found ascendVisibleDevices", zap.Strings("ascendVisibleDevices", ascendVisibleDevices))
 	return strings.Join(ascendVisibleDevices, ","), nil
-}
-
-func (s *pluginAPI) getPhyID(majorID string) (string, error) {
-	if s.ascendRuntimeOptions == "VIRTUAL" {
-		return majorID, nil
-	}
-	return getPhyIDFromDeviceID(majorID, s.hps.hdm.dmgr)
 }
 
 func (s *pluginAPI) mountDefaultDevice(resp *pluginapi.ContainerAllocateResponse) {
@@ -393,15 +384,14 @@ func (s *pluginAPI) setDevices(instance *Instance, devices string) error {
 	idSplit := strings.Split(devices, ",")
 	sort.Sort(sort.StringSlice(idSplit))
 	for _, deviceID := range idSplit {
-		logicID64, err := strconv.ParseInt(deviceID, 10, 32)
+		phyID, err := strconv.ParseInt(deviceID, 10, 32)
 		if err != nil {
 			logger.Error(" Device id trasnsform failes ", zap.String("DeviceName", deviceID))
 			return err
 		}
-		logicID := int32(logicID64)
-		deviceIP, err := s.getDeviceIP(logicID)
-		if err != nil {
-			logger.Error("Get device ip failed:->", zap.Int("deviceId", int(logicID)), zap.Error(err))
+		deviceIP, errs := s.getDeviceIP(int32(phyID))
+		if errs != nil {
+			logger.Error("Get device ip failed:->", zap.Int("deviceId", int(phyID)), zap.Error(errs))
 			return err
 		}
 
@@ -413,11 +403,16 @@ func (s *pluginAPI) setDevices(instance *Instance, devices string) error {
 	return nil
 }
 
-func (s *pluginAPI) getDeviceIP(logicID int32) (string, error) {
+func (s *pluginAPI) getDeviceIP(phyID int32) (string, error) {
 	if s.ascendRuntimeOptions == "VIRTUAL" {
 		return "", nil
 	}
-	return s.hps.hdm.dmgr.GetDeviceIP(logicID)
+
+	logicID, err := s.hps.hdm.dmgr.GetLogicID(uint32(phyID))
+	if err != nil {
+		return ERROR, fmt.Errorf("transfor phyID %d to logicID failed, error code: %v", phyID, err)
+	}
+	return s.hps.hdm.dmgr.GetDeviceIP(int32(logicID))
 }
 
 // PreStartContainer is Standard interface to kubelet with empty implement.
@@ -506,7 +501,7 @@ func (s *pluginAPI) updatePodAnnotations(pod *v1.Pod, ascendVisibleDevices strin
 		pod.Annotations = map[string]string{}
 	}
 
-	podDeviceValue := s.addAnnotation(ascendVisibleDevices, renamePod(pod.Name), serverID)
+	podDeviceValue := s.addAnnotation(ascendVisibleDevices, pod.Name, serverID)
 	pod2, err := s.updatePod(pod, podDeviceValue)
 	for i := 0; err != nil && i < retryTime; i++ {
 		logger.Info("try again ...")
@@ -534,16 +529,6 @@ func (s *pluginAPI) updatePod(pod *v1.Pod, podDeviceValue string) (*v1.Pod, erro
 		return nil, fmt.Errorf("update pod failed,%v", err)
 	}
 	return pod2, nil
-}
-
-func renamePod(podName string) string {
-	suffix := strings.Split(podName, "-")
-	lastIndex := len(suffix) - 1
-	_, err := strconv.Atoi(suffix[lastIndex])
-	if err == nil {
-		return suffix[lastIndex]
-	}
-	return "0"
 }
 
 func getOldestPod(pods []v1.Pod) *v1.Pod {
@@ -694,49 +679,44 @@ func (s *pluginAPI) responseAnonation(resp *pluginapi.ContainerAllocateResponse,
 	resp.Annotations = annotation
 }
 
-func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int, ascendVisibleDevices *string) error {
-
+func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int) (string, error) {
+	var ascendVisibleDevices []string
 	pods, err := s.getPendingPodsOnNode()
 	if err != nil {
 		logger.Error("get pod list err", zap.Error(err))
-		return err
+		return "", err
 	}
 	oldPod := getOldestPod(pods)
 	if oldPod == nil {
 		logger.Info("not get pending pod")
-		return err
+		return "", err
 	}
 	allocateDevice := sets.NewString()
 	err = getNPUAnnotationOfPod(oldPod, &allocateDevice, allocateNum)
 	if err != nil {
 		logger.Error("get NPU Annotation failed: ", zap.Error(err))
-		return err
+		return "", err
 	}
 	for _, id := range allocateDevice.List() {
-		majorID, err := getDeviceID(id, s.ascendRuntimeOptions)
-		if err != nil {
-			logger.Error("getDeviceID", zap.Error(err))
-			return err
+
+		phyID, errs := getDeviceID(id, s.ascendRuntimeOptions)
+		if errs != nil {
+			logger.Error("get phyID", zap.Error(errs))
+			return "", errs
 		}
-		phyID, err := getPhyIDFromDeviceID(majorID, s.hps.hdm.dmgr)
-		if err != nil {
-			logger.Error("get phyID failed", zap.Error(err))
-			return err
-		}
-		*ascendVisibleDevices += phyID + ","
+		ascendVisibleDevices = append(ascendVisibleDevices, phyID)
 	}
-	*ascendVisibleDevices = strings.TrimSuffix(*ascendVisibleDevices, ",")
 	usedDevices := sets.NewString()
 	s.getNodeNpuUsed(&usedDevices)
 	freeDevices := s.hps.healthDevice.Difference(usedDevices)
 	errs := s.hps.kubeInteractor.patchAnnotationOnNode(freeDevices)
 	if errs != nil {
 		logger.Error("patch Annotations failed", zap.Error(err))
-		return err
+		return "", err
 	}
-	err = s.updatePodAnnotations(oldPod, *ascendVisibleDevices)
+	err = s.updatePodAnnotations(oldPod, strings.Join(ascendVisibleDevices, ","))
 	if err != nil {
-		return err
+		return "", err
 	}
-	return nil
+	return strings.Join(ascendVisibleDevices, ","), nil
 }

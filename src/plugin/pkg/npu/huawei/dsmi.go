@@ -163,8 +163,8 @@ type DeviceMgrInterface interface {
 	GetPhyID(uint32) (uint32, error)
 	GetLogicID(uint32) (uint32, error)
 	GetChipInfo(int32) (*ChipInfo, error)
-	GetDeviceIP(logicID int32) (string, error)
-	GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error)
+	GetDeviceIP(int32) (string, error)
+	GetVDevicesInfo(uint32) (CgoDsmiVDevInfo, error)
 	ShutDown()
 }
 
@@ -280,11 +280,7 @@ func convertToCharArr(charArr []rune, cgoArr [maxChipName]C.uchar) []rune {
 }
 
 // GetDeviceIP get deviceIP
-func (d *DeviceManager) GetDeviceIP(phyID int32) (string, error) {
-	logicID, err := d.GetLogicID(uint32(phyID))
-	if err != nil {
-		return ERROR, fmt.Errorf("transfor phyID %d to logicID failed, error code: %v", phyID, err)
-	}
+func (d *DeviceManager) GetDeviceIP(logicID int32) (string, error) {
 	var portType C.int = 1
 	var portID C.int
 	var ipAddress [hiAIMaxDeviceNum]C.ip_addr_t
