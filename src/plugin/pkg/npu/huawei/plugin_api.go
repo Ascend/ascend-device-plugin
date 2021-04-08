@@ -258,8 +258,8 @@ func (s* pluginAPI) setAscendRuntimeOptions(requests *pluginapi.AllocateRequest)
 				return fmt.Errorf("request more than one virtual device, current is %d", len(rqt.DevicesIDs))
 			}
 			if IsOneOfVirtualDeviceType(deviceName){
-				s.ascendRuntimeOptions = "VIRTUAL"
-				break
+				s.ascendRuntimeOptions = VIRTUALDEV
+				return nil
 			}
 		}
 	}
@@ -292,7 +292,7 @@ func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (
 }
 
 func (s *pluginAPI) getPhyID(majorID string) (string, error) {
-	if s.ascendRuntimeOptions == "VIRTUAL" {
+	if s.ascendRuntimeOptions == VIRTUALDEV {
 		return majorID, nil
 	}
 	return getPhyIDFromDeviceID(majorID, s.hps.hdm.dmgr)
@@ -414,7 +414,7 @@ func (s *pluginAPI) setDevices(instance *Instance, devices string) error {
 }
 
 func (s *pluginAPI) getDeviceIP(logicID int32) (string, error) {
-	if s.ascendRuntimeOptions == "VIRTUAL" {
+	if s.ascendRuntimeOptions == VIRTUALDEV {
 		return "", nil
 	}
 	return s.hps.hdm.dmgr.GetDeviceIP(logicID)
