@@ -27,14 +27,10 @@ package huawei
 // dsmiHandle is the handle for dynamically loaded libdrvdsmi_host.so
 void *dsmiHandle;
 #define SO_NOT_FOUND -99999
-#define FUNCTION_NOT_FOUND -99998
+#define FUNC_NOT_FOUND -99998
 #define SUCCESS 0
 #define ERROR_UNKNOWN -99997
-#define CALL_FUNC(func_name,...)					\
-	if(func_name##_func == NULL){					\
-		return FUNCTION_NOT_FOUND;					\
-	}												\
-	return func_name##_func(__VA_ARGS__);			\
+#define CALL_FUNC(fun_name,...)if(fun_name##_func == NULL){return FUNC_NOT_FOUND;}return fun_name##_func(__VA_ARGS__);
 
 int (*dsmi_get_device_count_func)(int *device_count);
 int dsmi_get_device_count(int *device_count){
@@ -51,11 +47,6 @@ int dsmi_get_device_health(int device_id, unsigned int *phealth){
 	CALL_FUNC(dsmi_get_device_health,device_id,phealth)
 }
 
-int (*dsmi_get_device_utilization_rate_func)(int device_id, int device_type, unsigned int *putilization_rate);
-int dsmi_get_device_utilization_rate(int device_id,int device_type, unsigned int *putilization_rate){
-	CALL_FUNC(dsmi_get_device_utilization_rate,device_id, device_type,putilization_rate)
-}
-
 int (*dsmi_get_phyid_from_logicid_func)(unsigned int logicid, unsigned int *phyid);
 int dsmi_get_phyid_from_logicid(unsigned int logicid, unsigned int *phyid){
 	CALL_FUNC(dsmi_get_phyid_from_logicid,logicid,phyid)
@@ -66,41 +57,6 @@ int dsmi_get_logicid_from_phyid(unsigned int phyid, unsigned int *logicid){
 	CALL_FUNC(dsmi_get_logicid_from_phyid,phyid,logicid)
 }
 
-int (*dsmi_get_device_temperature_func)(int device_id,  int *ptemperature);
-int dsmi_get_device_temperature(int device_id,  int *ptemperature){
-	CALL_FUNC(dsmi_get_device_temperature,device_id,ptemperature)
-}
-
-int (*dsmi_get_device_voltage_func)(int device_id, unsigned int *pvoltage);
-int dsmi_get_device_voltage(int device_id, unsigned int *pvoltage){
-	CALL_FUNC(dsmi_get_device_voltage,device_id,pvoltage)
-}
-
-int (*dsmi_get_device_power_info_func)(int device_id, struct dsmi_power_info_stru *pdevice_power_info);
-int dsmi_get_device_power_info(int device_id, struct dsmi_power_info_stru *pdevice_power_info){
-	CALL_FUNC(dsmi_get_device_power_info,device_id,pdevice_power_info)
-}
-
-int (*dsmi_get_device_frequency_func)(int device_id, int device_type,unsigned int *pfrequency);
-int dsmi_get_device_frequency(int device_id, int device_type,unsigned int *pfrequency){
-	CALL_FUNC(dsmi_get_device_frequency,device_id,device_type,pfrequency)
-}
-
-int (*dsmi_get_hbm_info_func)(int device_id, struct dsmi_hbm_info_stru *pdevice_hbm_info);
-int dsmi_get_hbm_info(int device_id, struct dsmi_hbm_info_stru *pdevice_hbm_info){
-	CALL_FUNC(dsmi_get_hbm_info,device_id,pdevice_hbm_info)
-}
-
-int (*dsmi_get_memory_info_func)(int device_id, struct dsmi_memory_info_stru *pdevice_memory_info);
-int dsmi_get_memory_info(int device_id, struct dsmi_memory_info_stru *pdevice_memory_info){
-	CALL_FUNC(dsmi_get_memory_info,device_id,pdevice_memory_info)
-}
-
-int (*dsmi_get_device_errorcode_func)(int device_id, int *errorcount,unsigned int *perrorcode);
-int dsmi_get_device_errorcode(int device_id, int *errorcount,unsigned int *perrorcode){
-	CALL_FUNC(dsmi_get_device_errorcode,device_id,errorcount,perrorcode)
-}
-
 int (*dsmi_get_chip_info_func)(int device_id, struct dsmi_chip_info_stru *chip_info);
 int dsmi_get_chip_info(int device_id, struct dsmi_chip_info_stru *chip_info){
 	CALL_FUNC(dsmi_get_chip_info,device_id,chip_info)
@@ -109,6 +65,11 @@ int dsmi_get_chip_info(int device_id, struct dsmi_chip_info_stru *chip_info){
 int (*dsmi_get_device_ip_address_func)(int device_id, int port_type, int port_id, ip_addr_t *ip_address, ip_addr_t *mask_address);
 int dsmi_get_device_ip_address(int device_id, int port_type, int port_id, ip_addr_t *ip_address, ip_addr_t *mask_address){
 	CALL_FUNC(dsmi_get_device_ip_address,device_id,port_type,port_id,ip_address,mask_address)
+}
+
+int (*dsmi_get_vdevice_info_func)(unsigned int devid, struct dsmi_vdev_info *vdevice_info);
+int dsmi_get_vdevice_info(unsigned int devid, struct dsmi_vdev_info *vdevice_info){
+	CALL_FUNC(dsmi_get_vdevice_info,devid,vdevice_info)
 }
 
 // load .so files and functions
@@ -131,12 +92,12 @@ int dsmiInit_dl(void){
 
 	dsmi_get_logicid_from_phyid_func = dlsym(dsmiHandle,"dsmi_get_logicid_from_phyid");
 
-	dsmi_get_device_errorcode_func = dlsym(dsmiHandle,"dsmi_get_device_errorcode");
-
 	dsmi_get_chip_info_func = dlsym(dsmiHandle,"dsmi_get_chip_info");
 
 	dsmi_get_device_ip_address_func = dlsym(dsmiHandle,"dsmi_get_device_ip_address");
-	
+
+	dsmi_get_vdevice_info_func = dlsym(dsmiHandle,"dsmi_get_vdevice_info");
+
 	return SUCCESS;
 }
 
@@ -170,6 +131,28 @@ type ChipInfo struct {
 	ChipVer  string
 }
 
+// CgoDsmiSubVDevInfo single VDevInfo info
+type CgoDsmiSubVDevInfo struct {
+	status uint32
+	vdevid uint32
+	vfid   uint32
+	cid    uint64
+	spec   CgoDsmiVdevSpecInfo
+}
+
+// CgoDsmiVdevSpecInfo is special info
+type CgoDsmiVdevSpecInfo struct {
+	coreNum  string
+	reserved string
+}
+
+// CgoDsmiVDevInfo total VDevInfos info
+type CgoDsmiVDevInfo struct {
+	vDevNum             uint32
+	coreNumUnused       uint32
+	cgoDsmiSubVDevInfos []CgoDsmiSubVDevInfo
+}
+
 // DeviceMgrInterface interface for dsmi
 type DeviceMgrInterface interface {
 	GetDeviceCount() (int32, error)
@@ -179,6 +162,7 @@ type DeviceMgrInterface interface {
 	GetLogicID(uint32) (uint32, error)
 	GetChipInfo(int32) (*ChipInfo, error)
 	GetDeviceIP(logicID int32) (string, error)
+	GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error)
 	ShutDown()
 }
 
@@ -324,4 +308,34 @@ func (d *DeviceManager) GetDeviceIP(phyID int32) (string, error) {
 // ShutDown clean the dynamically loaded resource
 func (d *DeviceManager) ShutDown() {
 	C.dsmiShutDown()
+}
+
+// GetVDevicesInfo get the virtual device info by logicID
+func (d *DeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error) {
+	var dsmiVDevInfo C.struct_dsmi_vdev_info
+	err := C.dsmi_get_vdevice_info(C.uint(logicID), &dsmiVDevInfo)
+
+	if err != 0 {
+		return CgoDsmiVDevInfo{}, fmt.Errorf("get virtual device info failed, error code: %d", int32(err))
+	}
+	cgoDsmiVDevInfos := CgoDsmiVDevInfo{
+		vDevNum:       uint32(dsmiVDevInfo.vdev_num),
+		coreNumUnused: uint32(dsmiVDevInfo.spec_unused.core_num),
+	}
+
+	for i := uint32(0); i < cgoDsmiVDevInfos.vDevNum; i++ {
+		dsmiSubVDevInfo := *(*C.struct_dsmi_sub_vdev_info)(unsafe.Pointer(uintptr(unsafe.Pointer(&dsmiVDevInfo.vdev)) +
+			uintptr(C.sizeof_struct_dsmi_sub_vdev_info*C.int(i))))
+		coreNum := fmt.Sprintf("%v", dsmiSubVDevInfo.spec.core_num)
+		cgoDsmiVDevInfos.cgoDsmiSubVDevInfos = append(cgoDsmiVDevInfos.cgoDsmiSubVDevInfos, CgoDsmiSubVDevInfo{
+			status: uint32(dsmiSubVDevInfo.status),
+			vdevid: uint32(dsmiSubVDevInfo.vdevid),
+			vfid:   uint32(dsmiSubVDevInfo.vfid),
+			cid:    uint64(dsmiSubVDevInfo.cid),
+			spec: CgoDsmiVdevSpecInfo{
+				coreNum: coreNum,
+			},
+		})
+	}
+	return cgoDsmiVDevInfos, nil
 }

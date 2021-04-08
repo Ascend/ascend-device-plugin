@@ -19,6 +19,8 @@ package huawei
 
 import (
 	"fmt"
+	"go.uber.org/zap"
+	"strings"
 )
 
 // switch error log
@@ -36,23 +38,40 @@ func NewHwAscend910Manager() *HwAscend910Manager {
 
 // GetNPUs function discovers all HUAWEI Ascend910 devices available
 // on the local node by calling walking `/dev` directory.
+// a physical npu can be split into multiple vnpu
+// vnpu is classification by computing power, like Ascend-910-4c,Ascend-910-8c,Ascend-910-16c
+// physical npu sets corresponding to the deviTypes ,and npu id vDeviTypes
+// vDeviTypes may is: [Ascend-910-4c,Ascend-910-8c,Ascend-910-16c], also deviTypes: [Ascend-910, Ascend-910]
+// one class deviType will generate a socker file, like ascend-910-4c.sock
 func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *[]string, deviType string) error {
 	var ids [hiAIMaxDeviceNum]uint32
 
-	devNum, err := hnm.dmgr.GetDeviceList(&ids)
-	if err != nil {
-		return err
+	devNum, errInfo := hnm.dmgr.GetDeviceList(&ids)
+	if errInfo != nil {
+		return errInfo
 	}
+	var deviTypes []string
 	for i := int32(0); i < devNum; i++ {
 		phyID, err := hnm.dmgr.GetPhyID(ids[i])
 		if err != nil {
 			return err
 		}
-		devices, deviTypes := hnm.assemblePhyDevices(ids[i], phyID)
+
+		cgoDsmiVDevInfos, err := hnm.queryVirtualDevice(ids[i])
+		if err != nil && !strings.Contains(err.Error(), FunctionNotFound) {
+			logger.Error("Query virtual device info failure!", zap.String("err", err.Error()))
+			continue
+		}
+		var devices []npuDevice
+		if cgoDsmiVDevInfos.vDevNum == 0 {
+			devices, deviTypes = hnm.assemblePhyDevices(ids[i], phyID)
+		} else {
+			devices, deviTypes = hnm.assembleVirDevs(ids[i], phyID, cgoDsmiVDevInfos)
+		}
 		*allDevices = append(*allDevices, devices...)
 		*allDeviceTypes = append(*allDeviceTypes, deviTypes...)
 	}
-	*allDeviceTypes =hnm.removeDuplicate(allDeviceTypes)
+	*allDeviceTypes = hnm.removeDuplicate(allDeviceTypes)
 	return nil
 }
 
@@ -76,4 +95,30 @@ func (hnm *HwAscend910Manager) assemblePhyDevices(logicID, phyID uint32) ([]npuD
 	devices = append(devices, device)
 	deviTypes = append(deviTypes, hiAIAscend910Prefix)
 	return devices, deviTypes
+}
+
+func (hnm *HwAscend910Manager) assembleVirDevs(logicID, phyID uint32, vInfos CgoDsmiVDevInfo) ([]npuDevice, []string) {
+	var devices []npuDevice
+	var vDeviTypes []string
+	for _, dsmiSubVdevInfo := range vInfos.cgoDsmiSubVDevInfos {
+		vDevType := fmt.Sprintf("%s-%sc", hiAIAscend910Prefix, dsmiSubVdevInfo.spec.coreNum)
+		devID := fmt.Sprintf("%s-%sc-%d-%d", hiAIAscend910Prefix, dsmiSubVdevInfo.spec.coreNum,
+			dsmiSubVdevInfo.vdevid, logicID)
+		device := hnm.AssembleNpuDeviceStruct(vDevType, devID, phyID)
+		devices = append(devices, device)
+		vDeviTypes = append(vDeviTypes, vDevType)
+	}
+	return devices, vDeviTypes
+}
+
+func (hnm *HwAscend910Manager) queryVirtualDevice(logicID uint32) (CgoDsmiVDevInfo, error) {
+	var cgoDsmiVDevInfos CgoDsmiVDevInfo
+	if useVolcanoType {
+		return cgoDsmiVDevInfos, nil
+	}
+	cgoDsmiVDevInfos, err := hnm.dmgr.GetVDevicesInfo(logicID)
+	if err != nil {
+		return CgoDsmiVDevInfo{}, fmt.Errorf("query virtual device info failure: %s\n", err)
+	}
+	return cgoDsmiVDevInfos, nil
 }

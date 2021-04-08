@@ -28,6 +28,14 @@ import (
 	"time"
 )
 
+const (
+	// VIRTUAL_DEV represent virtual device
+	VIRTUAL_DEV = "VIRTUAL"
+
+	// PHYSICAL_DEV represent physical device
+	PHYSICAL_DEV = ""
+)
+
 // ascendCommonFunction struct definition
 type ascendCommonFunction struct {
 	dmgr DeviceMgrInterface
@@ -67,7 +75,7 @@ func setDeviceByPath(defaultDevices *[]string, device string) {
 func getLogicIDByName(DeviceName string, logicID *int32) error {
 	var phyID int32
 
-	major, err := getDeviceID(DeviceName)
+	major, err := getDeviceID(DeviceName, PHYSICAL_DEV)
 	if err != nil {
 		logger.Error("dev ID is invalid", zap.String("deviceID", DeviceName))
 		return err
@@ -121,7 +129,7 @@ func getPhyIDFromDeviceID(deviceID string, dmgr DeviceMgrInterface) (string, err
 	return strconv.Itoa(int(phyID)), nil
 }
 
-func getDeviceID(deviceName string) (string, error) {
+func getDeviceID(deviceName string, ascendRuntimeOptions string) (string, error) {
 
 	// hiAIAscend310Prefix: davinci-mini
 	// vnpu: davinci-mini0-0
@@ -132,8 +140,10 @@ func getDeviceID(deviceName string) (string, error) {
 	if len(idSplit) < idSplitNum {
 		return "", fmt.Errorf("id: %s is invalid", deviceName)
 	}
-
 	majorID := idSplit[len(idSplit)-1]
+	if ascendRuntimeOptions == VIRTUAL_DEV {
+		majorID = idSplit[len(idSplit)-2]
+	}
 	return majorID, nil
 }
 
@@ -173,10 +183,10 @@ func (adc *ascendCommonFunction) CreateLogDirectory(newLogPath *string, subdir s
 }
 
 // CreateLogSubDir is used to create log sub path
-func (adc *ascendCommonFunction) CreateLogSubDir(devID []string) (string, error) {
+func (adc *ascendCommonFunction) CreateLogSubDir(devID []string, ascendRuntimeOptions string) (string, error) {
 	var subdir = "/device"
 	for _, item := range devID {
-		major, err := getDeviceID(item)
+		major, err := getDeviceID(item, ascendRuntimeOptions)
 		if err != nil {
 			logger.Error("dev ID is invalid", zap.String("deviceID", item))
 			return subdir, fmt.Errorf("dev ID %s is invalid", item)
@@ -189,7 +199,7 @@ func (adc *ascendCommonFunction) CreateLogSubDir(devID []string) (string, error)
 // GetDevPath get dev path
 func (adc *ascendCommonFunction) GetDevPath(id, ascendRuntimeOptions string, hostPath *string, containerPath *string) {
 	*containerPath = fmt.Sprintf("%s%s", "/dev/davinci", id)
-	if ascendRuntimeOptions == "VIRTUAL" {
+	if ascendRuntimeOptions == VIRTUAL_DEV {
 		*hostPath = fmt.Sprintf("%s%s", "/dev/vdavinci", id)
 		return
 	}
@@ -198,14 +208,14 @@ func (adc *ascendCommonFunction) GetDevPath(id, ascendRuntimeOptions string, hos
 }
 
 // GetLogPath is used to get log path
-func (adc *ascendCommonFunction) GetLogPath(devID []string, defaultLogPath string, newLogPath *string) error {
-	subdir, err := adc.CreateLogSubDir(devID)
+func (adc *ascendCommonFunction) GetLogPath(devID []string, defaultLogPath, option string, newLogPath *string) error {
+	subdir, err := adc.CreateLogSubDir(devID, option)
 	if err != nil {
-		return  err
+		return err
 	}
 	err = adc.CreateLogDirectory(&defaultLogPath, subdir)
 	if err != nil {
-		return  err
+		return err
 	}
 	*newLogPath = defaultLogPath
 	logger.Info("log dir is:", zap.String("logDir", *newLogPath))

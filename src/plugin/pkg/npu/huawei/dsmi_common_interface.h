@@ -67,6 +67,30 @@ typedef struct ip_addr {
     enum ip_addr_type ip_type;
 } ip_addr_t;
 
+#define DSMI_MAX_VDEV_NUM 16
+#define DSMI_MAX_SPEC_RESERVE 8
+
+struct dsmi_vdev_spec_info {
+    unsigned char core_num;                         /**< aicore num for virtual device */
+    unsigned char reservesd[DSMI_MAX_SPEC_RESERVE]; /**reserved */
+};
+
+// Dsmi each virtual device info
+struct dsmi_sub_vdev_info {
+    unsigned int status;                            /**< whether the vdevice used by container */
+    unsigned int vdevid;                            /**< id number of vdevice */
+    unsigned int vfid;
+    unsigned long int cid;                           /**< container id */
+    struct dsmi_vdev_spec_info spec;                /**< specification of vdevice */
+};
+
+// Dsmi physical device split info
+struct dsmi_vdev_info {
+    unsigned int vdev_num;                          /**< number of vdevice the devid had created */
+    struct dsmi_vdev_spec_info spec_unused;         /**< resource the devid unallocated */
+    struct dsmi_sub_vdev_info vdev[DSMI_MAX_VDEV_NUM];
+};
+
 /**
 * @ingroup driver
 * @brief Get the number of devices
@@ -126,92 +150,6 @@ int dsmi_get_device_health(int device_id, unsigned int *phealth);
 
 /**
 * @ingroup driver
-* @brief Query device fault code
-* @attention NULL
-* @param [in] device_id The device id.
-* @param [out] errorcount Number of error codes, count:0~128
-* @param [out] perrorcode error codes
-* @return  0 for success, others for fail
-* @note Support:Ascend310,Ascend910
-*/
-int dsmi_get_device_errorcode(int device_id, int *errorcount, unsigned int *perrorcode);
-
-/**
-* @ingroup driver
-* @brief Query the temperature of the ICE SOC of Ascend AI processor
-* @attention NULL
-* @param [in] device_id  The device id
-* @param [out] ptemperature  The temperature of the HiSilicon SOC of the Shengteng AI processor: unit Celsius,
-                         the accuracy is 1 degree Celsius, and the decimal point is rounded. 16-bit signed type,
-                         little endian. The value returned by the device is the actual temperature.
-* @return  0 for success, others for fail
-* @note Support:Ascend310,Ascend910
-*/
-int dsmi_get_device_temperature(int device_id, int *ptemperature);
-
-/**
-* @ingroup driver
-* @brief Query device power consumption
-* @attention NULL
-* @param [in] device_id The device id
-* @param [out] pdevice_power_info Device power consumption: unit is W, accuracy is 0.1W. 16-bit unsigned short type,
-               little endian
-* @return 0 for success, others for fail
-* @note Support:Ascend310,Ascend910
-*/
-int dsmi_get_device_power_info(int device_id, struct dsmi_power_info_stru *pdevice_power_info);
-
-
-/**
-* @ingroup driver
-* @brief Query the voltage of Sheng AI SOC of ascend AI processor
-* @attention NULL
-* @param [in] device_id  The device id
-* @param [out] pvoltage  The voltage of the HiSilicon SOC of the Shengteng AI processor: the unit is V,
-                         and the accuracy is 0.01V
-* @return  0 for success, others for fail
-* @note Support:Ascend310,Ascend910
-*/
-int dsmi_get_device_voltage(int device_id, unsigned int *pvoltage);
-
-/**
-* @ingroup driver
-* @brief Get the occupancy rate of the HiSilicon SOC of the Ascension AI processor
-* @attention NULL
-* @param [in] device_id  The device id
-* @param [in] device_type  device_type
-* @param [out] putilization_rate  Utilization rate of HiSilicon SOC of ascend AI processor, unit:%
-* @return  0 for success, others for fail
-* @note Support:Ascend310,Ascend910
-*/
-int dsmi_get_device_utilization_rate(int device_id, int device_type, unsigned int *putilization_rate);
-
-/**
-* @ingroup driver
-* @brief Get the frequency of the HiSilicon SOC of the Ascension AI processor
-* @attention NULL
-* @param [in] device_id  The device id
-* @param [in] device_type  device_type
-* @param [out] pfrequency  Frequency, unit MHZ
-* @return  0 for success, others for fail
-* @note Support:Ascend310,Ascend910
-*/
-int dsmi_get_device_frequency(int device_id, int device_type, unsigned int *pfrequency);
-
-/**
-* @ingroup driver
-* @brief Get memory information
-* @attention NULL
-* @param [in] device_id  The device id
-* @param [out] pdevice_memory_info  Return memory information
-* @return  0 for success, others for fail
-* @note Support:Ascend310,Ascend910
-*/
-int dsmi_get_memory_info(int device_id, struct dsmi_memory_info_stru *pdevice_memory_info);
-
-
-/**
-* @ingroup driver
 * @brief get the ip address and mask address.
 * @attention NULL
 * @param [in] device_id  The device id
@@ -237,19 +175,6 @@ int dsmi_get_device_ip_address(int device_id, int port_type, int port_id, ip_add
 */
 int dsmi_get_chip_info(int device_id, struct dsmi_chip_info_stru *chip_info);
 
-
-/**
-* @ingroup driver
-* @brief Query the frequency, capacity and utilization information of hbm
-* @attention NULL
-* @param [in] device_id  The device id
-* @param [out] pdevice_hbm_info return hbm infomation
-* @return  0 for success, others for fail
-* @note Support:Ascend910
-*/
-int dsmi_get_hbm_info(int device_id, struct dsmi_hbm_info_stru *pdevice_hbm_info);
-
-
 /**
 * @ingroup driver
 * @brief Query the connectivity status of the RoCE network card's IP address
@@ -260,6 +185,17 @@ int dsmi_get_hbm_info(int device_id, struct dsmi_hbm_info_stru *pdevice_hbm_info
 * @note Support:Ascend910
 */
 int dsmi_get_network_health(int device_id, DSMI_NET_HEALTH_STATUS *presult);
+
+/**
+* @ingroup driver
+* @brief Query the cvirtual device info by device_id(logicID)
+* @attention NULL
+* @param [in] devid The device id
+* @param [out] result return the virtual device info wants to query
+* @return  0 for success, DRV_ERROR_NOT_SUPPORT: not support function, others for fail
+* @note Support:Ascend910
+*/
+int dsmi_get_vdevice_info(unsigned int devid, struct dsmi_vdev_info *info);
 
 #ifdef __cplusplus
 }

@@ -52,9 +52,13 @@ type HwPluginServeInterface interface {
 
 // NewHwPluginServe new a device plugin server
 func NewHwPluginServe(hdm *HwDevManager, devType string, socket string) HwPluginServeInterface {
-	ki, err := NewKubeInteractor()
-	if err != nil {
-		logger.Error("cannot create kube interactor.", zap.Error(err))
+	var ki *KubeInteractor
+	var err error
+	if useVolcanoType {
+		ki, err = NewKubeInteractor()
+		if err != nil {
+			logger.Error("cannot create kube interactor.", zap.Error(err))
+		}
 	}
 	return &HwPluginServe{
 		devType:        devType,

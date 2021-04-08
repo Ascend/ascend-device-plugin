@@ -32,7 +32,7 @@ func NewHwAscend310Manager() *HwAscend310Manager {
 // GetMatchingDeviType to get match device type
 func (hnm *HwAscend310Manager) GetMatchingDeviType() string {
 	if GetFdFlag {
-		return  hiAIAscendfdPrefix
+		return hiAIAscendfdPrefix
 	}
 	return hiAIAscend310Prefix
 }
