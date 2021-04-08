@@ -135,21 +135,21 @@ type ChipInfo struct {
 type CgoDsmiSubVDevInfo struct {
 	status uint32
 	vdevid uint32
-	vfid uint32
-	cid uint64
-	spec CgoDsmiVdevSpecInfo
+	vfid   uint32
+	cid    uint64
+	spec   CgoDsmiVdevSpecInfo
 }
 
 // CgoDsmiVdevSpecInfo is special info
 type CgoDsmiVdevSpecInfo struct {
-	coreNum string
+	coreNum  string
 	reserved string
 }
 
 // CgoDsmiVDevInfo total VDevInfos info
 type CgoDsmiVDevInfo struct {
-	vDevNum uint32
-	coreNumUnused uint32
+	vDevNum             uint32
+	coreNumUnused       uint32
 	cgoDsmiSubVDevInfos []CgoDsmiSubVDevInfo
 }
 
@@ -319,19 +319,19 @@ func (d *DeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error)
 		return CgoDsmiVDevInfo{}, fmt.Errorf("get virtual device info failed, error code: %d", int32(err))
 	}
 	cgoDsmiVDevInfos := CgoDsmiVDevInfo{
-		vDevNum: uint32(dsmiVDevInfo.vdev_num),
+		vDevNum:       uint32(dsmiVDevInfo.vdev_num),
 		coreNumUnused: uint32(dsmiVDevInfo.spec_unused.core_num),
 	}
 
 	for i := uint32(0); i < cgoDsmiVDevInfos.vDevNum; i++ {
 		dsmiSubVDevInfo := *(*C.struct_dsmi_sub_vdev_info)(unsafe.Pointer(uintptr(unsafe.Pointer(&dsmiVDevInfo.vdev)) +
-			uintptr(C.sizeof_struct_dsmi_sub_vdev_info * C.int(i))))
+			uintptr(C.sizeof_struct_dsmi_sub_vdev_info*C.int(i))))
 		coreNum := fmt.Sprintf("%v", dsmiSubVDevInfo.spec.core_num)
 		cgoDsmiVDevInfos.cgoDsmiSubVDevInfos = append(cgoDsmiVDevInfos.cgoDsmiSubVDevInfos, CgoDsmiSubVDevInfo{
 			status: uint32(dsmiSubVDevInfo.status),
 			vdevid: uint32(dsmiSubVDevInfo.vdevid),
-			vfid: uint32(dsmiSubVDevInfo.vfid),
-			cid: uint64(dsmiSubVDevInfo.cid),
+			vfid:   uint32(dsmiSubVDevInfo.vfid),
+			cid:    uint64(dsmiSubVDevInfo.cid),
 			spec: CgoDsmiVdevSpecInfo{
 				coreNum: coreNum,
 			},

@@ -47,12 +47,12 @@ const (
 
 	// LogPath save log file
 	LogPath                 = "/var/log/devicePlugin/devicePlugin.log"
-	fileMaxSize             = 1000                                                   // each log file size
-	maxBackups              = 20                                                     // max backup
-	maxAge                  = 28                                                     // the log file last time
+	fileMaxSize             = 1000                                                    // each log file size
+	maxBackups              = 20                                                      // max backup
+	maxAge                  = 28                                                      // the log file last time
 	podDeviceKey            = "ascend.kubectl.kubernetes.io/ascend-910-configuration" // config map name
-	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"                               // visible env
-	ascendRuntimeOptionsEnv = "ASCEND_RUNTIME_OPTIONS"                               // virtual runtime option env
+	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"                                // visible env
+	ascendRuntimeOptionsEnv = "ASCEND_RUNTIME_OPTIONS"                                // virtual runtime option env
 	logChmod                = 0640
 
 	huaweiAscend910  = "huawei.com/Ascend910"
@@ -65,8 +65,8 @@ const (
 	timeout          = 10
 	maxChipName      = 32
 
-	virtualDevicesPattern = `Ascend910-(4|8|16)c`
-	placeholder = 9999
+	virtualDevicesPattern         = `Ascend910-(4|8|16)c`
+	placeholder                   = 9999
 	logicIDIndexInVirtualDevID910 = 3
 
 	// Ascend device type identification

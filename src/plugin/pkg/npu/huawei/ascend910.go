@@ -65,13 +65,13 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *
 		var devices []npuDevice
 		if cgoDsmiVDevInfos.vDevNum == 0 {
 			devices, deviTypes = hnm.assemblePhyDevices(ids[i], phyID)
-		}else {
+		} else {
 			devices, deviTypes = hnm.assembleVirDevs(ids[i], phyID, cgoDsmiVDevInfos)
 		}
 		*allDevices = append(*allDevices, devices...)
 		*allDeviceTypes = append(*allDeviceTypes, deviTypes...)
 	}
-	*allDeviceTypes =hnm.removeDuplicate(allDeviceTypes)
+	*allDeviceTypes = hnm.removeDuplicate(allDeviceTypes)
 	return nil
 }
 
@@ -97,7 +97,7 @@ func (hnm *HwAscend910Manager) assemblePhyDevices(logicID, phyID uint32) ([]npuD
 	return devices, deviTypes
 }
 
-func (hnm *HwAscend910Manager) assembleVirDevs(logicID, phyID uint32, vInfos CgoDsmiVDevInfo) ([]npuDevice, []string){
+func (hnm *HwAscend910Manager) assembleVirDevs(logicID, phyID uint32, vInfos CgoDsmiVDevInfo) ([]npuDevice, []string) {
 	var devices []npuDevice
 	var vDeviTypes []string
 	for _, dsmiSubVdevInfo := range vInfos.cgoDsmiSubVDevInfos {

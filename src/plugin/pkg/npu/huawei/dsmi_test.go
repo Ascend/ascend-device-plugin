@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"github.com/golang/protobuf/ptypes/empty"
 	"os"
-	"testing"
 	"strconv"
 	"strings"
+	"testing"
 )
 
 const (
@@ -36,7 +36,7 @@ const (
 	testComputeCoreNum   = 4
 
 	// testPhyDevID use for ut, represent device id: 0,2,4,5,6,7
-	testPhyDevID         = "024567"
+	testPhyDevID = "024567"
 )
 
 type fakeDeviceManager struct{}
@@ -111,26 +111,26 @@ func (d *fakeDeviceManager) GetDeviceIP(logicID int32) (string, error) {
 }
 
 // GetVDevicesInfo for fakeDeviceManager
-func (d *fakeDeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error)  {
+func (d *fakeDeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error) {
 	var cgoDsmiVDevInfos CgoDsmiVDevInfo
 	if strings.Contains(testPhyDevID, strconv.Itoa(int(logicID))) {
 		cgoDsmiVDevInfos = CgoDsmiVDevInfo{
-			vDevNum: uint32(defaultVDevNum),
+			vDevNum:       uint32(defaultVDevNum),
 			coreNumUnused: uint32(maxAiCoreNum),
 		}
 		return cgoDsmiVDevInfos, nil
 	}
 	cgoDsmiVDevInfos = CgoDsmiVDevInfo{
-		vDevNum: uint32(testVDevNum),
+		vDevNum:       uint32(testVDevNum),
 		coreNumUnused: uint32(testAiCoreNum),
 	}
 	for i := 0; i < 2; i++ {
-		coreNum := fmt.Sprintf("%d", testComputeCoreNum * (i + 1))
-		cgoDsmiVDevInfos.cgoDsmiSubVDevInfos =append(cgoDsmiVDevInfos.cgoDsmiSubVDevInfos, CgoDsmiSubVDevInfo{
+		coreNum := fmt.Sprintf("%d", testComputeCoreNum*(i+1))
+		cgoDsmiVDevInfos.cgoDsmiSubVDevInfos = append(cgoDsmiVDevInfos.cgoDsmiSubVDevInfos, CgoDsmiSubVDevInfo{
 			status: uint32(0),
 			vdevid: uint32(int(logicID) + i),
-			vfid: uint32(int(logicID) + i),
-			cid: uint64(i),
+			vfid:   uint32(int(logicID) + i),
+			cid:    uint64(i),
 			spec: CgoDsmiVdevSpecInfo{
 				coreNum: coreNum,
 			},

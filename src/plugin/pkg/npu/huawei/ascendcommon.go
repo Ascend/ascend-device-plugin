@@ -211,11 +211,11 @@ func (adc *ascendCommonFunction) GetDevPath(id, ascendRuntimeOptions string, hos
 func (adc *ascendCommonFunction) GetLogPath(devID []string, defaultLogPath, option string, newLogPath *string) error {
 	subdir, err := adc.CreateLogSubDir(devID, option)
 	if err != nil {
-		return  err
+		return err
 	}
 	err = adc.CreateLogDirectory(&defaultLogPath, subdir)
 	if err != nil {
-		return  err
+		return err
 	}
 	*newLogPath = defaultLogPath
 	logger.Info("log dir is:", zap.String("logDir", *newLogPath))

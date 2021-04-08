@@ -41,8 +41,8 @@ import (
 )
 
 type pluginAPI struct {
-	hps      *HwPluginServe
-	outbreak *atomic.Bool
+	hps                  *HwPluginServe
+	outbreak             *atomic.Bool
 	ascendRuntimeOptions string
 }
 
@@ -155,7 +155,7 @@ func (s *pluginAPI) listenVirtualDevices() bool {
 		deviceName := fmt.Sprintf("%s-%d", hiAIAscend910Prefix, deviceIDs[idx])
 		healthStatus := s.hps.hdm.manager.GetDevState(deviceName, s.hps.hdm.dmgr)
 		for devID, device := range s.hps.devices {
-			if s.isPhyDevOwnThisVirtualDevice(device, deviceIDs[idx]) &&healthStatus != device.Health {
+			if s.isPhyDevOwnThisVirtualDevice(device, deviceIDs[idx]) && healthStatus != device.Health {
 				logger.Info("device health status change", zap.String("devID", devID),
 					zap.String("healthStatus", healthStatus))
 				isStatusChange = true
@@ -255,13 +255,13 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 	return resps, nil
 }
 
-func (s* pluginAPI) setAscendRuntimeOptions(requests *pluginapi.AllocateRequest) error {
+func (s *pluginAPI) setAscendRuntimeOptions(requests *pluginapi.AllocateRequest) error {
 	for _, rqt := range requests.ContainerRequests {
 		for _, deviceName := range rqt.DevicesIDs {
 			if IsOneOfVirtualDeviceType(deviceName) && len(rqt.DevicesIDs) > interval {
 				return fmt.Errorf("request more than one virtual device, current is %d", len(rqt.DevicesIDs))
 			}
-			if IsOneOfVirtualDeviceType(deviceName){
+			if IsOneOfVirtualDeviceType(deviceName) {
 				s.ascendRuntimeOptions = VIRTUAL_DEV
 				return nil
 			}
@@ -272,7 +272,7 @@ func (s* pluginAPI) setAscendRuntimeOptions(requests *pluginapi.AllocateRequest)
 
 func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (string, error) {
 	// 从kubelet获取id
-	var  ascendVisibleDevices []string
+	var ascendVisibleDevices []string
 	for _, id := range rqt.DevicesIDs {
 		_, ok := s.hps.devices[id]
 		if !ok {
@@ -370,8 +370,8 @@ func addEnv(ascendVisibleDevices, ascendRuntimeOptions string, resp *pluginapi.C
 	if len((*resp).Envs) == 0 {
 		(*resp).Envs = make(map[string]string)
 	}
-	(*resp).Envs [ascendVisibleDevicesEnv] = ascendVisibleDevices
-	(*resp).Envs [ascendRuntimeOptionsEnv] = ascendRuntimeOptions
+	(*resp).Envs[ascendVisibleDevicesEnv] = ascendVisibleDevices
+	(*resp).Envs[ascendRuntimeOptionsEnv] = ascendRuntimeOptions
 }
 
 func (s *pluginAPI) addAnnotation(devices, podName, serverID string) string {
