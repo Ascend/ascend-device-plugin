@@ -29,11 +29,11 @@ import (
 )
 
 const (
-	// VIRTUALDEV represent virtual device
-	VIRTUALDEV = "VIRTUAL"
+	// VIRTUAL_DEV represent virtual device
+	VIRTUAL_DEV = "VIRTUAL"
 
-	// PHYSICALDEV represent physical device
-	PHYSICALDEV = ""
+	// PHYSICAL_DEV represent physical device
+	PHYSICAL_DEV = ""
 )
 
 // ascendCommonFunction struct definition
@@ -75,7 +75,7 @@ func setDeviceByPath(defaultDevices *[]string, device string) {
 func getLogicIDByName(DeviceName string, logicID *int32) error {
 	var phyID int32
 
-	major, err := getDeviceID(DeviceName, PHYSICALDEV)
+	major, err := getDeviceID(DeviceName, PHYSICAL_DEV)
 	if err != nil {
 		logger.Error("dev ID is invalid", zap.String("deviceID", DeviceName))
 		return err
@@ -141,7 +141,7 @@ func getDeviceID(deviceName string, ascendRuntimeOptions string) (string, error)
 		return "", fmt.Errorf("id: %s is invalid", deviceName)
 	}
 	majorID := idSplit[len(idSplit)-1]
-	if ascendRuntimeOptions == VIRTUALDEV {
+	if ascendRuntimeOptions == VIRTUAL_DEV {
 		majorID = idSplit[len(idSplit)-2]
 	}
 	return majorID, nil
@@ -199,7 +199,7 @@ func (adc *ascendCommonFunction) CreateLogSubDir(devID []string, ascendRuntimeOp
 // GetDevPath get dev path
 func (adc *ascendCommonFunction) GetDevPath(id, ascendRuntimeOptions string, hostPath *string, containerPath *string) {
 	*containerPath = fmt.Sprintf("%s%s", "/dev/davinci", id)
-	if ascendRuntimeOptions == VIRTUALDEV {
+	if ascendRuntimeOptions == VIRTUAL_DEV {
 		*hostPath = fmt.Sprintf("%s%s", "/dev/vdavinci", id)
 		return
 	}

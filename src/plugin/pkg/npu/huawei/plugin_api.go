@@ -156,6 +156,8 @@ func (s *pluginAPI) listenVirtualDevices() bool {
 		healthStatus := s.hps.hdm.manager.GetDevState(deviceName, s.hps.hdm.dmgr)
 		for devID, device := range s.hps.devices {
 			if s.isPhyDevOwnThisVirtualDevice(device, deviceIDs[idx]) &&healthStatus != device.Health {
+				logger.Info("device health status change", zap.String("devID", devID),
+					zap.String("healthStatus", healthStatus))
 				isStatusChange = true
 				device.Health = healthStatus
 				s.hps.devices[devID] = device
@@ -174,6 +176,8 @@ func (s *pluginAPI) listenPhysicalDevices() bool {
 	for devID, device := range s.hps.devices {
 		healthStatus := s.hps.hdm.manager.GetDevState(devID, s.hps.hdm.dmgr)
 		if device.Health != healthStatus {
+			logger.Info("device health status change", zap.String("devID", devID),
+				zap.String("healthStatus", healthStatus))
 			isStatusChange = true
 			device.Health = healthStatus
 			s.hps.devices[devID] = device
@@ -258,7 +262,7 @@ func (s* pluginAPI) setAscendRuntimeOptions(requests *pluginapi.AllocateRequest)
 				return fmt.Errorf("request more than one virtual device, current is %d", len(rqt.DevicesIDs))
 			}
 			if IsOneOfVirtualDeviceType(deviceName){
-				s.ascendRuntimeOptions = VIRTUALDEV
+				s.ascendRuntimeOptions = VIRTUAL_DEV
 				return nil
 			}
 		}
@@ -292,7 +296,7 @@ func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (
 }
 
 func (s *pluginAPI) getPhyID(majorID string) (string, error) {
-	if s.ascendRuntimeOptions == VIRTUALDEV {
+	if s.ascendRuntimeOptions == VIRTUAL_DEV {
 		return majorID, nil
 	}
 	return getPhyIDFromDeviceID(majorID, s.hps.hdm.dmgr)
@@ -414,7 +418,7 @@ func (s *pluginAPI) setDevices(instance *Instance, devices string) error {
 }
 
 func (s *pluginAPI) getDeviceIP(logicID int32) (string, error) {
-	if s.ascendRuntimeOptions == VIRTUALDEV {
+	if s.ascendRuntimeOptions == VIRTUAL_DEV {
 		return "", nil
 	}
 	return s.hps.hdm.dmgr.GetDeviceIP(logicID)

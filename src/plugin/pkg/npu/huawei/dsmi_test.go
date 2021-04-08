@@ -29,11 +29,14 @@ const (
 	unHealthyTestLogicID = 3
 	serverSockFd         = "/var/lib/kubelet/device-plugins/davinci-mini.sock"
 	serverSock310        = "/var/lib/kubelet/device-plugins/Ascend310.sock"
-	maxAiCoreNum		 = 32
-	testAiCoreNum		 = 20
-	defaultVDevNum		 = 0
-	testVDevNum		 	 = 2
-	testComputeCoreNum	 = 4
+	maxAiCoreNum         = 32
+	testAiCoreNum        = 20
+	defaultVDevNum       = 0
+	testVDevNum          = 2
+	testComputeCoreNum   = 4
+
+	// testPhyDevID use for ut, represent device id: 0,2,4,5,6,7
+	testPhyDevID         = "024567"
 )
 
 type fakeDeviceManager struct{}
@@ -110,7 +113,7 @@ func (d *fakeDeviceManager) GetDeviceIP(logicID int32) (string, error) {
 // GetVDevicesInfo for fakeDeviceManager
 func (d *fakeDeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error)  {
 	var cgoDsmiVDevInfos CgoDsmiVDevInfo
-	if strings.Contains("024567", strconv.Itoa(int(logicID))) {
+	if strings.Contains(testPhyDevID, strconv.Itoa(int(logicID))) {
 		cgoDsmiVDevInfos = CgoDsmiVDevInfo{
 			vDevNum: uint32(defaultVDevNum),
 			coreNumUnused: uint32(maxAiCoreNum),
