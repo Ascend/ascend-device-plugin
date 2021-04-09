@@ -148,15 +148,14 @@ func TestUnhealthyState(t *testing.T) {
 	t.Logf("TestUnhealthyState Run Pass")
 }
 
-// TestGetLogicIDByName for LogicIDByName
-func TestGetLogicIDByName(t *testing.T) {
-	var logicID int32
-	err := getLogicIDByName("Ascend310-3", &logicID)
-	if err != nil || unHealthyTestLogicID != logicID {
+// TestGetPhyIDByName for PhyIDByName
+func TestGetPhyIDByName(t *testing.T) {
+	phyID, err := getPhyIDByName("Ascend310-3")
+	if err != nil || unHealthyTestLogicID != phyID {
 		t.Errorf("TestGetLogicIDByName Run Failed")
 	}
 
-	err = getLogicIDByName("Ascend310-1000", &logicID)
+	_, err = getPhyIDByName("Ascend310-1000")
 	if err == nil {
 		t.Errorf("TestGetLogicIDByName Run Failed")
 	}
