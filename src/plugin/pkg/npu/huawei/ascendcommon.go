@@ -28,8 +28,20 @@ import (
 	"time"
 )
 
+const (
+	// VIRTUAL_DEV represent virtual device
+	VIRTUAL_DEV = "VIRTUAL"
+
+	// PHYSICAL_DEV represent physical device
+	PHYSICAL_DEV = ""
+
+	// Device health state
+	NORMAL        = uint32(0)
+	GENERAL_ALARM = uint32(1)
+)
+
 // ascendCommonFunction struct definition
-type ascendCommonFunction struct{
+type ascendCommonFunction struct {
 	dmgr DeviceMgrInterface
 }
 
@@ -67,7 +79,7 @@ func setDeviceByPath(defaultDevices *[]string, device string) {
 func getPhyIDByName(DeviceName string) (uint32, error) {
 	var phyID uint32
 
-	major, err := getDeviceID(DeviceName, "")
+	major, err := getDeviceID(DeviceName, PHYSICAL_DEV)
 	if err != nil {
 		logger.Error("dev ID is invalid", zap.String("deviceID", DeviceName))
 		return phyID, err
@@ -114,7 +126,7 @@ func getDeviceID(deviceName string, ascendRuntimeOptions string) (string, error)
 		return "", fmt.Errorf("deviceName: %s is invalid", deviceName)
 	}
 	majorID := idSplit[len(idSplit)-1]
-	if ascendRuntimeOptions == "VIRTUAL" {
+	if ascendRuntimeOptions == VIRTUAL_DEV {
 		majorID = idSplit[len(idSplit)-2]
 	}
 	return majorID, nil
@@ -171,7 +183,7 @@ func (adc *ascendCommonFunction) CreateLogSubDir(devID []string, ascendRuntimeOp
 // GetDevPath is used to get device path
 func (adc *ascendCommonFunction) GetDevPath(id, ascendRuntimeOptions string, hostPath *string, containerPath *string) {
 	*containerPath = fmt.Sprintf("%s%s", "/dev/davinci", id)
-	if ascendRuntimeOptions == "VIRTUAL" {
+	if ascendRuntimeOptions == VIRTUAL_DEV {
 		*hostPath = fmt.Sprintf("%s%s", "/dev/vdavinci", id)
 		return
 	}
@@ -222,14 +234,19 @@ func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr DeviceMgrIn
 		}
 		return pluginapi.Unhealthy
 	}
-	if healthState != 0 {
-		err = unhealthyState(healthState, uint32(logicID), "healthState", dmgr)
+	switch healthState {
+	case NORMAL:
+		return pluginapi.Healthy
+	case GENERAL_ALARM:
+		logger.Warn("device health state", zap.Uint32("healthState", healthState))
+		return pluginapi.Healthy
+	default:
+		err = unhealthyState(healthState, logicID, "healthState", dmgr)
 		if err != nil {
 			logger.Error("unhealthyState ", zap.Error(err))
 		}
 		return pluginapi.Unhealthy
 	}
-	return pluginapi.Healthy
 }
 
 // GetNPUs Discovers all HUAWEI Ascend310/Ascend710/Ascend910 devices available on the local node by calling walking `/dev` directory.

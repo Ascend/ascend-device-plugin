@@ -23,6 +23,10 @@ import (
 	"strings"
 )
 
+const (
+	ZERO_CORE = "0"
+)
+
 // switch error log
 var logFlag = true
 
@@ -59,13 +63,13 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *
 
 		cgoDsmiVDevInfos, err := hnm.getVirtualDevice(ids[i])
 		if err != nil && !strings.Contains(err.Error(), FunctionNotFound) {
-			logger.Error("Query virtual device info failure!", zap.String("err",err.Error()))
+			logger.Error("Query virtual device info failure!", zap.String("err", err.Error()))
 			continue
 		}
 		var devices []npuDevice
 		if cgoDsmiVDevInfos.vDevNum == 0 {
 			devices, deviTypes = hnm.assemblePhyDevices(phyID)
-		}else {
+		} else {
 			devices, deviTypes = hnm.assembleVirtualDevices(phyID, cgoDsmiVDevInfos)
 		}
 		*allDevices = append(*allDevices, devices...)
@@ -89,7 +93,7 @@ func (hnm *HwAscend910Manager) removeDuplicate(allDeviceTypes *[]string) []strin
 
 func (hnm *HwAscend910Manager) assemblePhyDevices(phyID uint32) ([]npuDevice, []string) {
 	var devices []npuDevice
-	var deviTypes [] string
+	var deviTypes []string
 	devID := fmt.Sprintf("%s-%d", hiAIAscend910Prefix, phyID)
 	device := hnm.AssembleNpuDeviceStruct(hiAIAscend910Prefix, devID)
 	devices = append(devices, device)
@@ -99,8 +103,11 @@ func (hnm *HwAscend910Manager) assemblePhyDevices(phyID uint32) ([]npuDevice, []
 
 func (hnm *HwAscend910Manager) assembleVirtualDevices(phyID uint32, cgoDsmiVDevInfos CgoDsmiVDevInfo) ([]npuDevice, []string) {
 	var devices []npuDevice
-	var vDeviTypes [] string
+	var vDeviTypes []string
 	for _, dsmiSubVDevInfo := range cgoDsmiVDevInfos.cgoDsmiSubVDevInfos {
+		if dsmiSubVDevInfo.spec.coreNum == ZERO_CORE {
+			continue
+		}
 		vDeviType := fmt.Sprintf("%s-%sc", hiAIAscend910Prefix, dsmiSubVDevInfo.spec.coreNum)
 		devID := fmt.Sprintf("%s-%sc-%d-%d", hiAIAscend910Prefix, dsmiSubVDevInfo.spec.coreNum, dsmiSubVDevInfo.vdevid, phyID)
 		device := hnm.AssembleNpuDeviceStruct(vDeviType, devID)
