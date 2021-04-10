@@ -261,7 +261,7 @@ func (s *pluginAPI) setAscendRuntimeOptions(requests *pluginapi.AllocateRequest)
 				return fmt.Errorf("request more than one virtual device, current is %d", len(rqt.DevicesIDs))
 			}
 			if IsOneOfVirtualDeviceType(deviceName) {
-				s.ascendRuntimeOptions = VIRTUAL_DEV
+				s.ascendRuntimeOptions = VirtualDev
 				return nil
 			}
 		}
@@ -404,7 +404,7 @@ func (s *pluginAPI) setDevices(instance *Instance, devices string) error {
 }
 
 func (s *pluginAPI) getDeviceIP(phyID int32) (string, error) {
-	if s.ascendRuntimeOptions == VIRTUAL_DEV {
+	if s.ascendRuntimeOptions == VirtualDev {
 		return "", nil
 	}
 

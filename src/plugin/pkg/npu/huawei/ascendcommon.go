@@ -29,15 +29,17 @@ import (
 )
 
 const (
-	// VIRTUAL_DEV represent virtual device
-	VIRTUAL_DEV = "VIRTUAL"
+	// VirtualDev represent virtual device
+	VirtualDev = "VIRTUAL"
 
-	// PHYSICAL_DEV represent physical device
-	PHYSICAL_DEV = ""
+	// PhysicalDev represent physical device
+	PhysicalDev = ""
 
-	// Device health state
-	NORMAL        = uint32(0)
-	GENERAL_ALARM = uint32(1)
+	// Normal health state
+	Normal        = uint32(0)
+
+	// General alarm health state
+	GeneralAlarm = uint32(1)
 )
 
 // ascendCommonFunction struct definition
@@ -79,7 +81,7 @@ func setDeviceByPath(defaultDevices *[]string, device string) {
 func getPhyIDByName(DeviceName string) (uint32, error) {
 	var phyID uint32
 
-	major, err := getDeviceID(DeviceName, PHYSICAL_DEV)
+	major, err := getDeviceID(DeviceName, PhysicalDev)
 	if err != nil {
 		logger.Error("dev ID is invalid", zap.String("deviceID", DeviceName))
 		return phyID, err
@@ -126,7 +128,7 @@ func getDeviceID(deviceName string, ascendRuntimeOptions string) (string, error)
 		return "", fmt.Errorf("deviceName: %s is invalid", deviceName)
 	}
 	majorID := idSplit[len(idSplit)-1]
-	if ascendRuntimeOptions == VIRTUAL_DEV {
+	if ascendRuntimeOptions == VirtualDev {
 		majorID = idSplit[len(idSplit)-2]
 	}
 	return majorID, nil
@@ -183,7 +185,7 @@ func (adc *ascendCommonFunction) CreateLogSubDir(devID []string, ascendRuntimeOp
 // GetDevPath is used to get device path
 func (adc *ascendCommonFunction) GetDevPath(id, ascendRuntimeOptions string, hostPath *string, containerPath *string) {
 	*containerPath = fmt.Sprintf("%s%s", "/dev/davinci", id)
-	if ascendRuntimeOptions == VIRTUAL_DEV {
+	if ascendRuntimeOptions == VirtualDev {
 		*hostPath = fmt.Sprintf("%s%s", "/dev/vdavinci", id)
 		return
 	}
@@ -235,9 +237,9 @@ func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr DeviceMgrIn
 		return pluginapi.Unhealthy
 	}
 	switch healthState {
-	case NORMAL:
+	case Normal:
 		return pluginapi.Healthy
-	case GENERAL_ALARM:
+	case GeneralAlarm:
 		logger.Warn("device health state", zap.Uint32("healthState", healthState))
 		return pluginapi.Healthy
 	default:
