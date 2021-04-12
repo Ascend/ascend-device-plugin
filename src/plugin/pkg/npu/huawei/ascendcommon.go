@@ -34,6 +34,10 @@ const (
 
 	// PHYSICAL_DEV represent physical device
 	PHYSICAL_DEV = ""
+
+	// Device health state
+	NORMAL = uint32(0)
+	GENERAL_ALARM = uint32(1)
 )
 
 // ascendCommonFunction struct definition
@@ -230,14 +234,19 @@ func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr DeviceMgrIn
 		}
 		return pluginapi.Unhealthy
 	}
-	if healthState != 0 {
+	switch healthState {
+	case NORMAL:
+		return pluginapi.Healthy
+	case GENERAL_ALARM:
+		logger.Warn("device health state", zap.Uint32("healthState", healthState))
+		return pluginapi.Healthy
+	default:
 		err = unhealthyState(healthState, logicID, "healthState", dmgr)
 		if err != nil {
 			logger.Error("unhealthyState ", zap.Error(err))
 		}
 		return pluginapi.Unhealthy
 	}
-	return pluginapi.Healthy
 }
 
 // GetNPUs function discovers all HUAWEI Ascend910 devices available

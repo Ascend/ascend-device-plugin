@@ -23,6 +23,11 @@ import (
 	"strings"
 )
 
+const (
+	// ZERO_CORE is "0c"
+	ZERO_CORE = "0"
+)
+
 // switch error log
 var logFlag = true
 
@@ -102,6 +107,9 @@ func (hnm *HwAscend910Manager) assembleVirtualDevices(phyID uint32, vInfos CgoDs
 	var devices []npuDevice
 	var vDeviTypes []string
 	for _, dsmiSubVdevInfo := range vInfos.cgoDsmiSubVDevInfos {
+		if dsmiSubVdevInfo.spec.coreNum == ZERO_CORE {
+			continue
+		}
 		vDevType := fmt.Sprintf("%s-%sc", hiAIAscend910Prefix, dsmiSubVdevInfo.spec.coreNum)
 		devID := fmt.Sprintf("%s-%sc-%d-%d", hiAIAscend910Prefix, dsmiSubVdevInfo.spec.coreNum,
 			dsmiSubVdevInfo.vdevid, phyID)
