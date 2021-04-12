@@ -76,7 +76,7 @@ func TestHwAscend710Manager_GetDevPath(t *testing.T) {
 	hdm := createFake710HwDevManager("ascend710", false, false, false)
 	var hostPath string
 	var containerPath string
-	hdm.manager.GetDevPath("0", "", &hostPath, &containerPath)
+	hdm.manager.GetDevPath("0", physicalDev, &hostPath, &containerPath)
 	if hostPath != containerPath && hostPath != "/dev/davinci0" {
 		t.Fatal("TestHwAscend710Manager_GetDevPath Run Failed")
 	}
@@ -91,7 +91,7 @@ func TestHwAscend710Manager_GetLogPath(t *testing.T) {
 	devID := make([]string, 0)
 	devID = append(devID, "Ascend710-0")
 	t.Logf("deviceId%v, %d", devID, len(devID))
-	err := hdm.manager.GetLogPath(devID, "/var/dlog", "", &logPath)
+	err := hdm.manager.GetLogPath(devID, "/var/dlog", physicalDev, &logPath)
 	if err != nil {
 		t.Fatal(err)
 	}

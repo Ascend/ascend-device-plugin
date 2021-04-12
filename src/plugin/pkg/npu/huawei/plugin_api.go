@@ -41,8 +41,8 @@ import (
 )
 
 type pluginAPI struct {
-	hps      *HwPluginServe
-	outbreak *atomic.Bool
+	hps                  *HwPluginServe
+	outbreak             *atomic.Bool
 	ascendRuntimeOptions string
 }
 
@@ -261,8 +261,8 @@ func (s *pluginAPI) setAscendRuntimeOptions(requests *pluginapi.AllocateRequest)
 				return fmt.Errorf("request more than one virtual device, current is %d", len(rqt.DevicesIDs))
 			}
 			if IsOneOfVirtualDeviceType(deviceName) {
-				s.ascendRuntimeOptions = "VIRTUAL"
-				break
+				s.ascendRuntimeOptions = virtualDev
+				return nil
 			}
 		}
 	}
@@ -271,7 +271,7 @@ func (s *pluginAPI) setAscendRuntimeOptions(requests *pluginapi.AllocateRequest)
 
 func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (string, error) {
 	// 从kubelet获取id
-	var  ascendVisibleDevices []string
+	var ascendVisibleDevices []string
 	for _, id := range rqt.DevicesIDs {
 		_, ok := s.hps.devices[id]
 		if !ok {
@@ -404,7 +404,7 @@ func (s *pluginAPI) setDevices(instance *Instance, devices string) error {
 }
 
 func (s *pluginAPI) getDeviceIP(phyID int32) (string, error) {
-	if s.ascendRuntimeOptions == "VIRTUAL" {
+	if s.ascendRuntimeOptions == virtualDev {
 		return "", nil
 	}
 
