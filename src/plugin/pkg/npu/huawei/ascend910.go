@@ -57,16 +57,16 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *
 			return err
 		}
 
-		cgoDsmiVDevInfos, err := hnm.queryVirtualDevice(ids[i])
+		cgoDsmiVDevInfos, err := hnm.getVirtualDevice(ids[i])
 		if err != nil && !strings.Contains(err.Error(), FunctionNotFound) {
 			logger.Error("Query virtual device info failure!", zap.String("err", err.Error()))
 			continue
 		}
 		var devices []npuDevice
 		if cgoDsmiVDevInfos.vDevNum == 0 {
-			devices, deviTypes = hnm.assemblePhyDevices(ids[i], phyID)
+			devices, deviTypes = hnm.assemblePhyDevices(phyID)
 		} else {
-			devices, deviTypes = hnm.assembleVirDevs(ids[i], phyID, cgoDsmiVDevInfos)
+			devices, deviTypes = hnm.assembleVirtualDevices(phyID, cgoDsmiVDevInfos)
 		}
 		*allDevices = append(*allDevices, devices...)
 		*allDeviceTypes = append(*allDeviceTypes, deviTypes...)
@@ -87,31 +87,32 @@ func (hnm *HwAscend910Manager) removeDuplicate(allDeviceTypes *[]string) []strin
 	return rmDupDeviceTypes
 }
 
-func (hnm *HwAscend910Manager) assemblePhyDevices(logicID, phyID uint32) ([]npuDevice, []string) {
+func (hnm *HwAscend910Manager) assemblePhyDevices(phyID uint32) ([]npuDevice, []string) {
 	var devices []npuDevice
 	var deviTypes []string
-	devID := fmt.Sprintf("%s-%d", hiAIAscend910Prefix, logicID)
-	device := hnm.AssembleNpuDeviceStruct(hiAIAscend910Prefix, devID, phyID)
+	devID := fmt.Sprintf("%s-%d", hiAIAscend910Prefix, phyID)
+	device := hnm.AssembleNpuDeviceStruct(hiAIAscend910Prefix, devID)
 	devices = append(devices, device)
 	deviTypes = append(deviTypes, hiAIAscend910Prefix)
 	return devices, deviTypes
 }
 
-func (hnm *HwAscend910Manager) assembleVirDevs(logicID, phyID uint32, vInfos CgoDsmiVDevInfo) ([]npuDevice, []string) {
+func (hnm *HwAscend910Manager) assembleVirtualDevices(phyID uint32, vInfos CgoDsmiVDevInfo) (
+	[]npuDevice, []string) {
 	var devices []npuDevice
 	var vDeviTypes []string
 	for _, dsmiSubVdevInfo := range vInfos.cgoDsmiSubVDevInfos {
 		vDevType := fmt.Sprintf("%s-%sc", hiAIAscend910Prefix, dsmiSubVdevInfo.spec.coreNum)
 		devID := fmt.Sprintf("%s-%sc-%d-%d", hiAIAscend910Prefix, dsmiSubVdevInfo.spec.coreNum,
-			dsmiSubVdevInfo.vdevid, logicID)
-		device := hnm.AssembleNpuDeviceStruct(vDevType, devID, phyID)
+			dsmiSubVdevInfo.vdevid, phyID)
+		device := hnm.AssembleNpuDeviceStruct(vDevType, devID)
 		devices = append(devices, device)
 		vDeviTypes = append(vDeviTypes, vDevType)
 	}
 	return devices, vDeviTypes
 }
 
-func (hnm *HwAscend910Manager) queryVirtualDevice(logicID uint32) (CgoDsmiVDevInfo, error) {
+func (hnm *HwAscend910Manager) getVirtualDevice(logicID uint32) (CgoDsmiVDevInfo, error) {
 	var cgoDsmiVDevInfos CgoDsmiVDevInfo
 	if useVolcanoType {
 		return cgoDsmiVDevInfos, nil
