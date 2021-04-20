@@ -282,7 +282,7 @@ func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (
 			return nil, err
 		}
 		var deviceIP string
-		if s.hps.devType == hiAIAscend910Prefix {
+		if strings.Contains(s.hps.devType, hiAIAscend910Prefix) {
 			deviceIP, err = s.getDeviceIP(deviceID)
 			if err != nil {
 				logger.Error("Get device ip failed:->", zap.String("deviceId", deviceID), zap.Error(err))
