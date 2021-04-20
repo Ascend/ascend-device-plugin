@@ -36,7 +36,7 @@ const (
 	PHYSICAL_DEV = ""
 
 	// Device health state
-	NORMAL = uint32(0)
+	NORMAL        = uint32(0)
 	GENERAL_ALARM = uint32(1)
 )
 
@@ -79,13 +79,13 @@ func setDeviceByPath(defaultDevices *[]string, device string) {
 func getPhyIDByName(DeviceName string) (uint32, error) {
 	var phyID uint32
 
-	major, err := getDeviceID(DeviceName, PHYSICAL_DEV)
+	deviceID, _, err := getDeviceID(DeviceName, PHYSICAL_DEV)
 	if err != nil {
 		logger.Error("dev ID is invalid", zap.String("deviceID", DeviceName))
 		return phyID, err
 	}
 
-	devidCheck, err := strconv.Atoi(major)
+	devidCheck, err := strconv.Atoi(deviceID)
 	if err != nil {
 		logger.Error("transfer device string to Integer failed", zap.String("deviceID", DeviceName))
 		return phyID, err
@@ -114,26 +114,27 @@ func unhealthyState(healthyState uint32, logicID uint32, healthyType string, dmg
 	return nil
 }
 
-func getDeviceID(deviceName string, ascendRuntimeOptions string) (string, error) {
+func getDeviceID(deviceName string, ascendRuntimeOptions string) (string, string, error) {
 
 	// hiAIAscend310Prefix: davinci-mini
-	// vnpu: davinci-mini0-0
+	// vnpu: davinci-coreNum-vid-devID
 	// ascend310:  davinci-mini0
 
 	idSplit := strings.Split(deviceName, "-")
 
 	if len(idSplit) < idSplitNum {
-		return "", fmt.Errorf("id: %s is invalid", deviceName)
+		return "", "", fmt.Errorf("id: %s is invalid", deviceName)
 	}
-	majorID := idSplit[len(idSplit)-1]
+	var virID string
+	deviceID := idSplit[len(idSplit)-1]
 	if ascendRuntimeOptions == VIRTUAL_DEV {
-		majorID = idSplit[len(idSplit)-2]
+		virID = idSplit[len(idSplit)-2]
 	}
-	return majorID, nil
+	return deviceID, virID, nil
 }
 
-// IsOneOfVirtualDeviceType used to judge whether a physical device or a virtual device
-func IsOneOfVirtualDeviceType(devType string) bool {
+// IsVirtualDev used to judge whether a physical device or a virtual device
+func IsVirtualDev(devType string) bool {
 	pattern := virtualDevicesPattern
 	reg := regexp.MustCompile(pattern)
 	return reg.MatchString(devType)
@@ -170,25 +171,24 @@ func (adc *ascendCommonFunction) CreateLogDirectory(newLogPath *string, subdir s
 func (adc *ascendCommonFunction) CreateLogSubDir(devID []string, ascendRuntimeOptions string) (string, error) {
 	var subdir = "/device"
 	for _, item := range devID {
-		major, err := getDeviceID(item, ascendRuntimeOptions)
+		deviceID, _, err := getDeviceID(item, ascendRuntimeOptions)
 		if err != nil {
 			logger.Error("dev ID is invalid", zap.String("deviceID", item))
 			return subdir, fmt.Errorf("dev ID %s is invalid", item)
 		}
-		subdir += fmt.Sprintf("-%s", major)
+		subdir += fmt.Sprintf("-%s", deviceID)
 	}
 	return subdir, nil
 }
 
 // GetDevPath get dev path
-func (adc *ascendCommonFunction) GetDevPath(id, ascendRuntimeOptions string, hostPath *string, containerPath *string) {
-	*containerPath = fmt.Sprintf("%s%s", "/dev/davinci", id)
+func (adc *ascendCommonFunction) GetDevPath(id, ascendRuntimeOptions string) (string, string) {
+	containerPath := fmt.Sprintf("%s%s", "/dev/davinci", id)
+	hostPath := containerPath
 	if ascendRuntimeOptions == VIRTUAL_DEV {
-		*hostPath = fmt.Sprintf("%s%s", "/dev/vdavinci", id)
-		return
+		hostPath = fmt.Sprintf("%s%s", "/dev/vdavinci", id)
 	}
-	*hostPath = *containerPath
-	return
+	return containerPath, hostPath
 }
 
 // GetLogPath is used to get log path
@@ -249,8 +249,7 @@ func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr DeviceMgrIn
 	}
 }
 
-// GetNPUs function discovers all HUAWEI Ascend910 devices available
-// on the local node by calling walking `/dev` directory.
+// GetNPUs function discovers all HUAWEI Ascend710/Ascend310 devices by call dsmi interface
 func (adc *ascendCommonFunction) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *[]string, deviType string) error {
 	logger.Info("--->< ", zap.String("deviType", deviType))
 
