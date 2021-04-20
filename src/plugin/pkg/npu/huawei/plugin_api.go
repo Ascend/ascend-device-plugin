@@ -287,12 +287,15 @@ func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (
 			logger.Error("getDeviceID", zap.Error(err))
 			return nil, err
 		}
-
-		deviceIP, errs := s.getDeviceIP(deviceID)
-		if errs != nil {
-			logger.Error("Get device ip failed:->", zap.String("deviceId", deviceID), zap.Error(errs))
-			return nil, err
+		var deviceIP string
+		if strings.Contains(s.hps.devType, hiAIAscend910Prefix) {
+			deviceIP, err = s.getDeviceIP(deviceID)
+			if err != nil {
+				logger.Error("Get device ip failed:->", zap.String("deviceId", deviceID), zap.Error(err))
+				return nil, err
+			}
 		}
+
 		if s.ascendRuntimeOptions == VIRTUAL_DEV {
 			ascendVisibleDevices[virID] = deviceIP
 		} else {
