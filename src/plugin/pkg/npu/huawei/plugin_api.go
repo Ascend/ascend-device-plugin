@@ -28,7 +28,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"math"
 	"net"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -113,7 +112,7 @@ func (s *pluginAPI) ListAndWatch(emtpy *pluginapi.Empty, stream pluginapi.Device
 		}
 		time.Sleep(sleepTime * time.Second)
 		isStateChange := s.isDeviceStatusChange()
-		if useVolcanoType {
+		if useVolcanoType && !IsVirtualDev(s.hps.devType){
 			s.doWithVolcanoListAndWatch(isStateChange)
 		}
 		if !isStateChange {
@@ -137,7 +136,7 @@ func (s *pluginAPI) ListAndWatch(emtpy *pluginapi.Empty, stream pluginapi.Device
 }
 
 func (s *pluginAPI) isDeviceStatusChange() bool {
-	if IsOneOfVirtualDeviceType(s.hps.devType) {
+	if IsVirtualDev(s.hps.devType) {
 		return s.listenVirtualDevices()
 	}
 	return s.listenPhysicalDevices()
@@ -226,14 +225,14 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 		var dlogMountPath string
 
 		allocateNum := len(rqt.DevicesIDs)
-		ascendVisibleDevices, errs := s.setEnvFromKubelet(rqt)
+		ascendVisibleDevicesMap, errs := s.setEnvFromKubelet(rqt)
 		if errs != nil {
 			logger.Error("plugin doesn't have device", zap.Error(errs))
 			return nil, errs
 		}
 		// 使用volcano调度
-		if useVolcanoType {
-			ascendVisibleDevices, errs = s.doWithVolcanoSchedule(allocateNum)
+		if useVolcanoType && !IsVirtualDev(s.hps.devType){
+			ascendVisibleDevicesMap, errs = s.doWithVolcanoSchedule(allocateNum)
 			if errs != nil {
 				return nil, errs
 			}
@@ -241,12 +240,12 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 
 		if s.hps.runMode == runMode910 {
 			s.mountfile(resp, dlogMountPath, devID)
-			s.responseAnonation(resp, ascendVisibleDevices)
+			s.responseAnonation(resp, ascendVisibleDevicesMap)
 		}
-		addEnv(ascendVisibleDevices, s.ascendRuntimeOptions, resp)
+		addEnv(ascendVisibleDevicesMap, s.ascendRuntimeOptions, resp)
 		if !UseAscendDocker {
 			s.mountDefaultDevice(resp)
-			s.mountDevice(resp, ascendVisibleDevices)
+			s.mountDevice(resp, ascendVisibleDevicesMap)
 		}
 		resps.ContainerResponses = append(resps.ContainerResponses, resp)
 		logger.Info("allocate responses:", zap.String("request", resps.String()))
@@ -257,10 +256,10 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 func (s *pluginAPI) setAscendRuntimeOptions(requests *pluginapi.AllocateRequest) error {
 	for _, rqt := range requests.ContainerRequests {
 		for _, deviceName := range rqt.DevicesIDs {
-			if IsOneOfVirtualDeviceType(deviceName) && len(rqt.DevicesIDs) > interval {
+			if IsVirtualDev(deviceName) && len(rqt.DevicesIDs) > interval {
 				return fmt.Errorf("request more than one virtual device, current is %d", len(rqt.DevicesIDs))
 			}
-			if IsOneOfVirtualDeviceType(deviceName) {
+			if IsVirtualDev(deviceName) {
 				s.ascendRuntimeOptions = virtualDev
 				return nil
 			}
@@ -269,24 +268,36 @@ func (s *pluginAPI) setAscendRuntimeOptions(requests *pluginapi.AllocateRequest)
 	return nil
 }
 
-func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (string, error) {
-	// 从kubelet获取id
-	var ascendVisibleDevices []string
+func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (map[string]string, error) {
+	// get id from kubelet
+	ascendVisibleDevices := make(map[string]string, MaxVirtualDevNum)
 	for _, id := range rqt.DevicesIDs {
 		_, ok := s.hps.devices[id]
 		if !ok {
-			return "", fmt.Errorf("plugin doesn't have device %s", id)
+			return nil, fmt.Errorf("plugin doesn't have device %s", id)
 		}
-		phyID, err := getDeviceID(id, s.ascendRuntimeOptions)
+		deviceID, virID, err := getDeviceID(id, s.ascendRuntimeOptions)
 		if err != nil {
 			logger.Error("getDeviceID", zap.Error(err))
-			return "", err
+			return nil, err
+		}
+		var deviceIP string
+		if s.hps.devType == hiAIAscend910Prefix {
+			deviceIP, err = s.getDeviceIP(deviceID)
+			if err != nil {
+				logger.Error("Get device ip failed:->", zap.String("deviceId", deviceID), zap.Error(err))
+				return nil, err
+			}
 		}
 
-		ascendVisibleDevices = append(ascendVisibleDevices, phyID)
+		if s.ascendRuntimeOptions == virtualDev {
+			ascendVisibleDevices[virID] = deviceIP
+		} else {
+			ascendVisibleDevices[deviceID] = deviceIP
+		}
 	}
-	logger.Info("Found ascendVisibleDevices", zap.Strings("ascendVisibleDevices", ascendVisibleDevices))
-	return strings.Join(ascendVisibleDevices, ","), nil
+	logger.Info("Found ascendVisibleDevices: ", zap.Any("ascendVisibleDevices", ascendVisibleDevices))
+	return ascendVisibleDevices, nil
 }
 
 func (s *pluginAPI) mountDefaultDevice(resp *pluginapi.ContainerAllocateResponse) {
@@ -352,25 +363,26 @@ func getNPUByStatus(kubeClient kubernetes.Interface, nodeName, status string) (s
 	return useNpu, false
 }
 
-func addEnv(ascendVisibleDevices, ascendRuntimeOptions string, resp *pluginapi.ContainerAllocateResponse) {
+func addEnv(devices map[string]string, ascendRuntimeOptions string, resp *pluginapi.ContainerAllocateResponse) {
 	// add env
+	var ascendVisibleDevices []string
 	if len((*resp).Envs) == 0 {
 		(*resp).Envs = make(map[string]string)
 	}
-	(*resp).Envs[ascendVisibleDevicesEnv] = ascendVisibleDevices
+	for deviceID := range devices {
+		ascendVisibleDevices = append(ascendVisibleDevices, deviceID)
+	}
+
+	(*resp).Envs[ascendVisibleDevicesEnv] = strings.Join(ascendVisibleDevices, ",")
 	(*resp).Envs[ascendRuntimeOptionsEnv] = ascendRuntimeOptions
 }
 
-func (s *pluginAPI) addAnnotation(devices, podName, serverID string) string {
+func (s *pluginAPI) addAnnotation(devices map[string]string, podName, serverID string) string {
 	// Annotations
 	var instance Instance
 	instance.PodName = podName
 	instance.ServerID = serverID
-	err := s.setDevices(&instance, devices)
-	if err != nil {
-		logger.Error("Add annotation failed", zap.String("error", err.Error()))
-		return ""
-	}
+	s.setDevices(&instance, devices)
 	instanceByte, err := json.Marshal(instance)
 	if err != nil {
 		logger.Error("Transfor marshal failed", zap.String("error", err.Error()))
@@ -380,37 +392,25 @@ func (s *pluginAPI) addAnnotation(devices, podName, serverID string) string {
 	return instanceInfo
 }
 
-func (s *pluginAPI) setDevices(instance *Instance, devices string) error {
-	idSplit := strings.Split(devices, ",")
-	sort.Sort(sort.StringSlice(idSplit))
-	for _, deviceID := range idSplit {
-		phyID, err := strconv.ParseInt(deviceID, 10, 32)
-		if err != nil {
-			logger.Error(" Device id trasnsform failes ", zap.String("DeviceName", deviceID))
-			return err
-		}
-		deviceIP, errs := s.getDeviceIP(int32(phyID))
-		if errs != nil {
-			logger.Error("Get device ip failed:->", zap.Int("deviceId", int(phyID)), zap.Error(errs))
-			return err
-		}
-
+func (s *pluginAPI) setDevices(instance *Instance, devices map[string]string) {
+	for deviceID, deviceIP := range devices {
 		var device Device
 		device.DeviceID = deviceID
 		device.DeviceIP = deviceIP
 		instance.Devices = append(instance.Devices, device)
 	}
-	return nil
 }
 
-func (s *pluginAPI) getDeviceIP(phyID int32) (string, error) {
-	if s.ascendRuntimeOptions == virtualDev {
-		return "", nil
+func (s *pluginAPI) getDeviceIP(phyID string) (string, error) {
+	transPhyID, err := strconv.ParseInt(phyID, 10, 32)
+	if err != nil {
+		logger.Error(" Device id trasnsform failes ", zap.String("DeviceName", phyID))
+		return "", err
 	}
 
-	logicID, err := s.hps.hdm.dmgr.GetLogicID(uint32(phyID))
+	logicID, err := s.hps.hdm.dmgr.GetLogicID(uint32(transPhyID))
 	if err != nil {
-		return ERROR, fmt.Errorf("transfor phyID %d to logicID failed, error code: %v", phyID, err)
+		return ERROR, fmt.Errorf("transfor phyID %s to logicID failed, error code : %v", phyID, err)
 	}
 	return s.hps.hdm.dmgr.GetDeviceIP(int32(logicID))
 }
@@ -485,7 +485,7 @@ func GetSlogConfigFilePath() string {
 	return hiAISlogdConfig
 }
 
-func (s *pluginAPI) updatePodAnnotations(pod *v1.Pod, ascendVisibleDevices string) error {
+func (s *pluginAPI) updatePodAnnotations(pod *v1.Pod, ascendVisibleDevices map[string]string) error {
 	kubeClient := s.hps.kubeInteractor.clientset
 	node, err := kubeClient.CoreV1().Nodes().Get(s.hps.kubeInteractor.nodeName, metav1.GetOptions{})
 	if err != nil {
@@ -574,12 +574,9 @@ func (s *pluginAPI) getPendingPodsOnNode() ([]v1.Pod, error) {
 	return res, nil
 }
 
-func (s *pluginAPI) mountDevice(resp *pluginapi.ContainerAllocateResponse, deviceID string) {
-	devices := strings.Split(deviceID, ",")
-	var hostPath string
-	var containerPath string
-	for _, device := range devices {
-		s.hps.hdm.manager.GetDevPath(device, s.ascendRuntimeOptions, &hostPath, &containerPath)
+func (s *pluginAPI) mountDevice(resp *pluginapi.ContainerAllocateResponse, devices map[string]string) {
+	for deviceID := range devices {
+		containerPath, hostPath := s.hps.hdm.manager.GetDevPath(fmt.Sprintf("%s", deviceID), s.ascendRuntimeOptions)
 		resp.Devices = append(resp.Devices, &pluginapi.DeviceSpec{
 			HostPath:      hostPath,
 			ContainerPath: containerPath,
@@ -656,7 +653,7 @@ func getNPUAnnotationOfPod(pod *v1.Pod, allocateDevice *sets.String, allocateNum
 	return nil
 }
 
-func (s *pluginAPI) responseAnonation(resp *pluginapi.ContainerAllocateResponse, devices string) {
+func (s *pluginAPI) responseAnonation(resp *pluginapi.ContainerAllocateResponse, devices map[string]string) {
 	// Annotations
 	annotation := make(map[string]string)
 	var instance Instance
@@ -664,11 +661,7 @@ func (s *pluginAPI) responseAnonation(resp *pluginapi.ContainerAllocateResponse,
 
 	instance.ServerID = ""
 
-	err := s.setDevices(&instance, devices)
-	if err != nil {
-		logger.Error("Add annotation failed", zap.String("error", err.Error()))
-		return
-	}
+	s.setDevices(&instance, devices)
 	instanceByte, err := json.Marshal(instance)
 	if err != nil {
 		logger.Error("Transform marshal failed", zap.String("error", err.Error()))
@@ -679,44 +672,63 @@ func (s *pluginAPI) responseAnonation(resp *pluginapi.ContainerAllocateResponse,
 	resp.Annotations = annotation
 }
 
-func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int) (string, error) {
-	var ascendVisibleDevices []string
+func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int) (map[string]string, error) {
+	ascendVisibleDevices := make(map[string]string, MaxVirtualDevNum)
 	pods, err := s.getPendingPodsOnNode()
 	if err != nil {
 		logger.Error("get pod list err", zap.Error(err))
-		return "", err
+		return nil, err
 	}
 	oldPod := getOldestPod(pods)
 	if oldPod == nil {
 		logger.Info("not get pending pod")
-		return "", err
+		return nil, err
 	}
 	allocateDevice := sets.NewString()
 	err = getNPUAnnotationOfPod(oldPod, &allocateDevice, allocateNum)
 	if err != nil {
 		logger.Error("get NPU Annotation failed: ", zap.Error(err))
-		return "", err
+		return nil, err
 	}
-	for _, id := range allocateDevice.List() {
+	errors := s.getAscendVisiDevsWithVolcano(allocateDevice, &ascendVisibleDevices)
+	if errors != nil {
+		logger.Error("get ascend devs with volcano failed: ", zap.Error(err))
+	}
 
-		phyID, errs := getDeviceID(id, s.ascendRuntimeOptions)
-		if errs != nil {
-			logger.Error("get phyID", zap.Error(errs))
-			return "", errs
-		}
-		ascendVisibleDevices = append(ascendVisibleDevices, phyID)
-	}
 	usedDevices := sets.NewString()
 	s.getNodeNpuUsed(&usedDevices)
 	freeDevices := s.hps.healthDevice.Difference(usedDevices)
 	errs := s.hps.kubeInteractor.patchAnnotationOnNode(freeDevices)
 	if errs != nil {
 		logger.Error("patch Annotations failed", zap.Error(err))
-		return "", err
+		return nil, err
 	}
-	err = s.updatePodAnnotations(oldPod, strings.Join(ascendVisibleDevices, ","))
+	err = s.updatePodAnnotations(oldPod, ascendVisibleDevices)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return strings.Join(ascendVisibleDevices, ","), nil
+	return ascendVisibleDevices, nil
 }
+
+func (s *pluginAPI) getAscendVisiDevsWithVolcano(allocateDevice sets.String, devices *map[string]string) error {
+	for _, id := range allocateDevice.List() {
+
+		deviceID, virID, err := getDeviceID(id, s.ascendRuntimeOptions)
+		if err != nil {
+			logger.Error("get phyID", zap.Error(err))
+			return err
+		}
+		deviceIP, errs := s.getDeviceIP(deviceID)
+		if errs != nil {
+			logger.Error("Get device ip failed:->", zap.String("deviceId", deviceID), zap.Error(errs))
+			return errs
+		}
+		if s.ascendRuntimeOptions == virtualDev {
+			(*devices)[virID] = deviceIP
+		} else {
+			(*devices)[deviceID] = deviceIP
+		}
+	}
+	return nil
+}
+

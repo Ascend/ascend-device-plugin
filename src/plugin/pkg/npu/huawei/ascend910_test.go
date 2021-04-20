@@ -47,7 +47,7 @@ func TestHwAscend910Manager_GetNPUs(t *testing.T) {
 	}
 	for _, dev := range hdm.allDevs {
 		_, ok := resultDevMap[dev.ID]
-		if IsOneOfVirtualDeviceType(dev.ID) {
+		if IsVirtualDev(dev.ID) {
 			continue
 		}
 		if !ok {
@@ -66,7 +66,7 @@ func TestHwAscend910Manager_GetDevState(t *testing.T) {
 	}
 	for _, dev := range hdm.allDevs {
 		state := hdm.manager.GetDevState(dev.ID, hdm.manager.GetDmgr())
-		if IsOneOfVirtualDeviceType(dev.ID) {
+		if IsVirtualDev(dev.ID) {
 			continue
 		}
 		if strings.Contains(dev.ID, "3") && state != pluginapi.Unhealthy {
@@ -81,9 +81,7 @@ func TestHwAscend910Manager_GetDevState(t *testing.T) {
 // TestHwAscend910Manager_GetDevPath for getDevPath
 func TestHwAscend910Manager_GetDevPath(t *testing.T) {
 	hdm := createFake910HwDevManager("", true, false, false)
-	var hostPath string
-	var containerPath string
-	hdm.manager.GetDevPath("0", physicalDev, &hostPath, &containerPath)
+	containerPath, hostPath := hdm.manager.GetDevPath("0", physicalDev)
 	if hostPath != containerPath && hostPath != "/dev/davinci0" {
 		t.Fatal("TestHwAscend910Manager_GetDevPath Run Failed")
 	}
