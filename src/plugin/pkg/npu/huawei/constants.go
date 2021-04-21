@@ -72,5 +72,5 @@ const (
 	FunctionNotFound  = "-99998"
 
 	// MaxVirtualDevNum is the max virtual devices number
-	MaxVirtualDevNum = 110
+	MaxVirtualDevNum = 128
 )
