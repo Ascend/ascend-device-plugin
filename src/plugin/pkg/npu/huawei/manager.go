@@ -24,6 +24,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -37,7 +38,7 @@ type npuDevice struct {
 
 // HwDevManager manages huawei device devices.
 type HwDevManager struct {
-	serves      map[string]HwPluginServeInterface
+	serves      sync.Map
 	manager     devManager
 	dlogPath    string
 	runMode     string
@@ -59,7 +60,7 @@ var (
 type devManager interface {
 	GetNPUs(*[]npuDevice, *[]string, string) error
 	GetLogPath([]string, string, string, *string) error
-	GetDevPath(string, string, *string, *string)
+	GetDevPath(string, string) (string, string)
 	GetDevState(string, DeviceMgrInterface) string
 	SetDmgr(DeviceMgrInterface)
 	GetDmgr() DeviceMgrInterface
@@ -72,7 +73,6 @@ func NewHwDevManager(mode, dlogPath, logPath string) *HwDevManager {
 	return &HwDevManager{
 		dlogPath: dlogPath,
 		runMode:  mode,
-		serves:   make(map[string]HwPluginServeInterface),
 		dmgr:     NewDeviceManager(),
 		stopFlag: atomic.NewBool(false),
 	}
@@ -142,7 +142,7 @@ func (hdm *HwDevManager) Serve(devType, socketPath, pluginSocket string, pluginS
 			}
 			// start
 			hps = pluginServerFunc(hdm, devType, pluginSockPath)
-			hdm.serves[devType] = hps
+			hdm.serves.Store(devType, hps)
 			preStart(hps, pluginSockPath)
 			// end
 			if err := hps.Start(pluginSocket, pluginSockPath); err != nil {

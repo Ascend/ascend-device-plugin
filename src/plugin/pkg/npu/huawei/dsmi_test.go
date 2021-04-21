@@ -36,7 +36,7 @@ const (
 	testComputeCoreNum   = 4
 
 	// testPhyDevID use for ut, represent device id: 0,2,4,5,6,7
-	testPhyDevID = "024567"
+	testPhyDevID = "0234567"
 )
 
 type fakeDeviceManager struct{}

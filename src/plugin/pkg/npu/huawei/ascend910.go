@@ -41,8 +41,7 @@ func NewHwAscend910Manager() *HwAscend910Manager {
 	return &HwAscend910Manager{}
 }
 
-// GetNPUs function discovers all HUAWEI Ascend910 devices available
-// on the local node by calling walking `/dev` directory.
+// GetNPUs Discovers all HUAWEI Ascend910 devices by call dsmi interface
 // a physical npu can be split into multiple vnpu
 // vnpu is classification by computing power, like Ascend910-4c, Ascend910-8c, Ascend910-16c
 // physical npu sets corresponding to the deviTypes, and vnpu is vDeviTypes
@@ -119,10 +118,6 @@ func (hnm *HwAscend910Manager) assembleVirtualDevices(phyID uint32, cgoDsmiVDevI
 }
 
 func (hnm *HwAscend910Manager) getVirtualDevice(logicID uint32) (CgoDsmiVDevInfo, error) {
-	var cgoDsmiVDevInfos CgoDsmiVDevInfo
-	if useVolcanoType {
-		return cgoDsmiVDevInfos, nil
-	}
 	cgoDsmiVDevInfos, err := hnm.dmgr.GetVDevicesInfo(logicID)
 	if err != nil {
 		return CgoDsmiVDevInfo{}, fmt.Errorf("query virtual device info failure: %s", err)

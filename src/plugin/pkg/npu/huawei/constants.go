@@ -65,9 +65,12 @@ const (
 	timeout          = 10
 	maxChipName      = 32
 
-	virtualDevicesPattern = "Ascend910-(4|8|16)c"
+	virtualDevicesPattern = "Ascend910-(2|4|8|16)c"
 	logicIDIndexInVirtualDevID910 = 3
 
 	// FunctionNotFound for describe dsmi interface function is exist or not
 	FunctionNotFound  = "-99998"
+
+	// MaxVirtualDevNum is the max virtual devices number
+	MaxVirtualDevNum = 128
 )
