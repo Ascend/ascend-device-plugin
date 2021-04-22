@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"path"
+	"sync"
 	"testing"
 	"time"
 )
@@ -35,6 +36,8 @@ import (
 const (
 	annonationTest1 = "{\"pod_name\":\"pod_name\",\"server_id\":\"0.0.0.0\",\"devices\":[{\"device_id\":\"0\"," +
 		"\"device_ip\":\"0.0.0.0\"},{\"device_id\":\"1\",\"device_ip\":\"0.0.0.1\"}]}"
+	annonationTest2 = "{\"pod_name\":\"pod_name\",\"server_id\":\"0.0.0.0\",\"devices\":[{\"device_id\":\"1\"," +
+		"\"device_ip\":\"0.0.0.1\"},{\"device_id\":\"0\",\"device_ip\":\"0.0.0.0\"}]}"
 	runTime2      = 2
 	runTime3      = 3
 	runTime5      = 5
@@ -45,9 +48,7 @@ const (
 func TestPluginAPI_ListAndWatch(t *testing.T) {
 	hdm := createFakeDevManager("ascend910")
 	hdm.SetParameters(false, false, true)
-	if err := hdm.GetNPUs(); err != nil {
-		t.Fatal(err)
-	}
+	if err := hdm.GetNPUs(); err != nil {t.Fatal(err)}
 	devTypes := hdm.GetDevType()
 	if len(devTypes) == 0 {
 		t.Fatal("TestPluginAPI_ListAndWatch Run Failed")
@@ -81,8 +82,8 @@ func TestPluginAPI_ListAndWatch(t *testing.T) {
 		clientset: mockK8s,
 		nodeName:  "NODE_NAME",
 	}
-
 	for _, devType := range devTypes {
+		if IsVirtualDev(devType) {continue}
 		pluginSocket := fmt.Sprintf("%s.sock", devType)
 		pluginSockPath := path.Join(pluginapi.DevicePluginPath, pluginSocket)
 		fakePluginAPI = createFakePluginAPI(hdm, devType, pluginSockPath, fakeKubeInteractor)
@@ -134,12 +135,18 @@ func TestAddAnnotation(t *testing.T) {
 		nodeName:  "NODE_NAME",
 	}
 	for _, devType := range devTypes {
+		if IsVirtualDev(devType) {
+			continue
+		}
 		pluginSocket := fmt.Sprintf("%s.sock", devType)
 		pluginSockPath := path.Join(pluginapi.DevicePluginPath, pluginSocket)
 		fakePluginAPI = createFakePluginAPI(hdm, devType, pluginSockPath, fakeKubeInteractor)
 	}
-	annonationString := fakePluginAPI.addAnnotation("0,1", "pod_name", "0.0.0.0")
-	if annonationString == annonationTest1 {
+	var devices map[string]string
+	devices["0"] = "0.0.0.0"
+	devices["1"] = "0.0.0.1"
+	annonationString := fakePluginAPI.addAnnotation(devices, "pod_name", "0.0.0.0")
+	if annonationString == annonationTest1 || annonationString == annonationTest2 {
 		t.Logf("TestAddAnnotation Run Pass")
 	} else {
 		t.Fatal("TestAddAnnotation Run Failed")
