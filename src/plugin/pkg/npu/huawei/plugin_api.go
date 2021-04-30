@@ -28,6 +28,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"math"
 	"net"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -112,7 +113,7 @@ func (s *pluginAPI) ListAndWatch(emtpy *pluginapi.Empty, stream pluginapi.Device
 		}
 		time.Sleep(sleepTime * time.Second)
 		isStateChange := s.isDeviceStatusChange()
-		if useVolcanoType && !IsVirtualDev(s.hps.devType){
+		if useVolcanoType && !IsVirtualDev(s.hps.devType) {
 			s.doWithVolcanoListAndWatch(isStateChange)
 		}
 		if !isStateChange {
@@ -231,7 +232,7 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 			return nil, errs
 		}
 		// 使用volcano调度
-		if useVolcanoType && !IsVirtualDev(s.hps.devType){
+		if useVolcanoType && !IsVirtualDev(s.hps.devType) {
 			ascendVisibleDevicesMap, errs = s.doWithVolcanoSchedule(allocateNum)
 			if errs != nil {
 				return nil, errs
@@ -282,6 +283,11 @@ func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (
 			return nil, err
 		}
 		var deviceIP string
+		if s.ascendRuntimeOptions == virtualDev {
+			ascendVisibleDevices[virID] = deviceIP
+			continue
+		}
+
 		if strings.Contains(s.hps.devType, hiAIAscend910Prefix) {
 			deviceIP, err = s.getDeviceIP(deviceID)
 			if err != nil {
@@ -289,12 +295,7 @@ func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (
 				return nil, err
 			}
 		}
-
-		if s.ascendRuntimeOptions == virtualDev {
-			ascendVisibleDevices[virID] = deviceIP
-		} else {
-			ascendVisibleDevices[deviceID] = deviceIP
-		}
+		ascendVisibleDevices[deviceID] = deviceIP
 	}
 	logger.Info("Found ascendVisibleDevices: ", zap.Any("ascendVisibleDevices", ascendVisibleDevices))
 	return ascendVisibleDevices, nil
@@ -393,10 +394,15 @@ func (s *pluginAPI) addAnnotation(devices map[string]string, podName, serverID s
 }
 
 func (s *pluginAPI) setDevices(instance *Instance, devices map[string]string) {
-	for deviceID, deviceIP := range devices {
+	var sortDevicesKey []string
+	for deviceID := range devices {
+		sortDevicesKey = append(sortDevicesKey, deviceID)
+	}
+	sort.Strings(sortDevicesKey)
+	for _, deviceID := range sortDevicesKey {
 		var device Device
 		device.DeviceID = deviceID
-		device.DeviceIP = deviceIP
+		device.DeviceIP = devices[deviceID]
 		instance.Devices = append(instance.Devices, device)
 	}
 }
@@ -731,4 +737,3 @@ func (s *pluginAPI) getAscendVisiDevsWithVolcano(allocateDevice sets.String, dev
 	}
 	return nil
 }
-
