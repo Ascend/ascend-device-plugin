@@ -203,8 +203,19 @@ The device management plug-in provides the following functions:
         
         ```
 
+3.  parameter “useAscendDocker” description
+    ```
+    scene-1:not install Ascend-docker-runtime
+    setting:    useAscendDocker=false
+    
+    scene-2:install Ascend-docker-runtime
+    setting:    useAscendDocker=true  (default value is true)
+    
+    scene-3:open CPU core binding，whether or not installed ascend-docker-runtime
+    setting:    useAscendDocker=false
+    ```
 
-3.  Run the following command to edit the  **Dockerfile**  file and change the image name and version to the obtained values:
+4.  Run the following command to edit the  **Dockerfile**  file and change the image name and version to the obtained values:
 
     **vi** _/home/test/_ascend-device-plugin**/Dockerfile**
 
@@ -222,7 +233,7 @@ The device management plug-in provides the following functions:
     
     ```
 
-4.  Run the following commands to generate a binary file and image file \(use the actual script name\):
+5.  Run the following commands to generate a binary file and image file \(use the actual script name\):
 
     **cd** _/home/test/_ascend-device-plugin**/build**/
 
@@ -232,7 +243,7 @@ The device management plug-in provides the following functions:
 
     **./build.sh dockerimages**
 
-5.  Run the following command to view the generated software package:
+6.  Run the following command to view the generated software package:
 
     **ll** _/home/test/_ascend-device-plugin**/output**
 

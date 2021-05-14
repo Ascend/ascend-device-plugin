@@ -202,9 +202,19 @@
                     path: /var/log/devicePlugin
         
         ```
+3.  参数“useAscendDocker”使用说明
+    ```
+    scene-1:未安装Ascend-docker-runtime
+    setting:    useAscendDocker=false
+    
+    scene-2:安装Ascend-docker-runtime
+    setting:    useAscendDocker=true  (默认是true)
+    
+    scene-3:开启CPU绑核功能，无论是否安装Ascend-docker-runtime
+    setting:    useAscendDocker=false
+    ```
 
-
-3.  执行以下命令，编辑Dockerfile文件，将镜像修改为查询的镜像名及版本号。
+4.  执行以下命令，编辑Dockerfile文件，将镜像修改为查询的镜像名及版本号。
 
     **vi** _/home/test/_ascend-device-plugin**/Dockerfile**
 
@@ -222,7 +232,7 @@
     
     ```
 
-4.  执行以下命令，根据实际选择执行的脚本，生成二进制和镜像文件。
+5.  执行以下命令，根据实际选择执行的脚本，生成二进制和镜像文件。
 
     **cd** _/home/test/_ascend-device-plugin**/build**/
 
@@ -232,7 +242,7 @@
 
     **./build.sh dockerimages**
 
-5.  执行以下命令，查看生成的软件包。
+6.  执行以下命令，查看生成的软件包。
 
     **ll** _/home/test/_ascend-device-plugin**/output**
 
