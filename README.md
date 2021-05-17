@@ -203,8 +203,19 @@ The device management plug-in provides the following functions:
         
         ```
 
+3.  parameter “useAscendDocker” description
+    ```
+    scene-1:not install Ascend-docker-runtime
+    setting:    useAscendDocker=false
+    
+    scene-2:install Ascend-docker-runtime
+    setting:    useAscendDocker=true  (default value is true)
+    
+    scene-3:open CPU core binding，whether or not installed ascend-docker-runtime
+    setting:    useAscendDocker=false
+    ```
 
-3.  Run the following command to edit the  **Dockerfile**  file and change the image name and version to the obtained values:
+4.  Run the following command to edit the  **Dockerfile**  file and change the image name and version to the obtained values:
 
     **vi** _/home/test/_ascend-device-plugin**/Dockerfile**
 
@@ -222,7 +233,7 @@ The device management plug-in provides the following functions:
     
     ```
 
-4.  Run the following commands to generate a binary file and image file \(use the actual script name\):
+5.  Run the following commands to generate a binary file and image file \(use the actual script name\):
 
     **cd** _/home/test/_ascend-device-plugin**/build**/
 
@@ -232,7 +243,7 @@ The device management plug-in provides the following functions:
 
     **./build.sh dockerimages**
 
-5.  Run the following command to view the generated software package:
+6.  Run the following command to view the generated software package:
 
     **ll** _/home/test/_ascend-device-plugin**/output**
 
@@ -470,7 +481,22 @@ The device management plug-in provides the following functions:
 </th>
 </tr>
 </thead>
-<tbody><tr id="row137501013384"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="p137501613585"><a name="p137501613585"></a><a name="p137501613585"></a>v20.2.0</p>
+<tbody>
+<tr id="zh-cn_topic_0280467800_row118567425441"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="zh-cn_topic_0280467800_p08571442174415"><a name="zh-cn_topic_0280467800_p08571442174415"></a><a name="zh-cn_topic_0280467800_p08571442174415"></a>v2.0.2</p>
+</td>
+<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.2 "><p id="zh-cn_topic_0280467800_p38571542154414"><a name="zh-cn_topic_0280467800_p38571542154414"></a><a name="zh-cn_topic_0280467800_p38571542154414"></a>version-630</p>
+</td>
+<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.3 "><p id="zh-cn_topic_0280467800_p5857142154415"><a name="zh-cn_topic_0280467800_p5857142154415"></a><a name="zh-cn_topic_0280467800_p5857142154415"></a></p>
+</td>
+</tr>
+<tr id="zh-cn_topic_0280467800_row118567425441"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="zh-cn_topic_0280467800_p08571442174415"><a name="zh-cn_topic_0280467800_p08571442174415"></a><a name="zh-cn_topic_0280467800_p08571442174415"></a>v2.0.1</p>
+</td>
+<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.2 "><p id="zh-cn_topic_0280467800_p38571542154414"><a name="zh-cn_topic_0280467800_p38571542154414"></a><a name="zh-cn_topic_0280467800_p38571542154414"></a>version-330</p>
+</td>
+<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.3 "><p id="zh-cn_topic_0280467800_p5857142154415"><a name="zh-cn_topic_0280467800_p5857142154415"></a><a name="zh-cn_topic_0280467800_p5857142154415"></a>1:Adaptation-710;2:register id using phyid;3:The normal alarms of the chip are not automatically isolated.</p>
+</td>
+</tr>
+<tr id="row137501013384"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="p137501613585"><a name="p137501613585"></a><a name="p137501613585"></a>v20.2.0</p>
 </td>
 <td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.2 "><p id="p1675010135811"><a name="p1675010135811"></a><a name="p1675010135811"></a>2021-01-08</p>
 </td>
