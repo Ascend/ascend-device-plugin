@@ -23,12 +23,12 @@ import (
 	"fmt"
 	"github.com/golang/mock/gomock"
 	"go.uber.org/atomic"
+	"golang.org/x/net/context"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"path"
-	"sync"
 	"testing"
 	"time"
 )
@@ -38,9 +38,6 @@ const (
 		"\"device_ip\":\"0.0.0.0\"},{\"device_id\":\"1\",\"device_ip\":\"0.0.0.1\"}]}"
 	annonationTest2 = "{\"pod_name\":\"pod_name\",\"server_id\":\"0.0.0.0\",\"devices\":[{\"device_id\":\"1\"," +
 		"\"device_ip\":\"0.0.0.1\"},{\"device_id\":\"0\",\"device_ip\":\"0.0.0.0\"}]}"
-	runTime2      = 2
-	runTime3      = 3
-	runTime5      = 5
 	sleepTestFour = 4
 )
 
@@ -48,7 +45,9 @@ const (
 func TestPluginAPI_ListAndWatch(t *testing.T) {
 	hdm := createFakeDevManager("ascend910")
 	hdm.SetParameters(false, false, true)
-	if err := hdm.GetNPUs(); err != nil {t.Fatal(err)}
+	if err := hdm.GetNPUs(); err != nil {
+		t.Fatal(err)
+	}
 	devTypes := hdm.GetDevType()
 	if len(devTypes) == 0 {
 		t.Fatal("TestPluginAPI_ListAndWatch Run Failed")
@@ -70,28 +69,27 @@ func TestPluginAPI_ListAndWatch(t *testing.T) {
 	mockV1 := mock_v1.NewMockCoreV1Interface(ctrl)
 	mockNode := mock_v1.NewMockNodeInterface(ctrl)
 	mockPod := mock_v1.NewMockPodInterface(ctrl)
-	mockNode.EXPECT().Get(gomock.Any(), metav1.GetOptions{}).Return(node1, nil).Times(runTime2)
-	mockNode.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(node1, nil)
-	mockPod.EXPECT().List(gomock.Any()).Return(podList, nil).Times(runTime2)
-	mockV1.EXPECT().Pods(gomock.Any()).Return(mockPod).Times(runTime2)
-	mockV1.EXPECT().Nodes().Return(mockNode).Times(runTime3)
-	mockK8s.EXPECT().CoreV1().Return(mockV1).Times(runTime5)
-	mockstream := mock_v1beta1.NewMockDevicePlugin_ListAndWatchServer(ctrl)
-	mockstream.EXPECT().Send(&pluginapi.ListAndWatchResponse{}).Return(nil)
+	mockNode.EXPECT().Get(gomock.Any(), metav1.GetOptions{}).AnyTimes().Return(node1, nil)
+	mockNode.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(node1, nil)
+	mockPod.EXPECT().List(gomock.Any()).AnyTimes().Return(podList, nil)
+	mockV1.EXPECT().Pods(gomock.Any()).AnyTimes().Return(mockPod)
+	mockV1.EXPECT().Nodes().AnyTimes().Return(mockNode)
+	mockK8s.EXPECT().CoreV1().AnyTimes().Return(mockV1)
 	fakeKubeInteractor := &KubeInteractor{
 		clientset: mockK8s,
 		nodeName:  "NODE_NAME",
 	}
 	for _, devType := range devTypes {
-		if IsVirtualDev(devType) {continue}
+		mockstream := mock_v1beta1.NewMockDevicePlugin_ListAndWatchServer(ctrl)
+		mockstream.EXPECT().Send(&pluginapi.ListAndWatchResponse{}).Return(nil)
 		pluginSocket := fmt.Sprintf("%s.sock", devType)
 		pluginSockPath := path.Join(pluginapi.DevicePluginPath, pluginSocket)
 		fakePluginAPI = createFakePluginAPI(hdm, devType, pluginSockPath, fakeKubeInteractor)
-	}
-	go changeBreakFlag(fakePluginAPI)
-	err := fakePluginAPI.ListAndWatch(&pluginapi.Empty{}, mockstream)
-	if err != nil {
-		t.Fatal(err)
+		go changeBreakFlag(fakePluginAPI)
+		err := fakePluginAPI.ListAndWatch(&pluginapi.Empty{}, mockstream)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	t.Logf("TestPluginAPI_ListAndWatch Run Pass")
 }
@@ -142,7 +140,7 @@ func TestAddAnnotation(t *testing.T) {
 		pluginSockPath := path.Join(pluginapi.DevicePluginPath, pluginSocket)
 		fakePluginAPI = createFakePluginAPI(hdm, devType, pluginSockPath, fakeKubeInteractor)
 	}
-	var devices map[string]string
+	devices := make(map[string]string, 2)
 	devices["0"] = "0.0.0.0"
 	devices["1"] = "0.0.0.1"
 	annonationString := fakePluginAPI.addAnnotation(devices, "pod_name", "0.0.0.0")
@@ -151,4 +149,53 @@ func TestAddAnnotation(t *testing.T) {
 	} else {
 		t.Fatal("TestAddAnnotation Run Failed")
 	}
+}
+
+// TestAllocate for test Allocate
+func TestAllocate(t *testing.T) {
+	hdm := createFakeDevManager("ascend910")
+	hdm.SetParameters(false, true, false)
+	if err := hdm.GetNPUs(); err != nil {
+		t.Fatal(err)
+	}
+	devTypes := hdm.GetDevType()
+	if len(devTypes) == 0 {
+		t.Fatal("TestPluginAPI_Allocate Run Failed")
+	}
+	devicesIDs := []string{"Ascend910-8c-1-1"}
+	var containerRequests []*pluginapi.ContainerAllocateRequest
+	tmp := &pluginapi.ContainerAllocateRequest{
+		DevicesIDs: devicesIDs,
+	}
+	containerRequests = append(containerRequests, tmp)
+	requests := pluginapi.AllocateRequest{
+		ContainerRequests: containerRequests,
+	}
+	ctrl := gomock.NewController(t)
+	mockK8s := mock_kubernetes.NewMockInterface(ctrl)
+	mockV1 := mock_v1.NewMockCoreV1Interface(ctrl)
+	mockNode := mock_v1.NewMockNodeInterface(ctrl)
+	mockPod := mock_v1.NewMockPodInterface(ctrl)
+	mockV1.EXPECT().Pods(gomock.Any()).AnyTimes().Return(mockPod)
+	mockV1.EXPECT().Nodes().AnyTimes().Return(mockNode)
+	mockK8s.EXPECT().CoreV1().AnyTimes().Return(mockV1)
+	fakeKubeInteractor := &KubeInteractor{
+		clientset: mockK8s,
+		nodeName:  "NODE_NAME",
+	}
+	pluginSockPath := fmt.Sprintf("%s.sock", "Ascend910")
+	fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", pluginSockPath, fakeKubeInteractor)
+	var ctx context.Context
+	fakePluginAPI.hps.devices["Ascend910-8c-1-1"] = &npuDevice{
+		devType: "Ascend910-8c",
+		pciID:   "",
+		ID:      "Ascend910-8c-1-1",
+		Health:  pluginapi.Healthy,
+	}
+	_, requestErrs := fakePluginAPI.Allocate(ctx, &requests)
+	if requestErrs != nil {
+		t.Fatal("TestPluginAPI_Allocate Run Failed")
+	}
+
+	t.Logf("TestPluginAPI_Allocate Run Pass")
 }

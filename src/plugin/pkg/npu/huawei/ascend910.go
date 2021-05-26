@@ -54,13 +54,13 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *
 	if err != nil {
 		return err
 	}
-	var deviTypes []string
+	phyDevMapVirtualDev := make(map[uint32]string, devNum)
+	var deviTypes, vDevId []string
 	for i := int32(0); i < devNum; i++ {
 		phyID, err := hnm.dmgr.GetPhyID(ids[i])
 		if err != nil {
 			return err
 		}
-
 		cgoDsmiVDevInfos, err := hnm.getVirtualDevice(ids[i])
 		if err != nil && !strings.Contains(err.Error(), FunctionNotFound) {
 			logger.Error("Query virtual device info failure!", zap.String("err", err.Error()))
@@ -69,12 +69,15 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *
 		var devices []npuDevice
 		if cgoDsmiVDevInfos.vDevNum == 0 {
 			devices, deviTypes = hnm.assemblePhyDevices(phyID)
+			phyDevMapVirtualDev[phyID] = fmt.Sprintf("%d", phyID)
 		} else {
-			devices, deviTypes = hnm.assembleVirtualDevices(phyID, cgoDsmiVDevInfos)
+			devices, deviTypes, vDevId = hnm.assembleVirtualDevices(phyID, cgoDsmiVDevInfos)
+			phyDevMapVirtualDev[phyID] = strings.Join(vDevId, ",")
 		}
 		*allDevices = append(*allDevices, devices...)
 		*allDeviceTypes = append(*allDeviceTypes, deviTypes...)
 	}
+	hnm.phyDevMapVirtualDev = phyDevMapVirtualDev
 	*allDeviceTypes = hnm.removeDuplicate(allDeviceTypes)
 	return nil
 }
@@ -101,9 +104,11 @@ func (hnm *HwAscend910Manager) assemblePhyDevices(phyID uint32) ([]npuDevice, []
 	return devices, deviTypes
 }
 
-func (hnm *HwAscend910Manager) assembleVirtualDevices(phyID uint32, cgoDsmiVDevInfos CgoDsmiVDevInfo) ([]npuDevice, []string) {
+func (hnm *HwAscend910Manager) assembleVirtualDevices(phyID uint32, cgoDsmiVDevInfos CgoDsmiVDevInfo) (
+	[]npuDevice, []string, []string) {
 	var devices []npuDevice
 	var vDeviTypes []string
+	var vDevId []string
 	for _, dsmiSubVDevInfo := range cgoDsmiVDevInfos.cgoDsmiSubVDevInfos {
 		if dsmiSubVDevInfo.spec.coreNum == zeroCore {
 			continue
@@ -113,8 +118,9 @@ func (hnm *HwAscend910Manager) assembleVirtualDevices(phyID uint32, cgoDsmiVDevI
 		device := hnm.AssembleNpuDeviceStruct(vDeviType, devID)
 		devices = append(devices, device)
 		vDeviTypes = append(vDeviTypes, vDeviType)
+		vDevId = append(vDevId, fmt.Sprintf("%d", dsmiSubVDevInfo.vdevid))
 	}
-	return devices, vDeviTypes
+	return devices, vDeviTypes, vDevId
 }
 
 func (hnm *HwAscend910Manager) getVirtualDevice(logicID uint32) (CgoDsmiVDevInfo, error) {

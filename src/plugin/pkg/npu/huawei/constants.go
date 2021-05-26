@@ -52,7 +52,7 @@ const (
 	maxAge                  = 10                                                      // the log file last time
 	podDeviceKey            = "ascend.kubectl.kubernetes.io/ascend-910-configuration" // config map name
 	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"                                // visible env
-	ascendRuntimeOptionsEnv = "ASCEND_RUNTIME_OPTIONS"								  // virtual runtime option env
+	ascendRuntimeOptionsEnv = "ASCEND_RUNTIME_OPTIONS"                                // virtual runtime option env
 	logChmod                = 0640
 
 	huaweiAscend910  = "huawei.com/Ascend910"
@@ -66,10 +66,15 @@ const (
 	maxChipName      = 32
 
 	virtualDevicesPattern = "Ascend910-(2|4|8|16)c"
+	pwr2CSuffix           = "Ascend910-2c"
+	pwr4CSuffix           = "Ascend910-4c"
+	pwr8CSuffix           = "Ascend910-8c"
+	pwr16CSuffix          = "Ascend910-16c"
+
 	logicIDIndexInVirtualDevID910 = 3
 
 	// FunctionNotFound for describe dsmi interface function is exist or not
-	FunctionNotFound  = "-99998"
+	FunctionNotFound = "-99998"
 
 	// MaxVirtualDevNum is the max virtual devices number
 	MaxVirtualDevNum = 128

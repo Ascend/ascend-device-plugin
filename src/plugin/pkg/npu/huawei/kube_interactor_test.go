@@ -50,7 +50,7 @@ func TestPatchAnnotationOnNode(t *testing.T) {
 		clientset: mockK8s,
 		nodeName:  "NODE_NAME",
 	}
-	err := fakeKubeInteractor.patchAnnotationOnNode(freeDevices)
+	err := fakeKubeInteractor.patchAnnotationOnNode(freeDevices, "")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -21,7 +21,6 @@ import (
 	"go.uber.org/zap"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"os"
-	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -48,7 +47,6 @@ func createFakeDevManager(runMode string) *HwDevManager {
 	fakeHwDevManager := &HwDevManager{
 		dlogPath: "/var/log",
 		runMode:  runMode,
-		serves:   sync.Map{},
 		dmgr:     newFakeDeviceManager(),
 		stopFlag: atomic.NewBool(false),
 	}
