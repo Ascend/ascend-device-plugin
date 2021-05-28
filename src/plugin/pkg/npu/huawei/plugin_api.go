@@ -424,9 +424,9 @@ func (s *pluginAPI) setDevices(instance *Instance, devices map[string]string) {
 }
 
 func (s *pluginAPI) setVirtualDevices(instance *Instance, device Device, deviceID string) {
-	for phyId, virIds := range s.hps.hdm.manager.GetPhyDevMapVirtualDev() {
+	for phyID, virIds := range s.hps.hdm.manager.GetPhyDevMapVirtualDev() {
 		if strings.Contains(virIds, deviceID) {
-			device.DeviceID = fmt.Sprintf("%d", phyId)
+			device.DeviceID = fmt.Sprintf("%d", phyID)
 			device.DeviceIP = defaultDeviceIP
 			instance.Devices = append(instance.Devices, device)
 		}

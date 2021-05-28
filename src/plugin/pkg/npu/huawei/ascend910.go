@@ -55,7 +55,7 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *
 		return err
 	}
 	phyDevMapVirtualDev := make(map[uint32]string, devNum)
-	var deviTypes, vDevId []string
+	var deviTypes, vDevID []string
 	for i := int32(0); i < devNum; i++ {
 		phyID, err := hnm.dmgr.GetPhyID(ids[i])
 		if err != nil {
@@ -71,8 +71,8 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *
 			devices, deviTypes = hnm.assemblePhyDevices(phyID)
 			phyDevMapVirtualDev[phyID] = fmt.Sprintf("%d", phyID)
 		} else {
-			devices, deviTypes, vDevId = hnm.assembleVirtualDevices(phyID, cgoDsmiVDevInfos)
-			phyDevMapVirtualDev[phyID] = strings.Join(vDevId, ",")
+			devices, deviTypes, vDevID = hnm.assembleVirtualDevices(phyID, cgoDsmiVDevInfos)
+			phyDevMapVirtualDev[phyID] = strings.Join(vDevID, ",")
 		}
 		*allDevices = append(*allDevices, devices...)
 		*allDeviceTypes = append(*allDeviceTypes, deviTypes...)
@@ -108,7 +108,7 @@ func (hnm *HwAscend910Manager) assembleVirtualDevices(phyID uint32, cgoDsmiVDevI
 	[]npuDevice, []string, []string) {
 	var devices []npuDevice
 	var vDeviTypes []string
-	var vDevId []string
+	var vDevID []string
 	for _, dsmiSubVDevInfo := range cgoDsmiVDevInfos.cgoDsmiSubVDevInfos {
 		if dsmiSubVDevInfo.spec.coreNum == zeroCore {
 			continue
@@ -118,9 +118,9 @@ func (hnm *HwAscend910Manager) assembleVirtualDevices(phyID uint32, cgoDsmiVDevI
 		device := hnm.AssembleNpuDeviceStruct(vDeviType, devID)
 		devices = append(devices, device)
 		vDeviTypes = append(vDeviTypes, vDeviType)
-		vDevId = append(vDevId, fmt.Sprintf("%d", dsmiSubVDevInfo.vdevid))
+		vDevID = append(vDevID, fmt.Sprintf("%d", dsmiSubVDevInfo.vdevid))
 	}
-	return devices, vDeviTypes, vDevId
+	return devices, vDeviTypes, vDevID
 }
 
 func (hnm *HwAscend910Manager) getVirtualDevice(logicID uint32) (CgoDsmiVDevInfo, error) {
