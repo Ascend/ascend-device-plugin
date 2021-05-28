@@ -63,6 +63,7 @@ type Device struct { // Device
 
 var ip string
 var totalDevices sets.String
+var stateThreadNum int
 
 // Register function is use to register k8s devicePlugin to kubelet.
 func (hps *HwPluginServe) Register(k8sSocketPath, pluginSocket, resourceName string) error {
@@ -204,18 +205,15 @@ func (s *pluginAPI) doWithVolcanoListAndWatch(isStateChange bool) {
 	m.Lock()
 	usedDevices := sets.NewString()
 	s.getNodeNpuUsed(&usedDevices)
-	for _, device := range usedDevices.List() {
-		logger.Debug("useDevice" + device)
-	}
 	freeDevices := s.hps.healthDevice.Difference(usedDevices)
 	totalDevices = totalDevices.Union(freeDevices)
-	m.Unlock()
-	m.Lock()
-	if len(totalDevices) == len(s.hps.hdm.allDevs) {
+	stateThreadNum += interval
+	if stateThreadNum == len(s.hps.hdm.allDevTypes) {
 		if err := s.hps.kubeInteractor.patchAnnotationOnNode(totalDevices, ""); err != nil {
 			logger.Error("patch Annotation failed", zap.Error(err))
 		}
 		totalDevices = totalDevices.Intersection(sets.String{})
+		stateThreadNum = resetZero
 	}
 	m.Unlock()
 }
@@ -326,7 +324,7 @@ func (s *pluginAPI) mountDefaultDevice(resp *pluginapi.ContainerAllocateResponse
 func (s *pluginAPI) getNodeNpuUsed(usedDevices *sets.String) {
 	var (
 		err    error
-		useNpu string
+		useNpu []string
 	)
 
 	kubeClient := s.hps.kubeInteractor.clientset
@@ -335,45 +333,40 @@ func (s *pluginAPI) getNodeNpuUsed(usedDevices *sets.String) {
 		logger.Error("get node from k8s error", zap.Error(err))
 		return
 	}
-	npuListRunning, getFailed := s.getNPUByStatus(kubeClient, node.Name, string(v1.PodRunning))
+	getFailed := s.getNPUByStatus(kubeClient, node.Name, string(v1.PodRunning), &useNpu)
 	if getFailed {
 		return
 	}
 
-	useNpu += npuListRunning
-	npuListPending, getFailed := s.getNPUByStatus(kubeClient, node.Name, string(v1.PodPending))
+	getFailed = s.getNPUByStatus(kubeClient, node.Name, string(v1.PodPending), &useNpu)
 	if getFailed {
 		return
 	}
-	useNpu += npuListPending
-	useNpu = strings.TrimSuffix(useNpu, ",")
-	deviceString := strings.Split(useNpu, ",")
-	for _, device := range deviceString {
+	for _, device := range useNpu {
 		usedDevices.Insert(device)
 	}
-	logger.Debug(fmt.Sprintf("nodeName: %s", node.Name), zap.String("useNpu", useNpu))
+	logger.Debug(fmt.Sprintf("nodeName: %s", node.Name), zap.Strings("useNpu", useNpu))
 	return
 }
 
-func (s *pluginAPI) getNPUByStatus(kubeClient kubernetes.Interface, nodeName, status string) (string, bool) {
+func (s *pluginAPI) getNPUByStatus(kubeClient kubernetes.Interface, nodeName, status string, useNpu *[]string) bool {
 	selector := fields.SelectorFromSet(fields.Set{"spec.nodeName": nodeName, "status.phase": status})
 	podList, err := kubeClient.CoreV1().Pods(v1.NamespaceAll).List(metav1.ListOptions{
 		FieldSelector: selector.String()})
 	if err != nil {
 		logger.Error(fmt.Sprintf("nodeName: %s", nodeName), zap.Error(err))
-		return "", true
+		return true
 	}
-	var useNpu string
 	for _, pod := range podList.Items {
 		annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, s.hps.devType)
 		tmpNpu, ok := pod.Annotations[annotationTag]
 		if !ok {
 			continue
 		}
-		useNpu += tmpNpu + ","
+		*useNpu = append(*useNpu, tmpNpu)
 	}
-	logger.Debug("useNpu: " + useNpu)
-	return useNpu, false
+	logger.Debug("useNpu: " + strings.Join(*useNpu, ","))
+	return false
 }
 
 func addEnv(devices map[string]string, ascendRuntimeOptions string, resp *pluginapi.ContainerAllocateResponse) {

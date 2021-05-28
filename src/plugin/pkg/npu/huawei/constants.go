@@ -78,4 +78,6 @@ const (
 
 	// MaxVirtualDevNum is the max virtual devices number
 	MaxVirtualDevNum = 128
+
+	resetZero = 0
 )
