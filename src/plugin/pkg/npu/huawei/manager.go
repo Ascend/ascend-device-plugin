@@ -24,7 +24,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 )
@@ -38,7 +37,6 @@ type npuDevice struct {
 
 // HwDevManager manages huawei device devices.
 type HwDevManager struct {
-	serves      sync.Map
 	manager     devManager
 	dlogPath    string
 	runMode     string
@@ -65,6 +63,7 @@ type devManager interface {
 	SetDmgr(DeviceMgrInterface)
 	GetDmgr() DeviceMgrInterface
 	GetMatchingDeviType() string
+	GetPhyDevMapVirtualDev() map[uint32]string
 }
 
 // NewHwDevManager function is used to new a dev manager.
@@ -142,7 +141,6 @@ func (hdm *HwDevManager) Serve(devType, socketPath, pluginSocket string, pluginS
 			}
 			// start
 			hps = pluginServerFunc(hdm, devType, pluginSockPath)
-			hdm.serves.Store(devType, hps)
 			preStart(hps, pluginSockPath)
 			// end
 			if err := hps.Start(pluginSocket, pluginSockPath); err != nil {

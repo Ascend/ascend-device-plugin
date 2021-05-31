@@ -40,11 +40,15 @@ const (
 
 	// GeneralAlarm health state
 	generalAlarm = uint32(1)
+
+	// Default device ip
+	defaultDeviceIP = "127.0.0.1"
 )
 
 // ascendCommonFunction struct definition
 type ascendCommonFunction struct {
-	dmgr DeviceMgrInterface
+	dmgr                DeviceMgrInterface
+	phyDevMapVirtualDev map[uint32]string
 }
 
 func getDefaultDevices(defaultDevices *[]string) error {
@@ -288,4 +292,9 @@ func (adc *ascendCommonFunction) SetDmgr(dmgr DeviceMgrInterface) {
 // GetDmgr to get dmgr
 func (adc *ascendCommonFunction) GetDmgr() DeviceMgrInterface {
 	return adc.dmgr
+}
+
+// GetPhyDevMapVirtualDev get phy devices and virtual devices mapping
+func (adc *ascendCommonFunction) GetPhyDevMapVirtualDev() map[uint32]string {
+	return adc.phyDevMapVirtualDev
 }
