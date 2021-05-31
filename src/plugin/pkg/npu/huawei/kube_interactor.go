@@ -146,10 +146,10 @@ func (ki *KubeInteractor) convertStringToSet(deviceNames string) sets.String {
 }
 
 func checkNeedUpdate(isNil bool, annotation string, allocatableDevices sets.String) bool {
-	return !isNil || !judegeSameAscend(annotation, allocatableDevices) || strings.TrimSpace(annotation) == ""
+	return !isNil || !judgeSameAscend(annotation, allocatableDevices) || strings.TrimSpace(annotation) == ""
 }
 
-func judegeSameAscend(annotation string, allocatableDevices sets.String) bool {
+func judgeSameAscend(annotation string, allocatableDevices sets.String) bool {
 	annotationSet := sets.String{}
 	for _, device := range strings.Split(annotation, ",") {
 		annotationSet.Insert(device)
