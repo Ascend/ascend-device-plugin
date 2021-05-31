@@ -61,9 +61,12 @@ type Device struct { // Device
 	DeviceIP string `json:"device_ip"` // device ip
 }
 
-var ip string
-var totalDevices sets.String
-var stateThreadNum int
+var (
+	ip             string
+	totalDevices   sets.String
+	stateThreadNum int
+	m              sync.Mutex
+)
 
 // Register function is use to register k8s devicePlugin to kubelet.
 func (hps *HwPluginServe) Register(k8sSocketPath, pluginSocket, resourceName string) error {
@@ -201,7 +204,6 @@ func (s *pluginAPI) doWithVolcanoListAndWatch(isStateChange bool) {
 			s.hps.healthDevice.Insert(device.ID)
 		}
 	}
-	var m sync.Mutex
 	m.Lock()
 	usedDevices := sets.NewString()
 	s.getNodeNpuUsed(&usedDevices)
