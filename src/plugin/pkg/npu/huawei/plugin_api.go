@@ -365,7 +365,7 @@ func (s *pluginAPI) getNPUByStatus(kubeClient kubernetes.Interface, nodeName, st
 		if !ok {
 			continue
 		}
-		*useNpu = append(*useNpu, tmpNpu)
+		*useNpu = append(*useNpu, strings.Split(tmpNpu, ",")...)
 	}
 	logger.Debug("useNpu: " + strings.Join(*useNpu, ","))
 	return false
