@@ -22,8 +22,10 @@
 
 设备管理插件拥有以下功能：
 
--   设备发现：支持从昇腾设备驱动中发现设备个数，将其发现的设备个数上报到Kubernetes系统中。
--   健康检查：支持检测昇腾设备的健康状态，当设备处于不健康状态时，上报到Kubernetes系统中，将不健康的昇腾设备从Kubernetes系统中剔除。
+-   设备发现：支持从昇腾设备驱动中发现设备个数，将其发现的设备个数上报到Kubernetes系统中；支持发现拆分物理设备得到的虚拟设备，
+需要虚拟设备提前拆分完成。
+-   健康检查：支持检测昇腾设备的健康状态，当设备处于不健康状态时，上报到Kubernetes系统中，将不健康的昇腾设备从Kubernetes系统中剔除；
+虚拟设备健康状态由拆分其的物理设备决定。
 -   设备分配：支持在Kubernetes系统中分配昇腾设备。
 
 <h2 id="编译Ascend-Device-Plugin.md">编译Ascend Device Plugin</h2>
@@ -284,7 +286,7 @@
 
     **kubectl label nodes** _localhost.localdomain_ **accelerator=**_huawei-Ascend910_
 
-    localhost.localdomain为有Ascend 910（或Ascend 310）的节点名称，可通过**kubectl get node**命令查看。
+    localhost.localdomain为有Ascend 910（或Ascend 310, 或Ascend 710）的节点名称，可通过**kubectl get node**命令查看。
 
     标签名称需要和“编译Ascend Device Plugin”章节中yaml文件里的nodeSelector标签名称保持一致。
 
@@ -346,7 +348,7 @@
         imagePullPolicy: Never
         resources:
           limits: #资源限制
-            huawei.com/Ascend310: 2 #根据实际修改资源类型。
+            huawei.com/Ascend310: 2 #根据实际修改资源类型。支持的资源类型请参考[2]
         volumeMounts:
           - name: joblog
             mountPath: /home/log/  #容器内部日志路径，根据任务需要修改。
@@ -371,7 +373,18 @@
             path: /usr/local/Ascend/driver #根据Driver实际所在路径修改。
     ```
 
-2.  执行如下命令，创建Pod。
+2.  支持的资源类型:
+
+        (1) huawei.com/Ascend310: 2
+            分配 2 颗 310 芯片
+        (2) huawei.com/Ascend710: 1
+            分配 1 颗 710 芯片
+        (3) huawei.com/Ascend910: 4
+            分配 4 颗 9 芯片
+        (4) huawei.com/Ascend910-16c: 1
+            分配 1 颗算力为16核的虚拟设备，此处的1固定，不能填写其他值；支持的虚拟设备类型有：2c/4c/8c/16c
+    
+3.  执行如下命令，创建Pod。
 
     **kubectl apply -f ascend.yaml**
 
@@ -379,7 +392,7 @@
     >如需删除请执行以下命令：
     >**kubectl delete -f** **ascend.yaml**
 
-3.  分别执行以下命令，进入Pod查看分配信息。
+4.  分别执行以下命令，进入Pod查看分配信息。
 
     **kubectl exec -it** _pod名称_ **bash**
 
@@ -485,7 +498,7 @@
 </td>
 <td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.2 "><p id="zh-cn_topic_0280467800_p38571542154414"><a name="zh-cn_topic_0280467800_p38571542154414"></a><a name="zh-cn_topic_0280467800_p38571542154414"></a>630版本</p>
 </td>
-<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.3 "><p id="zh-cn_topic_0280467800_p5857142154415"><a name="zh-cn_topic_0280467800_p5857142154415"></a><a name="zh-cn_topic_0280467800_p5857142154415"></a></p>
+<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.3 "><p id="zh-cn_topic_0280467800_p5857142154415"><a name="zh-cn_topic_0280467800_p5857142154415"></a><a name="zh-cn_topic_0280467800_p5857142154415"></a>1、910芯片支持算力拆分</p>
 </td>
 </tr>
 <tr id="zh-cn_topic_0280467800_row118567425441"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="zh-cn_topic_0280467800_p08571442174415"><a name="zh-cn_topic_0280467800_p08571442174415"></a><a name="zh-cn_topic_0280467800_p08571442174415"></a>v2.0.1</p>
