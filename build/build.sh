@@ -57,6 +57,7 @@ function mv_file() {
     dos2unix "${TOP_DIR}/other/${deploy_name}"
     chmod 550 "${TOP_DIR}/other/${deploy_name}"
     cp "${TOP_DIR}/other/${deploy_name}"     "${TOP_DIR}"/output
+    chmod 550 "${TOP_DIR}/output/${output_name}"
 }
 
 function zip_file(){
