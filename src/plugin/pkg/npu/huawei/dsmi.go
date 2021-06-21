@@ -124,6 +124,9 @@ const (
 	retError = -1
 	// UnRetError return error
 	unretError = 100
+
+	// dsmiMaxVdevNum is number of vdevice the devid spilt
+	dsmiMaxVdevNum = 16
 )
 
 // ChipInfo chip info
@@ -313,8 +316,9 @@ func (d *DeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error)
 	var dsmiVDevInfo C.struct_dsmi_vdev_info
 	err := C.dsmi_get_vdevice_info(C.uint(logicID), &dsmiVDevInfo)
 
-	if err != 0 {
-		return CgoDsmiVDevInfo{}, fmt.Errorf("get virtual device info failed, error code: %d", int32(err))
+	if err != 0 || int(dsmiVDevInfo.vdev_num) < 0 || int(dsmiVDevInfo.vdev_num) > dsmiMaxVdevNum {
+		return CgoDsmiVDevInfo{}, fmt.Errorf("get virtual device info failed, error code is: %d " +
+			"and vdev num is: %d", int32(err), int32(dsmiVDevInfo.vdev_num))
 	}
 	cgoDsmiVDevInfos := CgoDsmiVDevInfo{
 		vDevNum: uint32(dsmiVDevInfo.vdev_num),
