@@ -318,7 +318,7 @@ func (s *pluginAPI) mountDefaultDevice(resp *pluginapi.ContainerAllocateResponse
 		resp.Devices = append(resp.Devices, &pluginapi.DeviceSpec{
 			HostPath:      d,
 			ContainerPath: d,
-			Permissions:   "mrw",
+			Permissions:   "rw",
 		})
 	}
 }
@@ -606,7 +606,7 @@ func (s *pluginAPI) mountDevice(resp *pluginapi.ContainerAllocateResponse, devic
 		resp.Devices = append(resp.Devices, &pluginapi.DeviceSpec{
 			HostPath:      hostPath,
 			ContainerPath: containerPath,
-			Permissions:   "mrw",
+			Permissions:   "rw",
 		})
 	}
 }
