@@ -68,7 +68,6 @@ type devManager interface {
 
 // NewHwDevManager function is used to new a dev manager.
 func NewHwDevManager(mode, dlogPath, logPath string) *HwDevManager {
-	logger.Info("the log path is :", zap.String("logPath", logPath))
 	return &HwDevManager{
 		dlogPath: dlogPath,
 		runMode:  mode,
