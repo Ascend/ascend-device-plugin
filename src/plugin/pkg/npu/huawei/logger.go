@@ -17,7 +17,6 @@
 package huawei
 
 import (
-	"errors"
 	"fmt"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -37,12 +36,12 @@ func NewLogger(loggerPath string) error {
 	}
 	logger = ConfigLog(loggerPath)
 	if logger == nil {
-		return errors.New("create logger error")
+		return fmt.Errorf("create logger error")
 	}
 	error := os.Chmod(loggerPath, logChmod)
 	if error != nil{
 		logger.Error("config log path error")
-		return errors.New("set log file mode failed")
+		return fmt.Errorf("set log file mode failed")
 	}
 	return nil
 }
