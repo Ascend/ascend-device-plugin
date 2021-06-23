@@ -1,32 +1,25 @@
 #!/bin/bash
 # Perform  build k8s-device-plugin
-# Copyright @ Huawei Technologies CO., Ltd. 2020-2020. All rights reserved
+# Copyright @ Huawei Technologies CO., Ltd. 2020-2021. All rights reserved
 set -e
 CUR_DIR=$(dirname $(readlink -f "$0"))
 TOP_DIR=$(realpath "${CUR_DIR}"/..)
-build_version="V20.1.0"
+build_version="v2.0.2"
 output_name="ascendplugin"
-deploy_name="deploy.sh"
-docker_images_name="ascend-k8sdeviceplugin:V20.1.0"
+docker_images_name="ascend-k8sdeviceplugin:v2.0.2"
 os_type=$(arch)
 if [ "${os_type}" = "aarch64" ]; then
   os_type="arm64"
 else
   os_type="x86"
 fi
-tar_name="Ascend-K8sDevicePlugin-${build_version}-${os_type}-Linux.tar.gz"
-docker_zip_name="Ascend-K8sDevicePlugin-${build_version}-${os_type}-Docker.tar.gz"
 build_type=build
-docker_type=nodocker
 
 if [ "$1" == "ci" ] || [ "$2" == "ci" ]; then
     export GO111MODULE="on"
     export GOPROXY="http://mirrors.tools.huawei.com/goproxy/"
     export GONOSUMDB="*"
     build_type=ci
-fi
-if [ "$1" == "dockerimages" ] || [ "$2" == "dockerimages" ]; then
-    docker_type=dockerimages
 fi
 
 function clear_env() {
@@ -54,34 +47,42 @@ function build_plugin() {
 
 function mv_file() {
     mv "${TOP_DIR}/src/plugin/cmd/ascendplugin/${output_name}"   "${TOP_DIR}"/output
-    dos2unix "${TOP_DIR}/other/${deploy_name}"
-    chmod 550 "${TOP_DIR}/other/${deploy_name}"
-    cp "${TOP_DIR}/other/${deploy_name}"     "${TOP_DIR}"/output
     chmod 500 "${TOP_DIR}/output/${output_name}"
 }
 
-function zip_file(){
-    cd "${TOP_DIR}/output"
-    tar -zcvf "${tar_name}"  "${output_name}"  "${deploy_name}"
-    rm -f "${output_name}"  "${deploy_name}"
+function modify_version() {
+    cd "${TOP_DIR}"
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/ascendplugin.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/ascendplugin-volcano.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/ascendplugin-310.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/ascendplugin-710.yaml
+
+    cp "$TOP_DIR"/Dockerfile "$TOP_DIR"/output/
+    cp "$TOP_DIR"/ascendplugin.yaml "$TOP_DIR"/output/ascendplugin-"${version}".yaml
+    cp "$TOP_DIR"/ascendplugin-volcano.yaml "$TOP_DIR"/output/ascendplugin-volcano-"${version}".yaml
+    cp "$TOP_DIR"/ascendplugin-310.yaml "$TOP_DIR"/output/ascendplugin-310-"${version}".yaml
+    cp "$TOP_DIR"/ascendplugin-710.yaml "$TOP_DIR"/output/ascendplugin-710-"${version}".yaml
+
+    sed -i "s#output/ascendplugin#ascendplugin#" "$TOP_DIR"/output/Dockerfile
 }
 
-function build_docker_images(){
-    cd "${TOP_DIR}"
-    docker rmi "${docker_images_name}" || true
-    docker build -t "${docker_images_name}" .
-    docker save "${docker_images_name}" | gzip > "${docker_zip_name}"
-    mv "${docker_zip_name}" ./output/
+function parse_version() {
+    version_file="${TOP_DIR}"/service_config.ini
+    version=${build_version}
+    if  [ -f "$version_file" ]; then
+      line=$(sed -n '4p' "$version_file" 2>&1)
+      #cut the chars after ':'
+      version=${line#*:}
+      build_version=${version}
+    fi
 }
 
 function main() {
   clear_env
+  parse_version
   build_plugin
   mv_file
-  if [ "${docker_type}" == "dockerimages" ]; then
-      build_docker_images
-  fi
-  zip_file
+  modify_version
 }
 
 main
