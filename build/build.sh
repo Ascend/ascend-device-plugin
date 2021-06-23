@@ -52,6 +52,11 @@ function mv_file() {
 
 function modify_version() {
     cd "${TOP_DIR}"
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/ascendplugin.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/ascendplugin-volcano.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/ascendplugin-310.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/ascendplugin-710.yaml
+
     cp "$TOP_DIR"/Dockerfile "$TOP_DIR"/output/
     cp "$TOP_DIR"/ascendplugin.yaml "$TOP_DIR"/output/ascendplugin-"${version}".yaml
     cp "$TOP_DIR"/ascendplugin-volcano.yaml "$TOP_DIR"/output/ascendplugin-volcano-"${version}".yaml
@@ -68,6 +73,7 @@ function parse_version() {
       line=$(sed -n '4p' "$version_file" 2>&1)
       #cut the chars after ':'
       version=${line#*:}
+      build_version=${version}
     fi
 }
 
