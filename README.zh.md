@@ -25,7 +25,7 @@
 -   设备发现：支持从昇腾设备驱动中发现设备个数，将其发现的设备个数上报到Kubernetes系统中；支持发现拆分物理设备得到的虚拟设备，
 需要虚拟设备提前拆分完成。
 -   健康检查：支持检测昇腾设备的健康状态，当设备处于不健康状态时，上报到Kubernetes系统中，将不健康的昇腾设备从Kubernetes系统中剔除；
-虚拟设备健康状态由拆分其的物理设备决定。
+虚拟设备健康状态由拆分这些虚拟设备的物理设备决定。
 -   设备分配：支持在Kubernetes系统中分配昇腾设备。
 
 <h2 id="编译Ascend-Device-Plugin.md">编译Ascend Device Plugin</h2>
@@ -282,7 +282,7 @@
 
     **docker load** **-i** _Ascend-K8sDevicePlugin-xxx-arm64-Docker.tar.gz_
 
-3.  <a name="zh-cn_topic_0269670254_li26268471380"></a>执行如下命令，给带有Ascend 910（或Ascend 310）的节点打标签。
+3.  <a name="zh-cn_topic_0269670254_li26268471380"></a>执行如下命令，给带有Ascend 910（或Ascend 310, 或Ascend 710）的节点打标签。
 
     **kubectl label nodes** _localhost.localdomain_ **accelerator=**_huawei-Ascend910_
 
@@ -382,7 +382,7 @@
         (3) huawei.com/Ascend910: 4
             分配 4 颗 9 芯片
         (4) huawei.com/Ascend910-16c: 1
-            分配 1 颗算力为16核的虚拟设备，此处的1固定，不能填写其他值；支持的虚拟设备类型有：2c/4c/8c/16c
+            分配 1 颗算力为16核的虚拟设备，只支持单卡单容器任务（即数值只能填1）。支持调度2c、4c、8c、16c四种AI core数量的虚拟设备。
     
 3.  执行如下命令，创建Pod。
 
@@ -473,11 +473,12 @@
 ├── LICENSE                                          
 ├── Open Source Software Notice.md                   
 ├── README.zh.md
+├── README.md
 ├── ascend.yaml                                      # sample运行任务yaml
-├── ascendplugin-310.yaml                            # 推理卡部署yaml
+├── ascendplugin-310.yaml                            # 310推理卡部署yaml
+├── ascendplugin-710.yaml                            # 710推理卡部署yaml
 ├── ascendplugin-volcano.yaml                        # 和volcano实现亲和性调度部署yaml
 ├── ascendplugin.yaml                                # 推理卡部署yaml
-├── docker_run.sh                                    # docker运行命令
 ├── go.mod                                           
 └── go.sum                                           
 ```
