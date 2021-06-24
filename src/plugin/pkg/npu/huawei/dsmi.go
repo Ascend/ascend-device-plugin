@@ -191,6 +191,9 @@ func (d *DeviceManager) GetDeviceCount() (int32, error) {
 	if err != 0 {
 		return retError, fmt.Errorf("get device quantity failed, error code: %d", int32(err))
 	}
+	if int(count) < 0 || int(count) > hiAIMaxDeviceNum {
+		return retError, fmt.Errorf("number of deviceis incorrect: %d", int(count))
+	}
 	return int32(count), nil
 }
 
@@ -235,7 +238,9 @@ func (d *DeviceManager) GetPhyID(logicID uint32) (uint32, error) {
 	if err != 0 {
 		return unretError, fmt.Errorf("get phy id failed ,error code is: %d", int32(err))
 	}
-
+	if int(phyID) < 0 || int(phyID) > hiAIMaxDeviceNum {
+		return unretError, fmt.Errorf("get invalid physical id: %d", int(phyID))
+	}
 	return uint32(phyID), nil
 }
 
@@ -246,6 +251,9 @@ func (d *DeviceManager) GetLogicID(phyID uint32) (uint32, error) {
 	err := C.dsmi_get_logicid_from_phyid(C.uint(phyID), &logicID)
 	if err != 0 {
 		return unretError, fmt.Errorf("get logic id failed ,error code is : %d", int32(err))
+	}
+	if int(logicID) < 0 || int(logicID) > hiAIMaxDeviceNum {
+		return unretError, fmt.Errorf("get invalid logic id: %d", int(logicID))
 	}
 
 	return uint32(logicID), nil
