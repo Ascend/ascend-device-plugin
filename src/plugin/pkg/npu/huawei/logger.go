@@ -22,6 +22,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"time"
@@ -38,8 +39,13 @@ func NewLogger(loggerPath string) error {
 	if logger == nil {
 		return fmt.Errorf("create logger error")
 	}
-	error := os.Chmod(loggerPath, logChmod)
-	if error != nil{
+	err := checkAndCreateLogFile(loggerPath)
+	if err != nil {
+		logger.Error("create file failed")
+		return fmt.Errorf("create file failed")
+	}
+	err = os.Chmod(loggerPath, logChmod)
+	if err != nil{
 		logger.Error("config log path error")
 		return fmt.Errorf("set log file mode failed")
 	}
@@ -91,13 +97,28 @@ func ConfigLog(logPath string) *zap.Logger {
 	return zap.New(core, zap.AddCaller())
 }
 
+func checkAndCreateLogFile(filePath string) error {
+	_, err := os.Stat(filePath)
+	if err != nil {
+		if os.IsExist(err) {
+			return nil
+		}
+		f, err := os.Create(filePath)
+		defer f.Close()
+		if err != nil {
+			return fmt.Errorf("create file(%s) fail", path.Base(filePath))
+		}
+	}
+	return nil
+}
+
 func validate(path string) bool {
-	relpath, err := filepath.Abs(path)
+	realpath, err := filepath.Abs(path)
 	if err != nil {
 		fmt.Println("It's error when converted to an absolute path.")
 		return false
 	}
 	pattern := `^/*`
 	reg := regexp.MustCompile(pattern)
-	return reg.MatchString(relpath)
+	return reg.MatchString(realpath)
 }
