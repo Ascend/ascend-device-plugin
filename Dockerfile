@@ -12,4 +12,4 @@ ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/Ascend/driver/lib64/
 
 COPY ./output/ascendplugin /usr/local/bin/
 
-RUN chmod 500 /usr/local/bin/ascendplugin
+RUN chmod 550 /usr/local/bin/ascendplugin
