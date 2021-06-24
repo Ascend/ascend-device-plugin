@@ -8,6 +8,8 @@ ENV USE_ASCEND_DOCKER true
 
 ENV LD_LIBRARY_PATH  /usr/local/Ascend/driver/lib64/driver:/usr/local/Ascend/driver/lib64/common
 
-ENV  LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/Ascend/driver/lib64/
+ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/Ascend/driver/lib64/
 
 COPY ./output/ascendplugin /usr/local/bin/
+
+RUN chmod 500 /usr/local/bin/ascendplugin
