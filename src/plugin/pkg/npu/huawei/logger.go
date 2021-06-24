@@ -39,13 +39,13 @@ func NewLogger(loggerPath string) error {
 	if logger == nil {
 		return fmt.Errorf("create logger error")
 	}
-	error := checkAndCreateLogFile(loggerPath)
-	if error != nil {
-		logger.Error("create file fail")
-		return fmt.Errorf("create file fail")
+	err := checkAndCreateLogFile(loggerPath)
+	if err != nil {
+		logger.Error("create file failed")
+		return fmt.Errorf("create file failed")
 	}
-	error = os.Chmod(loggerPath, logChmod)
-	if error != nil{
+	err = os.Chmod(loggerPath, logChmod)
+	if err != nil{
 		logger.Error("config log path error")
 		return fmt.Errorf("set log file mode failed")
 	}
