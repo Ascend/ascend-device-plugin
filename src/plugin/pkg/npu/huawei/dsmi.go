@@ -238,7 +238,7 @@ func (d *DeviceManager) GetPhyID(logicID uint32) (uint32, error) {
 	if err != 0 {
 		return unretError, fmt.Errorf("get phy id failed ,error code is: %d", int32(err))
 	}
-	if int(phyID) > hiAIMaxDeviceNum {
+	if uint32(phyID) > uint32(hiAIMaxDeviceNum) {
 		return unretError, fmt.Errorf("get invalid physical id: %d", int(phyID))
 	}
 	return uint32(phyID), nil
@@ -252,7 +252,7 @@ func (d *DeviceManager) GetLogicID(phyID uint32) (uint32, error) {
 	if err != 0 {
 		return unretError, fmt.Errorf("get logic id failed ,error code is : %d", int32(err))
 	}
-	if int(logicID) > hiAIMaxDeviceNum {
+	if uint32(logicID) > uint32(hiAIMaxDeviceNum) {
 		return unretError, fmt.Errorf("get invalid logic id: %d", int(logicID))
 	}
 
