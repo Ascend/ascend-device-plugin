@@ -115,6 +115,10 @@ func (hdm *HwDevManager) GetDevType() []string {
 // Serve start grpc server
 func (hdm *HwDevManager) Serve(devType, socketPath, pluginSocket string, pluginServerFunc func(*HwDevManager, string, string) HwPluginServeInterface) {
 	// start sockPath monitor
+	if !VerifyPath(socketPath) {
+		logger.Error("socket path verify failed", zap.String("socketPath", socketPath))
+		os.Exit(1)
+	}
 	pluginSockPath := path.Join(socketPath, pluginSocket)
 
 	logger.Info("Starting socket file watcher.")
@@ -152,7 +156,6 @@ func (hdm *HwDevManager) Serve(devType, socketPath, pluginSocket string, pluginS
 		// Monitor file signals and system signals
 		restart = hdm.signalWatch(watcher.fileWatcher, osSignChan, restart, hps, pluginSockPath)
 	}
-
 }
 
 func preStart(hps HwPluginServeInterface, pluginSockPath string) {
