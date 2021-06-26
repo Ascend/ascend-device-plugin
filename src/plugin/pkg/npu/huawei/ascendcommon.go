@@ -45,6 +45,10 @@ const (
 
 	// Default device ip
 	defaultDeviceIP = "127.0.0.1"
+
+	// rootUID and rootGID is user group
+	rootUID = 0
+	rootGID = 0
 )
 
 // ascendCommonFunction struct definition
@@ -157,7 +161,7 @@ func VerifyPath(verifyPath string) bool {
 	}
 	pathInfo, err := os.Stat(absVerifyPath)
 	if err != nil || os.IsNotExist(err) {
-		logger.Error("socket path not exist: ", zap.Error(err))
+		logger.Error("file path not exist: ", zap.Error(err))
 		return false
 	}
 	realPath, err := filepath.EvalSymlinks(absVerifyPath)
@@ -166,7 +170,7 @@ func VerifyPath(verifyPath string) bool {
 		return false
 	}
 	stat, ok:= pathInfo.Sys().(*syscall.Stat_t)
-	if !ok || stat.Uid != 0 || stat.Gid != 0 {
+	if !ok || stat.Uid != rootUID || stat.Gid != rootGID {
 		logger.Error("Non-root owner group of the path")
 		return false
 	}

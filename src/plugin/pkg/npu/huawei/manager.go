@@ -117,7 +117,7 @@ func (hdm *HwDevManager) Serve(devType, socketPath, pluginSocket string, pluginS
 	// start sockPath monitor
 	if !VerifyPath(socketPath) {
 		logger.Error("socket path verify failed", zap.String("socketPath", socketPath))
-		os.Exit(1)
+		return
 	}
 	pluginSockPath := path.Join(socketPath, pluginSocket)
 
