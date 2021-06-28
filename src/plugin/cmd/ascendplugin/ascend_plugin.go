@@ -72,7 +72,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	neverStop := make(chan struct{}, 1)
+	neverStop := make(chan struct{})
 	switch *mode {
 	case "ascend310", "pci", "vnpu", "ascend910", "ascend710", "":
 		logger.Info("ascend device plugin running mode", zap.String("mode", *mode))
