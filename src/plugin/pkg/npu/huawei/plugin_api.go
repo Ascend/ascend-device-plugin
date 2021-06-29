@@ -68,6 +68,11 @@ var (
 	m              sync.Mutex
 )
 
+const (
+	// envNum is the number of env variables that will be written to the container
+	envNum = 2
+)
+
 // Register function is use to register k8s devicePlugin to kubelet.
 func (hps *HwPluginServe) Register(k8sSocketPath, pluginSocket, resourceName string) error {
 	conn, err := grpc.Dial(k8sSocketPath, grpc.WithInsecure(),
@@ -375,7 +380,7 @@ func addEnv(devices map[string]string, ascendRuntimeOptions string, resp *plugin
 	// add env
 	var ascendVisibleDevices []string
 	if len((*resp).Envs) == 0 {
-		(*resp).Envs = make(map[string]string)
+		(*resp).Envs = make(map[string]string, envNum)
 	}
 	for deviceID := range devices {
 		ascendVisibleDevices = append(ascendVisibleDevices, deviceID)
@@ -683,7 +688,7 @@ func (s *pluginAPI) getNPUAnnotationOfPod(pod *v1.Pod, allocateDevice *sets.Stri
 
 func (s *pluginAPI) responseAnonation(resp *pluginapi.ContainerAllocateResponse, devices map[string]string) {
 	// Annotations
-	annotation := make(map[string]string)
+	annotation := make(map[string]string, 1)
 	var instance Instance
 	instance.PodName = "cloud-localhost-"
 

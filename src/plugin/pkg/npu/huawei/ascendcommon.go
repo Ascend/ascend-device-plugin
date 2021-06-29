@@ -22,10 +22,12 @@ import (
 	"go.uber.org/zap"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+	"syscall"
 )
 
 const (
@@ -43,6 +45,10 @@ const (
 
 	// Default device ip
 	defaultDeviceIP = "127.0.0.1"
+
+	// rootUID and rootGID is user group
+	rootUID = 0
+	rootGID = 0
 )
 
 // ascendCommonFunction struct definition
@@ -144,6 +150,31 @@ func IsVirtualDev(devType string) bool {
 	pattern := virtualDevicesPattern
 	reg := regexp.MustCompile(pattern)
 	return reg.MatchString(devType)
+}
+
+// VerifyPath used to verify the validity of the path
+func VerifyPath(verifyPath string) bool {
+	absVerifyPath, err := filepath.Abs(verifyPath)
+	if err != nil {
+		logger.Error("abs current path failed: ", zap.Error(err))
+		return false
+	}
+	pathInfo, err := os.Stat(absVerifyPath)
+	if err != nil || os.IsNotExist(err) {
+		logger.Error("file path not exist: ", zap.Error(err))
+		return false
+	}
+	realPath, err := filepath.EvalSymlinks(absVerifyPath)
+	if err != nil || absVerifyPath != realPath {
+		logger.Error("Symlinks is not allowed: ")
+		return false
+	}
+	stat, ok:= pathInfo.Sys().(*syscall.Stat_t)
+	if !ok || stat.Uid != rootUID || stat.Gid != rootGID {
+		logger.Error("Non-root owner group of the path")
+		return false
+	}
+	return true
 }
 
 // AssembleNpuDeviceStruct is used to create a struct of npuDevice

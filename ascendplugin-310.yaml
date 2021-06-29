@@ -43,6 +43,7 @@ spec:
         args: [ "umask 0027;ascendplugin  --useAscendDocker=${USE_ASCEND_DOCKER}" ]
         securityContext:
           privileged: true
+          readOnlyRootFilesystem: true
         imagePullPolicy: Never
         volumeMounts:
           - name: device-plugin
