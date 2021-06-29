@@ -60,7 +60,7 @@ func TestHwDevManager_Serve(t *testing.T) {
 	if err != nil {
 		t.Fatal("TestHwDevManager_Serve Run FAiled, reason is failed to create sock file")
 	}
-	f.Chmod(logChmod)
+	f.Chmod(socketChmod)
 	f.Close()
 	go deleteServerSocketByDevManager(serverSock310, fakeHwDevManager)
 	fakeHwDevManager.Serve("Ascend310", "/var/lib/kubelet/device-plugins/", "Ascend310.sock", NewFakeHwPluginServe)
@@ -84,7 +84,7 @@ func TestSignalWatch(t *testing.T) {
 	if err != nil {
 		t.Fatal("TestSignalWatch Run FAiled, reason is failed to create sock file")
 	}
-	f.Chmod(logChmod)
+	f.Chmod(socketChmod)
 	f.Close()
 	watcher := NewFileWatch()
 	err = watcher.watchFile(pluginapi.DevicePluginPath)

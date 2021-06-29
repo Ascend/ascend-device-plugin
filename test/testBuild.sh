@@ -1,5 +1,5 @@
 #!/bin/sh
-set -x
+
 CUR_DIR=$(dirname $(readlink -f $0))
 TOP_DIR=$(realpath "${CUR_DIR}"/..)
 export GO111MODULE="on"

@@ -72,7 +72,7 @@ func createNetListen(pluginSocketPath string) (net.Listener, error) {
 		logger.Error("device plugin start failed.", zap.String("err", err.Error()))
 		return nil, err
 	}
-	err = os.Chmod(pluginSocketPath, logChmod)
+	err = os.Chmod(pluginSocketPath, socketChmod)
 	if err != nil {
 		logger.Error("chmod error", zap.Error(err))
 	}
