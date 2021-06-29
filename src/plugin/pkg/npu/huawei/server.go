@@ -64,7 +64,7 @@ func NewHwPluginServe(hdm *HwDevManager, devType string, socket string) HwPlugin
 		devType:        devType,
 		hdm:            hdm,
 		runMode:        hdm.runMode,
-		devices:        make(map[string]*npuDevice),
+		devices:        make(map[string]*npuDevice, hiAIMaxDeviceNum),
 		socket:         socket,
 		kubeInteractor: ki,
 		healthDevice:   sets.String{},
