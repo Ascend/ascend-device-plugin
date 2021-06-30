@@ -379,7 +379,7 @@ func (s *pluginAPI) getNPUByStatus(kubeClient kubernetes.Interface, nodeName, st
 	for _, pod := range podList.Items {
 		annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, s.hps.devType)
 		tmpNpu, ok := pod.Annotations[annotationTag]
-		if !ok || len(tmpNpu) == 0 {
+		if !ok {
 			continue
 		}
 		*useNpu = append(*useNpu, strings.Split(tmpNpu, ",")...)
