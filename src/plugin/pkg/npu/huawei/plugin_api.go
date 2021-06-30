@@ -682,7 +682,7 @@ func (s *pluginAPI) getNPUResourceNumOfPod(pod *v1.Pod) uint {
 	for _, container := range containers {
 		if val, ok := container.Resources.Limits[v1.ResourceName(annotationTag)]; ok {
 			if uint(val.Value()) > uint(maxDevicesNum) {
-				fmt.Errorf("the devices limits can't bigger than 8")
+				fmt.Errorf("the devices limits can't bigger than %d", maxDevicesNum)
 				continue
 			}
 			total += uint(val.Value())
