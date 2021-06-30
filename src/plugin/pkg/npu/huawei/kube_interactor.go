@@ -20,7 +20,9 @@ import (
 	"fmt"
 	"go.uber.org/zap"
 	"os"
+	"regexp"
 	"strings"
+	"syscall"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -33,6 +35,10 @@ import (
 	nodeutil "k8s.io/kubernetes/pkg/util/node"
 )
 
+const (
+	kubeEnvMaxLength = 253
+)
+
 // KubeInteractor include kubeclientSet & nodeName
 type KubeInteractor struct {
 	clientset kubernetes.Interface
@@ -41,7 +47,12 @@ type KubeInteractor struct {
 
 // NewKubeClient get client from KUBECONFIG  or not
 func NewKubeClient() (*kubernetes.Clientset, error) {
-	clientCfg, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
+	kubeConfig := os.Getenv("KUBECONFIG")
+	if err := checkKubeConfig(kubeConfig); err != nil {
+		return nil, fmt.Errorf("check kube config failed: %v", err)
+	}
+
+	clientCfg, err := clientcmd.BuildConfigFromFlags("", kubeConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -61,10 +72,42 @@ func NewKubeInteractor() (*KubeInteractor, error) {
 		return nil, fmt.Errorf("failed to create kube client: %v", err)
 	}
 
+	nodeName := os.Getenv("NODE_NAME")
+	if err := checkNodeName(nodeName); err != nil {
+		return nil, fmt.Errorf("check node name failed: %v", err)
+	}
+
 	return &KubeInteractor{
 		clientset: client,
-		nodeName:  os.Getenv("NODE_NAME"),
+		nodeName:  nodeName,
 	}, nil
+}
+
+func checkKubeConfig(kubeConfig string) error {
+	if len(kubeConfig) > kubeEnvMaxLength {
+		return fmt.Errorf("kube config length %d is bigger than %d", len(kubeConfig), kubeEnvMaxLength)
+	}
+	kubeConfigPathInfo, err := os.Stat(kubeConfig)
+	if err != nil || os.IsNotExist(err) {
+		return nil
+	}
+	stat, ok := kubeConfigPathInfo.Sys().(*syscall.Stat_t)
+	if !ok || stat.Uid != rootUID || stat.Gid != rootGID {
+		return fmt.Errorf("non-root owner group of the path")
+	}
+	return nil
+}
+
+func checkNodeName(nodeName string) error {
+	if len(nodeName) > kubeEnvMaxLength {
+		return fmt.Errorf("node name length %d is bigger than %d", len(nodeName), kubeEnvMaxLength)
+	}
+	pattern := "^[a-z0-9A-Z]+([a-z0-9A-Z\\-]*)[a-z0-9A-Z]+$"
+	reg := regexp.MustCompile(pattern)
+	if !reg.MatchString(nodeName) {
+		return fmt.Errorf("node name %s is illegal", nodeName)
+	}
+	return nil
 }
 
 func (ki *KubeInteractor) patchAnnotationOnNode(allocatableDevices sets.String, devType string) error {
