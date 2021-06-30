@@ -80,7 +80,7 @@ const (
 	podNameSpaceMaxLength = 63
 
 	// maxDevicesNum is max number of devices
-	maxDevicesNum = 8
+	maxDevicesNum = 64
 )
 
 // Register function is use to register k8s devicePlugin to kubelet.
@@ -252,7 +252,7 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 		var dlogMountPath string
 		allocateNum := len(rqt.DevicesIDs)
 		if allocateNum > maxDevicesNum {
-			return nil, fmt.Errorf("the devices can't bigger than 8")
+			return nil, fmt.Errorf("the devices can't bigger than %d", maxDevicesNum)
 		}
 		ascendVisibleDevicesMap, errs := s.setEnvFromKubelet(rqt)
 		if errs != nil {
