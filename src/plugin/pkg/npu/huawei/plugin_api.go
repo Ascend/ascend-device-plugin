@@ -610,11 +610,11 @@ func (s *pluginAPI) getPendingPodsOnNode() ([]v1.Pod, error) {
 	}
 
 	for _, pod := range pl.Items {
-		if err := s.checkPodName(pod.Name); err != nil {
+		if err := s.checkPodNameAndSpace(pod.Name, podNameMaxLength); err != nil {
 			logger.Error("pod name syntax illegal", zap.Error(err))
 			continue
 		}
-		if err := s.checkPodNameSpace(pod.Namespace); err != nil {
+		if err := s.checkPodNameAndSpace(pod.Namespace, podNameSpaceMaxLength); err != nil {
 			logger.Error("pod namespace syntax illegal", zap.Error(err))
 			continue
 		}
@@ -768,26 +768,18 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int) (map[string]string, e
 	return ascendVisibleDevices, nil
 }
 
-func (s *pluginAPI) checkPodName(podName string) error {
-	if len(podName) > podNameMaxLength {
-		return fmt.Errorf("pod name length %d is bigger than %d", len(podName), podNameMaxLength)
-	}
-	pattern := "^[a-z0-9]+([a-z0-9\\-.]*)[a-z0-9]+$"
-	reg := regexp.MustCompile(pattern)
-	if !reg.MatchString(podName) {
-		return fmt.Errorf("pod name %s is illegal", podName)
-	}
-	return nil
-}
-
-func (s *pluginAPI) checkPodNameSpace(podNameSpace string) error {
-	if len(podNameSpace) > podNameSpaceMaxLength {
-		return fmt.Errorf("pod namespace length %d is bigger than %d", len(podNameSpace), podNameSpaceMaxLength)
+func (s *pluginAPI) checkPodNameAndSpace(podPara string, maxLength int) error {
+	if len(podPara) > maxLength {
+		return fmt.Errorf("para length %d is bigger than %d", len(podPara), maxLength)
 	}
 	pattern := "^[a-z0-9]+[a-z0-9\\-]*[a-z0-9]+$"
+	if maxLength == podNameMaxLength {
+		pattern = "^[a-z0-9]+([a-z0-9\\-.]*)[a-z0-9]+$"
+	}
+
 	reg := regexp.MustCompile(pattern)
-	if !reg.MatchString(podNameSpace) {
-		return fmt.Errorf("pod namespace %s is illegal", podNameSpace)
+	if !reg.MatchString(podPara) {
+		return fmt.Errorf("para %s is illegal", podPara)
 	}
 	return nil
 }
