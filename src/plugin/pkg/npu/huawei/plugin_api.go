@@ -28,6 +28,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"math"
 	"net"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -71,6 +72,12 @@ var (
 const (
 	// envNum is the number of env variables that will be written to the container
 	envNum = 2
+
+	// podNameMaxLength is the max pod name length
+	podNameMaxLength = 253
+
+	// podNameSpaceMaxLength is the max pod namespace length
+	podNameSpaceMaxLength = 63
 )
 
 // Register function is use to register k8s devicePlugin to kubelet.
@@ -367,7 +374,7 @@ func (s *pluginAPI) getNPUByStatus(kubeClient kubernetes.Interface, nodeName, st
 	for _, pod := range podList.Items {
 		annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, s.hps.devType)
 		tmpNpu, ok := pod.Annotations[annotationTag]
-		if !ok {
+		if !ok || len(tmpNpu) == 0 {
 			continue
 		}
 		*useNpu = append(*useNpu, strings.Split(tmpNpu, ",")...)
@@ -598,6 +605,14 @@ func (s *pluginAPI) getPendingPodsOnNode() ([]v1.Pod, error) {
 	}
 
 	for _, pod := range pl.Items {
+		if err := s.checkPodName(pod.Name); err != nil {
+			logger.Error("pod name syntax illegal", zap.Error(err))
+			continue
+		}
+		if err := s.checkPodNameSpace(pod.Namespace); err != nil {
+			logger.Error("pod namespace syntax illegal", zap.Error(err))
+			continue
+		}
 		if s.getNPUResourceNumOfPod(&pod) > 0 && s.isAscendAssignedPod(&pod) && !s.isShouldDeletePod(&pod) {
 			res = append(res, pod)
 		}
@@ -717,6 +732,7 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int) (map[string]string, e
 		logger.Info("not get pending pod")
 		return nil, err
 	}
+
 	allocateDevice := sets.NewString()
 	err = s.getNPUAnnotationOfPod(oldPod, &allocateDevice, allocateNum)
 	if err != nil {
@@ -741,6 +757,30 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int) (map[string]string, e
 		return nil, err
 	}
 	return ascendVisibleDevices, nil
+}
+
+func (s *pluginAPI) checkPodName(podName string) error {
+	if len(podName) > podNameMaxLength {
+		return fmt.Errorf("pod name length %d is bigger than %d", len(podName), podNameMaxLength)
+	}
+	pattern := "^[a-z0-9]+([a-z0-9\\-.]*)[a-z0-9]+$"
+	reg := regexp.MustCompile(pattern)
+	if !reg.MatchString(podName) {
+		return fmt.Errorf("pod name %s is illegal", podName)
+	}
+	return nil
+}
+
+func (s *pluginAPI) checkPodNameSpace(podNameSpace string) error {
+	if len(podNameSpace) > podNameSpaceMaxLength {
+		return fmt.Errorf("pod namespace length %d is bigger than %d", len(podNameSpace), podNameSpaceMaxLength)
+	}
+	pattern := "^[a-z0-9]+[a-z0-9\\-]*[a-z0-9]+$"
+	reg := regexp.MustCompile(pattern)
+	if !reg.MatchString(podNameSpace) {
+		return fmt.Errorf("pod namespace %s is illegal", podNameSpace)
+	}
+	return nil
 }
 
 func (s *pluginAPI) getAscendVisiDevsWithVolcano(allocateDevice sets.String, devices *map[string]string) error {
