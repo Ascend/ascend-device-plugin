@@ -28,6 +28,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"math"
 	"net"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -71,6 +72,15 @@ var (
 const (
 	// envNum is the number of env variables that will be written to the container
 	envNum = 2
+
+	// podNameMaxLength is the max pod name length
+	podNameMaxLength = 253
+
+	// podNameSpaceMaxLength is the max pod namespace length
+	podNameSpaceMaxLength = 63
+
+	// maxDevicesNum is max number of devices
+	maxDevicesNum = 64
 )
 
 // Register function is use to register k8s devicePlugin to kubelet.
@@ -240,8 +250,10 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 
 		var devID []string
 		var dlogMountPath string
-
 		allocateNum := len(rqt.DevicesIDs)
+		if allocateNum > maxDevicesNum {
+			return nil, fmt.Errorf("the devices can't bigger than %d", maxDevicesNum)
+		}
 		ascendVisibleDevicesMap, errs := s.setEnvFromKubelet(rqt)
 		if errs != nil {
 			logger.Error("plugin doesn't have device", zap.Error(errs))
@@ -598,6 +610,14 @@ func (s *pluginAPI) getPendingPodsOnNode() ([]v1.Pod, error) {
 	}
 
 	for _, pod := range pl.Items {
+		if err := s.checkPodNameAndSpace(pod.Name, podNameMaxLength); err != nil {
+			logger.Error("pod name syntax illegal", zap.Error(err))
+			continue
+		}
+		if err := s.checkPodNameAndSpace(pod.Namespace, podNameSpaceMaxLength); err != nil {
+			logger.Error("pod namespace syntax illegal", zap.Error(err))
+			continue
+		}
 		if s.getNPUResourceNumOfPod(&pod) > 0 && s.isAscendAssignedPod(&pod) && !s.isShouldDeletePod(&pod) {
 			res = append(res, pod)
 		}
@@ -661,6 +681,10 @@ func (s *pluginAPI) getNPUResourceNumOfPod(pod *v1.Pod) uint {
 	annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, s.hps.devType)
 	for _, container := range containers {
 		if val, ok := container.Resources.Limits[v1.ResourceName(annotationTag)]; ok {
+			if uint(val.Value()) > uint(maxDevicesNum) {
+				fmt.Errorf("the devices limits can't bigger than %d", maxDevicesNum)
+				continue
+			}
 			total += uint(val.Value())
 		}
 	}
@@ -717,6 +741,7 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int) (map[string]string, e
 		logger.Info("not get pending pod")
 		return nil, err
 	}
+
 	allocateDevice := sets.NewString()
 	err = s.getNPUAnnotationOfPod(oldPod, &allocateDevice, allocateNum)
 	if err != nil {
@@ -741,6 +766,22 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int) (map[string]string, e
 		return nil, err
 	}
 	return ascendVisibleDevices, nil
+}
+
+func (s *pluginAPI) checkPodNameAndSpace(podPara string, maxLength int) error {
+	if len(podPara) > maxLength {
+		return fmt.Errorf("para length %d is bigger than %d", len(podPara), maxLength)
+	}
+	pattern := "^[a-z0-9]+[a-z0-9\\-]*[a-z0-9]+$"
+	if maxLength == podNameMaxLength {
+		pattern = "^[a-z0-9]+([a-z0-9\\-.]*)[a-z0-9]+$"
+	}
+
+	reg := regexp.MustCompile(pattern)
+	if !reg.MatchString(podPara) {
+		return fmt.Errorf("para %s is illegal", podPara)
+	}
+	return nil
 }
 
 func (s *pluginAPI) getAscendVisiDevsWithVolcano(allocateDevice sets.String, devices *map[string]string) error {
