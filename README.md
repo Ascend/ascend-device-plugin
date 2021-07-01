@@ -119,17 +119,38 @@ The device management plug-in provides the following functions:
         **ascendplugin-volcano.yaml**
 
         ```
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          name: ascend-device-plugin-sa
+          namespace: kube-system
+        ---
+        kind: ClusterRole
+        apiVersion: rbac.authorization.k8s.io/v1
+        metadata:
+          name: pods-node-ascend-device-plugin-role
+        rules:
+          - apiGroups: [""]
+            resources: ["pods"]
+            verbs: ["get", "list", "update"]
+          - apiGroups: [""]
+            resources: ["nodes"]
+            verbs: ["get"]
+          - apiGroups: [""]
+            resources: ["nodes/status"]
+            verbs: ["get", "patch"]
+        ---
         kind: ClusterRoleBinding
         apiVersion: rbac.authorization.k8s.io/v1
         metadata:
-          name: pods-device-plugin
+          name: pods-node-ascend-device-plugin-rolebinding
         subjects:
           - kind: ServiceAccount
-            name: default
+            name: ascend-device-plugin-sa
             namespace: kube-system
         roleRef:
           kind: ClusterRole
-          name: cluster-admin
+          name: pods-node-ascend-device-plugin-role
           apiGroup: rbac.authorization.k8s.io
         ---
         apiVersion: apps/v1
@@ -163,8 +184,9 @@ The device management plug-in provides the following functions:
               priorityClassName: "system-node-critical"
               nodeSelector:
                 accelerator: huawei-Ascend910
+              serviceAccountName: ascend-device-plugin-sa
               containers:
-              - image: ascend-k8sdeviceplugin:v0.0.1   #Image name and version
+              - image: ascend-k8sdeviceplugin:v2.0.2   #Image name and version
                 name: device-plugin-01
                 resources:
                   requests:
@@ -180,7 +202,7 @@ The device management plug-in provides the following functions:
                 imagePullPolicy: Never
                 volumeMounts:
                   - name: device-plugin
-                    mountPath: /var/lib/kubelet/device-plugins
+                mountPath: /var/lib/kubelet/device-plugins
                   - name: hiai-driver
                     mountPath: /usr/local/Ascend/driver  #Set the value to the actual driver installation directory.
                   - name: log-path
@@ -202,7 +224,7 @@ The device management plug-in provides the following functions:
                     path: /var/log/devicePlugin
         
         ```
-
+    
 3.  parameter “useAscendDocker” description
     ```
     scene-1:not install Ascend-docker-runtime
