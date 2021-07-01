@@ -38,6 +38,7 @@ type HwPluginServe struct {
 	socket         string
 	kubeInteractor *KubeInteractor
 	healthDevice   sets.String
+	unHealthDevice sets.String
 }
 
 // HwPluginServeInterface the interface of PluginServer
@@ -68,6 +69,7 @@ func NewHwPluginServe(hdm *HwDevManager, devType string, socket string) HwPlugin
 		socket:         socket,
 		kubeInteractor: ki,
 		healthDevice:   sets.String{},
+		unHealthDevice: sets.String{},
 	}
 }
 

@@ -20,6 +20,7 @@ package huawei
 import (
 	"fmt"
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/util/sets"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"os"
 	"path/filepath"
@@ -111,10 +112,32 @@ func getPhyIDByName(DeviceName string) (uint32, error) {
 	return phyID, nil
 }
 
+func getUnHealthDev(listenUHDev, annotationUHDev, labelsRecoverDev, device910 sets.String) (
+	sets.String, string) {
+	var newAscend910 []string
+	if autoStowingDevs {
+		for device := range device910 {
+			newAscend910 = append(newAscend910, device)
+		}
+		return sets.String{}, strings.Join(newAscend910, ",")
+	}
+	addRecoverDev := annotationUHDev.Difference(listenUHDev)
+	newLabelsRecoverDev := labelsRecoverDev.Union(addRecoverDev)
+	newDevice910 := device910.Difference(newLabelsRecoverDev)
+	for device := range newDevice910 {
+		newAscend910 = append(newAscend910, device)
+	}
+	return newLabelsRecoverDev, strings.Join(newAscend910, ",")
+}
+
 func unhealthyState(healthyState uint32, logicID uint32, healthyType string, dmgr DeviceMgrInterface) error {
 	phyID, err := dmgr.GetPhyID(logicID)
 	if err != nil {
 		return fmt.Errorf("get phyID failed %v", err)
+	}
+	errs := dmgr.GetDeviceErrorCode(logicID)
+	if errs != nil {
+		return errs
 	}
 	// if logFlag is true,print device error message
 	if logFlag {
@@ -272,10 +295,7 @@ func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr DeviceMgrIn
 		return pluginapi.Unhealthy
 	}
 	switch healthState {
-	case normalState:
-		return pluginapi.Healthy
-	case generalAlarm:
-		logger.Warn("device health state", zap.Uint32("healthState", healthState))
+	case normalState, generalAlarm:
 		return pluginapi.Healthy
 	default:
 		err = unhealthyState(healthState, logicID, "healthState", dmgr)

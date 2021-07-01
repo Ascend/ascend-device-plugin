@@ -74,6 +74,8 @@ const (
 	pwr16CSuffix          = "Ascend910-16c"
 
 	logicIDIndexInVirtualDevID910 = 3
+	huaweiUnHealthAscend910 = "huawei.com/Ascend910-Unhealthy"
+	huaweiRecoverAscend910  = "huawei.com/Ascend910-Recover"
 
 	// FunctionNotFound for describe dsmi interface function is exist or not
 	FunctionNotFound = "-99998"

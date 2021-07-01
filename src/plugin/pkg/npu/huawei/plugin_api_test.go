@@ -44,7 +44,7 @@ const (
 // TestPluginAPI_ListAndWatch for listAndWatch
 func TestPluginAPI_ListAndWatch(t *testing.T) {
 	hdm := createFakeDevManager("ascend910")
-	hdm.SetParameters(false, false, true)
+	hdm.SetParameters(false, false, true, true, sleepTime)
 	if err := hdm.GetNPUs(); err != nil {
 		t.Fatal(err)
 	}
@@ -108,6 +108,7 @@ func createFakePluginAPI(hdm *HwDevManager, devType string, socket string, ki *K
 		socket:         socket,
 		kubeInteractor: ki,
 		healthDevice:   sets.String{},
+		unHealthDevice: sets.String{},
 	},
 		outbreak: atomic.NewBool(false),
 	}
@@ -116,7 +117,7 @@ func createFakePluginAPI(hdm *HwDevManager, devType string, socket string, ki *K
 // TestAddAnnotation for test AddAnnotation
 func TestAddAnnotation(t *testing.T) {
 	hdm := createFakeDevManager("ascend910")
-	hdm.SetParameters(false, false, true)
+	hdm.SetParameters(false, false, true, true, sleepTime)
 	if err := hdm.GetNPUs(); err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +155,7 @@ func TestAddAnnotation(t *testing.T) {
 // TestAllocate for test Allocate
 func TestAllocate(t *testing.T) {
 	hdm := createFakeDevManager("ascend910")
-	hdm.SetParameters(false, true, false)
+	hdm.SetParameters(false, true, false, true, sleepTime)
 	if err := hdm.GetNPUs(); err != nil {
 		t.Fatal(err)
 	}

@@ -123,6 +123,17 @@ func (ki *KubeInteractor) patchAnnotationOnNode(allocatableDevices sets.String, 
 
 		groupAllocatableDevs := ki.groupDevByPower(allocatableDevices)
 		newNode := ki.updateNodeAnnotations(devType, groupAllocatableDevs, node)
+		if devType == "" {
+			newLabelsRecoverDev, newAscend910 := getUnHealthDev(totalUHDevices,
+				ki.convertDevListToSets(node.Annotations[huaweiUnHealthAscend910], "comma"),
+				ki.convertDevListToSets(node.Labels[huaweiRecoverAscend910], "dot"),
+				ki.convertDevListToSets(groupAllocatableDevs[huaweiAscend910], "comma"))
+			newNode.Annotations[huaweiAscend910] = newAscend910
+			newNode.Annotations[huaweiUnHealthAscend910] = ki.convertSetsToString(totalUHDevices, "comma")
+			if !autoStowingDevs {
+				newNode.Labels[huaweiRecoverAscend910] = ki.convertSetsToString(newLabelsRecoverDev, "dot")
+			}
+		}
 		_, _, err = nodeutil.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), node, newNode)
 		if err != nil {
 			logger.Error("failed to patch volcano npu resource: %v", zap.Error(err))
@@ -133,14 +144,49 @@ func (ki *KubeInteractor) patchAnnotationOnNode(allocatableDevices sets.String, 
 	return err
 }
 
+func (ki *KubeInteractor) convertDevListToSets(devices string, sepType string) sets.String {
+	deviceSets := sets.String{}
+	var devicesList []string
+	if sepType == "dot" {
+		devicesList =  strings.Split(devices, ".")
+	} else {
+		devicesList = strings.Split(devices, ",")
+	}
+	for _, device := range devicesList {
+		if len(device) == 0 {
+			continue
+		}
+		deviceSets.Insert(device)
+	}
+	return deviceSets
+}
+
+func (ki *KubeInteractor) convertSetsToString(annotationUHDevice sets.String, sepType string) string {
+	var unHealthDevs []string
+	for device := range annotationUHDevice {
+		unHealthDevs = append(unHealthDevs, device)
+	}
+	if sepType == "dot" {
+		return strings.Join(unHealthDevs, ".")
+	}
+	return strings.Join(unHealthDevs, ",")
+}
+
 func (ki *KubeInteractor) updateNodeAnnotations(devType string, groupAllocatableDevs map[string]string,
 	node *v1.Node) *v1.Node {
+	if !firstTimeList {
+		delete(node.Annotations, huaweiUnHealthAscend910)
+		delete(node.Annotations, huaweiAscend910)
+		delete(node.Labels, huaweiRecoverAscend910)
+		firstTimeList = true
+	}
 	newNode := node.DeepCopy()
 	if devType != "" {
 		annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, devType)
 		newNode.Annotations[annotationTag] = groupAllocatableDevs[annotationTag]
 		return newNode
 	}
+
 	for annotationTag, deviceNames := range groupAllocatableDevs {
 		annotation, isNil := node.Annotations[annotationTag]
 		setDevs := ki.convertStringToSet(deviceNames)

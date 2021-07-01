@@ -139,6 +139,11 @@ func (d *fakeDeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, er
 	return cgoDsmiVDevInfos, nil
 }
 
+// GetDeviceErrorCode get device error code
+func (d *fakeDeviceManager) GetDeviceErrorCode(logicID uint32) error {
+	return nil
+}
+
 // TestUnhealthyState for UnhealthyState
 func TestUnhealthyState(t *testing.T) {
 	err := unhealthyState(1, uint32(3), "healthState", newFakeDeviceManager())
