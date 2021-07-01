@@ -5,7 +5,7 @@ set -e
 CUR_DIR=$(dirname $(readlink -f "$0"))
 TOP_DIR=$(realpath "${CUR_DIR}"/..)
 build_version="v2.0.2"
-output_name="ascendplugin"
+output_name="deviceplugin"
 docker_images_name="ascend-k8sdeviceplugin:v2.0.2"
 os_type=$(arch)
 if [ "${os_type}" = "aarch64" ]; then
@@ -27,7 +27,7 @@ function clear_env() {
 }
 
 function build_plugin() {
-    cd "${TOP_DIR}"/src/plugin/cmd/ascendplugin
+    cd "${TOP_DIR}"/src/plugin/cmd/deviceplugin
     export CGO_ENABLED=1 
     export CGO_CFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
     export CGO_CPPFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv" 
@@ -40,30 +40,30 @@ function build_plugin() {
             -trimpath
     ls "${output_name}"
     if [ $? -ne 0 ]; then
-        echo "fail to find ascendplugin"
+        echo "fail to find deviceplugin"
         exit 1
     fi
 }
 
 function mv_file() {
-    mv "${TOP_DIR}/src/plugin/cmd/ascendplugin/${output_name}"   "${TOP_DIR}"/output
+    mv "${TOP_DIR}/src/plugin/cmd/deviceplugin/${output_name}"   "${TOP_DIR}"/output
     chmod 500 "${TOP_DIR}/output/${output_name}"
 }
 
 function modify_version() {
     cd "${TOP_DIR}"
-    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/ascendplugin.yaml
-    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/ascendplugin-volcano.yaml
-    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/ascendplugin-310.yaml
-    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/ascendplugin-710.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/deviceplugin.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/deviceplugin-volcano.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/deviceplugin-310.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/deviceplugin-710.yaml
 
     cp "$TOP_DIR"/Dockerfile "$TOP_DIR"/output/
-    cp "$TOP_DIR"/ascendplugin.yaml "$TOP_DIR"/output/ascendplugin-"${version}".yaml
-    cp "$TOP_DIR"/ascendplugin-volcano.yaml "$TOP_DIR"/output/ascendplugin-volcano-"${version}".yaml
-    cp "$TOP_DIR"/ascendplugin-310.yaml "$TOP_DIR"/output/ascendplugin-310-"${version}".yaml
-    cp "$TOP_DIR"/ascendplugin-710.yaml "$TOP_DIR"/output/ascendplugin-710-"${version}".yaml
+    cp "$TOP_DIR"/deviceplugin.yaml "$TOP_DIR"/output/deviceplugin-"${version}".yaml
+    cp "$TOP_DIR"/deviceplugin-volcano.yaml "$TOP_DIR"/output/deviceplugin-volcano-"${version}".yaml
+    cp "$TOP_DIR"/deviceplugin-310.yaml "$TOP_DIR"/output/deviceplugin-310-"${version}".yaml
+    cp "$TOP_DIR"/deviceplugin-710.yaml "$TOP_DIR"/output/deviceplugin-710-"${version}".yaml
 
-    sed -i "s#output/ascendplugin#ascendplugin#" "$TOP_DIR"/output/Dockerfile
+    sed -i "s#output/deviceplugin#deviceplugin#" "$TOP_DIR"/output/Dockerfile
 }
 
 function parse_version() {

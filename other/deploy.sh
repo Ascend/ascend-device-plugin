@@ -2,7 +2,7 @@
 unset http_proxy https_proxy
 
 CURRENT_PATH=$(cd "$(dirname "$0")"; pwd)
-APP_NAME="ascendplugin"
+APP_NAME="deviceplugin"
 SERVICENAME="deviceplugin.service"
 SERVICE_PATH=/etc/systemd/system
 TARGET_DIR=/usr/local/bin
@@ -267,7 +267,7 @@ function check_golang_install()
 function dp_config_file()
 {
 
-  command="/usr/local/bin/ascendplugin"
+  command="/usr/local/bin/deviceplugin"
    if [ -n "${INSTALL_PARA1}" ]; then
       command="${command} ${INSTALL_PARA1}"
    fi
@@ -279,7 +279,7 @@ function dp_config_file()
    fi
 cat > ${SERVICENAME} <<EOF
 [Unit]
-Description=ascendplugin: The Ascend910 k8s device plugin
+Description=deviceplugin: The Ascend910 k8s device plugin
 Documentation=https://kubernetes.io/docs/
 After=kubelet.service
 
@@ -384,7 +384,7 @@ function help()
 
 function version()
 {
-	./ascendplugin --version
+	./deviceplugin --version
 }
 
 function main()
