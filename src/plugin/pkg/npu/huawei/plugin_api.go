@@ -237,11 +237,11 @@ func (s *pluginAPI) groupDevsByStatus(isStateChange bool) {
 		totalUHDevices = sets.String{}
 	}
 	s.hps.healthDevice = sets.String{}
-	UHDevice := sets.String{}
+	uhDevice := sets.String{}
 	for _, device := range s.hps.devices {
 		if device.Health != pluginapi.Healthy && !IsVirtualDev(device.ID) {
-			UHDevice.Insert(device.ID)
-			totalUHDevices = totalUHDevices.Union(UHDevice)
+			uhDevice.Insert(device.ID)
+			totalUHDevices = totalUHDevices.Union(uhDevice)
 			continue
 		}
 		s.hps.healthDevice.Insert(device.ID)
