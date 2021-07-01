@@ -10,7 +10,6 @@ ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/Ascend/driver/lib64/
 
 COPY ./output/deviceplugin /usr/local/bin/
 
-RUN chmod 550 /usr/local/bin/deviceplugin
-
-RUN echo 'umask 027' >> /etc/profile && \
+RUN chmod 550 /usr/local/bin/deviceplugin &&\
+    echo 'umask 027' >> /etc/profile &&\
     echo 'source /etc/profile' >> ~/.bashrc
