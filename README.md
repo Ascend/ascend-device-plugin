@@ -202,7 +202,7 @@ The device management plug-in provides the following functions:
                 imagePullPolicy: Never
                 volumeMounts:
                   - name: device-plugin
-                mountPath: /var/lib/kubelet/device-plugins
+                    mountPath: /var/lib/kubelet/device-plugins
                   - name: hiai-driver
                     mountPath: /usr/local/Ascend/driver  #Set the value to the actual driver installation directory.
                   - name: log-path
