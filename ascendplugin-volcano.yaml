@@ -1,14 +1,35 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ascend-device-plugin-sa
+  namespace: kube-system
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: pods-node-ascend-device-plugin-role
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "update"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["nodes/status"]
+    verbs: ["get", "patch"]
+---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: pods-device-plugin
+  name: pods-node-ascend-device-plugin-rolebinding
 subjects:
   - kind: ServiceAccount
-    name: default
+    name: ascend-device-plugin-sa
     namespace: kube-system
 roleRef:
   kind: ClusterRole
-  name: cluster-admin
+  name: pods-node-ascend-device-plugin-role
   apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: apps/v1
@@ -42,6 +63,7 @@ spec:
       priorityClassName: "system-node-critical"
       nodeSelector:
         accelerator: huawei-Ascend910
+      serviceAccountName: ascend-device-plugin-sa
       containers:
       - image: ascend-k8sdeviceplugin:v2.0.2
         name: device-plugin-01
