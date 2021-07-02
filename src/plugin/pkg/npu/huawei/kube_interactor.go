@@ -37,6 +37,12 @@ import (
 
 const (
 	kubeEnvMaxLength = 253
+
+	// nodeLabelsDeviceSep if the separator between devices on labels
+	nodeLabelsDeviceSep = "dot"
+
+	// nodeAnnotationsDeviceSep if the separator between devices on annotation
+	nodeAnnotationsDeviceSep = "comma"
 )
 
 // KubeInteractor include kubeclientSet & nodeName
@@ -125,13 +131,13 @@ func (ki *KubeInteractor) patchAnnotationOnNode(allocatableDevices sets.String, 
 		newNode := ki.updateNodeAnnotations(devType, groupAllocatableDevs, node)
 		if devType == "" {
 			newLabelsRecoverDev, newAscend910 := getUnHealthDev(totalUHDevices,
-				ki.convertDevListToSets(node.Annotations[huaweiUnHealthAscend910], "comma"),
-				ki.convertDevListToSets(node.Labels[huaweiRecoverAscend910], "dot"),
-				ki.convertDevListToSets(groupAllocatableDevs[huaweiAscend910], "comma"))
+				ki.convertDevListToSets(node.Annotations[huaweiUnHealthAscend910], nodeAnnotationsDeviceSep),
+				ki.convertDevListToSets(node.Labels[huaweiRecoverAscend910], nodeLabelsDeviceSep),
+				ki.convertDevListToSets(groupAllocatableDevs[huaweiAscend910], nodeAnnotationsDeviceSep))
 			newNode.Annotations[huaweiAscend910] = newAscend910
-			newNode.Annotations[huaweiUnHealthAscend910] = ki.convertSetsToString(totalUHDevices, "comma")
+			newNode.Annotations[huaweiUnHealthAscend910] = ki.convertSetsToString(totalUHDevices, nodeAnnotationsDeviceSep)
 			if !autoStowingDevs {
-				newNode.Labels[huaweiRecoverAscend910] = ki.convertSetsToString(newLabelsRecoverDev, "dot")
+				newNode.Labels[huaweiRecoverAscend910] = ki.convertSetsToString(newLabelsRecoverDev, nodeLabelsDeviceSep)
 			}
 		}
 		_, _, err = nodeutil.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), node, newNode)
@@ -147,7 +153,7 @@ func (ki *KubeInteractor) patchAnnotationOnNode(allocatableDevices sets.String, 
 func (ki *KubeInteractor) convertDevListToSets(devices string, sepType string) sets.String {
 	deviceSets := sets.String{}
 	var devicesList []string
-	if sepType == "dot" {
+	if sepType == nodeLabelsDeviceSep {
 		devicesList =  strings.Split(devices, ".")
 	} else {
 		devicesList = strings.Split(devices, ",")
@@ -166,7 +172,7 @@ func (ki *KubeInteractor) convertSetsToString(annotationUHDevice sets.String, se
 	for device := range annotationUHDevice {
 		unHealthDevs = append(unHealthDevs, device)
 	}
-	if sepType == "dot" {
+	if sepType == nodeLabelsDeviceSep {
 		return strings.Join(unHealthDevs, ".")
 	}
 	return strings.Join(unHealthDevs, ",")

@@ -135,6 +135,9 @@ const (
 
 	// dsmiMaxVdevNum is number of vdevice the devid spilt
 	dsmiMaxVdevNum = 16
+
+	// MaxErrorCodeCount is the max number of error code
+	MaxErrorCodeCount = 128
 )
 
 // ChipInfo chip info
@@ -361,13 +364,17 @@ func (d *DeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error)
 // GetDeviceErrorCode get device error code
 func (d *DeviceManager) GetDeviceErrorCode(logicID uint32) error {
 	var errorCount C.int
-	var pErrorCode C.uint
-	err := C.dsmi_get_device_errorcode(C.int(logicID), &errorCount, &pErrorCode)
-	if err != 0 {
+	var pErrorCode [MaxErrorCodeCount]C.uint
+	if err := C.dsmi_get_device_errorcode(C.int(logicID), &errorCount, &pErrorCode); err != 0 {
 		return fmt.Errorf("get device %d errorcode failed, erro is: %d", logicID, int32(err))
 	}
+
+	if int32(errorCount) < 0 || int32(errorCount) > MaxErrorCodeCount {
+		return fmt.Errorf("get wrong errorcode count, device: %d, errorcode count: %d", logicID, int32(errorCount))
+	}
+
 	logger.Info("get device error code", zap.Uint32("logicID", logicID),
-		zap.Int("errorCount", int(errorCount)), zap.Int("pErrorCode", int(pErrorCode)))
+		zap.Int("errorCount", int(errorCount)), zap.Int("pErrorCode", int(pErrorCode[0])))
 
 	return nil
 }

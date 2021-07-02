@@ -135,8 +135,7 @@ func unhealthyState(healthyState uint32, logicID uint32, healthyType string, dmg
 	if err != nil {
 		return fmt.Errorf("get phyID failed %v", err)
 	}
-	errs := dmgr.GetDeviceErrorCode(logicID)
-	if errs != nil {
+	if errs := dmgr.GetDeviceErrorCode(logicID); errs != nil {
 		return errs
 	}
 	// if logFlag is true,print device error message
