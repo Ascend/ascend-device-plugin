@@ -47,7 +47,7 @@
 2.  进入ascend-device-plugin目录，执行以下命令，修改yaml文件。
     -   通用yaml文件。
 
-        **vi deviceplugin.yaml**
+        **vi ascendplugin.yaml**
 
         ```
         apiVersion: apps/v1
@@ -74,7 +74,7 @@
                 - key: huawei.com/Ascend910  #资源名称，根据芯片类型设置。
                   operator: Exists
                   effect: NoSchedule
-                - key: "deviceplugin"
+                - key: "ascendplugin"
                   operator: "Equal"
                   value: "v2"
                   effect: NoSchedule
@@ -92,7 +92,7 @@
                     memory: 500Mi
                     cpu: 500m
                 command: [ "/bin/bash", "-c", "--"]
-                args: [ "deviceplugin  --useAscendDocker=${USE_ASCEND_DOCKER}" ] 
+                args: [ "ascendplugin  --useAscendDocker=${USE_ASCEND_DOCKER}" ] 
                 securityContext:
                   privileged: true
                 imagePullPolicy: Never
@@ -118,7 +118,7 @@
 
     -   MindX DL使用yaml文件。
 
-        **deviceplugin-volcano.yaml**
+        **ascendplugin-volcano.yaml**
 
         ```
         apiVersion: v1
@@ -179,7 +179,7 @@
                 - key: huawei.com/Ascend910
                   operator: Exists
                   effect: NoSchedule
-                - key: "deviceplugin"
+                - key: "ascendplugin"
                   operator: "Equal"
                   value: "v2"
                   effect: NoSchedule
@@ -198,7 +198,7 @@
                     memory: 500Mi
                     cpu: 500m
                 command: [ "/bin/bash", "-c", "--"]
-                args: [ "deviceplugin  --useAscendDocker=${USE_ASCEND_DOCKER} --volcanoType=true" ] 
+                args: [ "ascendplugin  --useAscendDocker=${USE_ASCEND_DOCKER} --volcanoType=true" ] 
                 securityContext:
                   privileged: true
                 imagePullPolicy: Never
@@ -252,9 +252,9 @@
     
     ENV  LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/Ascend/driver/lib64/
     
-    COPY ./output/deviceplugin /usr/local/bin/
+    COPY ./output/ascendplugin /usr/local/bin/
     
-    RUN chmod 550 /usr/local/bin/deviceplugin
+    RUN chmod 550 /usr/local/bin/ascendplugin
     
     RUN echo 'umask 027' >> /etc/profile && \
         echo 'source /etc/profile' >> ~/.bashrc
@@ -281,11 +281,11 @@
     ```
     drwxr-xr-x 2 root root     4096 Jun  8 18:42 ./
     drwxr-xr-x 9 root root     4096 Jun  8 17:12 ../
-    -r-x------. 1 root root 31926632 Jul  1 16:43 deviceplugin
-    -rw-r--r--. 1 root root     1964 Jul  1 16:43 deviceplugin-310-v2.0.2.yaml
-    -rw-r--r--. 1 root root     2081 Jul  1 16:43 deviceplugin-710-v2.0.2.yaml
-    -rw-r--r--. 1 root root     1818 Jul  1 16:43 deviceplugin-v2.0.2.yaml
-    -rw-r--r--. 1 root root     2955 Jul  1 16:43 deviceplugin-volcano-v2.0.2.yaml
+    -r-x------. 1 root root 31926632 Jul  1 16:43 ascendplugin
+    -rw-r--r--. 1 root root     1964 Jul  1 16:43 ascendplugin-310-v2.0.2.yaml
+    -rw-r--r--. 1 root root     2081 Jul  1 16:43 ascendplugin-710-v2.0.2.yaml
+    -rw-r--r--. 1 root root     1818 Jul  1 16:43 ascendplugin-v2.0.2.yaml
+    -rw-r--r--. 1 root root     2955 Jul  1 16:43 ascendplugin-volcano-v2.0.2.yaml
     -rw-r--r--. 1 root root      465 Jul  1 16:43 Dockerfile
     ```
 
@@ -332,7 +332,7 @@
 
     **cd** _/home/test/_**ascend-device-plugin**
 
-    **kubectl apply -f  deviceplugin.yaml**
+    **kubectl apply -f  ascendplugin.yaml**
 
     >![](figures/icon-note.gif) **说明：** 
     >部署完成后需要等待几分钟，才能看到节点设备部署信息。
@@ -500,8 +500,8 @@
 ├── output                                           # 编译结果目录
 ├── src                                              # 源代码目录
 │   └── plugin
-│   │    ├── cmd/deviceplugin
-│   │    │   └── device_plugin.go    
+│   │    ├── cmd/ascendplugin
+│   │    │   └── ascend_plugin.go    
 │   │    └── pkg/npu/huawei
 ├── test                                             # 测试目录
 ├── Dockerfile                                       # 镜像文件
@@ -510,10 +510,10 @@
 ├── README.zh.md
 ├── README.md
 ├── ascend.yaml                                      # sample运行任务yaml
-├── deviceplugin-310.yaml                            # 310推理卡部署yaml
-├── deviceplugin-710.yaml                            # 710推理卡部署yaml
-├── deviceplugin-volcano.yaml                        # 和volcano实现亲和性调度部署yaml
-├── deviceplugin.yaml                                # 推理卡部署yaml
+├── ascendplugin-310.yaml                            # 310推理卡部署yaml
+├── ascendplugin-710.yaml                            # 710推理卡部署yaml
+├── ascendplugin-volcano.yaml                        # 和volcano实现亲和性调度部署yaml
+├── ascendplugin.yaml                                # 推理卡部署yaml
 ├── go.mod                                           
 └── go.sum                                           
 ```

@@ -22,7 +22,7 @@ spec:
         - key: huawei.com/Ascend310
           operator: Exists
           effect: NoSchedule
-        - key: "deviceplugin"
+        - key: "device-plugin"
           operator: "Equal"
           value: "v2"
           effect: NoSchedule
@@ -40,7 +40,7 @@ spec:
             memory: 500Mi
             cpu: 500m
         command: [ "/bin/bash", "-c", "--"]
-        args: [ "umask 0027;deviceplugin  --useAscendDocker=${USE_ASCEND_DOCKER}" ]
+        args: [ "umask 0027;device-plugin  --useAscendDocker=${USE_ASCEND_DOCKER}" ]
         securityContext:
           privileged: true
           readOnlyRootFilesystem: true

@@ -45,7 +45,7 @@ The device management plug-in provides the following functions:
 2.  Go to the  **ascend-device-plugin**  directory and run the following command to modify the YAML file:
     -   Common YAML file
 
-        **vi deviceplugin.yaml**
+        **vi ascendplugin.yaml**
 
         ```
         apiVersion: apps/v1
@@ -72,7 +72,7 @@ The device management plug-in provides the following functions:
                 - key: huawei.com/Ascend910 #Resource name. Set the value based on the processor type.
                   operator: Exists
                   effect: NoSchedule
-                - key: "deviceplugin"
+                - key: "ascendplugin"
                   operator: "Equal"
                   value: "v2"
                   effect: NoSchedule
@@ -90,7 +90,7 @@ The device management plug-in provides the following functions:
                     memory: 500Mi
                     cpu: 500m
                 command: [ "/bin/bash", "-c", "--"]
-                args: [ "deviceplugin  --useAscendDocker=${USE_ASCEND_DOCKER}" ] 
+                args: [ "ascendplugin  --useAscendDocker=${USE_ASCEND_DOCKER}" ] 
                 securityContext:
                   privileged: true
                 imagePullPolicy: Never
@@ -116,7 +116,7 @@ The device management plug-in provides the following functions:
 
     -   YAML file of MindX DL
 
-        **deviceplugin-volcano.yaml**
+        **ascendplugin-volcano.yaml**
 
         ```
         apiVersion: v1
@@ -177,7 +177,7 @@ The device management plug-in provides the following functions:
                 - key: huawei.com/Ascend910
                   operator: Exists
                   effect: NoSchedule
-                - key: "deviceplugin"
+                - key: "ascendplugin"
                   operator: "Equal"
                   value: "v2"
                   effect: NoSchedule
@@ -196,7 +196,7 @@ The device management plug-in provides the following functions:
                     memory: 500Mi
                     cpu: 500m
                 command: [ "/bin/bash", "-c", "--"]
-                args: [ "deviceplugin  --useAscendDocker=${USE_ASCEND_DOCKER} --volcanoType=true" ] 
+                args: [ "ascendplugin  --useAscendDocker=${USE_ASCEND_DOCKER} --volcanoType=true" ] 
                 securityContext:
                   privileged: true
                 imagePullPolicy: Never
@@ -251,9 +251,9 @@ The device management plug-in provides the following functions:
     
     ENV  LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/Ascend/driver/lib64/
     
-    COPY ./output/deviceplugin /usr/local/bin/
+    COPY ./output/ascendplugin /usr/local/bin/
     
-    RUN chmod 550 /usr/local/bin/deviceplugin
+    RUN chmod 550 /usr/local/bin/ascendplugin
     
     RUN echo 'umask 027' >> /etc/profile && \
         echo 'source /etc/profile' >> ~/.bashrc
@@ -283,11 +283,11 @@ The device management plug-in provides the following functions:
     ```
     drwxr-xr-x 2 root root     4096 Jun  8 18:42 ./
     drwxr-xr-x 9 root root     4096 Jun  8 17:12 ../
-    -r-x------. 1 root root 31926632 Jul  1 16:43 deviceplugin
-    -rw-r--r--. 1 root root     1964 Jul  1 16:43 deviceplugin-310-v2.0.2.yaml
-    -rw-r--r--. 1 root root     2081 Jul  1 16:43 deviceplugin-710-v2.0.2.yaml
-    -rw-r--r--. 1 root root     1818 Jul  1 16:43 deviceplugin-v2.0.2.yaml
-    -rw-r--r--. 1 root root     2955 Jul  1 16:43 deviceplugin-volcano-v2.0.2.yaml
+    -r-x------. 1 root root 31926632 Jul  1 16:43 ascendplugin
+    -rw-r--r--. 1 root root     1964 Jul  1 16:43 ascendplugin-310-v2.0.2.yaml
+    -rw-r--r--. 1 root root     2081 Jul  1 16:43 ascendplugin-710-v2.0.2.yaml
+    -rw-r--r--. 1 root root     1818 Jul  1 16:43 ascendplugin-v2.0.2.yaml
+    -rw-r--r--. 1 root root     2955 Jul  1 16:43 ascendplugin-volcano-v2.0.2.yaml
     -rw-r--r--. 1 root root      465 Jul  1 16:43 Dockerfile
     ```
 
@@ -327,7 +327,7 @@ The device management plug-in provides the following functions:
 
     **cd** _/home/test/_**ascend-device-plugin**
 
-    **kubectl apply -f  deviceplugin.yaml**
+    **kubectl apply -f  ascendplugin.yaml**
 
     >![](figures/icon-note.gif) **NOTE:** 
     >To view the node deployment information, you need to wait for several minutes after the deployment is complete.
@@ -491,8 +491,8 @@ The device management plug-in provides the following functions:
 ├── output                                           # Compilation result directory.
 ├── src                                              # Source code directory.
 │   └── plugin
-│   │    ├── cmd/deviceplugin
-│   │    │   └── device_plugin.go    
+│   │    ├── cmd/ascendplugin
+│   │    │   └── ascend_plugin.go    
 │   │    └── pkg/npu/huawei
 ├── test                                             # Test directory.
 ├── Dockerfile                                       # Image file.
@@ -501,10 +501,10 @@ The device management plug-in provides the following functions:
 ├── README.zh.md
 ├── README.md
 ├── ascend.yaml                                      # YAML file of the sample running task 
-├── deviceplugin-310.yaml                            # YAML file for deploying the inference card with Ascend 310
-├── deviceplugin-710.yaml                            # YAML file for deploying the inference card with Ascend 710
-├── deviceplugin-volcano.yaml                        # YAML file for implementing affinity scheduling and deployment with Volcano.
-├── deviceplugin.yaml                                 # YAML file for deploying the inference card
+├── ascendplugin-310.yaml                            # YAML file for deploying the inference card with Ascend 310
+├── ascendplugin-710.yaml                            # YAML file for deploying the inference card with Ascend 710
+├── ascendplugin-volcano.yaml                        # YAML file for implementing affinity scheduling and deployment with Volcano.
+├── ascendplugin.yaml                                 # YAML file for deploying the inference card
 ├── go.mod                                           
 └── go.sum                                           
 ```
