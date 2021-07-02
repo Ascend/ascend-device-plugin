@@ -254,14 +254,9 @@
     
     COPY ./output/ascendplugin /usr/local/bin/
     
-    RUN chmod 550 /usr/local/bin/ascendplugin
-    
-    RUN echo 'umask 027' >> /etc/profile && \
-        echo 'source /etc/profile' >> ~/.bashrc
-    
     ```
 
-5.  执行以下命令，根据实际选择执行的脚本，生成二进制文件。
+5.  执行以下命令，根据实际选择执行的脚本，生成二进制和镜像文件。
 
     **cd** _/home/test/_ascend-device-plugin**/build**/
 
@@ -269,7 +264,7 @@
 
     **dos2unix build.sh**
 
-    **./build.sh**
+    **./build.sh dockerimages**
 
 6.  执行以下命令，查看生成的软件包。
 
@@ -277,16 +272,15 @@
 
     x86和ARM生成的软件包名不同，以下示例为ARM环境：
 
-    
+    >![](figures/icon-note.gif) **说明：** 
+    >-   **Ascend-K8sDevicePlugin-**_xxx_**-arm64-Docker.tar.gz**：K8s设备插件镜像。
+    >-   **Ascend-K8sDevicePlugin-**_xxx_**-arm64-Linux.tar.gz**：K8s设备插件二进制安装包。
+
     ```
     drwxr-xr-x 2 root root     4096 Jun  8 18:42 ./
     drwxr-xr-x 9 root root     4096 Jun  8 17:12 ../
-    -r-x------. 1 root root 31926632 Jul  1 16:43 ascendplugin
-    -rw-r--r--. 1 root root     1964 Jul  1 16:43 ascendplugin-310-v2.0.2.yaml
-    -rw-r--r--. 1 root root     2081 Jul  1 16:43 ascendplugin-710-v2.0.2.yaml
-    -rw-r--r--. 1 root root     1818 Jul  1 16:43 ascendplugin-v2.0.2.yaml
-    -rw-r--r--. 1 root root     2955 Jul  1 16:43 ascendplugin-volcano-v2.0.2.yaml
-    -rw-r--r--. 1 root root      465 Jul  1 16:43 Dockerfile
+    -rw-r--r-- 1 root root 29584705 Jun  9 10:37 Ascend-K8sDevicePlugin-xxx-arm64-Docker.tar.gz
+    -rw-r--r-- 1 root root  6721073 Jun  9 16:20 Ascend-K8sDevicePlugin-xxx-arm64-Linux.tar.gz
     ```
 
 
@@ -304,20 +298,13 @@
     -   是，请执行[3](#zh-cn_topic_0269670254_li26268471380)。
     -   否，请执行[2](#zh-cn_topic_0269670254_li1372334715567)重新导入。
 
-2.  <a name="zh-cn_topic_0269670254_li1372334715567"></a>利用组件包中提供的Dockerfile执行以下命令构建Ascend Device Plugin的镜像。
+2.  <a name="zh-cn_topic_0269670254_li1372334715567"></a>进入生成的Docker软件包所在目录，执行以下命令，导入Docker镜像。
 
     **cd** _/home/test/_**ascend-device-plugin/output**
 
-    **docker build** **-t** _ascend-k8sdeviceplugin:v2.0.2_ .
-    
-    当出现“Successfully built xxx”表示镜像构建成功，注意不要遗漏命令结尾的“.”。
+    **docker load** **-i** _Ascend-K8sDevicePlugin-xxx-arm64-Docker.tar.gz_
 
-3.  执行如下命令将编译好的镜像打包并压缩，便于在各个服务器之间传输。
-    docker save -o ascend-k8sdeviceplugin:v2.0.2 | gzip > Ascend-K8sDevicePlugin-v2.0.2-{arch}-Docker.tar.gz
-    或者使用不带压缩功能的命令：
-    docker save -o Ascend-K8sDevicePlugin-v2.0.2-{arch}-Docker.tar ascend-k8sdeviceplugin:v2.0.2
-
-4.  <a name="zh-cn_topic_0269670254_li26268471380"></a>执行如下命令，给带有Ascend 910（或Ascend 310, 或Ascend 710）的节点打标签。
+3.  <a name="zh-cn_topic_0269670254_li26268471380"></a>执行如下命令，给带有Ascend 910（或Ascend 310, 或Ascend 710）的节点打标签。
 
     **kubectl label nodes** _localhost.localdomain_ **accelerator=**_huawei-Ascend910_
 
@@ -328,7 +315,7 @@
     >![](figures/icon-note.gif) **说明：** 
     >如有新节点需要部署K8s插件，请执行[2](#zh-cn_topic_0269670254_li1372334715567)\~[3](#zh-cn_topic_0269670254_li26268471380)。
 
-5.  执行以下命令，部署DaemonSet。
+4.  执行以下命令，部署DaemonSet。
 
     **cd** _/home/test/_**ascend-device-plugin**
 
@@ -337,7 +324,7 @@
     >![](figures/icon-note.gif) **说明：** 
     >部署完成后需要等待几分钟，才能看到节点设备部署信息。
 
-6.  执行如下命令，查看节点设备部署信息。
+5.  执行如下命令，查看节点设备部署信息。
 
     **kubectl describe node**
 

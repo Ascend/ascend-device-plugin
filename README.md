@@ -253,11 +253,6 @@ The device management plug-in provides the following functions:
     
     COPY ./output/ascendplugin /usr/local/bin/
     
-    RUN chmod 550 /usr/local/bin/ascendplugin
-    
-    RUN echo 'umask 027' >> /etc/profile && \
-        echo 'source /etc/profile' >> ~/.bashrc
-    
     ```
 
 5.  Run the following commands to generate a binary file and image file \(use the actual script name\):
@@ -268,7 +263,7 @@ The device management plug-in provides the following functions:
 
     **dos2unix build.sh**
 
-    **./build.sh**
+    **./build.sh dockerimages**
 
 6.  Run the following command to view the generated software package:
 
@@ -283,12 +278,8 @@ The device management plug-in provides the following functions:
     ```
     drwxr-xr-x 2 root root     4096 Jun  8 18:42 ./
     drwxr-xr-x 9 root root     4096 Jun  8 17:12 ../
-    -r-x------. 1 root root 31926632 Jul  1 16:43 ascendplugin
-    -rw-r--r--. 1 root root     1964 Jul  1 16:43 ascendplugin-310-v2.0.2.yaml
-    -rw-r--r--. 1 root root     2081 Jul  1 16:43 ascendplugin-710-v2.0.2.yaml
-    -rw-r--r--. 1 root root     1818 Jul  1 16:43 ascendplugin-v2.0.2.yaml
-    -rw-r--r--. 1 root root     2955 Jul  1 16:43 ascendplugin-volcano-v2.0.2.yaml
-    -rw-r--r--. 1 root root      465 Jul  1 16:43 Dockerfile
+    -rw-r--r-- 1 root root 29584705 Jun  9 10:37 Ascend-K8sDevicePlugin-xxx-arm64-Docker.tar.gz
+    -rw-r--r-- 1 root root  6721073 Jun  9 16:20 Ascend-K8sDevicePlugin-xxx-arm64-Linux.tar.gz
     ```
 
 
@@ -504,7 +495,7 @@ The device management plug-in provides the following functions:
 ├── ascendplugin-310.yaml                            # YAML file for deploying the inference card with Ascend 310
 ├── ascendplugin-710.yaml                            # YAML file for deploying the inference card with Ascend 710
 ├── ascendplugin-volcano.yaml                        # YAML file for implementing affinity scheduling and deployment with Volcano.
-├── ascendplugin.yaml                                 # YAML file for deploying the inference card
+├──ascendplugin.yaml                                 # YAML file for deploying the inference card
 ├── go.mod                                           
 └── go.sum                                           
 ```
