@@ -365,7 +365,7 @@ func (d *DeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error)
 func (d *DeviceManager) GetDeviceErrorCode(logicID uint32) error {
 	var errorCount C.int
 	var pErrorCode [MaxErrorCodeCount]C.uint
-	if err := C.dsmi_get_device_errorcode(C.int(logicID), &errorCount, &pErrorCode); err != 0 {
+	if err := C.dsmi_get_device_errorcode(C.int(logicID), &errorCount, &pErrorCode[0]); err != 0 {
 		return fmt.Errorf("get device %d errorcode failed, erro is: %d", logicID, int32(err))
 	}
 
