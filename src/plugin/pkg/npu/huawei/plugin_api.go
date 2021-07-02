@@ -67,6 +67,8 @@ var (
 	totalDevices   sets.String
 	stateThreadNum int
 	m              sync.Mutex
+	firstTimeList  bool
+	totalUHDevices sets.String
 )
 
 const (
@@ -133,7 +135,7 @@ func (s *pluginAPI) ListAndWatch(emtpy *pluginapi.Empty, stream pluginapi.Device
 		if s.outbreak.Load() {
 			break
 		}
-		time.Sleep(sleepTime * time.Second)
+		time.Sleep(time.Duration(listAndWatchPeriod) * time.Second)
 		isStateChange := s.isDeviceStatusChange()
 		if useVolcanoType {
 			s.doWithVolcanoListAndWatch(isStateChange)
@@ -210,15 +212,7 @@ func (s *pluginAPI) listenPhysicalDevices() bool {
 }
 
 func (s *pluginAPI) doWithVolcanoListAndWatch(isStateChange bool) {
-	if isStateChange {
-		s.hps.healthDevice = sets.String{}
-		for _, device := range s.hps.devices {
-			if device.Health != pluginapi.Healthy {
-				continue
-			}
-			s.hps.healthDevice.Insert(device.ID)
-		}
-	}
+	s.groupDevsByStatus(isStateChange)
 	m.Lock()
 	usedDevices := sets.NewString()
 	s.getNodeNpuUsed(&usedDevices)
@@ -233,6 +227,25 @@ func (s *pluginAPI) doWithVolcanoListAndWatch(isStateChange bool) {
 		stateThreadNum = resetZero
 	}
 	m.Unlock()
+}
+
+func (s *pluginAPI) groupDevsByStatus(isStateChange bool) {
+	if !isStateChange {
+		return
+	}
+	if s.hps.devType == hiAIAscend910Prefix && isStateChange {
+		totalUHDevices = sets.String{}
+	}
+	s.hps.healthDevice = sets.String{}
+	uhDevice := sets.String{}
+	for _, device := range s.hps.devices {
+		if device.Health != pluginapi.Healthy && !IsVirtualDev(device.ID) {
+			uhDevice.Insert(device.ID)
+			totalUHDevices = totalUHDevices.Union(uhDevice)
+			continue
+		}
+		s.hps.healthDevice.Insert(device.ID)
+	}
 }
 
 // Allocate is called by kubelet to mount device to k8s pod.
@@ -250,6 +263,7 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 
 		var devID []string
 		var dlogMountPath string
+
 		allocateNum := len(rqt.DevicesIDs)
 		if allocateNum > maxDevicesNum {
 			return nil, fmt.Errorf("the devices can't bigger than %d", maxDevicesNum)
@@ -266,7 +280,6 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 				return nil, errs
 			}
 		}
-
 		if s.hps.runMode == runMode910 {
 			s.mountfile(resp, dlogMountPath, devID)
 			s.responseAnonation(resp, ascendVisibleDevicesMap)
@@ -325,7 +338,7 @@ func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (
 		}
 		ascendVisibleDevices[deviceID] = deviceIP
 	}
-	logger.Info("Found ascendVisibleDevices: ", zap.Any("ascendVisibleDevices", ascendVisibleDevices))
+	logger.Info("Kubelet found ascendVisibleDevices: ", zap.Any("ascendVisibleDevices", ascendVisibleDevices))
 	return ascendVisibleDevices, nil
 }
 
@@ -741,7 +754,6 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int) (map[string]string, e
 		logger.Info("not get pending pod")
 		return nil, err
 	}
-
 	allocateDevice := sets.NewString()
 	err = s.getNPUAnnotationOfPod(oldPod, &allocateDevice, allocateNum)
 	if err != nil {
@@ -765,6 +777,7 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int) (map[string]string, e
 	if err != nil {
 		return nil, err
 	}
+	logger.Info("Volcano found ascendVisibleDevices: ", zap.Any("ascendVisibleDevices", ascendVisibleDevices))
 	return ascendVisibleDevices, nil
 }
 

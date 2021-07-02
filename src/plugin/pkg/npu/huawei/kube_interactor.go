@@ -37,6 +37,12 @@ import (
 
 const (
 	kubeEnvMaxLength = 253
+
+	// nodeLabelsDeviceSep if the separator between devices on labels
+	nodeLabelsDeviceSep = "dot"
+
+	// nodeAnnotationsDeviceSep if the separator between devices on annotation
+	nodeAnnotationsDeviceSep = "comma"
 )
 
 // KubeInteractor include kubeclientSet & nodeName
@@ -123,6 +129,17 @@ func (ki *KubeInteractor) patchAnnotationOnNode(allocatableDevices sets.String, 
 
 		groupAllocatableDevs := ki.groupDevByPower(allocatableDevices)
 		newNode := ki.updateNodeAnnotations(devType, groupAllocatableDevs, node)
+		if devType == "" {
+			newLabelsRecoverDev, newAscend910 := getUnHealthDev(totalUHDevices,
+				ki.convertDevListToSets(node.Annotations[huaweiUnHealthAscend910], nodeAnnotationsDeviceSep),
+				ki.convertDevListToSets(node.Labels[huaweiRecoverAscend910], nodeLabelsDeviceSep),
+				ki.convertDevListToSets(groupAllocatableDevs[huaweiAscend910], nodeAnnotationsDeviceSep))
+			newNode.Annotations[huaweiAscend910] = newAscend910
+			newNode.Annotations[huaweiUnHealthAscend910] = ki.convertSetsToString(totalUHDevices, nodeAnnotationsDeviceSep)
+			if !autoStowingDevs {
+				newNode.Labels[huaweiRecoverAscend910] = ki.convertSetsToString(newLabelsRecoverDev, nodeLabelsDeviceSep)
+			}
+		}
 		_, _, err = nodeutil.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), node, newNode)
 		if err != nil {
 			logger.Error("failed to patch volcano npu resource: %v", zap.Error(err))
@@ -133,14 +150,49 @@ func (ki *KubeInteractor) patchAnnotationOnNode(allocatableDevices sets.String, 
 	return err
 }
 
+func (ki *KubeInteractor) convertDevListToSets(devices string, sepType string) sets.String {
+	deviceSets := sets.String{}
+	var devicesList []string
+	if sepType == nodeLabelsDeviceSep {
+		devicesList =  strings.Split(devices, ".")
+	} else {
+		devicesList = strings.Split(devices, ",")
+	}
+	for _, device := range devicesList {
+		if len(device) == 0 {
+			continue
+		}
+		deviceSets.Insert(device)
+	}
+	return deviceSets
+}
+
+func (ki *KubeInteractor) convertSetsToString(annotationUHDevice sets.String, sepType string) string {
+	var unHealthDevs []string
+	for device := range annotationUHDevice {
+		unHealthDevs = append(unHealthDevs, device)
+	}
+	if sepType == nodeLabelsDeviceSep {
+		return strings.Join(unHealthDevs, ".")
+	}
+	return strings.Join(unHealthDevs, ",")
+}
+
 func (ki *KubeInteractor) updateNodeAnnotations(devType string, groupAllocatableDevs map[string]string,
 	node *v1.Node) *v1.Node {
+	if !firstTimeList {
+		delete(node.Annotations, huaweiUnHealthAscend910)
+		delete(node.Annotations, huaweiAscend910)
+		delete(node.Labels, huaweiRecoverAscend910)
+		firstTimeList = true
+	}
 	newNode := node.DeepCopy()
 	if devType != "" {
 		annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, devType)
 		newNode.Annotations[annotationTag] = groupAllocatableDevs[annotationTag]
 		return newNode
 	}
+
 	for annotationTag, deviceNames := range groupAllocatableDevs {
 		annotation, isNil := node.Annotations[annotationTag]
 		setDevs := ki.convertStringToSet(deviceNames)

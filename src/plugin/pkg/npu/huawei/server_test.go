@@ -34,6 +34,7 @@ type fakeHwPluginServe struct {
 	socket         string
 	kubeInteractor *KubeInteractor
 	healthDevice   sets.String
+	unHealthDevice sets.String
 }
 
 // NewFakeHwPluginServe to create fakePlugin
@@ -45,6 +46,7 @@ func NewFakeHwPluginServe(hdm *HwDevManager, devType string, socket string) HwPl
 		devices:      make(map[string]*npuDevice),
 		socket:       socket,
 		healthDevice: sets.String{},
+		unHealthDevice: sets.String{},
 	}
 }
 

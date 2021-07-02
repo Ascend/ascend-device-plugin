@@ -74,6 +74,11 @@ int dsmi_get_vdevice_info(unsigned int devid, struct dsmi_vdev_info *vdevice_inf
 	CALL_FUNC(dsmi_get_vdevice_info,devid,vdevice_info)
 }
 
+int (*dsmi_get_device_errorcode_func)(int device_id, int *errorcount, unsigned int *perrorcode);
+int dsmi_get_device_errorcode(int device_id, int *errorcount, unsigned int *perrorcode){
+    CALL_FUNC(dsmi_get_device_errorcode,device_id,errorcount,perrorcode)
+}
+
 // load .so files and functions
 int dsmiInit_dl(void){
 	dsmiHandle = dlopen("libdrvdsmi_host.so",RTLD_LAZY);
@@ -100,6 +105,8 @@ int dsmiInit_dl(void){
 
 	dsmi_get_vdevice_info_func = dlsym(dsmiHandle,"dsmi_get_vdevice_info");
 
+	dsmi_get_device_errorcode_func = dlsym(dsmiHandle,"dsmi_get_device_errorcode");
+
 	return SUCCESS;
 }
 
@@ -113,6 +120,7 @@ int dsmiShutDown(void){
 import "C"
 import (
 	"fmt"
+	"go.uber.org/zap"
 	"unsafe"
 )
 
@@ -127,6 +135,9 @@ const (
 
 	// dsmiMaxVdevNum is number of vdevice the devid spilt
 	dsmiMaxVdevNum = 16
+
+	// MaxErrorCodeCount is the max number of error code
+	MaxErrorCodeCount = 128
 )
 
 // ChipInfo chip info
@@ -168,6 +179,7 @@ type DeviceMgrInterface interface {
 	GetChipInfo(int32) (*ChipInfo, error)
 	GetDeviceIP(int32) (string, error)
 	GetVDevicesInfo(uint32) (CgoDsmiVDevInfo, error)
+	GetDeviceErrorCode(uint32) error
 	ShutDown()
 }
 
@@ -347,4 +359,22 @@ func (d *DeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error)
 		})
 	}
 	return cgoDsmiVDevInfos, nil
+}
+
+// GetDeviceErrorCode get device error code
+func (d *DeviceManager) GetDeviceErrorCode(logicID uint32) error {
+	var errorCount C.int
+	var pErrorCode [MaxErrorCodeCount]C.uint
+	if err := C.dsmi_get_device_errorcode(C.int(logicID), &errorCount, &pErrorCode[0]); err != 0 {
+		return fmt.Errorf("get device %d errorcode failed, erro is: %d", logicID, int32(err))
+	}
+
+	if int32(errorCount) < 0 || int32(errorCount) > MaxErrorCodeCount {
+		return fmt.Errorf("get wrong errorcode count, device: %d, errorcode count: %d", logicID, int32(errorCount))
+	}
+
+	logger.Info("get device error code", zap.Uint32("logicID", logicID),
+		zap.Int("errorCount", int(errorCount)), zap.Int("pErrorCode", int(pErrorCode[0])))
+
+	return nil
 }

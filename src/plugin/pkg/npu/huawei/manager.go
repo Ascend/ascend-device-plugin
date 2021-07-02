@@ -53,6 +53,12 @@ var (
 	// UseAscendDocker to chose docker type
 	UseAscendDocker bool
 	useVolcanoType  bool
+
+	// listAndWatchPeriod set listening device state period
+	listAndWatchPeriod int
+
+	// autoStowingDevs auto stowing fixes devices or not
+	autoStowingDevs bool
 )
 
 type devManager interface {
@@ -156,6 +162,7 @@ func (hdm *HwDevManager) Serve(devType, socketPath, pluginSocket string, pluginS
 		// Monitor file signals and system signals
 		restart = hdm.signalWatch(watcher.fileWatcher, osSignChan, restart, hps, pluginSockPath)
 	}
+
 }
 
 func preStart(hps HwPluginServeInterface, pluginSockPath string) {
@@ -211,10 +218,12 @@ func (hdm *HwDevManager) signalWatch(watcher *fsnotify.Watcher, sigs chan os.Sig
 }
 
 // SetParameters to set Parameters
-func (hdm *HwDevManager) SetParameters(fdFlag, useAscendDocker, volcanoType bool) {
+func (hdm *HwDevManager) SetParameters(fdFlag, useAscendDocker, volcanoType, autoStowing bool, listWatchPeriod int) {
 	GetFdFlag = fdFlag
 	UseAscendDocker = useAscendDocker
 	useVolcanoType = volcanoType
+	listAndWatchPeriod = listWatchPeriod
+	autoStowingDevs = autoStowing
 }
 
 func (hdm *HwDevManager) setRunMode() error {

@@ -197,6 +197,18 @@ int dsmi_get_network_health(int device_id, DSMI_NET_HEALTH_STATUS *presult);
 */
 int dsmi_get_vdevice_info(unsigned int devid, struct dsmi_vdev_info *info);
 
+/**
+* @ingroup driver
+* @brief Query the device errorcode by device_id(logicID)
+* @attention NULL
+* @param [in] device_id The device id
+* @param [out] *errorcount The number of error code
+* @param [out] *perrorcode The error code
+* @return 0 for success, others for fail
+* @note Support:Ascend310,Ascend710,Ascend910
+*/
+int dsmi_get_device_errorcode(int device_id, int *errorcount, unsigned int *perrorcode);
+
 #ifdef __cplusplus
 }
 #endif

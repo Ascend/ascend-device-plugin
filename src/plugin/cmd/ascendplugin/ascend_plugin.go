@@ -30,6 +30,14 @@ const (
 	dlogPath   = "/var/dlog"
 	socketPath = "/var/lib/kubelet/device-plugins"
 	logPath    = "/var/log/devicePlugin"
+
+	// defaultListWatchPeriod is the default listening device state's period
+	defaultListWatchPeriod = 5
+
+	// maxListWatchPeriod is the max listening device state's period
+	maxListWatchPeriod = 60
+	// minListWatchPeriod is the min listening device state's period
+	minListWatchPeriod = 3
 )
 
 var (
@@ -39,6 +47,9 @@ var (
 	volcanoType     = flag.Bool("volcanoType", false, "use volcano to schedue")
 	version         = flag.Bool("version", false, "show k8s device plugin version ")
 	logDir          = flag.String("logDir", "/var/alog/AtlasEdge_log", "log path")
+	listWatchPeriod = flag.Int("listWatchPeriod", defaultListWatchPeriod, "listen and " +
+		"watch device state's period, unit is second, scope is [3, 60]")
+	autoStowing     = flag.Bool("autoStowing", true, "auto stowing fixes devices or not")
 )
 
 var (
@@ -72,6 +83,11 @@ func main() {
 		os.Exit(0)
 	}
 
+	if *listWatchPeriod < minListWatchPeriod || *listWatchPeriod > maxListWatchPeriod {
+		fmt.Printf("list and watch period %d out of range\n", *listWatchPeriod)
+		os.Exit(1)
+	}
+
 	neverStop := make(chan struct{})
 	switch *mode {
 	case "ascend310", "pci", "vnpu", "ascend910", "ascend710", "":
@@ -82,7 +98,7 @@ func main() {
 	}
 
 	hdm := hwmanager.NewHwDevManager(*mode, dlogPath, loggerPath)
-	hdm.SetParameters(*fdFlag, *useAscendDocker, *volcanoType)
+	hdm.SetParameters(*fdFlag, *useAscendDocker, *volcanoType, *autoStowing, *listWatchPeriod)
 	if err := hdm.GetNPUs(); err != nil {
 		logger.Error("no devices found. waiting indefinitely", zap.String("err", err.Error()))
 		<-neverStop

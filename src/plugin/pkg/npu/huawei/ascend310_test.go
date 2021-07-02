@@ -111,7 +111,7 @@ func TestHwAscend310Manager_GetLogPath(t *testing.T) {
 
 func createFakeHwDevManager(mode string, fdFlag, useAscendDocker, volcanoType bool) *HwDevManager {
 	hdm := NewHwDevManager(mode, "/var/dlog", "/var/log/devicePlugin/")
-	hdm.SetParameters(fdFlag, useAscendDocker, volcanoType)
+	hdm.SetParameters(fdFlag, useAscendDocker, volcanoType, true, sleepTime)
 	hdm.manager = NewFakeHwAscend310Manager()
 	hdm.manager.SetDmgr(newFakeDeviceManager())
 	return hdm
