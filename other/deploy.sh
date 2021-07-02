@@ -2,8 +2,8 @@
 unset http_proxy https_proxy
 
 CURRENT_PATH=$(cd "$(dirname "$0")"; pwd)
-APP_NAME="ascendplugin"
-SERVICENAME="deviceplugin.service"
+APP_NAME="device-plugin"
+SERVICENAME="device-plugin.service"
 SERVICE_PATH=/etc/systemd/system
 TARGET_DIR=/usr/local/bin
 lograte_path=/etc/logrotate.d
@@ -267,7 +267,7 @@ function check_golang_install()
 function dp_config_file()
 {
 
-  command="/usr/local/bin/ascendplugin"
+  command="/usr/local/bin/device-plugin"
    if [ -n "${INSTALL_PARA1}" ]; then
       command="${command} ${INSTALL_PARA1}"
    fi
@@ -279,7 +279,7 @@ function dp_config_file()
    fi
 cat > ${SERVICENAME} <<EOF
 [Unit]
-Description=ascendplugin: The Ascend910 k8s device plugin
+Description=device-plugin: The Ascend910 k8s device plugin
 Documentation=https://kubernetes.io/docs/
 After=kubelet.service
 
@@ -312,8 +312,8 @@ function device_plugin_service_start()
 
     if [ -e ${SERVICE_PATH}/${SERVICENAME} ]
     then
-        systemctl enable deviceplugin.service
-        systemctl daemon-reload &&  systemctl start deviceplugin.service
+        systemctl enable device-plugin.service
+        systemctl daemon-reload &&  systemctl start device-plugin.service
         check_device_plugin_status
     else
     	log_error "${SERVICE_PATH}/${SERVICENAME} not found, device plugin service start failed"
@@ -384,7 +384,7 @@ function help()
 
 function version()
 {
-	./ascendplugin --version
+	./device-plugin --version
 }
 
 function main()

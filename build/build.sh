@@ -5,7 +5,7 @@ set -e
 CUR_DIR=$(dirname $(readlink -f "$0"))
 TOP_DIR=$(realpath "${CUR_DIR}"/..)
 build_version="v2.0.2"
-output_name="ascendplugin"
+output_name="device-plugin"
 docker_images_name="ascend-k8sdeviceplugin:v2.0.2"
 os_type=$(arch)
 if [ "${os_type}" = "aarch64" ]; then
@@ -40,7 +40,7 @@ function build_plugin() {
             -trimpath
     ls "${output_name}"
     if [ $? -ne 0 ]; then
-        echo "fail to find ascendplugin"
+        echo "fail to find device-plugin"
         exit 1
     fi
 }
@@ -58,12 +58,12 @@ function modify_version() {
     sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/ascendplugin-710.yaml
 
     cp "$TOP_DIR"/Dockerfile "$TOP_DIR"/output/
-    cp "$TOP_DIR"/ascendplugin.yaml "$TOP_DIR"/output/ascendplugin-"${version}".yaml
-    cp "$TOP_DIR"/ascendplugin-volcano.yaml "$TOP_DIR"/output/ascendplugin-volcano-"${version}".yaml
-    cp "$TOP_DIR"/ascendplugin-310.yaml "$TOP_DIR"/output/ascendplugin-310-"${version}".yaml
-    cp "$TOP_DIR"/ascendplugin-710.yaml "$TOP_DIR"/output/ascendplugin-710-"${version}".yaml
+    cp "$TOP_DIR"/ascendplugin.yaml "$TOP_DIR"/output/device-plugin-"${version}".yaml
+    cp "$TOP_DIR"/ascendplugin-volcano.yaml "$TOP_DIR"/output/device-plugin-volcano-"${version}".yaml
+    cp "$TOP_DIR"/ascendplugin-310.yaml "$TOP_DIR"/output/device-plugin-310-"${version}".yaml
+    cp "$TOP_DIR"/ascendplugin-710.yaml "$TOP_DIR"/output/device-plugin-710-"${version}".yaml
 
-    sed -i "s#output/ascendplugin#ascendplugin#" "$TOP_DIR"/output/Dockerfile
+    sed -i "s#output/device-plugin#device-plugin#" "$TOP_DIR"/output/Dockerfile
 }
 
 function parse_version() {
