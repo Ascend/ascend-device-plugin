@@ -120,7 +120,7 @@ int dsmiShutDown(void){
 import "C"
 import (
 	"fmt"
-	"go.uber.org/zap"
+	"huawei.com/npu-exporter/hwlog"
 	"unsafe"
 )
 
@@ -373,8 +373,8 @@ func (d *DeviceManager) GetDeviceErrorCode(logicID uint32) error {
 		return fmt.Errorf("get wrong errorcode count, device: %d, errorcode count: %d", logicID, int32(errorCount))
 	}
 
-	logger.Info("get device error code", zap.Uint32("logicID", logicID),
-		zap.Int("errorCount", int(errorCount)), zap.Int("pErrorCode", int(pErrorCode[0])))
+	hwlog.Infof("get device error code, " +
+		"logicID: %d, errorCount: %d, pErrorCode: %d", logicID, int(errorCount),int(pErrorCode[0]))
 
 	return nil
 }

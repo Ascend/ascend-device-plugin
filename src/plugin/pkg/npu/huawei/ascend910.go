@@ -19,7 +19,7 @@ package huawei
 
 import (
 	"fmt"
-	"go.uber.org/zap"
+	"huawei.com/npu-exporter/hwlog"
 	"strings"
 )
 
@@ -63,7 +63,7 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *
 		}
 		cgoDsmiVDevInfos, err := hnm.getVirtualDevice(ids[i])
 		if err != nil && !strings.Contains(err.Error(), FunctionNotFound) {
-			logger.Error("Query virtual device info failure!", zap.String("err", err.Error()))
+			hwlog.Errorf("Query virtual device info failure!, err: %s", err.Error())
 			continue
 		}
 		var devices []npuDevice

@@ -19,7 +19,7 @@ package huawei
 import (
 	"github.com/fsnotify/fsnotify"
 	"go.uber.org/atomic"
-	"go.uber.org/zap"
+	"huawei.com/npu-exporter/hwlog"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"os"
 	"path"
@@ -87,7 +87,7 @@ func (hdm *HwDevManager) GetNPUs() error {
 
 	err := hdm.setRunMode()
 	if err != nil {
-		logger.Error("err to set Run mode ", zap.Error(err))
+		hwlog.Errorf("err to set Run mode, err: %v ", err)
 		return err
 	}
 
@@ -99,7 +99,7 @@ func (hdm *HwDevManager) GetNPUs() error {
 	case runMode710:
 		hdm.manager = NewHwAscend710Manager()
 	}
-	logger.Info("device plugin start")
+	hwlog.Infof("device plugin start")
 	hdm.manager.SetDmgr(hdm.dmgr)
 
 	if err := getDefaultDevices(&hdm.defaultDevs); err != nil {
@@ -122,20 +122,20 @@ func (hdm *HwDevManager) GetDevType() []string {
 func (hdm *HwDevManager) Serve(devType, socketPath, pluginSocket string, pluginServerFunc func(*HwDevManager, string, string) HwPluginServeInterface) {
 	// start sockPath monitor
 	if !VerifyPath(socketPath) {
-		logger.Error("socket path verify failed", zap.String("socketPath", socketPath))
+		hwlog.Errorf("socket path verify failed")
 		return
 	}
 	pluginSockPath := path.Join(socketPath, pluginSocket)
 
-	logger.Info("Starting socket file watcher.")
+	hwlog.Infof("Starting socket file watcher.")
 	watcher := NewFileWatch()
 	err := watcher.watchFile(pluginapi.DevicePluginPath)
 	if err != nil {
-		logger.Error("failed to create file watcher.", zap.String("err", err.Error()))
+		hwlog.Errorf("failed to create file watcher, err: %s", err.Error())
 	}
 	defer watcher.fileWatcher.Close()
 
-	logger.Info("Starting OS signs watcher.")
+	hwlog.Infof("Starting OS signs watcher.")
 	osSignChan := newSignWatcher(syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGKILL)
 
 	restart := true
@@ -153,7 +153,8 @@ func (hdm *HwDevManager) Serve(devType, socketPath, pluginSocket string, pluginS
 			preStart(hps, pluginSockPath)
 			// end
 			if err := hps.Start(pluginSocket, pluginSockPath); err != nil {
-				logger.Error("Could not contact Kubelet, retrying. Did you enable the device plugin feature gate?")
+				hwlog.Errorf("Could not contact Kubelet, retrying. " +
+					"Did you enable the device plugin feature gate?")
 				restart = true
 			} else {
 				restart = false
@@ -173,13 +174,13 @@ func preStart(hps HwPluginServeInterface, pluginSockPath string) {
 		}
 		// Use non-default level to avoid log spam.
 		if logFlag {
-			logger.Error("hwPluginServe.PreStart() failed", zap.String("err", err.Error()))
+			hwlog.Errorf("hwPluginServe preStart failed, err: %s", err.Error())
 		}
 		logFlag = false
 		time.Sleep(sleepTime * time.Second)
 	}
 	logFlag = true
-	logger.Info("starting device-plugin server at:", zap.String("pluginSockPath", pluginSockPath))
+	hwlog.Infof("starting device-plugin server")
 }
 
 func (hdm *HwDevManager) signalWatch(watcher *fsnotify.Watcher, sigs chan os.Signal, restart bool, hps HwPluginServeInterface, pluginSockPath string) bool {
@@ -187,28 +188,28 @@ func (hdm *HwDevManager) signalWatch(watcher *fsnotify.Watcher, sigs chan os.Sig
 	select {
 	case event, signEnd := <-watcher.Events:
 		if signEnd == false {
-			logger.Info("no watcher event, channel closed")
+			hwlog.Infof("no watcher event, channel closed")
 			return restart
 		}
 		if event.Name == pluginSockPath && event.Op&fsnotify.Remove == fsnotify.Remove {
-			logger.Warn("notify: file deleted, please check !", zap.String("fileName", pluginSockPath))
+			hwlog.Warnf("notify: sock file deleted, please check !")
 		}
 		if event.Name == pluginapi.KubeletSocket && event.Op&fsnotify.Create == fsnotify.Create {
-			logger.Info("notify: file created, restarting.", zap.String("fileName", pluginapi.KubeletSocket))
+			hwlog.Infof("notify: kubelet.sock file created, restarting.")
 			return true
 		}
 
 	case s, signEnd := <-sigs:
 		if signEnd == false {
-			logger.Info("no watcher sign event, channel closed")
+			hwlog.Infof("no watcher sign event, channel closed")
 			return restart
 		}
 		switch s {
 		case syscall.SIGHUP:
-			logger.Info("Received SIGHUP, restarting.")
+			hwlog.Infof("Received SIGHUP, restarting.")
 			return true
 		default:
-			logger.Info("Received signal, shutting down.", zap.String("signal", s.String()))
+			hwlog.Infof("Received signal: %s, shutting down.", s.String())
 			hps.Stop()
 			hdm.dmgr.ShutDown()
 			os.Exit(0)

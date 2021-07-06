@@ -29,10 +29,6 @@ const (
 	splitTestStringNum = 2
 )
 
-func init() {
-	NewLogger("/var/log/devicePlugin")
-}
-
 // NewFakeHwAscend310Manager used to create ascend 310 manager
 func NewFakeHwAscend310Manager() *HwAscend310Manager {
 	return &HwAscend310Manager{}

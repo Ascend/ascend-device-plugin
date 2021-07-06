@@ -21,7 +21,7 @@ import (
 	hwmanager "Ascend-device-plugin/src/plugin/pkg/npu/huawei"
 	"flag"
 	"fmt"
-	"go.uber.org/zap"
+	"huawei.com/npu-exporter/hwlog"
 	"os"
 )
 
@@ -47,9 +47,9 @@ var (
 	volcanoType     = flag.Bool("volcanoType", false, "use volcano to schedue")
 	version         = flag.Bool("version", false, "show k8s device plugin version ")
 	logDir          = flag.String("logDir", "/var/alog/AtlasEdge_log", "log path")
-	listWatchPeriod = flag.Int("listWatchPeriod", defaultListWatchPeriod, "listen and " +
+	listWatchPeriod = flag.Int("listWatchPeriod", defaultListWatchPeriod, "listen and "+
 		"watch device state's period, unit is second, scope is [3, 60]")
-	autoStowing     = flag.Bool("autoStowing", true, "auto stowing fixes devices or not")
+	autoStowing = flag.Bool("autoStowing", true, "auto stowing fixes devices or not")
 )
 
 var (
@@ -64,23 +64,14 @@ func main() {
 	flag.Parse()
 	var loggerPath string
 
-	loggerPath = fmt.Sprintf("%s/%s", logPath, hwmanager.LogName)
-	if *fdFlag {
-		loggerPath = fmt.Sprintf("%s/%s", *logDir, hwmanager.LogName)
-	}
-	err := hwmanager.NewLogger(loggerPath)
-	if err != nil {
-		fmt.Printf("new logger is error %v", err.Error())
-		os.Exit(1)
-	}
-	logger := hwmanager.GetLogger()
-	if logger == nil {
-		fmt.Printf("logger is nil")
-		os.Exit(1)
-	}
 	if *version {
 		fmt.Printf("%s version: %s\n", BuildName, BuildVersion)
 		os.Exit(0)
+	}
+
+	loggerPath = fmt.Sprintf("%s/%s", logPath, hwmanager.LogName)
+	if *fdFlag {
+		loggerPath = fmt.Sprintf("%s/%s", *logDir, hwmanager.LogName)
 	}
 
 	if *listWatchPeriod < minListWatchPeriod || *listWatchPeriod > maxListWatchPeriod {
@@ -88,30 +79,52 @@ func main() {
 		os.Exit(1)
 	}
 
+	hwLogConfig := hwlog.LogConfig{
+		LogFileName:   loggerPath,
+		OnlyToStdout:  false,
+		LogLevel:      0,
+		LogMode:       hwmanager.LogChmod,
+		BackupLogMode: hwmanager.BackupLogChmod,
+		FileMaxSize:   hwmanager.FileMaxSize,
+		MaxBackups:    hwmanager.MaxBackups,
+		MaxAge:        hwmanager.MaxAge,
+		IsCompress:    true,
+	}
+	stopCh := make(chan struct{})
+	defer close(stopCh)
+	if err := hwlog.Init(&hwLogConfig, stopCh); err != nil {
+		fmt.Printf("init hwlog error %v", err.Error())
+		os.Exit(1)
+	}
+	if !hwlog.IsInit() {
+		fmt.Printf("hwlog is nil")
+		os.Exit(1)
+	}
+
 	neverStop := make(chan struct{})
 	switch *mode {
 	case "ascend310", "pci", "vnpu", "ascend910", "ascend710", "":
-		logger.Info("ascend device plugin running mode", zap.String("mode", *mode))
+		hwlog.Infof("ascend device plugin running mode: %s", *mode)
 	default:
-		logger.Info("unSupport mode, waiting indefinitely", zap.String("mode", *mode))
+		hwlog.Infof("unSupport mode: %s, waiting indefinitely", *mode)
 		<-neverStop
 	}
 
 	hdm := hwmanager.NewHwDevManager(*mode, dlogPath, loggerPath)
 	hdm.SetParameters(*fdFlag, *useAscendDocker, *volcanoType, *autoStowing, *listWatchPeriod)
 	if err := hdm.GetNPUs(); err != nil {
-		logger.Error("no devices found. waiting indefinitely", zap.String("err", err.Error()))
+		hwlog.Errorf("no devices found. waiting indefinitely, err: %s", err.Error())
 		<-neverStop
 	}
 
 	devTypes := hdm.GetDevType()
 	if len(devTypes) == 0 {
-		logger.Error("no devices type found. waiting indefinitely")
+		hwlog.Errorf("no devices type found. waiting indefinitely")
 		<-neverStop
 	}
 
 	for _, devType := range devTypes {
-		logger.Info("ascend device serve started", zap.String("devType", devType))
+		hwlog.Infof("ascend device serve started, devType: %s", devType)
 		pluginSocket := fmt.Sprintf("%s.sock", devType)
 		go hdm.Serve(devType, socketPath, pluginSocket, hwmanager.NewHwPluginServe)
 	}

@@ -19,7 +19,7 @@ package huawei
 
 import (
 	"fmt"
-	"go.uber.org/zap"
+	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/apimachinery/pkg/util/sets"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"os"
@@ -27,8 +27,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 	"syscall"
+	"time"
 )
 
 const (
@@ -94,18 +94,18 @@ func getPhyIDByName(DeviceName string) (uint32, error) {
 
 	deviceID, _, err := getDeviceID(DeviceName, physicalDev)
 	if err != nil {
-		logger.Error("dev ID is invalid", zap.String("deviceID", DeviceName))
+		hwlog.Errorf("dev ID is invalid, deviceID: %s", DeviceName)
 		return phyID, err
 	}
 
 	devidCheck, err := strconv.Atoi(deviceID)
 	if err != nil {
-		logger.Error("transfer device string to Integer failed", zap.String("deviceID", DeviceName))
+		hwlog.Errorf("transfer device string to Integer failed, deviceID: %s", DeviceName)
 		return phyID, err
 	}
 	phyID = uint32(devidCheck)
 	if phyID > hiAIMaxDeviceNum || phyID < 0 {
-		logger.Error("GetDeviceState phyID overflow", zap.Uint32("phyID", phyID))
+		hwlog.Errorf("GetDeviceState phyID overflow, phyID: %d", phyID)
 		return phyID, fmt.Errorf("GetDevice phyid %d overflow", phyID)
 	}
 
@@ -140,10 +140,8 @@ func unhealthyState(healthyState uint32, logicID uint32, healthyType string, dmg
 	}
 	// if logFlag is true,print device error message
 	if logFlag {
-		logger.Error("device is unHealthy.",
-			zap.Uint32("logicID", logicID),
-			zap.Uint32("phyID", phyID),
-			zap.Uint32(healthyType, healthyState))
+		hwlog.Errorf("device is unHealthy, "+
+			"logicID: %d, phyID: %d, %s: %d", logicID, phyID, healthyType, healthyState)
 	}
 	return nil
 }
@@ -178,22 +176,22 @@ func IsVirtualDev(devType string) bool {
 func VerifyPath(verifyPath string) bool {
 	absVerifyPath, err := filepath.Abs(verifyPath)
 	if err != nil {
-		logger.Error("abs current path failed: ", zap.Error(err))
+		hwlog.Errorf("abs current path failed")
 		return false
 	}
 	pathInfo, err := os.Stat(absVerifyPath)
 	if err != nil || os.IsNotExist(err) {
-		logger.Error("file path not exist: ", zap.Error(err))
+		hwlog.Errorf("file path not exist")
 		return false
 	}
 	realPath, err := filepath.EvalSymlinks(absVerifyPath)
 	if err != nil || absVerifyPath != realPath {
-		logger.Error("Symlinks is not allowed: ")
+		hwlog.Errorf("Symlinks is not allowed")
 		return false
 	}
-	stat, ok:= pathInfo.Sys().(*syscall.Stat_t)
+	stat, ok := pathInfo.Sys().(*syscall.Stat_t)
 	if !ok || stat.Uid != rootUID || stat.Gid != rootGID {
-		logger.Error("Non-root owner group of the path")
+		hwlog.Errorf("Non-root owner group of the path")
 		return false
 	}
 	return true
@@ -201,7 +199,7 @@ func VerifyPath(verifyPath string) bool {
 
 // AssembleNpuDeviceStruct is used to create a struct of npuDevice
 func (adc *ascendCommonFunction) AssembleNpuDeviceStruct(deviType, devID string) npuDevice {
-	logger.Info("Found Huawei Ascend:", zap.String("deviType", deviType), zap.String("deviceID", devID))
+	hwlog.Infof("Found Huawei Ascend, deviceType: %s, deviceID: %s", deviType, devID)
 	return npuDevice{
 		devType: deviType,
 		pciID:   "",
@@ -217,10 +215,8 @@ func (adc *ascendCommonFunction) CreateLogDirectory(newLogPath *string, subdir s
 	*newLogPath += t.UTC().Format("_2006-01-02-15-04-05.999")
 	if _, err := os.Stat(*newLogPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(*newLogPath, os.ModePerm); err != nil {
-			logger.Error("create directory %s failed.",
-				zap.String("path", *newLogPath),
-				zap.String("err", err.Error()))
-			return fmt.Errorf("create directory %s failed: %s", *newLogPath, err)
+			hwlog.Errorf("ascendCommon create directory failed")
+			return fmt.Errorf("ascendCommon create directory failed")
 		}
 	}
 	return nil
@@ -232,7 +228,7 @@ func (adc *ascendCommonFunction) CreateLogSubDir(devID []string, ascendRuntimeOp
 	for _, item := range devID {
 		deviceID, _, err := getDeviceID(item, ascendRuntimeOptions)
 		if err != nil {
-			logger.Error("dev ID is invalid", zap.String("deviceID", item))
+			hwlog.Errorf("dev ID is invalid, deviceID: %s", item)
 			return subdir, fmt.Errorf("dev ID %s is invalid", item)
 		}
 		subdir += fmt.Sprintf("-%s", deviceID)
@@ -261,7 +257,7 @@ func (adc *ascendCommonFunction) GetLogPath(devID []string, defaultLogPath, asce
 		return err
 	}
 	*newLogPath = defaultLogPath
-	logger.Info("log dir is:", zap.String("logDir", *newLogPath))
+	hwlog.Infof("get log path successfully")
 	return nil
 }
 
@@ -270,8 +266,7 @@ func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr DeviceMgrIn
 	phyID, err := getPhyIDByName(DeviceName)
 	if err != nil {
 		if logFlag {
-			logger.Error("get device phyID failed.", zap.String("deviceId", DeviceName),
-				zap.String("error", err.Error()))
+			hwlog.Errorf("get device phyID failed, deviceId: %s, err: %s", DeviceName, err.Error())
 		}
 		return pluginapi.Unhealthy
 	}
@@ -279,8 +274,7 @@ func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr DeviceMgrIn
 	logicID, err := dmgr.GetLogicID(phyID)
 	if err != nil {
 		if logFlag {
-			logger.Error("get device logicID failed.", zap.String("deviceId", DeviceName),
-				zap.String("error", err.Error()))
+			hwlog.Errorf("get device logicID failed, deviceId: %s, err: %s", DeviceName, err.Error())
 		}
 		return pluginapi.Unhealthy
 	}
@@ -288,8 +282,7 @@ func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr DeviceMgrIn
 	healthState, err := dmgr.GetDeviceHealth(int32(logicID))
 	if err != nil {
 		if logFlag {
-			logger.Error("get device healthy state failed.", zap.Int32("deviceId", int32(logicID)),
-				zap.String("error", err.Error()))
+			hwlog.Errorf("get device healthy state failed, deviceId: %d, err: %s", int32(logicID), err.Error())
 		}
 		return pluginapi.Unhealthy
 	}
@@ -299,7 +292,7 @@ func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr DeviceMgrIn
 	default:
 		err = unhealthyState(healthState, logicID, "healthState", dmgr)
 		if err != nil {
-			logger.Error("unhealthyState ", zap.Error(err))
+			hwlog.Errorf("unhealthyState, err: %v", err)
 		}
 		return pluginapi.Unhealthy
 	}
@@ -307,7 +300,7 @@ func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr DeviceMgrIn
 
 // GetNPUs Discovers all HUAWEI Ascend310/Ascend710 devices by call dsmi interface
 func (adc *ascendCommonFunction) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *[]string, deviType string) error {
-	logger.Info("--->< ", zap.String("deviType", deviType))
+	hwlog.Infof("--->< deviType: %s", deviType)
 
 	var ids [hiAIMaxDeviceNum]uint32
 	devNum, getDevListErrInfo := adc.dmgr.GetDeviceList(&ids)

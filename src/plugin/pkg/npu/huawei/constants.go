@@ -47,15 +47,15 @@ const (
 
 	// LogName save log file
 	LogName                 = "devicePlugin.log"
-	fileMaxSize             = 30                                                      // each log file size
-	maxBackups              = 20                                                      // max backup
-	maxAge                  = 10                                                      // the log file last time
+	FileMaxSize             = 20                                                      // each log file size
+	MaxBackups              = 8                                                       // max backup
+	MaxAge                  = 10                                                      // the log file last time
 	podDeviceKey            = "ascend.kubectl.kubernetes.io/ascend-910-configuration" // config map name
 	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"                                // visible env
 	ascendRuntimeOptionsEnv = "ASCEND_RUNTIME_OPTIONS"                                // virtual runtime option env
-	logChmod                = 0640
+	LogChmod                = 0640
+	BackupLogChmod          = 0400
 	socketChmod             = 0600
-
 
 	huaweiAscend910  = "huawei.com/Ascend910"
 	podPredicateTime = "predicate-time"
@@ -74,8 +74,8 @@ const (
 	pwr16CSuffix          = "Ascend910-16c"
 
 	logicIDIndexInVirtualDevID910 = 3
-	huaweiUnHealthAscend910 = "huawei.com/Ascend910-Unhealthy"
-	huaweiRecoverAscend910  = "huawei.com/Ascend910-Recover"
+	huaweiUnHealthAscend910       = "huawei.com/Ascend910-Unhealthy"
+	huaweiRecoverAscend910        = "huawei.com/Ascend910-Recover"
 
 	// FunctionNotFound for describe dsmi interface function is exist or not
 	FunctionNotFound = "-99998"
