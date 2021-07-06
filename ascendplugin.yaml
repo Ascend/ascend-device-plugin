@@ -51,7 +51,7 @@ spec:
           - name: hiai-driver
             mountPath: /usr/local/Ascend/driver
           - name: log-path
-            mountPath: /var/log/devicePlugin
+            mountPath: /var/log/mindx-dl/devicePlugin
       volumes:
         - name: device-plugin
           hostPath:
@@ -61,4 +61,4 @@ spec:
             path: /usr/local/Ascend/driver
         - name: log-path
           hostPath:
-            path: /var/log/devicePlugin
+            path: /var/log/mindx-dl/devicePlugin

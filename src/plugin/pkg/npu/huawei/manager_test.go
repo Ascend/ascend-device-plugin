@@ -71,11 +71,7 @@ func deleteServerSocketByDevManager(serverSocket string, manager *HwDevManager) 
 	time.Sleep(sleepNumTwo * time.Second)
 	manager.stopFlag.Store(true)
 	hwlog.Infof("remove serverSocket: %s", serverSocket)
-	err := os.Remove(serverSocket)
-
-	if err != nil {
-		hwlog.Errorf("deleteServerSocketByDevManager, err: %v", err)
-	}
+	os.Remove(serverSocket)
 }
 
 // TestSignalWatch for testSingalWatch

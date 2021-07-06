@@ -29,7 +29,7 @@ const (
 	// socket name
 	dlogPath   = "/var/dlog"
 	socketPath = "/var/lib/kubelet/device-plugins"
-	logPath    = "/var/log/devicePlugin"
+	logPath    = "/var/log/mindx-dl/devicePlugin"
 
 	// defaultListWatchPeriod is the default listening device state's period
 	defaultListWatchPeriod = 5
@@ -59,6 +59,28 @@ var (
 	BuildVersion string
 )
 
+func initLogModule(logPath string, stopCh <-chan struct{}) {
+	hwLogConfig := hwlog.LogConfig{
+		LogFileName:   logPath,
+		OnlyToStdout:  false,
+		LogLevel:      0,
+		LogMode:       hwmanager.LogChmod,
+		BackupLogMode: hwmanager.BackupLogChmod,
+		FileMaxSize:   hwmanager.FileMaxSize,
+		MaxBackups:    hwmanager.MaxBackups,
+		MaxAge:        hwmanager.MaxAge,
+		IsCompress:    true,
+	}
+	if err := hwlog.Init(&hwLogConfig, stopCh); err != nil {
+		fmt.Printf("init hwlog error %v", err.Error())
+		os.Exit(1)
+	}
+	if !hwlog.IsInit() {
+		fmt.Printf("hwlog is nil")
+		os.Exit(1)
+	}
+}
+
 func main() {
 
 	flag.Parse()
@@ -79,27 +101,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	hwLogConfig := hwlog.LogConfig{
-		LogFileName:   loggerPath,
-		OnlyToStdout:  false,
-		LogLevel:      0,
-		LogMode:       hwmanager.LogChmod,
-		BackupLogMode: hwmanager.BackupLogChmod,
-		FileMaxSize:   hwmanager.FileMaxSize,
-		MaxBackups:    hwmanager.MaxBackups,
-		MaxAge:        hwmanager.MaxAge,
-		IsCompress:    true,
-	}
 	stopCh := make(chan struct{})
 	defer close(stopCh)
-	if err := hwlog.Init(&hwLogConfig, stopCh); err != nil {
-		fmt.Printf("init hwlog error %v", err.Error())
-		os.Exit(1)
-	}
-	if !hwlog.IsInit() {
-		fmt.Printf("hwlog is nil")
-		os.Exit(1)
-	}
+	initLogModule(loggerPath, stopCh)
 
 	neverStop := make(chan struct{})
 	switch *mode {
