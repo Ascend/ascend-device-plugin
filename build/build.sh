@@ -50,7 +50,7 @@ function mv_file() {
 }
 
 function change_mod() {
-    chmod 400 -R "$TOP_DIR/output/"*
+    chmod 400 "$TOP_DIR"/output/*
     chmod 500 "${TOP_DIR}/output/${output_name}"
 }
 
