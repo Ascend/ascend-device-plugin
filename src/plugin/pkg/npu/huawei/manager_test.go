@@ -18,7 +18,7 @@ package huawei
 
 import (
 	"go.uber.org/atomic"
-	"go.uber.org/zap"
+	"huawei.com/npu-exporter/hwlog"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"os"
 	"syscall"
@@ -70,12 +70,8 @@ func TestHwDevManager_Serve(t *testing.T) {
 func deleteServerSocketByDevManager(serverSocket string, manager *HwDevManager) {
 	time.Sleep(sleepNumTwo * time.Second)
 	manager.stopFlag.Store(true)
-	logger.Info("remove", zap.String("serverSocket", serverSocket))
-	err := os.Remove(serverSocket)
-
-	if err != nil {
-		logger.Error("deleteServerSocketByDevManager", zap.Error(err))
-	}
+	hwlog.Infof("remove serverSocket: %s", serverSocket)
+	os.Remove(serverSocket)
 }
 
 // TestSignalWatch for testSingalWatch
@@ -92,7 +88,7 @@ func TestSignalWatch(t *testing.T) {
 		t.Errorf("failed to create file watcher. %v", err)
 	}
 	defer watcher.fileWatcher.Close()
-	logger.Info("Starting OS signs watcher.")
+	hwlog.Infof("Starting OS signs watcher.")
 	osSignChan := newSignWatcher(syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	hdm := HwDevManager{}
 	hps := NewHwPluginServe(&hdm, "", "")

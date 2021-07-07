@@ -18,7 +18,7 @@ package huawei
 
 import (
 	"fmt"
-	"go.uber.org/zap"
+	"huawei.com/npu-exporter/hwlog"
 	"os"
 	"regexp"
 	"strings"
@@ -123,7 +123,7 @@ func (ki *KubeInteractor) patchAnnotationOnNode(allocatableDevices sets.String, 
 		node, err = ki.clientset.CoreV1().Nodes().Get(ki.nodeName, metav1.GetOptions{})
 
 		if err != nil {
-			logger.Error("failed to get node: ", zap.String("nodeName", ki.nodeName), zap.Error(err))
+			hwlog.Errorf("failed to get node, nodeName: %s, err: %v", ki.nodeName, err)
 			return false, nil
 		}
 
@@ -142,7 +142,7 @@ func (ki *KubeInteractor) patchAnnotationOnNode(allocatableDevices sets.String, 
 		}
 		_, _, err = nodeutil.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), node, newNode)
 		if err != nil {
-			logger.Error("failed to patch volcano npu resource: %v", zap.Error(err))
+			hwlog.Errorf("failed to patch volcano npu resource: %v", err)
 			return false, nil
 		}
 		return true, nil
@@ -154,7 +154,7 @@ func (ki *KubeInteractor) convertDevListToSets(devices string, sepType string) s
 	deviceSets := sets.String{}
 	var devicesList []string
 	if sepType == nodeLabelsDeviceSep {
-		devicesList =  strings.Split(devices, ".")
+		devicesList = strings.Split(devices, ".")
 	} else {
 		devicesList = strings.Split(devices, ",")
 	}
