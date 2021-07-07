@@ -45,7 +45,6 @@ func TestHwDevManager_GetNPUs(t *testing.T) {
 
 func createFakeDevManager(runMode string) *HwDevManager {
 	fakeHwDevManager := &HwDevManager{
-		dlogPath: "/var/log",
 		runMode:  runMode,
 		dmgr:     newFakeDeviceManager(),
 		stopFlag: atomic.NewBool(false),

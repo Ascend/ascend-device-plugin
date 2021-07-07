@@ -28,7 +28,6 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-	"time"
 )
 
 const (
@@ -208,34 +207,6 @@ func (adc *ascendCommonFunction) AssembleNpuDeviceStruct(deviType, devID string)
 	}
 }
 
-// CreateLogDirectory is used to create log complete path
-func (adc *ascendCommonFunction) CreateLogDirectory(newLogPath *string, subdir string) error {
-	*newLogPath += subdir
-	t := time.Now()
-	*newLogPath += t.UTC().Format("_2006-01-02-15-04-05.999")
-	if _, err := os.Stat(*newLogPath); os.IsNotExist(err) {
-		if err := os.MkdirAll(*newLogPath, os.ModePerm); err != nil {
-			hwlog.Errorf("ascendCommon create directory failed")
-			return fmt.Errorf("ascendCommon create directory failed")
-		}
-	}
-	return nil
-}
-
-// CreateLogSubDir is used to create log sub path
-func (adc *ascendCommonFunction) CreateLogSubDir(devID []string, ascendRuntimeOptions string) (string, error) {
-	var subdir = "/device"
-	for _, item := range devID {
-		deviceID, _, err := getDeviceID(item, ascendRuntimeOptions)
-		if err != nil {
-			hwlog.Errorf("dev ID is invalid, deviceID: %s", item)
-			return subdir, fmt.Errorf("dev ID %s is invalid", item)
-		}
-		subdir += fmt.Sprintf("-%s", deviceID)
-	}
-	return subdir, nil
-}
-
 // GetDevPath is used to get device path
 func (adc *ascendCommonFunction) GetDevPath(id, ascendRuntimeOptions string) (string, string) {
 	containerPath := fmt.Sprintf("%s%s", "/dev/davinci", id)
@@ -244,21 +215,6 @@ func (adc *ascendCommonFunction) GetDevPath(id, ascendRuntimeOptions string) (st
 		hostPath = fmt.Sprintf("%s%s", "/dev/vdavinci", id)
 	}
 	return containerPath, hostPath
-}
-
-// GetLogPath is used to get log path
-func (adc *ascendCommonFunction) GetLogPath(devID []string, defaultLogPath, ascendRuntimeOptions string, newLogPath *string) error {
-	subdir, err := adc.CreateLogSubDir(devID, ascendRuntimeOptions)
-	if err != nil {
-		return err
-	}
-	err = adc.CreateLogDirectory(&defaultLogPath, subdir)
-	if err != nil {
-		return err
-	}
-	*newLogPath = defaultLogPath
-	hwlog.Infof("get log path successfully")
-	return nil
 }
 
 // GetDevState get device state

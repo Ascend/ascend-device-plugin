@@ -27,7 +27,6 @@ import (
 
 const (
 	// socket name
-	dlogPath   = "/var/dlog"
 	socketPath = "/var/lib/kubelet/device-plugins"
 	logPath    = "/var/log/mindx-dl/devicePlugin"
 
@@ -110,7 +109,7 @@ func main() {
 		<-neverStop
 	}
 
-	hdm := hwmanager.NewHwDevManager(*mode, dlogPath, loggerPath)
+	hdm := hwmanager.NewHwDevManager(*mode)
 	hdm.SetParameters(*fdFlag, *useAscendDocker, *volcanoType, *autoStowing, *listWatchPeriod)
 	if err := hdm.GetNPUs(); err != nil {
 		hwlog.Errorf("no devices found. waiting indefinitely, err: %s", err.Error())
