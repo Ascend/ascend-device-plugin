@@ -86,27 +86,8 @@ func TestHwAscend310Manager_GetDevPath(t *testing.T) {
 	t.Logf("TestHwAscend310Manager_GetDevPath Run Pass")
 }
 
-// TestHwAscend310Manager_GetLogPath for getLogPath
-func TestHwAscend310Manager_GetLogPath(t *testing.T) {
-	hdm := createFakeHwDevManager("", true, false, false)
-
-	var logPath string
-	devID := make([]string, 0)
-	devID = append(devID, "davinci-mini-0")
-	t.Logf("deviceId%v, %d", devID, len(devID))
-	err := hdm.manager.GetLogPath(devID, "/var/dlog", physicalDev, &logPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	splitstring := strings.Split(logPath, "_")
-	if len(splitstring) != splitTestStringNum || !strings.Contains(logPath, "0") {
-		t.Fail()
-	}
-	t.Logf("TestHwAscend310Manager_GetLogPath Run Pass ")
-}
-
 func createFakeHwDevManager(mode string, fdFlag, useAscendDocker, volcanoType bool) *HwDevManager {
-	hdm := NewHwDevManager(mode, "/var/dlog", "/var/log/devicePlugin/")
+	hdm := NewHwDevManager(mode)
 	hdm.SetParameters(fdFlag, useAscendDocker, volcanoType, true, sleepTime)
 	hdm.manager = NewFakeHwAscend310Manager()
 	hdm.manager.SetDmgr(newFakeDeviceManager())

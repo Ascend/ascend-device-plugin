@@ -261,9 +261,6 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 	for _, rqt := range requests.ContainerRequests {
 		resp := new(pluginapi.ContainerAllocateResponse)
 
-		var devID []string
-		var dlogMountPath string
-
 		allocateNum := len(rqt.DevicesIDs)
 		if allocateNum > maxDevicesNum {
 			return nil, fmt.Errorf("the devices can't bigger than %d", maxDevicesNum)
@@ -281,7 +278,7 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 			}
 		}
 		if s.hps.runMode == runMode910 {
-			s.mountfile(resp, dlogMountPath, devID)
+			s.mountfile(resp)
 			s.responseAnonation(resp, ascendVisibleDevicesMap)
 		}
 		addEnv(ascendVisibleDevicesMap, s.ascendRuntimeOptions, resp)
@@ -479,11 +476,7 @@ func (s *pluginAPI) PreStartContainer(ctx context.Context,
 	return &pluginapi.PreStartContainerResponse{}, nil
 }
 
-func (s *pluginAPI) mountfile(resp *pluginapi.ContainerAllocateResponse, dlogMountPath string, devID []string) {
-	if err := s.hps.hdm.manager.GetLogPath(devID, s.hps.hdm.dlogPath, s.ascendRuntimeOptions, &dlogMountPath); err != nil {
-		hwlog.Errorf("get logPath failed, err: %s", err.Error())
-		dlogMountPath = s.hps.hdm.dlogPath
-	}
+func (s *pluginAPI) mountfile(resp *pluginapi.ContainerAllocateResponse) {
 	timeStr := time.Now().Format("20060102150405")
 	rankID := "" + timeStr + "-0"
 	slogConfigPath := GetSlogConfigFilePath()
@@ -491,11 +484,6 @@ func (s *pluginAPI) mountfile(resp *pluginapi.ContainerAllocateResponse, dlogMou
 		ContainerPath: slogConfigPath,
 		HostPath:      slogConfigPath,
 		ReadOnly:      true,
-	})
-	resp.Mounts = append(resp.Mounts, &pluginapi.Mount{
-		ContainerPath: "/var/dlog",
-		HostPath:      dlogMountPath,
-		ReadOnly:      false,
 	})
 	// mount log format
 

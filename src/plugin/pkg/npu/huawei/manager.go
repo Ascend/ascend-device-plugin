@@ -38,7 +38,6 @@ type npuDevice struct {
 // HwDevManager manages huawei device devices.
 type HwDevManager struct {
 	manager     devManager
-	dlogPath    string
 	runMode     string
 	allDevTypes []string
 	allDevs     []npuDevice
@@ -63,7 +62,6 @@ var (
 
 type devManager interface {
 	GetNPUs(*[]npuDevice, *[]string, string) error
-	GetLogPath([]string, string, string, *string) error
 	GetDevPath(string, string) (string, string)
 	GetDevState(string, DeviceMgrInterface) string
 	SetDmgr(DeviceMgrInterface)
@@ -73,9 +71,8 @@ type devManager interface {
 }
 
 // NewHwDevManager function is used to new a dev manager.
-func NewHwDevManager(mode, dlogPath, logPath string) *HwDevManager {
+func NewHwDevManager(mode string) *HwDevManager {
 	return &HwDevManager{
-		dlogPath: dlogPath,
 		runMode:  mode,
 		dmgr:     NewDeviceManager(),
 		stopFlag: atomic.NewBool(false),

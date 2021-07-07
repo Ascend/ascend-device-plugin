@@ -81,27 +81,8 @@ func TestHwAscend710Manager_GetDevPath(t *testing.T) {
 	t.Logf("TestHwAscend710Manager_GetDevPath Run Pass")
 }
 
-// TestHwAscend710Manager_GetLogPath for getLogPath
-func TestHwAscend710Manager_GetLogPath(t *testing.T) {
-	hdm := createFake710HwDevManager("ascend710", false, false, false)
-
-	var logPath string
-	devID := make([]string, 0)
-	devID = append(devID, "Ascend710-0")
-	t.Logf("deviceId%v, %d", devID, len(devID))
-	err := hdm.manager.GetLogPath(devID, "/var/dlog", physicalDev, &logPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	splitstring := strings.Split(logPath, "_")
-	if len(splitstring) != splitTestStringNum || !strings.Contains(logPath, "0") {
-		t.Fail()
-	}
-	t.Logf("TestHwAscend710Manager_GetLogPath Run Pass ")
-}
-
 func createFake710HwDevManager(mode string, fdFlag, useAscendDocker, volcanoType bool) *HwDevManager {
-	hdm := NewHwDevManager(mode, "/var/dlog", "/var/log/devicePlugin/")
+	hdm := NewHwDevManager(mode)
 	hdm.SetParameters(fdFlag, useAscendDocker, volcanoType, true, sleepTime)
 	hdm.manager = NewFakeHwAscend710Manager()
 	hdm.manager.SetDmgr(newFakeDeviceManager())
