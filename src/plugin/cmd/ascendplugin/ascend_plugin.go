@@ -75,10 +75,6 @@ func initLogModule(logPath string, stopCh <-chan struct{}) {
 		fmt.Printf("init hwlog error %v", err.Error())
 		os.Exit(1)
 	}
-	if !hwlog.IsInit() {
-		fmt.Printf("hwlog is nil")
-		os.Exit(1)
-	}
 }
 
 func main() {

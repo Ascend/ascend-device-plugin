@@ -8,7 +8,7 @@ require (
 	go.uber.org/zap v1.16.0
 	golang.org/x/net v0.0.0-20200301022130-244492dfa37a
 	google.golang.org/grpc v1.31.0
-	huawei.com/npu-exporter v1.0.2
+	huawei.com/npu-exporter v0.0.1
 	k8s.io/api v0.17.8
 	k8s.io/apimachinery v0.17.8
 	k8s.io/client-go v0.17.8
