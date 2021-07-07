@@ -47,6 +47,10 @@ function build_plugin() {
 
 function mv_file() {
     mv "${TOP_DIR}/src/plugin/cmd/ascendplugin/${output_name}"   "${TOP_DIR}"/output
+}
+
+function change_mod() {
+    chmod 400 "$TOP_DIR"/output/*
     chmod 500 "${TOP_DIR}/output/${output_name}"
 }
 
@@ -83,6 +87,7 @@ function main() {
   build_plugin
   mv_file
   modify_version
+  change_mod
 }
 
 main
