@@ -44,6 +44,7 @@ const (
 	sleepTime = 5
 
 	// logger setting
+	
 	// MaxBackups log file max backup
 	MaxBackups = 30
 	// MaxAge the log file last time
