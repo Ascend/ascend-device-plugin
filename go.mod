@@ -5,7 +5,6 @@ go 1.14
 require (
 	github.com/fsnotify/fsnotify v1.4.9
 	go.uber.org/atomic v1.6.0
-	go.uber.org/zap v1.16.0
 	golang.org/x/net v0.0.0-20200301022130-244492dfa37a
 	google.golang.org/grpc v1.31.0
 	huawei.com/npu-exporter v0.0.1

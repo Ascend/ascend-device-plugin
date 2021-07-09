@@ -64,6 +64,7 @@ spec:
         - name: log-path
           hostPath:
             path: /var/log/mindx-dl/devicePlugin
+            type: Directory
         - name: localtime
           hostPath:
             path: /etc/localtime
