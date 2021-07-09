@@ -45,8 +45,8 @@ var (
 	useAscendDocker = flag.Bool("useAscendDocker", true, "use ascend docker or not")
 	volcanoType     = flag.Bool("volcanoType", false, "use volcano to schedue")
 	version         = flag.Bool("version", false, "show k8s device plugin version ")
-	logDir          = flag.String("logDir", "/var/alog/AtlasEdge_log/devicePlugin.log",
-		"log path")
+	edgeLogFile     = flag.String("edgeLogFile", "/var/alog/AtlasEdge_log/devicePlugin.log",
+		"edge log file path")
 	listWatchPeriod = flag.Int("listWatchPeriod", defaultListWatchPeriod, "listen and "+
 		"watch device state's period, unit is second, scope is [3, 60]")
 	autoStowing     = flag.Bool("autoStowing", true, "auto stowing fixes devices or not")
@@ -70,7 +70,7 @@ func initLogModule( stopCh <-chan struct{}) {
 	var loggerPath string
 	loggerPath = *logFile
 	if *fdFlag {
-		loggerPath = *logDir
+		loggerPath = *edgeLogFile
 	}
 	hwLogConfig := hwlog.LogConfig{
 		LogFileName:   loggerPath,
