@@ -28,7 +28,7 @@ import (
 const (
 	// socket name
 	socketPath = "/var/lib/kubelet/device-plugins"
-	logPath    = "/var/log/mindx-dl/devicePlugin"
+	defaultLogPath    = "/var/log/mindx-dl/devicePlugin/devicePlugin.log"
 
 	// defaultListWatchPeriod is the default listening device state's period
 	defaultListWatchPeriod = 5
@@ -45,10 +45,18 @@ var (
 	useAscendDocker = flag.Bool("useAscendDocker", true, "use ascend docker or not")
 	volcanoType     = flag.Bool("volcanoType", false, "use volcano to schedue")
 	version         = flag.Bool("version", false, "show k8s device plugin version ")
-	logDir          = flag.String("logDir", "/var/alog/AtlasEdge_log", "log path")
+	edgeLogFile     = flag.String("edgeLogFile", "/var/alog/AtlasEdge_log/devicePlugin.log",
+		"edge log file path")
 	listWatchPeriod = flag.Int("listWatchPeriod", defaultListWatchPeriod, "listen and "+
 		"watch device state's period, unit is second, scope is [3, 60]")
-	autoStowing = flag.Bool("autoStowing", true, "auto stowing fixes devices or not")
+	autoStowing     = flag.Bool("autoStowing", true, "auto stowing fixes devices or not")
+	logLevel        = flag.Int("logLevel", 0,
+		"log level, -1-debug, 0-info(default), 1-warning, 2-error, 3-dpanic, 4-panic, 5-fatal")
+	logMaxAge       = flag.Int("maxAge", hwmanager.MaxAge, "maximum number of days for backup log files")
+	logIsCompress   = flag.Bool("isCompress", false,
+		"whether backup files need to be compressed (default false)")
+	logFile         = flag.String("logFile", defaultLogPath, "log file path")
+	logMaxBackups   = flag.Int("maxBackups", hwmanager.MaxBackups, "maximum number of backup log files")
 )
 
 var (
@@ -58,17 +66,18 @@ var (
 	BuildVersion string
 )
 
-func initLogModule(logPath string, stopCh <-chan struct{}) {
+func initLogModule( stopCh <-chan struct{}) {
+	var loggerPath string
+	loggerPath = *logFile
+	if *fdFlag {
+		loggerPath = *edgeLogFile
+	}
 	hwLogConfig := hwlog.LogConfig{
-		LogFileName:   logPath,
-		OnlyToStdout:  false,
-		LogLevel:      0,
-		LogMode:       hwmanager.LogChmod,
-		BackupLogMode: hwmanager.BackupLogChmod,
-		FileMaxSize:   hwmanager.FileMaxSize,
-		MaxBackups:    hwmanager.MaxBackups,
-		MaxAge:        hwmanager.MaxAge,
-		IsCompress:    true,
+		LogFileName:   loggerPath,
+		LogLevel:      *logLevel,
+		MaxBackups:    *logMaxBackups,
+		MaxAge:        *logMaxAge,
+		IsCompress:    *logIsCompress,
 	}
 	if err := hwlog.Init(&hwLogConfig, stopCh); err != nil {
 		fmt.Printf("init hwlog error %v", err.Error())
@@ -79,16 +88,10 @@ func initLogModule(logPath string, stopCh <-chan struct{}) {
 func main() {
 
 	flag.Parse()
-	var loggerPath string
 
 	if *version {
 		fmt.Printf("%s version: %s\n", BuildName, BuildVersion)
 		os.Exit(0)
-	}
-
-	loggerPath = fmt.Sprintf("%s/%s", logPath, hwmanager.LogName)
-	if *fdFlag {
-		loggerPath = fmt.Sprintf("%s/%s", *logDir, hwmanager.LogName)
 	}
 
 	if *listWatchPeriod < minListWatchPeriod || *listWatchPeriod > maxListWatchPeriod {
@@ -98,7 +101,7 @@ func main() {
 
 	stopCh := make(chan struct{})
 	defer close(stopCh)
-	initLogModule(loggerPath, stopCh)
+	initLogModule(stopCh)
 
 	neverStop := make(chan struct{})
 	switch *mode {
