@@ -26,6 +26,8 @@ import (
 const (
 	// ZeroCore is "0c"
 	zeroCore = "0"
+	// noVDevFound means not supported in the current scenario.
+	noVDevFound = "65534"
 )
 
 // switch error log
@@ -63,8 +65,10 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *
 		}
 		cgoDsmiVDevInfos, err := hnm.getVirtualDevice(ids[i])
 		if err != nil && !strings.Contains(err.Error(), FunctionNotFound) {
-			hwlog.Errorf("Query virtual device info failure!, err: %s", err.Error())
-			continue
+			if !strings.Contains(err.Error(), noVDevFound) {
+				hwlog.Errorf("Query virtual device info failure!, err: %s", err.Error())
+				continue
+			}
 		}
 		var devices []npuDevice
 		if cgoDsmiVDevInfos.vDevNum == 0 {
