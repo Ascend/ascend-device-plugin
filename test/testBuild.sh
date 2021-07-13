@@ -4,23 +4,7 @@ CUR_DIR=$(dirname $(readlink -f $0))
 TOP_DIR=$(realpath "${CUR_DIR}"/..)
 export GO111MODULE="on"
 export PATH=$GOPATH/bin:$PATH
-CONFIGDIR=${TOP_DIR}/src/plugin/config/config_310
 
-DRIVER_FILE="310driver"
-DOWN_DRIVER_FILE="platform/Tuscany"
-PC_File="ascend_device_plugin.pc"
-SODIR=${TOP_DIR}/${DRIVER_FILE}/driver/lib64/
-export LD_LIBRARY_PATH=${SODIR}:${LD_LIBRARY_PATH}
-export PKG_CONFIG_PATH=${CONFIGDIR}:$PKG_CONFIG_PATH
-ls ${TOP_DIR}/${DOWN_DRIVER_FILE}
-plateform=$(arch)
-chmod 550 ${TOP_DIR}/${DOWN_DRIVER_FILE}/Ascend310-driver-*.${plateform}.run
-
-mkdir -p /var/lib/kubelet/device-plugins
-${TOP_DIR}/${DOWN_DRIVER_FILE}/Ascend310-driver-*${osname}*.${plateform}*.run \
---noexec --extract=${TOP_DIR}/${DRIVER_FILE}
-sed -i "/^prefix=/c prefix=${TOP_DIR}/${DRIVER_FILE}" ${CONFIGDIR}/${PC_File}
-ldd ${SODIR}/libdrvdsmi_host.so
 go get github.com/golang/mock/mockgen
 MOCK_TOP=${TOP_DIR}/src/plugin/pkg/npu/huawei
 mkdir -p "${MOCK_TOP}/mock_v1"
@@ -48,6 +32,7 @@ go test -v -race -coverprofile cov.out ${TOP_DIR}/src/plugin/pkg/npu/huawei/ >./
 if [ $? != 0 ]; then
   echo '****** go test cases error! ******'
   echo 'Failed' >$file_input
+  exit 1
 else
   echo ${file_detail_output}
   gocov convert cov.out | gocov-html >${file_detail_output}
@@ -68,3 +53,4 @@ echo "************************************* End   LLT Test *********************
 rm -rf ${MOCK_TOP}/mock_v1
 rm -rf ${MOCK_TOP}/mock_kubernetes
 rm -rf ${MOCK_TOP}/mock_kubelet_v1beta1
+exit 0
