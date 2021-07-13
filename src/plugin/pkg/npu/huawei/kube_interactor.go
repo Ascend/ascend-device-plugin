@@ -136,9 +136,7 @@ func (ki *KubeInteractor) patchAnnotationOnNode(allocatableDevices sets.String, 
 				ki.convertDevListToSets(groupAllocatableDevs[huaweiAscend910], nodeAnnotationsDeviceSep))
 			newNode.Annotations[huaweiAscend910] = newAscend910
 			newNode.Annotations[huaweiUnHealthAscend910] = ki.convertSetsToString(totalUHDevices, nodeAnnotationsDeviceSep)
-			if !autoStowingDevs {
-				newNode.Labels[huaweiRecoverAscend910] = ki.convertSetsToString(newLabelsRecoverDev, nodeLabelsDeviceSep)
-			}
+			newNode.Labels[huaweiRecoverAscend910] = ki.convertSetsToString(newLabelsRecoverDev, nodeLabelsDeviceSep)
 		}
 		_, _, err = nodeutil.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), node, newNode)
 		if err != nil {
