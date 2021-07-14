@@ -83,6 +83,9 @@ const (
 
 	// maxDevicesNum is max number of devices
 	maxDevicesNum = 64
+
+	// maxTrainDevicesNum is max number of train devices
+	maxTrainDevicesNum = 8
 )
 
 // Register function is use to register k8s devicePlugin to kubelet.
@@ -673,17 +676,23 @@ func getPredicateTimeFromPodAnnotation(pod *v1.Pod) uint64 {
 	return math.MaxUint64
 }
 
-func (s *pluginAPI) getNPUResourceNumOfPod(pod *v1.Pod) uint {
-	var total uint
+func (s *pluginAPI) getNPUResourceNumOfPod(pod *v1.Pod) int64 {
+	var total int64
 	containers := pod.Spec.Containers
 	annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, s.hps.devType)
 	for _, container := range containers {
 		if val, ok := container.Resources.Limits[v1.ResourceName(annotationTag)]; ok {
-			if uint(val.Value()) > uint(maxDevicesNum) {
-				fmt.Errorf("the devices limits can't bigger than %d", maxDevicesNum)
-				continue
+			limitsDevNum := val.Value()
+			if limitsDevNum < 0 || limitsDevNum > int64(maxTrainDevicesNum) {
+				hwlog.Errorf("apply devices number should be in [0, 8]")
+				return int64(0)
 			}
-			total += uint(val.Value())
+			if limitsDevNum > math.MaxInt64-total {
+				hwlog.Errorf("apply devices number overflow")
+				return int64(0)
+			}
+
+			total += limitsDevNum
 		}
 	}
 	return total
