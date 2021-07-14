@@ -56,11 +56,11 @@ func TestPluginAPI_ListAndWatch(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	node1 := &v1.Node{
-		ObjectMeta: metav1.ObjectMeta{Annotations: make(map[string]string)},
+		ObjectMeta: metav1.ObjectMeta{Annotations: make(map[string]string), Labels: make(map[string]string)},
 	}
 	podList := &v1.PodList{}
 	pod1 := v1.Pod{
-		ObjectMeta: metav1.ObjectMeta{Annotations: make(map[string]string)},
+		ObjectMeta: metav1.ObjectMeta{Annotations: make(map[string]string), Labels: make(map[string]string)},
 	}
 	podList.Items = append(podList.Items, pod1)
 	node1.Annotations[huaweiAscend910] = "Ascend910-1,Ascend910-2"
