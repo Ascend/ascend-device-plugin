@@ -40,23 +40,23 @@ const (
 )
 
 var (
-	mode            = flag.String("mode", "", "device plugin running mode")
-	fdFlag          = flag.Bool("fdFlag", false, "set the connect system is fd system")
-	useAscendDocker = flag.Bool("useAscendDocker", true, "use ascend docker or not")
-	volcanoType     = flag.Bool("volcanoType", false, "use volcano to schedue")
-	version         = flag.Bool("version", false, "show k8s device plugin version ")
+	mode            = flag.String("mode", "", "Device plugin running mode")
+	fdFlag          = flag.Bool("fdFlag", false, "Whether to use fd system to manage device")
+	useAscendDocker = flag.Bool("useAscendDocker", true, "Whether to use ascend docker")
+	volcanoType     = flag.Bool("volcanoType", false, "Whether to use volcano for scheduling")
+	version         = flag.Bool("version", false, "Output version information")
 	edgeLogFile     = flag.String("edgeLogFile", "/var/alog/AtlasEdge_log/devicePlugin.log",
-		"edge log file path")
-	listWatchPeriod = flag.Int("listWatchPeriod", defaultListWatchPeriod, "listen and "+
-		"watch device state's period, unit is second, scope is [3, 60]")
-	autoStowing     = flag.Bool("autoStowing", true, "auto stowing fixes devices or not")
+		"Log file path in edge scene")
+	listWatchPeriod = flag.Int("listWatchPeriod", defaultListWatchPeriod, "Listen and "+
+		"watch device state's period, unit second, range [3, 60]")
+	autoStowing     = flag.Bool("autoStowing", true, "Whether to automatically stow the fixed device")
 	logLevel        = flag.Int("logLevel", 0,
-		"log level, -1-debug, 0-info(default), 1-warning, 2-error, 3-dpanic, 4-panic, 5-fatal")
-	logMaxAge       = flag.Int("maxAge", hwmanager.MaxAge, "maximum number of days for backup log files")
+		"Log level, -1-debug, 0-info(default), 1-warning, 2-error, 3-dpanic, 4-panic, 5-fatal")
+	logMaxAge       = flag.Int("maxAge", hwmanager.MaxAge, "Maximum number of days for backup log files")
 	logIsCompress   = flag.Bool("isCompress", false,
-		"whether backup files need to be compressed (default false)")
-	logFile         = flag.String("logFile", defaultLogPath, "log file path")
-	logMaxBackups   = flag.Int("maxBackups", hwmanager.MaxBackups, "maximum number of backup log files")
+		"Whether backup files need to be compressed")
+	logFile         = flag.String("logFile", defaultLogPath, "The log file path")
+	logMaxBackups   = flag.Int("maxBackups", hwmanager.MaxBackups, "Maximum number of backup log files")
 )
 
 var (
