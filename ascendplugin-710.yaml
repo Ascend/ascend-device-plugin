@@ -40,8 +40,8 @@ spec:
               memory: 500Mi
               cpu: 500m
           command: [ "/bin/bash", "-c", "--"]
-          args: [ "umask 0027;device-plugin  --useAscendDocker=${USE_ASCEND_DOCKER}
-                   --logFile=/var/log/mindx-dl/devicePlugin/devicePlugin.log --logLevel=0" ]
+          args: [ "umask 0027;device-plugin  -useAscendDocker=${USE_ASCEND_DOCKER}
+                   -logFile=/var/log/mindx-dl/devicePlugin/devicePlugin.log -logLevel=0" ]
           securityContext:
             privileged: true
             readOnlyRootFilesystem: true
