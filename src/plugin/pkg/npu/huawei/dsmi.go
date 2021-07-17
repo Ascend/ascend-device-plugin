@@ -121,6 +121,7 @@ import "C"
 import (
 	"fmt"
 	"huawei.com/npu-exporter/hwlog"
+	"strings"
 	"unsafe"
 )
 
@@ -308,8 +309,7 @@ func (d *DeviceManager) GetDeviceIP(logicID int32) (string, error) {
 	var portID C.int
 	var ipAddress [hiAIMaxDeviceNum]C.ip_addr_t
 	var maskAddress [hiAIMaxDeviceNum]C.ip_addr_t
-	var retIPAddress string
-	var ipString [4]uint8
+	var deviceIP []string
 
 	retCode := C.dsmi_get_device_ip_address(C.int(logicID), portType, portID, &ipAddress[C.int(logicID)],
 		&maskAddress[C.int(logicID)])
@@ -318,12 +318,10 @@ func (d *DeviceManager) GetDeviceIP(logicID int32) (string, error) {
 	}
 
 	unionPara := ipAddress[C.int(logicID)].u_addr
-	for i := 0; i < len(ipString); i++ {
-		ipString[i] = uint8(*(*C.uchar)(unsafe.Pointer(&unionPara[i])))
+	for i := 0; i < deviceIPLength; i++ {
+		deviceIP = append(deviceIP, fmt.Sprintf("%d", uint8(unionPara[i])))
 	}
-
-	retIPAddress = fmt.Sprintf("%d.%d.%d.%d", ipString[0], ipString[1], ipString[2], ipString[3])
-	return retIPAddress, nil
+	return strings.Join(deviceIP, "."), nil
 }
 
 // ShutDown clean the dynamically loaded resource
