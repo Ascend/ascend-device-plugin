@@ -4,7 +4,7 @@ cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMT
 cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 cloud.google.com/go v0.38.0 h1:ROfEUZz+Gh5pa62DJWXSaonyu3StP6EA6lPEXPI6mCo=
 cloud.google.com/go v0.38.0/go.mod h1:990N+gfupTy94rShfmMCWGDn0LpTmnzTp2qbd1dvSRU=
-codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.0.2 h1:EfV2Gy5y2h4dGN1ky/YJ8IrArcLLhZpRlBxm18qjLFE=
+codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.0.2 h1:z4jR3FZCTSU2qK3NuZlz6xn94RVFR3Sr3x99/vog7EE=
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.0.2/go.mod h1:QUtw8bVLqhKrZ2b0N+94TCBUB+J9NtkXSHi4FQTPpuw=
 codehub-dg-y.huawei.com/it-edge-native/edge-native-core/coastguard.git v1.0.6 h1:QO4JTYr7hsyjd8VeE9ARivO3iIes/1GS6DkLiS5w3Xo=
 codehub-dg-y.huawei.com/it-edge-native/edge-native-core/coastguard.git v1.0.6/go.mod h1:mbUvvh/0ox+lNtLoraCsf+NMpTCL2h4L/NtfboraaH4=
