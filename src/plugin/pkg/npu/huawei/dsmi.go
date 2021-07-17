@@ -122,7 +122,6 @@ import (
 	"fmt"
 	"huawei.com/npu-exporter/hwlog"
 	"strings"
-	"unsafe"
 )
 
 const (
@@ -344,13 +343,12 @@ func (d *DeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error)
 	}
 
 	for i := uint32(0); i < cgoDsmiVDevInfos.vDevNum; i++ {
-		dsmiSubVDevInfo := *(*C.struct_dsmi_sub_vdev_info)(unsafe.Pointer(uintptr(unsafe.Pointer(&dsmiVDevInfo.vdev)) + uintptr(C.sizeof_struct_dsmi_sub_vdev_info * C.int(i))))
-		coreNum := fmt.Sprintf("%v", dsmiSubVDevInfo.spec.core_num)
+		coreNum := fmt.Sprintf("%v", dsmiVDevInfo.vdev[i].spec.core_num)
 		cgoDsmiVDevInfos.cgoDsmiSubVDevInfos= append(cgoDsmiVDevInfos.cgoDsmiSubVDevInfos, CgoDsmiSubVDevInfo{
-			status: uint32(dsmiSubVDevInfo.status),
-			vdevid: uint32(dsmiSubVDevInfo.vdevid),
-			vfid: uint32(dsmiSubVDevInfo.vfid),
-			cid: uint64(dsmiSubVDevInfo.cid),
+			status: uint32(dsmiVDevInfo.vdev[i].status),
+			vdevid: uint32(dsmiVDevInfo.vdev[i].vdevid),
+			vfid: uint32(dsmiVDevInfo.vdev[i].vfid),
+			cid: uint64(dsmiVDevInfo.vdev[i].cid),
 			spec: CgoDsmiVdevSpecInfo{
 				coreNum: coreNum,
 			},
