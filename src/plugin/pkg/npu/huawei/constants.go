@@ -40,6 +40,7 @@ const (
 	hiAISlogdConfig     = "/etc/slog.conf"
 	hiAIMaxDeviceNum    = 64
 	idSplitNum          = 2
+	deviceIPLength      = 4
 	// The unit is seconds
 	sleepTime = 5
 
