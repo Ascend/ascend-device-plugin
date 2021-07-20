@@ -40,7 +40,7 @@ const (
 )
 
 var (
-	mode            = flag.String("mode", "", "Device plugin running mode")
+	mode            = flag.String("mode", "", "Device plugin running mode: ascend310, ascend710, ascend910")
 	fdFlag          = flag.Bool("fdFlag", false, "Whether to use fd system to manage device")
 	useAscendDocker = flag.Bool("useAscendDocker", true, "Whether to use ascend docker")
 	volcanoType     = flag.Bool("volcanoType", false, "Whether to use volcano for scheduling")
@@ -105,7 +105,7 @@ func main() {
 
 	neverStop := make(chan struct{})
 	switch *mode {
-	case "ascend310", "pci", "vnpu", "ascend910", "ascend710", "":
+	case "ascend310", "ascend910", "ascend710", "":
 		hwlog.Infof("ascend device plugin running mode: %s", *mode)
 	default:
 		hwlog.Infof("unSupport mode: %s, waiting indefinitely", *mode)
