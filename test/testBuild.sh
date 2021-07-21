@@ -1,4 +1,5 @@
-#!/bin/sh
+#!/bin/bash
+# Copyright @ Huawei Technologies CO., Ltd. 2020-2021. All rights reserved
 set -e
 CUR_DIR=$(dirname $(readlink -f $0))
 TOP_DIR=$(realpath "${CUR_DIR}"/..)
@@ -25,7 +26,12 @@ file_detail_output='DevicepluginCoverageReport.html'
 echo "************************************* Start LLT Test *************************************"
 mkdir -p "${TOP_DIR}"/test/
 cd "${TOP_DIR}"/test/
-rm -rf $file_detail_output $file_input
+if [ -f "$file_detail_output" ]; then
+  rm -rf $file_detail_output
+fi
+if [ -f "$file_input" ]; then
+  rm -rf $file_input
+fi
 
 go test -v -race -coverprofile cov.out ${TOP_DIR}/src/plugin/pkg/npu/huawei/ >./$file_input
 
