@@ -5,6 +5,13 @@ set -e
 CUR_DIR=$(dirname $(readlink -f "$0"))
 TOP_DIR=$(realpath "${CUR_DIR}"/..)
 build_version="v2.0.2"
+version_file="${TOP_DIR}"/service_config.ini
+if  [ -f "$version_file" ]; then
+  line=$(sed -n '4p' "$version_file" 2>&1)
+  #cut the chars after ':'
+  build_version=${line#*:}
+fi
+
 output_name="device-plugin"
 docker_images_name="ascend-k8sdeviceplugin:v2.0.2"
 os_type=$(arch)
@@ -56,34 +63,23 @@ function change_mod() {
 
 function modify_version() {
     cd "${TOP_DIR}"
-    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/ascendplugin.yaml
-    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/ascendplugin-volcano.yaml
-    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/ascendplugin-310.yaml
-    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/ascendplugin-710.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$TOP_DIR"/ascendplugin.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$TOP_DIR"/ascendplugin-volcano.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$TOP_DIR"/ascendplugin-310.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$TOP_DIR"/ascendplugin-710.yaml
 
     cp "$TOP_DIR"/Dockerfile "$TOP_DIR"/output/
-    cp "$TOP_DIR"/ascendplugin.yaml "$TOP_DIR"/output/device-plugin-"${version}".yaml
-    cp "$TOP_DIR"/ascendplugin-volcano.yaml "$TOP_DIR"/output/device-plugin-volcano-"${version}".yaml
-    cp "$TOP_DIR"/ascendplugin-310.yaml "$TOP_DIR"/output/device-plugin-310-"${version}".yaml
-    cp "$TOP_DIR"/ascendplugin-710.yaml "$TOP_DIR"/output/device-plugin-710-"${version}".yaml
+    cp "$TOP_DIR"/ascendplugin.yaml "$TOP_DIR"/output/device-plugin-"${build_version}".yaml
+    cp "$TOP_DIR"/ascendplugin-volcano.yaml "$TOP_DIR"/output/device-plugin-volcano-"${build_version}".yaml
+    cp "$TOP_DIR"/ascendplugin-310.yaml "$TOP_DIR"/output/device-plugin-310-"${build_version}".yaml
+    cp "$TOP_DIR"/ascendplugin-710.yaml "$TOP_DIR"/output/device-plugin-710-"${build_version}".yaml
 
     sed -i "s#output/device-plugin#device-plugin#" "$TOP_DIR"/output/Dockerfile
 }
 
-function parse_version() {
-    version_file="${TOP_DIR}"/service_config.ini
-    version=${build_version}
-    if  [ -f "$version_file" ]; then
-      line=$(sed -n '4p' "$version_file" 2>&1)
-      #cut the chars after ':'
-      version=${line#*:}
-      build_version=${version}
-    fi
-}
 
 function main() {
   clear_env
-  parse_version
   build_plugin
   mv_file
   modify_version
