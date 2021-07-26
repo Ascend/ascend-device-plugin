@@ -40,6 +40,11 @@ func TestHwDevManager_GetNPUs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	fakeHwDevManager = createFakeDevManager("ascend710")
+	err = fakeHwDevManager.GetNPUs()
+	if err != nil {
+		t.Fatal(err)
+	}
 	t.Logf("TestHwDevManager_GetNPUs Run Pass")
 }
 
@@ -62,7 +67,8 @@ func TestHwDevManager_Serve(t *testing.T) {
 	f.Chmod(socketChmod)
 	f.Close()
 	go deleteServerSocketByDevManager(serverSock310, fakeHwDevManager)
-	fakeHwDevManager.Serve("Ascend310", "/var/lib/kubelet/device-plugins/", "Ascend310.sock", NewFakeHwPluginServe)
+	fakeHwDevManager.Serve("Ascend310", "/var/lib/kubelet/device-plugins/",
+		"Ascend310.sock", NewFakeHwPluginServe)
 	t.Logf("TestHwDevManager_Serve Run Pass")
 }
 
@@ -90,6 +96,7 @@ func TestSignalWatch(t *testing.T) {
 	hwlog.Infof("Starting OS signs watcher.")
 	osSignChan := newSignWatcher(syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	hdm := HwDevManager{}
+	useVolcanoType = true
 	hps := NewHwPluginServe(&hdm, "", "")
 	var restart bool
 	go deleteServerSocket(serverSockFd)

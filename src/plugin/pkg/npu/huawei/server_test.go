@@ -18,10 +18,12 @@ package huawei
 
 import (
 	"fmt"
+	"go.uber.org/atomic"
 	"google.golang.org/grpc"
 	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/apimachinery/pkg/util/sets"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+	"testing"
 )
 
 type fakeHwPluginServe struct {
@@ -40,14 +42,68 @@ type fakeHwPluginServe struct {
 // NewFakeHwPluginServe to create fakePlugin
 func NewFakeHwPluginServe(hdm *HwDevManager, devType string, socket string) HwPluginServeInterface {
 	return &fakeHwPluginServe{
-		devType:      devType,
-		hdm:          hdm,
-		runMode:      hdm.runMode,
-		devices:      make(map[string]*npuDevice),
-		socket:       socket,
-		healthDevice: sets.String{},
+		devType:        devType,
+		hdm:            hdm,
+		runMode:        hdm.runMode,
+		devices:        make(map[string]*npuDevice),
+		socket:         socket,
+		healthDevice:   sets.String{},
 		unHealthDevice: sets.String{},
 	}
+}
+
+// TestStart for test Start
+func TestStart(t *testing.T) {
+	fakeHwDevManager := &HwDevManager{
+		runMode:  "ascend910",
+		dmgr:     newFakeDeviceManager(),
+		stopFlag: atomic.NewBool(false),
+	}
+	pluginSocket := "Ascend910.sock"
+	pluginSocketPath := "/var/lib/kubelet/device-plugins/" + pluginSocket
+	hps := NewHwPluginServe(fakeHwDevManager, "Ascend910", pluginSocketPath)
+	err := hps.Start(pluginSocket, pluginSocketPath)
+	if err != nil {
+		t.Fatal("TestStart Run Failed")
+	}
+	t.Logf("TestStart Run Pass")
+}
+
+// TestStop for test Stop
+func TestStop(t *testing.T) {
+	fakeHwDevManager := &HwDevManager{
+		runMode:  "ascend910",
+		stopFlag: atomic.NewBool(false),
+	}
+	pluginSocket := "Ascend910.sock"
+	pluginSocketPath := "/var/lib/kubelet/device-plugins/" + pluginSocket
+	hps := NewHwPluginServe(fakeHwDevManager, "Ascend910", pluginSocketPath)
+	err := hps.Stop()
+	if err != nil {
+		t.Fatal("TestStop Run Failed")
+	}
+	err = hps.cleanSock()
+	if err != nil {
+		t.Fatal("TestStop Run Failed")
+	}
+	t.Logf("TestStop Run Pass")
+}
+
+// TestGetDevByType for test GetDevByType
+func TestGetDevByType(t *testing.T) {
+	fakeHwDevManager := createFakeDevManager("")
+	err := fakeHwDevManager.GetNPUs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	pluginSocket := "Ascend310.sock"
+	pluginSocketPath := "/var/lib/kubelet/device-plugins/" + pluginSocket
+	hps := NewHwPluginServe(fakeHwDevManager, "Ascend310", pluginSocketPath)
+	err = hps.GetDevByType()
+	if err != nil {
+		t.Fatal("TestGetDevByType Run Failed")
+	}
+	t.Logf("TestGetDevByType Run Pass")
 }
 
 // GetDevByType by fake
