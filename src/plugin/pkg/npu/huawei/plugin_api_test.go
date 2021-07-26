@@ -25,6 +25,7 @@ import (
 	"go.uber.org/atomic"
 	"golang.org/x/net/context"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
@@ -155,7 +156,7 @@ func TestAddAnnotation(t *testing.T) {
 // TestAllocate for test Allocate
 func TestAllocate(t *testing.T) {
 	hdm := createFakeDevManager("ascend910")
-	hdm.SetParameters(false, true, false, true, sleepTime)
+	hdm.SetParameters(false, false, false, true, sleepTime)
 	if err := hdm.GetNPUs(); err != nil {
 		t.Fatal(err)
 	}
@@ -193,10 +194,96 @@ func TestAllocate(t *testing.T) {
 		ID:      "Ascend910-8c-1-1",
 		Health:  pluginapi.Healthy,
 	}
+
 	_, requestErrs := fakePluginAPI.Allocate(ctx, &requests)
 	if requestErrs != nil {
 		t.Fatal("TestPluginAPI_Allocate Run Failed")
 	}
 
 	t.Logf("TestPluginAPI_Allocate Run Pass")
+}
+
+// TestGetDevicePluginOptions for test GetDevicePluginOptions
+func TestGetDevicePluginOptions(t *testing.T) {
+	var ctx context.Context
+	var pe pluginapi.Empty
+	hdm := createFakeDevManager("ascend910")
+	pluginSockPath := fmt.Sprintf("%s.sock", "Ascend910")
+	fakeKubeInteractor := &KubeInteractor{}
+	fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", pluginSockPath, fakeKubeInteractor)
+	_, err := fakePluginAPI.GetDevicePluginOptions(ctx, &pe)
+	if err != nil {
+		t.Fatal("TestGetDevicePluginOptions Run Failed")
+	}
+	t.Logf("TestGetDevicePluginOptions Run Pass")
+}
+
+// TestGetNPUAnnotationOfPod for test getNPUAnnotationOfPod
+func TestGetNPUAnnotationOfPod(t *testing.T) {
+	pods := mockPodList()
+	var res []v1.Pod
+	ascendVisibleDevices := make(map[string]string, MaxVirtualDevNum)
+	hdm := createFakeDevManager("ascend910")
+	pluginSockPath := fmt.Sprintf("%s.sock", "Ascend910")
+	fakeKubeInteractor := &KubeInteractor{}
+	fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", pluginSockPath, fakeKubeInteractor)
+	for _, pod := range pods {
+		if err := fakePluginAPI.checkPodNameAndSpace(pod.Name, podNameMaxLength); err != nil {
+			t.Fatal("TestGetNPUAnnotationOfPod Run Failed")
+		}
+		if err := fakePluginAPI.checkPodNameAndSpace(pod.Namespace, podNameSpaceMaxLength); err != nil {
+			t.Fatal("TestGetNPUAnnotationOfPod Run Failed")
+		}
+		if fakePluginAPI.getNPUResourceNumOfPod(&pod) >= 0 && fakePluginAPI.isAscendAssignedPod(&pod) &&
+			!fakePluginAPI.isShouldDeletePod(&pod) {
+			res = append(res, pod)
+		}
+	}
+	oldPod := getOldestPod(pods)
+	if oldPod == nil {
+		t.Fatal("TestGetNPUAnnotationOfPod Run Failed")
+	}
+	allocateDevice := sets.NewString()
+	err := fakePluginAPI.getNPUAnnotationOfPod(oldPod, &allocateDevice, 1)
+	if err != nil {
+		t.Fatal("TestGetNPUAnnotationOfPod Run Failed")
+	}
+	err = fakePluginAPI.getAscendVisiDevsWithVolcano(allocateDevice, &ascendVisibleDevices)
+	if err != nil {
+		t.Fatal("TestGetNPUAnnotationOfPod Run Failed")
+	}
+	t.Logf("TestGetNPUAnnotationOfPod Run Pass")
+}
+
+func mockPodList() []v1.Pod {
+	annotationTag := resourceNamePrefix + "Ascend910"
+	annotations := make(map[string]string, 1)
+	annotations[annotationTag] = "Ascend910-0"
+	annotations["predicate-time"] = "1626785193048251590"
+	return []v1.Pod{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "mindx-dls-npu-1p-default-2p-0",
+				Namespace:   "btg-test",
+				Annotations: annotations,
+			},
+			Spec: v1.PodSpec{
+				Containers: []v1.Container{
+					{Resources: v1.ResourceRequirements{
+						Limits: v1.ResourceList{
+							"huawei.com/ascend910": resource.Quantity{},
+						},
+					}},
+				},
+			},
+			Status: v1.PodStatus{
+				Reason: "UnexpectedAdmissionError",
+				ContainerStatuses: []v1.ContainerStatus{
+					{State: v1.ContainerState{
+						Waiting: &v1.ContainerStateWaiting{},
+					}},
+				},
+			},
+		},
+	}
 }
