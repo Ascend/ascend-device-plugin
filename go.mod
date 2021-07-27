@@ -7,7 +7,7 @@ require (
 	go.uber.org/atomic v1.6.0
 	golang.org/x/net v0.0.0-20191004110552-13f9640d40b9
 	google.golang.org/grpc v1.23.1
-	huawei.com/npu-exporter v0.0.2
+	huawei.com/npu-exporter v0.0.3
 	k8s.io/api v0.17.8
 	k8s.io/apimachinery v0.17.8
 	k8s.io/client-go v0.17.8
@@ -17,7 +17,7 @@ require (
 
 replace (
 	huawei.com/kmc => codehub-dg-y.huawei.com/it-edge-native/edge-native-core/coastguard.git v1.0.6
-	huawei.com/npu-exporter => codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.0.2
+	huawei.com/npu-exporter => codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.0.3
 	k8s.io/api => k8s.io/api v0.17.8
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.17.8
 	k8s.io/apimachinery => k8s.io/apimachinery v0.17.8
