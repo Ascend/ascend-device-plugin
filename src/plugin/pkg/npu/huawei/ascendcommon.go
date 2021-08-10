@@ -297,3 +297,8 @@ func (adc *ascendCommonFunction) GetDmgr() DeviceMgrInterface {
 func (adc *ascendCommonFunction) GetPhyDevMapVirtualDev() map[uint32]string {
 	return adc.phyDevMapVirtualDev
 }
+
+// DoWithVolcanoListAndWatch ascend710 do nothing
+func (adc *ascendCommonFunction) DoWithVolcanoListAndWatch(hps *HwPluginServe, isStateChange bool) {
+	return
+}

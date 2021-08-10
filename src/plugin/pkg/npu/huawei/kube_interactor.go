@@ -116,7 +116,7 @@ func checkNodeName(nodeName string) error {
 	return nil
 }
 
-func (ki *KubeInteractor) patchAnnotationOnNode(allocatableDevices sets.String, devType string) error {
+func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]string, devType string) error {
 	var err error
 	err = wait.PollImmediate(interval*time.Second, timeout*time.Second, func() (bool, error) {
 		var node *v1.Node
@@ -127,7 +127,6 @@ func (ki *KubeInteractor) patchAnnotationOnNode(allocatableDevices sets.String, 
 			return false, nil
 		}
 
-		groupAllocatableDevs := ki.groupDevByPower(allocatableDevices)
 		newNode := ki.updateNodeAnnotations(devType, groupAllocatableDevs, node)
 		if devType == "" {
 			newLabelsRecoverDev, newAscend910 := getUnHealthDev(totalUHDevices,
@@ -200,34 +199,6 @@ func (ki *KubeInteractor) updateNodeAnnotations(devType string, groupAllocatable
 		newNode.Annotations[annotationTag] = deviceNames
 	}
 	return newNode
-}
-
-func (ki *KubeInteractor) groupDevByPower(allocatableDevices sets.String) map[string]string {
-	var pwrSuffix = []string{hiAIAscend910Prefix, pwr2CSuffix, pwr4CSuffix, pwr8CSuffix, pwr16CSuffix}
-	var groupAllocatableDevs = make(map[string]string, len(pwrSuffix))
-	for _, suffix := range pwrSuffix {
-		powerAnnotation := ki.filterTagPowerDevice(allocatableDevices, suffix)
-		annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, suffix)
-		groupAllocatableDevs[annotationTag] = powerAnnotation
-	}
-	return groupAllocatableDevs
-}
-
-func (ki *KubeInteractor) filterTagPowerDevice(allocatableDevices sets.String, suffix string) string {
-	var powerAnnotation []string
-	for deviceName := range allocatableDevices {
-		switch suffix {
-		case hiAIAscend910Prefix:
-			if !IsVirtualDev(deviceName) {
-				powerAnnotation = append(powerAnnotation, deviceName)
-			}
-		default:
-			if strings.Contains(deviceName, suffix) {
-				powerAnnotation = append(powerAnnotation, deviceName)
-			}
-		}
-	}
-	return strings.Join(powerAnnotation, ",")
 }
 
 func (ki *KubeInteractor) convertStringToSet(deviceNames string) sets.String {

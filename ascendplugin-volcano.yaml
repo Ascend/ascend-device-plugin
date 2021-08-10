@@ -56,7 +56,7 @@ spec:
         - key: huawei.com/Ascend910
           operator: Exists
           effect: NoSchedule
-        - key: "deviceplugin"
+        - key: "device-plugin"
           operator: "Equal"
           value: "v2"
           effect: NoSchedule
@@ -65,7 +65,7 @@ spec:
         accelerator: huawei-Ascend910
       serviceAccountName: ascend-device-plugin-sa
       containers:
-      - image: ascend-k8sdeviceplugin:v2.0.2
+      - image: ascend-k8sdeviceplugin:v2.0.3
         name: device-plugin-01
         resources:
           requests:
@@ -75,7 +75,7 @@ spec:
             memory: 500Mi
             cpu: 500m
         command: [ "/bin/bash", "-c", "--"]
-        args: [ "umask 0027;device-plugin  -useAscendDocker=true -volcanoType=true
+        args: [ "device-plugin  -useAscendDocker=true -volcanoType=true
                  -logFile=/var/log/mindx-dl/devicePlugin/devicePlugin.log -logLevel=0" ]
         securityContext:
           privileged: true

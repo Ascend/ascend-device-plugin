@@ -58,6 +58,9 @@ var (
 
 	// autoStowingDevs auto stowing fixes devices or not
 	autoStowingDevs bool
+
+	// switch error log
+	logFlag = true
 )
 
 type devManager interface {
@@ -68,6 +71,7 @@ type devManager interface {
 	GetDmgr() DeviceMgrInterface
 	GetMatchingDeviType() string
 	GetPhyDevMapVirtualDev() map[uint32]string
+	DoWithVolcanoListAndWatch(*HwPluginServe, bool)
 }
 
 // NewHwDevManager function is used to new a dev manager.

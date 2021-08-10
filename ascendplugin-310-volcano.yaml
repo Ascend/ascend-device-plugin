@@ -1,3 +1,37 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ascend-device-plugin-sa
+  namespace: kube-system
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: pods-node-ascend-device-plugin-role
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "update"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["nodes/status"]
+    verbs: ["get", "patch"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: pods-node-ascend-device-plugin-rolebinding
+subjects:
+  - kind: ServiceAccount
+    name: ascend-device-plugin-sa
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: pods-node-ascend-device-plugin-role
+  apiGroup: rbac.authorization.k8s.io
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -29,6 +63,7 @@ spec:
       priorityClassName: "system-node-critical"
       nodeSelector:
         accelerator: huawei-Ascend310
+      serviceAccountName: ascend-device-plugin-sa
       containers:
       - image: ascend-k8sdeviceplugin:v2.0.3
         name: device-plugin-01
@@ -40,7 +75,7 @@ spec:
             memory: 500Mi
             cpu: 500m
         command: [ "/bin/bash", "-c", "--"]
-        args: [ "device-plugin  -useAscendDocker=true
+        args: [ "device-plugin  -useAscendDocker=true -volcanoType=true
                  -logFile=/var/log/mindx-dl/devicePlugin/devicePlugin.log -logLevel=0" ]
         securityContext:
           privileged: true
@@ -55,6 +90,11 @@ spec:
             mountPath: /var/log/mindx-dl/devicePlugin
           - name: localtime
             mountPath: /etc/localtime
+        env:
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
       volumes:
         - name: device-plugin
           hostPath:

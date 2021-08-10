@@ -124,14 +124,7 @@ func (s *pluginAPI) ListAndWatch(emtpy *pluginapi.Empty, stream pluginapi.Device
 
 	hwlog.Infof("device-plugin: ListAndWatch start")
 	resp := new(pluginapi.ListAndWatchResponse)
-	for _, dev := range s.hps.devices {
-		resp.Devices = append(resp.Devices, &pluginapi.Device{ID: dev.ID, Health: dev.Health})
-		s.hps.healthDevice.Insert(dev.ID)
-	}
-
-	if err := sendDevToKubelet(resp, stream); err != nil {
-		hwlog.Errorf("listAndWatch: send device info failed, please check kubelet status, err: %s", err.Error())
-	}
+	s.updateKubeletDevInfo(resp, stream)
 
 	for {
 		if s.outbreak.Load() {
@@ -140,7 +133,7 @@ func (s *pluginAPI) ListAndWatch(emtpy *pluginapi.Empty, stream pluginapi.Device
 		time.Sleep(time.Duration(listAndWatchPeriod) * time.Second)
 		isStateChange := s.isDeviceStatusChange()
 		if useVolcanoType {
-			s.doWithVolcanoListAndWatch(isStateChange)
+			s.hps.hdm.manager.DoWithVolcanoListAndWatch(s.hps, isStateChange)
 		}
 		if !isStateChange {
 			// close log print
@@ -148,18 +141,26 @@ func (s *pluginAPI) ListAndWatch(emtpy *pluginapi.Empty, stream pluginapi.Device
 		}
 		if isStateChange {
 			// turn on log print
-			logFlag = true
+			logFlag, firstTimeList = true, true
 			resp.Devices = resp.Devices[:0]
-			for _, dev := range s.hps.devices {
-				resp.Devices = append(resp.Devices, &pluginapi.Device{ID: dev.ID, Health: dev.Health})
-			}
-			if err := sendDevToKubelet(resp, stream); err != nil {
-				hwlog.Errorf("listAndWatch: send device info failed, please check kubelet status, err: %s",
-					err.Error())
-			}
+			s.updateKubeletDevInfo(resp, stream)
 		}
 	}
 	return nil
+}
+
+func (s *pluginAPI) updateKubeletDevInfo(resp *pluginapi.ListAndWatchResponse,
+	stream pluginapi.DevicePlugin_ListAndWatchServer) {
+	for _, dev := range s.hps.devices {
+		resp.Devices = append(resp.Devices, &pluginapi.Device{ID: dev.ID, Health: dev.Health})
+		if !firstTimeList {
+			s.hps.healthDevice.Insert(dev.ID)
+		}
+	}
+
+	if err := sendDevToKubelet(resp, stream); err != nil {
+		hwlog.Errorf("listAndWatch: send device info failed, please check kubelet status, err: %s", err.Error())
+	}
 }
 
 func (s *pluginAPI) isDeviceStatusChange() bool {
@@ -211,43 +212,6 @@ func (s *pluginAPI) listenPhysicalDevices() bool {
 		}
 	}
 	return isStateChange
-}
-
-func (s *pluginAPI) doWithVolcanoListAndWatch(isStateChange bool) {
-	s.groupDevsByStatus(isStateChange)
-	m.Lock()
-	usedDevices := sets.NewString()
-	s.getNodeNpuUsed(&usedDevices)
-	freeDevices := s.hps.healthDevice.Difference(usedDevices)
-	totalDevices = totalDevices.Union(freeDevices)
-	stateThreadNum += interval
-	if stateThreadNum == len(s.hps.hdm.allDevTypes) {
-		if err := s.hps.kubeInteractor.patchAnnotationOnNode(totalDevices, ""); err != nil {
-			hwlog.Errorf("patch Annotation failed, err: %v", err)
-		}
-		totalDevices = totalDevices.Intersection(sets.String{})
-		stateThreadNum = resetZero
-	}
-	m.Unlock()
-}
-
-func (s *pluginAPI) groupDevsByStatus(isStateChange bool) {
-	if !isStateChange {
-		return
-	}
-	if s.hps.devType == hiAIAscend910Prefix && isStateChange {
-		totalUHDevices = sets.String{}
-	}
-	s.hps.healthDevice = sets.String{}
-	uhDevice := sets.String{}
-	for _, device := range s.hps.devices {
-		if device.Health != pluginapi.Healthy && !IsVirtualDev(device.ID) {
-			uhDevice.Insert(device.ID)
-			totalUHDevices = totalUHDevices.Union(uhDevice)
-			continue
-		}
-		s.hps.healthDevice.Insert(device.ID)
-	}
 }
 
 // Allocate is called by kubelet to mount device to k8s pod.
@@ -352,24 +316,24 @@ func (s *pluginAPI) mountDefaultDevice(resp *pluginapi.ContainerAllocateResponse
 	}
 }
 
-func (s *pluginAPI) getNodeNpuUsed(usedDevices *sets.String) {
+func getNodeNpuUsed(usedDevices *sets.String, hps *HwPluginServe) {
 	var (
 		err    error
 		useNpu []string
 	)
 
-	kubeClient := s.hps.kubeInteractor.clientset
-	node, err := kubeClient.CoreV1().Nodes().Get(s.hps.kubeInteractor.nodeName, metav1.GetOptions{})
+	kubeClient := hps.kubeInteractor.clientset
+	node, err := kubeClient.CoreV1().Nodes().Get(hps.kubeInteractor.nodeName, metav1.GetOptions{})
 	if err != nil {
 		hwlog.Errorf("get node from k8s error: %v", err)
 		return
 	}
-	getFailed := s.getNPUByStatus(kubeClient, node.Name, string(v1.PodRunning), &useNpu)
+	getFailed := getNPUByStatus(kubeClient, node.Name, string(v1.PodRunning), hps.devType, &useNpu)
 	if getFailed {
 		return
 	}
 
-	getFailed = s.getNPUByStatus(kubeClient, node.Name, string(v1.PodPending), &useNpu)
+	getFailed = getNPUByStatus(kubeClient, node.Name, string(v1.PodPending), hps.devType, &useNpu)
 	if getFailed {
 		return
 	}
@@ -380,7 +344,7 @@ func (s *pluginAPI) getNodeNpuUsed(usedDevices *sets.String) {
 	return
 }
 
-func (s *pluginAPI) getNPUByStatus(kubeClient kubernetes.Interface, nodeName, status string, useNpu *[]string) bool {
+func getNPUByStatus(kubeClient kubernetes.Interface, nodeName, status, devType string, useNpu *[]string) bool {
 	selector := fields.SelectorFromSet(fields.Set{"spec.nodeName": nodeName, "status.phase": status})
 	podList, err := kubeClient.CoreV1().Pods(v1.NamespaceAll).List(metav1.ListOptions{
 		FieldSelector: selector.String()})
@@ -389,7 +353,7 @@ func (s *pluginAPI) getNPUByStatus(kubeClient kubernetes.Interface, nodeName, st
 		return true
 	}
 	for _, pod := range podList.Items {
-		annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, s.hps.devType)
+		annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, devType)
 		tmpNpu, ok := pod.Annotations[annotationTag]
 		if !ok {
 			continue
@@ -759,9 +723,10 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int) (map[string]string, e
 	}
 
 	usedDevices := sets.NewString()
-	s.getNodeNpuUsed(&usedDevices)
+	getNodeNpuUsed(&usedDevices, s.hps)
 	freeDevices := s.hps.healthDevice.Difference(usedDevices)
-	errs := s.hps.kubeInteractor.patchAnnotationOnNode(freeDevices, s.hps.devType)
+	groupAllocatableDevs := groupDevByPower(freeDevices, s.hps.devType)
+	errs := s.hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, s.hps.devType)
 	if errs != nil {
 		hwlog.Errorf("patch Annotations failed, err: %v", err)
 		return nil, err

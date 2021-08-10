@@ -20,6 +20,8 @@ package huawei
 import (
 	"fmt"
 	"huawei.com/npu-exporter/hwlog"
+	"k8s.io/apimachinery/pkg/util/sets"
+	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"strings"
 )
 
@@ -29,9 +31,6 @@ const (
 	// noVDevFound means not supported in the current scenario.
 	noVDevFound = "65534"
 )
-
-// switch error log
-var logFlag = true
 
 // HwAscend910Manager manages huawei Ascend910 devices.
 type HwAscend910Manager struct {
@@ -133,4 +132,77 @@ func (hnm *HwAscend910Manager) getVirtualDevice(logicID uint32) (CgoDsmiVDevInfo
 		return CgoDsmiVDevInfo{}, fmt.Errorf("query virtual device info failure: %s", err)
 	}
 	return cgoDsmiVDevInfos, nil
+}
+
+// DoWithVolcanoListAndWatch ascend910 affinity scheduling
+func (hnm *HwAscend910Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe, isStateChange bool) {
+	hnm.groupDevsByStatus(hps, isStateChange)
+	m.Lock()
+	usedDevices := sets.NewString()
+	getNodeNpuUsed(&usedDevices, hps)
+	freeDevices := hps.healthDevice.Difference(usedDevices)
+	totalDevices = totalDevices.Union(freeDevices)
+	stateThreadNum += interval
+	if stateThreadNum == len(hps.hdm.allDevTypes) {
+		groupAllocatableDevs := groupDevByPower(totalDevices, hps.devType)
+		if err := hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, ""); err != nil {
+			hwlog.Errorf("patch Annotation failed, err: %v", err)
+		}
+		totalDevices = totalDevices.Intersection(sets.String{})
+		stateThreadNum = resetZero
+	}
+	m.Unlock()
+}
+
+func (hnm *HwAscend910Manager) groupDevsByStatus(hps *HwPluginServe, isStateChange bool) {
+	if !isStateChange {
+		return
+	}
+	if hps.devType == hiAIAscend910Prefix && isStateChange {
+		totalUHDevices = sets.String{}
+	}
+	hps.healthDevice = sets.String{}
+	uhDevice := sets.String{}
+	for _, device := range hps.devices {
+		if device.Health != pluginapi.Healthy && !IsVirtualDev(device.ID) {
+			uhDevice.Insert(device.ID)
+			totalUHDevices = totalUHDevices.Union(uhDevice)
+			continue
+		}
+		hps.healthDevice.Insert(device.ID)
+	}
+}
+
+func groupDevByPower(allocatableDevices sets.String, devType string) map[string]string {
+	var pwrSuffix = []string{hiAIAscend910Prefix, pwr2CSuffix, pwr4CSuffix, pwr8CSuffix, pwr16CSuffix}
+	var groupAllocatableDevs = make(map[string]string, len(pwrSuffix))
+	if devType == hiAIAscend310Prefix {
+		chipAnnotation := filterTagPowerDevice(allocatableDevices, hiAIAscend310Prefix)
+		annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, hiAIAscend310Prefix)
+		groupAllocatableDevs[annotationTag] = chipAnnotation
+		return groupAllocatableDevs
+	}
+	for _, suffix := range pwrSuffix {
+		powerAnnotation := filterTagPowerDevice(allocatableDevices, suffix)
+		annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, suffix)
+		groupAllocatableDevs[annotationTag] = powerAnnotation
+	}
+	return groupAllocatableDevs
+}
+
+func filterTagPowerDevice(allocatableDevices sets.String, suffix string) string {
+	var powerAnnotation []string
+	for deviceName := range allocatableDevices {
+		switch suffix {
+		case hiAIAscend910Prefix:
+			if !IsVirtualDev(deviceName) {
+				powerAnnotation = append(powerAnnotation, deviceName)
+			}
+		default:
+			if strings.Contains(deviceName, suffix) {
+				powerAnnotation = append(powerAnnotation, deviceName)
+			}
+		}
+	}
+	return strings.Join(powerAnnotation, ",")
 }
