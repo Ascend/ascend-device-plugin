@@ -20,8 +20,20 @@ mockgen k8s.io/client-go/kubernetes/typed/core/v1 PodInterface >${MOCK_TOP}/mock
 
 export PKG_CONFIG_PATH=${TOP_DIR}/src/plugin/config/config_310/:$PKG_CONFIG_PATH
 
-file_input='testDeviceplugin.txt'
-file_detail_output='DevicepluginCoverageReport.html'
+function execute_test() {
+  if ! (go test -v -race -coverprofile cov.out ${TOP_DIR}/src/plugin/pkg/npu/huawei/ >./$file_input); then
+    echo '****** go test cases error! ******'
+    echo 'Failed' >$file_input
+    exit 1
+  else
+    echo ${file_detail_output}
+    gocov convert cov.out | gocov-html >${file_detail_output}
+    gotestsum --junitfile unit-tests.xml "${TOP_DIR}"/src/plugin/pkg/npu/huawei/...
+  fi
+}
+
+file_input='testDevicePlugin.txt'
+file_detail_output='api.html'
 
 echo "************************************* Start LLT Test *************************************"
 mkdir -p "${TOP_DIR}"/test/
@@ -32,18 +44,7 @@ fi
 if [ -f "$file_input" ]; then
   rm -rf $file_input
 fi
-
-go test -v -race -coverprofile cov.out ${TOP_DIR}/src/plugin/pkg/npu/huawei/ >./$file_input
-
-if [ $? != 0 ]; then
-  echo '****** go test cases error! ******'
-  echo 'Failed' >$file_input
-  exit 1
-else
-  echo ${file_detail_output}
-  gocov convert cov.out | gocov-html >${file_detail_output}
-fi
-
+execute_test
 echo "<html<body><h1>==================================================</h1><table border="2">" >>./$file_detail_output
 echo "<html<body><h1>DevicePlugin testCase</h1><table border="1">" >>./$file_detail_output
 echo "<html<body><h1>==================================================</h1><table border="2">" >>./$file_detail_output
@@ -60,3 +61,5 @@ rm -rf ${MOCK_TOP}/mock_v1
 rm -rf ${MOCK_TOP}/mock_kubernetes
 rm -rf ${MOCK_TOP}/mock_kubelet_v1beta1
 exit 0
+
+}
