@@ -717,11 +717,9 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int) (map[string]string, e
 		hwlog.Errorf("get NPU Annotation failed, err: %v", err)
 		return nil, err
 	}
-	errors := s.getAscendVisiDevsWithVolcano(allocateDevice, &ascendVisibleDevices)
-	if errors != nil {
+	if errors := s.getAscendVisiDevsWithVolcano(allocateDevice, &ascendVisibleDevices); errors != nil{
 		hwlog.Errorf("get ascend devs with volcano failed, err: %v", err)
 	}
-
 	usedDevices := sets.NewString()
 	getNodeNpuUsed(&usedDevices, s.hps)
 	freeDevices := s.hps.healthDevice.Difference(usedDevices)
@@ -762,6 +760,11 @@ func (s *pluginAPI) getAscendVisiDevsWithVolcano(allocateDevice sets.String, dev
 		if err != nil {
 			hwlog.Errorf("get phyID, err: %v", err)
 			return err
+		}
+		if s.hps.devType == hiAIAscend310Prefix {
+			hwlog.Infof("%s not exist device ip", s.hps.devType)
+			(*devices)[deviceID] = ""
+			continue
 		}
 		if s.ascendRuntimeOptions == virtualDev {
 			(*devices)[virID] = defaultDeviceIP
