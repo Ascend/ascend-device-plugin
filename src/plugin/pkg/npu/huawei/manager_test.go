@@ -60,6 +60,10 @@ func createFakeDevManager(runMode string) *HwDevManager {
 // TestHwDevManager_Serve for serve
 func TestHwDevManager_Serve(t *testing.T) {
 	fakeHwDevManager := createFakeDevManager("")
+	errDir := os.MkdirAll("/var/lib/kubelet/device-plugins/",os.ModePerm)
+	if errDir != nil {
+		t.Fatal("TestHwDevManager_Serve Run FAiled, reason is failed to create folder file")
+	}
 	f, err := os.Create(serverSock310)
 	if err != nil {
 		t.Fatal("TestHwDevManager_Serve Run FAiled, reason is failed to create sock file")
