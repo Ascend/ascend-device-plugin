@@ -72,22 +72,22 @@ typedef struct ip_addr {
 
 struct dsmi_vdev_spec_info {
     unsigned char core_num;                         /**< aicore num for virtual device */
-    unsigned char reservesd[DSMI_MAX_SPEC_RESERVE]; /**reserved */
+    unsigned char reservesd[DSMI_MAX_SPEC_RESERVE]; /**< reserved */
 };
 
 // Dsmi each virtual device info
 struct dsmi_sub_vdev_info {
-    unsigned int status;                            /**< whether the vdevice used by container */
-    unsigned int vdevid;                            /**< id number of vdevice */
+    unsigned int status;                                /**< whether the vdevice used by container */
+    unsigned int vdevid;                                /**< id number of vdevice */
     unsigned int vfid;
-    unsigned long int cid;                           /**< container id */
-    struct dsmi_vdev_spec_info spec;                /**< specification of vdevice */
+    unsigned long int cid;                              /**< container id */
+    struct dsmi_vdev_spec_info spec;                    /**< specification of vdevice */
 };
 
 // Dsmi physical device split info
 struct dsmi_vdev_info {
-    unsigned int vdev_num;                          /**< number of vdevice the devid had created */
-    struct dsmi_vdev_spec_info spec_unused;         /**< resource the devid unallocated */
+    unsigned int vdev_num;                              /**< number of vdevice the devid had created */
+    struct dsmi_vdev_spec_info spec_unused;             /**< resource the devid unallocated */
     struct dsmi_sub_vdev_info vdev[DSMI_MAX_VDEV_NUM];
 };
 
@@ -111,7 +111,6 @@ int dsmi_get_device_count(int *device_count);
 * @note Support:Ascend310,Ascend910
 */
 int dsmi_list_device(int device_id_list[], int count);
-
 
 
 /**
@@ -175,6 +174,7 @@ int dsmi_get_device_ip_address(int device_id, int port_type, int port_id, ip_add
 */
 int dsmi_get_chip_info(int device_id, struct dsmi_chip_info_stru *chip_info);
 
+
 /**
 * @ingroup driver
 * @brief Query the connectivity status of the RoCE network card's IP address
@@ -188,14 +188,26 @@ int dsmi_get_network_health(int device_id, DSMI_NET_HEALTH_STATUS *presult);
 
 /**
 * @ingroup driver
-* @brief Query the cvirtual device info by device_id(logicID)
+* @brief Query the virtual device info by device_id(logicID)
 * @attention NULL
-* @param [in] devid The device id
+* @param [in] device_id The device id
 * @param [out] result return the virtual device info wants to query
 * @return  0 for success, DRV_ERROR_NOT_SUPPORT: not support function, others for fail
 * @note Support:Ascend910
 */
 int dsmi_get_vdevice_info(unsigned int devid, struct dsmi_vdev_info *info);
+
+/**
+* @ingroup driver
+* @brief Query the device errorcode by device_id(logicID)
+* @attention NULL
+* @param [in] device_id The device id
+* @param [out] *errorcount The number of error code
+* @param [out] *perrorcode The error code
+* @return 0 for success, others for fail
+* @note Support:Ascend310,Ascend710,Ascend910
+*/
+int dsmi_get_device_errorcode(int device_id, int *errorcount, unsigned int *perrorcode);
 
 #ifdef __cplusplus
 }

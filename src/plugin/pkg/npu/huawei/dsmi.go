@@ -18,7 +18,7 @@ package huawei
 
 // #cgo LDFLAGS: -ldl
 /*
-#include <stddef.h>
+ #include <stddef.h>
 #include <dlfcn.h>
 #include <stdlib.h>
 
@@ -26,11 +26,11 @@ package huawei
 
 // dsmiHandle is the handle for dynamically loaded libdrvdsmi_host.so
 void *dsmiHandle;
-#define SO_NOT_FOUND -99999
-#define FUNC_NOT_FOUND -99998
-#define SUCCESS 0
-#define ERROR_UNKNOWN -99997
-#define CALL_FUNC(fun_name,...)if(fun_name##_func == NULL){return FUNC_NOT_FOUND;}return fun_name##_func(__VA_ARGS__);
+#define SO_NOT_FOUND  -99999
+#define FUNCTION_NOT_FOUND  -99998
+#define SUCCESS  0
+#define ERROR_UNKNOWN  -99997
+#define CALL_FUNC(name,...) if(name##_func==NULL){return FUNCTION_NOT_FOUND;}return name##_func(__VA_ARGS__);
 
 int (*dsmi_get_device_count_func)(int *device_count);
 int dsmi_get_device_count(int *device_count){
@@ -62,8 +62,10 @@ int dsmi_get_chip_info(int device_id, struct dsmi_chip_info_stru *chip_info){
 	CALL_FUNC(dsmi_get_chip_info,device_id,chip_info)
 }
 
-int (*dsmi_get_device_ip_address_func)(int device_id, int port_type, int port_id, ip_addr_t *ip_address, ip_addr_t *mask_address);
-int dsmi_get_device_ip_address(int device_id, int port_type, int port_id, ip_addr_t *ip_address, ip_addr_t *mask_address){
+int (*dsmi_get_device_ip_address_func)(int device_id, int port_type, int port_id, ip_addr_t *ip_address,
+    ip_addr_t *mask_address);
+int dsmi_get_device_ip_address(int device_id, int port_type, int port_id, ip_addr_t *ip_address,
+    ip_addr_t *mask_address){
 	CALL_FUNC(dsmi_get_device_ip_address,device_id,port_type,port_id,ip_address,mask_address)
 }
 
@@ -72,10 +74,15 @@ int dsmi_get_vdevice_info(unsigned int devid, struct dsmi_vdev_info *vdevice_inf
 	CALL_FUNC(dsmi_get_vdevice_info,devid,vdevice_info)
 }
 
+int (*dsmi_get_device_errorcode_func)(int device_id, int *errorcount, unsigned int *perrorcode);
+int dsmi_get_device_errorcode(int device_id, int *errorcount, unsigned int *perrorcode){
+    CALL_FUNC(dsmi_get_device_errorcode,device_id,errorcount,perrorcode)
+}
+
 // load .so files and functions
 int dsmiInit_dl(void){
 	dsmiHandle = dlopen("libdrvdsmi_host.so",RTLD_LAZY);
-	if (dsmiHandle == NULL){
+	if (dsmiHandle == NULL) {
 		dsmiHandle = dlopen("libdrvdsmi.so",RTLD_LAZY);
 	}
 	if (dsmiHandle == NULL){
@@ -86,7 +93,7 @@ int dsmiInit_dl(void){
 
 	dsmi_get_device_count_func = dlsym(dsmiHandle,"dsmi_get_device_count");
 
-	dsmi_get_device_health_func = dlsym(dsmiHandle,"dsmi_get_device_health");
+ 	dsmi_get_device_health_func = dlsym(dsmiHandle,"dsmi_get_device_health");
 
 	dsmi_get_phyid_from_logicid_func = dlsym(dsmiHandle,"dsmi_get_phyid_from_logicid");
 
@@ -98,20 +105,23 @@ int dsmiInit_dl(void){
 
 	dsmi_get_vdevice_info_func = dlsym(dsmiHandle,"dsmi_get_vdevice_info");
 
+	dsmi_get_device_errorcode_func = dlsym(dsmiHandle,"dsmi_get_device_errorcode");
+
 	return SUCCESS;
 }
 
 int dsmiShutDown(void){
-	if (dsmiHandle == NULL){
-		return SUCCESS;
-	}
+	if (dsmiHandle == NULL) {
+   	 	return SUCCESS;
+  	}
 	return (dlclose(dsmiHandle) ? ERROR_UNKNOWN : SUCCESS);
 }
 */
 import "C"
 import (
+	"Ascend-device-plugin/src/plugin/pkg/npu/hwlog"
 	"fmt"
-	"unsafe"
+	"strings"
 )
 
 const (
@@ -122,6 +132,12 @@ const (
 	retError = -1
 	// UnRetError return error
 	unretError = 100
+
+	// dsmiMaxVdevNum is number of vdevice the devid spilt
+	dsmiMaxVdevNum = 16
+
+	// MaxErrorCodeCount is the max number of error code
+	MaxErrorCodeCount = 128
 )
 
 // ChipInfo chip info
@@ -163,6 +179,7 @@ type DeviceMgrInterface interface {
 	GetChipInfo(int32) (*ChipInfo, error)
 	GetDeviceIP(int32) (string, error)
 	GetVDevicesInfo(uint32) (CgoDsmiVDevInfo, error)
+	GetDeviceErrorCode(uint32) error
 	ShutDown()
 }
 
@@ -185,6 +202,9 @@ func (d *DeviceManager) GetDeviceCount() (int32, error) {
 	err := C.dsmi_get_device_count(&count)
 	if err != 0 {
 		return retError, fmt.Errorf("get device quantity failed, error code: %d", int32(err))
+	}
+	if int(count) < 0 || int(count) > hiAIMaxDeviceNum {
+		return retError, fmt.Errorf("number of deviceis incorrect: %d", int(count))
 	}
 	return int32(count), nil
 }
@@ -230,7 +250,9 @@ func (d *DeviceManager) GetPhyID(logicID uint32) (uint32, error) {
 	if err != 0 {
 		return unretError, fmt.Errorf("get phy id failed ,error code is: %d", int32(err))
 	}
-
+	if uint32(phyID) > uint32(hiAIMaxDeviceNum) {
+		return unretError, fmt.Errorf("get invalid physical id: %d", uint32(phyID))
+	}
 	return uint32(phyID), nil
 }
 
@@ -241,6 +263,9 @@ func (d *DeviceManager) GetLogicID(phyID uint32) (uint32, error) {
 	err := C.dsmi_get_logicid_from_phyid(C.uint(phyID), &logicID)
 	if err != 0 {
 		return unretError, fmt.Errorf("get logic id failed ,error code is : %d", int32(err))
+	}
+	if uint32(logicID) > uint32(hiAIMaxDeviceNum) {
+		return unretError, fmt.Errorf("get invalid logic id: %d", uint32(logicID))
 	}
 
 	return uint32(logicID), nil
@@ -283,8 +308,7 @@ func (d *DeviceManager) GetDeviceIP(logicID int32) (string, error) {
 	var portID C.int
 	var ipAddress [hiAIMaxDeviceNum]C.ip_addr_t
 	var maskAddress [hiAIMaxDeviceNum]C.ip_addr_t
-	var retIPAddress string
-	var ipString [4]uint8
+	var deviceIP []string
 
 	retCode := C.dsmi_get_device_ip_address(C.int(logicID), portType, portID, &ipAddress[C.int(logicID)],
 		&maskAddress[C.int(logicID)])
@@ -293,12 +317,10 @@ func (d *DeviceManager) GetDeviceIP(logicID int32) (string, error) {
 	}
 
 	unionPara := ipAddress[C.int(logicID)].u_addr
-	for i := 0; i < len(ipString); i++ {
-		ipString[i] = uint8(*(*C.uchar)(unsafe.Pointer(&unionPara[i])))
+	for i := 0; i < deviceIPLength; i++ {
+		deviceIP = append(deviceIP, fmt.Sprintf("%d", uint8(unionPara[i])))
 	}
-
-	retIPAddress = fmt.Sprintf("%d.%d.%d.%d", ipString[0], ipString[1], ipString[2], ipString[3])
-	return retIPAddress, nil
+	return strings.Join(deviceIP, "."), nil
 }
 
 // ShutDown clean the dynamically loaded resource
@@ -306,13 +328,14 @@ func (d *DeviceManager) ShutDown() {
 	C.dsmiShutDown()
 }
 
-// GetVDevicesInfo get the virtual device info by logicID
+// GetVDevicesInfo get the virtual device info by logicid
 func (d *DeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error) {
 	var dsmiVDevInfo C.struct_dsmi_vdev_info
 	err := C.dsmi_get_vdevice_info(C.uint(logicID), &dsmiVDevInfo)
 
-	if err != 0 {
-		return CgoDsmiVDevInfo{}, fmt.Errorf("get virtual device info failed, error code: %d", int32(err))
+	if err != 0 || int(dsmiVDevInfo.vdev_num) < 0 || int(dsmiVDevInfo.vdev_num) > dsmiMaxVdevNum {
+		return CgoDsmiVDevInfo{}, fmt.Errorf("get virtual device info failed, error code is: %d "+
+			"and vdev num is: %d", int32(err), int32(dsmiVDevInfo.vdev_num))
 	}
 	cgoDsmiVDevInfos := CgoDsmiVDevInfo{
 		vDevNum:       uint32(dsmiVDevInfo.vdev_num),
@@ -320,18 +343,34 @@ func (d *DeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error)
 	}
 
 	for i := uint32(0); i < cgoDsmiVDevInfos.vDevNum; i++ {
-		dsmiSubVDevInfo := *(*C.struct_dsmi_sub_vdev_info)(unsafe.Pointer(uintptr(unsafe.Pointer(&dsmiVDevInfo.vdev)) +
-			uintptr(C.sizeof_struct_dsmi_sub_vdev_info*C.int(i))))
-		coreNum := fmt.Sprintf("%v", dsmiSubVDevInfo.spec.core_num)
+		coreNum := fmt.Sprintf("%v", dsmiVDevInfo.vdev[i].spec.core_num)
 		cgoDsmiVDevInfos.cgoDsmiSubVDevInfos = append(cgoDsmiVDevInfos.cgoDsmiSubVDevInfos, CgoDsmiSubVDevInfo{
-			status: uint32(dsmiSubVDevInfo.status),
-			vdevid: uint32(dsmiSubVDevInfo.vdevid),
-			vfid:   uint32(dsmiSubVDevInfo.vfid),
-			cid:    uint64(dsmiSubVDevInfo.cid),
+			status: uint32(dsmiVDevInfo.vdev[i].status),
+			vdevid: uint32(dsmiVDevInfo.vdev[i].vdevid),
+			vfid:   uint32(dsmiVDevInfo.vdev[i].vfid),
+			cid:    uint64(dsmiVDevInfo.vdev[i].cid),
 			spec: CgoDsmiVdevSpecInfo{
 				coreNum: coreNum,
 			},
 		})
 	}
 	return cgoDsmiVDevInfos, nil
+}
+
+// GetDeviceErrorCode get device error code
+func (d *DeviceManager) GetDeviceErrorCode(logicID uint32) error {
+	var errorCount C.int
+	var pErrorCode [MaxErrorCodeCount]C.uint
+	if err := C.dsmi_get_device_errorcode(C.int(logicID), &errorCount, &pErrorCode[0]); err != 0 {
+		return fmt.Errorf("get device %d errorcode failed, erro is: %d", logicID, int32(err))
+	}
+
+	if int32(errorCount) < 0 || int32(errorCount) > MaxErrorCodeCount {
+		return fmt.Errorf("get wrong errorcode count, device: %d, errorcode count: %d", logicID, int32(errorCount))
+	}
+
+	hwlog.Infof("get device error code, "+
+		"logicID: %d, errorCount: %d, pErrorCode: %d", logicID, int(errorCount), int(pErrorCode[0]))
+
+	return nil
 }

@@ -17,11 +17,10 @@
 package huawei
 
 import (
+	"Ascend-device-plugin/src/plugin/pkg/npu/hwlog"
 	"go.uber.org/atomic"
-	"go.uber.org/zap"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"os"
-	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -41,14 +40,17 @@ func TestHwDevManager_GetNPUs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	fakeHwDevManager = createFakeDevManager("ascend710")
+	err = fakeHwDevManager.GetNPUs()
+	if err != nil {
+		t.Fatal(err)
+	}
 	t.Logf("TestHwDevManager_GetNPUs Run Pass")
 }
 
 func createFakeDevManager(runMode string) *HwDevManager {
 	fakeHwDevManager := &HwDevManager{
-		dlogPath: "/var/log",
 		runMode:  runMode,
-		serves:   sync.Map{},
 		dmgr:     newFakeDeviceManager(),
 		stopFlag: atomic.NewBool(false),
 	}
@@ -62,22 +64,19 @@ func TestHwDevManager_Serve(t *testing.T) {
 	if err != nil {
 		t.Fatal("TestHwDevManager_Serve Run FAiled, reason is failed to create sock file")
 	}
-	f.Chmod(logChmod)
+	f.Chmod(socketChmod)
 	f.Close()
 	go deleteServerSocketByDevManager(serverSock310, fakeHwDevManager)
-	fakeHwDevManager.Serve("Ascend310", "/var/lib/kubelet/device-plugins/", "Ascend310.sock", NewFakeHwPluginServe)
+	fakeHwDevManager.Serve("Ascend310", "/var/lib/kubelet/device-plugins/",
+		"Ascend310.sock", NewFakeHwPluginServe)
 	t.Logf("TestHwDevManager_Serve Run Pass")
 }
 
 func deleteServerSocketByDevManager(serverSocket string, manager *HwDevManager) {
 	time.Sleep(sleepNumTwo * time.Second)
 	manager.stopFlag.Store(true)
-	logger.Info("remove", zap.String("serverSocket", serverSocket))
-	err := os.Remove(serverSocket)
-
-	if err != nil {
-		logger.Error("deleteServerSocketByDevManager", zap.Error(err))
-	}
+	hwlog.Infof("remove serverSocket: %s", serverSocket)
+	os.Remove(serverSocket)
 }
 
 // TestSignalWatch for testSingalWatch
@@ -86,7 +85,7 @@ func TestSignalWatch(t *testing.T) {
 	if err != nil {
 		t.Fatal("TestSignalWatch Run FAiled, reason is failed to create sock file")
 	}
-	f.Chmod(logChmod)
+	f.Chmod(socketChmod)
 	f.Close()
 	watcher := NewFileWatch()
 	err = watcher.watchFile(pluginapi.DevicePluginPath)
@@ -94,9 +93,10 @@ func TestSignalWatch(t *testing.T) {
 		t.Errorf("failed to create file watcher. %v", err)
 	}
 	defer watcher.fileWatcher.Close()
-	logger.Info("Starting OS signs watcher.")
+	hwlog.Infof("Starting OS signs watcher.")
 	osSignChan := newSignWatcher(syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	hdm := HwDevManager{}
+	useVolcanoType = true
 	hps := NewHwPluginServe(&hdm, "", "")
 	var restart bool
 	go deleteServerSocket(serverSockFd)

@@ -22,7 +22,7 @@ spec:
         - key: huawei.com/Ascend910
           operator: Exists
           effect: NoSchedule
-        - key: "ascendplugin"
+        - key: "device-plugin"
           operator: "Equal"
           value: "v2"
           effect: NoSchedule
@@ -30,7 +30,7 @@ spec:
       nodeSelector:
         accelerator: huawei-Ascend910
       containers:
-      - image: ascend-k8sdeviceplugin:v2.0.1
+      - image: ascend-k8sdeviceplugin:v2.0.2
         name: device-plugin-01
         resources:
           requests:
@@ -40,9 +40,11 @@ spec:
             memory: 500Mi
             cpu: 500m
         command: [ "/bin/bash", "-c", "--"]
-        args: [ "umask 0027;ascendplugin  --useAscendDocker=${USE_ASCEND_DOCKER}" ]
+        args: [ "umask 0027;device-plugin  -useAscendDocker=true
+                 -logFile=/var/log/mindx-dl/devicePlugin/devicePlugin.log -logLevel=0" ]
         securityContext:
           privileged: true
+          readOnlyRootFilesystem: true
         imagePullPolicy: Never
         volumeMounts:
           - name: device-plugin
@@ -50,7 +52,7 @@ spec:
           - name: hiai-driver
             mountPath: /usr/local/Ascend/driver
           - name: log-path
-            mountPath: /var/log/devicePlugin
+            mountPath: /var/log/mindx-dl/devicePlugin
       volumes:
         - name: device-plugin
           hostPath:
@@ -60,4 +62,5 @@ spec:
             path: /usr/local/Ascend/driver
         - name: log-path
           hostPath:
-            path: /var/log/devicePlugin
+            path: /var/log/mindx-dl/devicePlugin
+            type: Directory

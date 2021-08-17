@@ -139,6 +139,11 @@ func (d *fakeDeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, er
 	return cgoDsmiVDevInfos, nil
 }
 
+// GetDeviceErrorCode get device error code
+func (d *fakeDeviceManager) GetDeviceErrorCode(logicID uint32) error {
+	return nil
+}
+
 // TestUnhealthyState for UnhealthyState
 func TestUnhealthyState(t *testing.T) {
 	err := unhealthyState(1, uint32(3), "healthState", newFakeDeviceManager())
@@ -190,13 +195,13 @@ func TestGetDefaultDevices(t *testing.T) {
 	defaultMap[hiAIHDCDevice] = empty.Empty{}
 	defaultMap[hiAIManagerDevice] = empty.Empty{}
 	defaultMap[hiAISVMDevice] = empty.Empty{}
-	defaultMap[hiAi200RCSVM0] = empty.Empty{}
-	defaultMap[hiAi200RCLog] = empty.Empty{}
 	defaultMap[hiAi200RCEventSched] = empty.Empty{}
-	defaultMap[hiAi200RCUpgrade] = empty.Empty{}
 	defaultMap[hiAi200RCHiDvpp] = empty.Empty{}
+	defaultMap[hiAi200RCLog] = empty.Empty{}
 	defaultMap[hiAi200RCMemoryBandwidth] = empty.Empty{}
+	defaultMap[hiAi200RCSVM0] = empty.Empty{}
 	defaultMap[hiAi200RCTsAisle] = empty.Empty{}
+	defaultMap[hiAi200RCUpgrade] = empty.Empty{}
 
 	for _, str := range defaultDeivces {
 		_, ok := defaultMap[str]
@@ -209,7 +214,7 @@ func TestGetDefaultDevices(t *testing.T) {
 
 func createFile(filePath string) error {
 	f, err := os.Create(filePath)
-	f.Chmod(logChmod)
+	f.Chmod(socketChmod)
 	f.Close()
 	return err
 }

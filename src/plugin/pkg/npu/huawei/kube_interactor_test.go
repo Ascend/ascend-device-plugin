@@ -33,7 +33,7 @@ func TestPatchAnnotationOnNode(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	node1 := &v1.Node{
-		ObjectMeta: metav1.ObjectMeta{Annotations: make(map[string]string)},
+		ObjectMeta: metav1.ObjectMeta{Annotations: make(map[string]string), Labels: make(map[string]string)},
 	}
 	node1.Annotations[huaweiAscend910] = "Ascend910-1,Ascend910-2"
 	mockK8s := mock_kubernetes.NewMockInterface(ctrl)
@@ -50,7 +50,7 @@ func TestPatchAnnotationOnNode(t *testing.T) {
 		clientset: mockK8s,
 		nodeName:  "NODE_NAME",
 	}
-	err := fakeKubeInteractor.patchAnnotationOnNode(freeDevices)
+	err := fakeKubeInteractor.patchAnnotationOnNode(freeDevices, "")
 	if err != nil {
 		t.Fatal(err)
 	}

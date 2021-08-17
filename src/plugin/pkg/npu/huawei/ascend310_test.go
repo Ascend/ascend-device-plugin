@@ -17,6 +17,7 @@
 package huawei
 
 import (
+	"Ascend-device-plugin/src/plugin/pkg/npu/hwlog"
 	"fmt"
 	"github.com/golang/protobuf/ptypes/empty"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
@@ -25,11 +26,20 @@ import (
 )
 
 const (
-	npuTestNum         = 8
-	splitTestStringNum = 2
+	npuTestNum = 8
 )
 
-// NewHwAscend310Manager used to create ascend 310 manager
+func init() {
+	hwLogConfig := hwlog.LogConfig{
+		LogFileName: "/var/log/mindx-dl/devicePlugin/devicePluginUt.log",
+	}
+	stopCh := make(chan struct{})
+	if err := hwlog.Init(&hwLogConfig, stopCh); err != nil {
+		fmt.Printf("init hwlog error %v", err.Error())
+	}
+}
+
+// NewFakeHwAscend310Manager used to create ascend 310 manager
 func NewFakeHwAscend310Manager() *HwAscend310Manager {
 	return &HwAscend310Manager{}
 }
@@ -79,34 +89,15 @@ func TestHwAscend310Manager_GetDevState(t *testing.T) {
 // TestHwAscend310Manager_GetDevPath for GetDevPath
 func TestHwAscend310Manager_GetDevPath(t *testing.T) {
 	hdm := createFakeHwDevManager("", true, false, false)
-	containerPath, hostPath := hdm.manager.GetDevPath("0", PHYSICAL_DEV)
+	containerPath, hostPath := hdm.manager.GetDevPath("0", physicalDev)
 	if hostPath != containerPath && hostPath != "/dev/davinci0" {
 		t.Fatal("TestHwAscend310Manager_GetDevPath Run Failed")
 	}
 	t.Logf("TestHwAscend310Manager_GetDevPath Run Pass")
 }
 
-// TestHwAscend310Manager_GetLogPath for getLogPath
-func TestHwAscend310Manager_GetLogPath(t *testing.T) {
-	hdm := createFakeHwDevManager("", true, false, false)
-
-	var logPath string
-	devID := make([]string, 0)
-	devID = append(devID, "davinci-mini-0")
-	t.Logf("deviceId%v, %d", devID, len(devID))
-	err := hdm.manager.GetLogPath(devID, "/var/dlog", PHYSICAL_DEV, &logPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	splitstring := strings.Split(logPath, "_")
-	if len(splitstring) != splitTestStringNum || !strings.Contains(logPath, "0") {
-		t.Fail()
-	}
-	t.Logf("TestHwAscend310Manager_GetLogPath Run Pass ")
-}
-
 func createFakeHwDevManager(mode string, fdFlag, useAscendDocker, volcanoType bool) *HwDevManager {
-	hdm := NewHwDevManager(mode, "/var/dlog")
+	hdm := NewHwDevManager(mode)
 	hdm.SetParameters(fdFlag, useAscendDocker, volcanoType)
 	hdm.manager = NewFakeHwAscend310Manager()
 	hdm.manager.SetDmgr(newFakeDeviceManager())

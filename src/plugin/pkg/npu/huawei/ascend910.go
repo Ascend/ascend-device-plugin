@@ -18,14 +18,16 @@
 package huawei
 
 import (
+	"Ascend-device-plugin/src/plugin/pkg/npu/hwlog"
 	"fmt"
-	"go.uber.org/zap"
 	"strings"
 )
 
 const (
-	// ZERO_CORE is "0c"
-	ZERO_CORE = "0"
+	// ZeroCore is "0c"
+	zeroCore = "0"
+	// noVDevFound means not supported in the current scenario.
+	noVDevFound = "65534"
 )
 
 // switch error log
@@ -41,46 +43,51 @@ func NewHwAscend910Manager() *HwAscend910Manager {
 	return &HwAscend910Manager{}
 }
 
-// GetNPUs function discovers all HUAWEI Ascend910 devices by call dsmi interface
+// GetNPUs Discovers all HUAWEI Ascend910 devices by call dsmi interface
 // a physical npu can be split into multiple vnpu
-// vnpu is classification by computing power, like Ascend-910-4c,Ascend-910-8c,Ascend-910-16c
-// physical npu sets corresponding to the deviTypes ,and npu id vDeviTypes
-// vDeviTypes may is: [Ascend-910-4c,Ascend-910-8c,Ascend-910-16c], also deviTypes: [Ascend-910, Ascend-910]
-// one class deviType will generate a socker file, like ascend-910-4c.sock
-func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *[]string, deviType string) error {
+// vnpu is classification by computing power, like Ascend910-4c, Ascend910-8c, Ascend910-16c
+// physical npu sets corresponding to the deviTypes, and vnpu is vDeviTypes
+// vDeviTypes may is: [Ascend910-4c, Ascend910-4c, Ascend910-8c], also deviTypes may is: [Ascend910, Ascend910]
+// one class deviType will generate a socket file, like ascend910-4c.sock or Ascend910.sock, so we deduplicate
+func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *[]string, matchingDeviType string) error {
 	var ids [hiAIMaxDeviceNum]uint32
 
-	devNum, errInfo := hnm.dmgr.GetDeviceList(&ids)
-	if errInfo != nil {
-		return errInfo
+	devNum, err := hnm.dmgr.GetDeviceList(&ids)
+	if err != nil {
+		return err
 	}
-	var deviTypes []string
+	phyDevMapVirtualDev := make(map[uint32]string, devNum)
+	var deviTypes, vDevID []string
 	for i := int32(0); i < devNum; i++ {
 		phyID, err := hnm.dmgr.GetPhyID(ids[i])
 		if err != nil {
 			return err
 		}
-
 		cgoDsmiVDevInfos, err := hnm.getVirtualDevice(ids[i])
 		if err != nil && !strings.Contains(err.Error(), FunctionNotFound) {
-			logger.Error("Query virtual device info failure!", zap.String("err", err.Error()))
-			continue
+			if !strings.Contains(err.Error(), noVDevFound) {
+				hwlog.Errorf("Query virtual device info failure!, err: %s", err.Error())
+				continue
+			}
 		}
 		var devices []npuDevice
 		if cgoDsmiVDevInfos.vDevNum == 0 {
 			devices, deviTypes = hnm.assemblePhyDevices(phyID)
+			phyDevMapVirtualDev[phyID] = fmt.Sprintf("%d", phyID)
 		} else {
-			devices, deviTypes = hnm.assembleVirtualDevices(phyID, cgoDsmiVDevInfos)
+			devices, deviTypes, vDevID = hnm.assembleVirtualDevices(phyID, cgoDsmiVDevInfos)
+			phyDevMapVirtualDev[phyID] = strings.Join(vDevID, ",")
 		}
 		*allDevices = append(*allDevices, devices...)
 		*allDeviceTypes = append(*allDeviceTypes, deviTypes...)
 	}
+	hnm.phyDevMapVirtualDev = phyDevMapVirtualDev
 	*allDeviceTypes = hnm.removeDuplicate(allDeviceTypes)
 	return nil
 }
 
 func (hnm *HwAscend910Manager) removeDuplicate(allDeviceTypes *[]string) []string {
-	deviceTypesMap := make(map[string]string, 10)
+	deviceTypesMap := make(map[string]string, len(*allDeviceTypes))
 	var rmDupDeviceTypes []string
 	for _, deviType := range *allDeviceTypes {
 		deviceTypesMap[deviType] = deviType
@@ -101,28 +108,29 @@ func (hnm *HwAscend910Manager) assemblePhyDevices(phyID uint32) ([]npuDevice, []
 	return devices, deviTypes
 }
 
-func (hnm *HwAscend910Manager) assembleVirtualDevices(phyID uint32, vInfos CgoDsmiVDevInfo) (
-	[]npuDevice, []string) {
+func (hnm *HwAscend910Manager) assembleVirtualDevices(phyID uint32, cgoDsmiVDevInfos CgoDsmiVDevInfo) (
+	[]npuDevice, []string, []string) {
 	var devices []npuDevice
 	var vDeviTypes []string
-	for _, dsmiSubVdevInfo := range vInfos.cgoDsmiSubVDevInfos {
-		if dsmiSubVdevInfo.spec.coreNum == ZERO_CORE {
+	var vDevID []string
+	for _, dsmiSubVDevInfo := range cgoDsmiVDevInfos.cgoDsmiSubVDevInfos {
+		if dsmiSubVDevInfo.spec.coreNum == zeroCore {
 			continue
 		}
-		vDevType := fmt.Sprintf("%s-%sc", hiAIAscend910Prefix, dsmiSubVdevInfo.spec.coreNum)
-		devID := fmt.Sprintf("%s-%sc-%d-%d", hiAIAscend910Prefix, dsmiSubVdevInfo.spec.coreNum,
-			dsmiSubVdevInfo.vdevid, phyID)
-		device := hnm.AssembleNpuDeviceStruct(vDevType, devID)
+		vDeviType := fmt.Sprintf("%s-%sc", hiAIAscend910Prefix, dsmiSubVDevInfo.spec.coreNum)
+		devID := fmt.Sprintf("%s-%sc-%d-%d", hiAIAscend910Prefix, dsmiSubVDevInfo.spec.coreNum, dsmiSubVDevInfo.vdevid, phyID)
+		device := hnm.AssembleNpuDeviceStruct(vDeviType, devID)
 		devices = append(devices, device)
-		vDeviTypes = append(vDeviTypes, vDevType)
+		vDeviTypes = append(vDeviTypes, vDeviType)
+		vDevID = append(vDevID, fmt.Sprintf("%d", dsmiSubVDevInfo.vdevid))
 	}
-	return devices, vDeviTypes
+	return devices, vDeviTypes, vDevID
 }
 
 func (hnm *HwAscend910Manager) getVirtualDevice(logicID uint32) (CgoDsmiVDevInfo, error) {
 	cgoDsmiVDevInfos, err := hnm.dmgr.GetVDevicesInfo(logicID)
 	if err != nil {
-		return CgoDsmiVDevInfo{}, fmt.Errorf("query virtual device info failure: %s\n", err)
+		return CgoDsmiVDevInfo{}, fmt.Errorf("query virtual device info failure: %s", err)
 	}
 	return cgoDsmiVDevInfos, nil
 }

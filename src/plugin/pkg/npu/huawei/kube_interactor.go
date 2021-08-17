@@ -17,10 +17,12 @@ limitations under the License.
 package huawei
 
 import (
+	"Ascend-device-plugin/src/plugin/pkg/npu/hwlog"
 	"fmt"
-	"go.uber.org/zap"
 	"os"
+	"regexp"
 	"strings"
+	"syscall"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -33,6 +35,16 @@ import (
 	nodeutil "k8s.io/kubernetes/pkg/util/node"
 )
 
+const (
+	kubeEnvMaxLength = 253
+
+	// nodeLabelsDeviceSep if the separator between devices on labels
+	nodeLabelsDeviceSep = "dot"
+
+	// nodeAnnotationsDeviceSep if the separator between devices on annotation
+	nodeAnnotationsDeviceSep = "comma"
+)
+
 // KubeInteractor include kubeclientSet & nodeName
 type KubeInteractor struct {
 	clientset kubernetes.Interface
@@ -41,7 +53,12 @@ type KubeInteractor struct {
 
 // NewKubeClient get client from KUBECONFIG  or not
 func NewKubeClient() (*kubernetes.Clientset, error) {
-	clientCfg, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
+	kubeConfig := os.Getenv("KUBECONFIG")
+	if err := checkKubeConfig(kubeConfig); err != nil {
+		return nil, fmt.Errorf("check kube config failed: %v", err)
+	}
+
+	clientCfg, err := clientcmd.BuildConfigFromFlags("", kubeConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -61,47 +78,128 @@ func NewKubeInteractor() (*KubeInteractor, error) {
 		return nil, fmt.Errorf("failed to create kube client: %v", err)
 	}
 
+	nodeName := os.Getenv("NODE_NAME")
+	if err := checkNodeName(nodeName); err != nil {
+		return nil, fmt.Errorf("check node name failed: %v", err)
+	}
+
 	return &KubeInteractor{
 		clientset: client,
-		nodeName:  os.Getenv("NODE_NAME"),
+		nodeName:  nodeName,
 	}, nil
 }
 
-func (ki *KubeInteractor) patchAnnotationOnNode(allocatableDevices sets.String) error {
+func checkKubeConfig(kubeConfig string) error {
+	if len(kubeConfig) > kubeEnvMaxLength {
+		return fmt.Errorf("kube config length %d is bigger than %d", len(kubeConfig), kubeEnvMaxLength)
+	}
+	kubeConfigPathInfo, err := os.Stat(kubeConfig)
+	if err != nil || os.IsNotExist(err) {
+		return nil
+	}
+	stat, ok := kubeConfigPathInfo.Sys().(*syscall.Stat_t)
+	if !ok || stat.Uid != rootUID || stat.Gid != rootGID {
+		return fmt.Errorf("non-root owner group of the path")
+	}
+	return nil
+}
+
+func checkNodeName(nodeName string) error {
+	if len(nodeName) > kubeEnvMaxLength {
+		return fmt.Errorf("node name length %d is bigger than %d", len(nodeName), kubeEnvMaxLength)
+	}
+	pattern := "^[a-z0-9A-Z]+([a-z0-9A-Z\\-]*)[a-z0-9A-Z]+$"
+	reg := regexp.MustCompile(pattern)
+	if !reg.MatchString(nodeName) {
+		return fmt.Errorf("node name %s is illegal", nodeName)
+	}
+	return nil
+}
+
+func (ki *KubeInteractor) patchAnnotationOnNode(allocatableDevices sets.String, devType string) error {
 	var err error
 	err = wait.PollImmediate(interval*time.Second, timeout*time.Second, func() (bool, error) {
 		var node *v1.Node
 		node, err = ki.clientset.CoreV1().Nodes().Get(ki.nodeName, metav1.GetOptions{})
 
 		if err != nil {
-			logger.Error("failed to get node: ", zap.String("nodeName", ki.nodeName), zap.Error(err))
+			hwlog.Errorf("failed to get node, nodeName: %s, err: %v", ki.nodeName, err)
 			return false, nil
 		}
-		var str string
-		for k := range allocatableDevices {
-			str += k + ","
-		}
-		str = strings.TrimSuffix(str, ",")
-		annotation, isNil := node.Annotations[huaweiAscend910]
-		if checkNeedUpdate(isNil, annotation, allocatableDevices) {
-			newNode := node.DeepCopy()
-			newNode.Annotations[huaweiAscend910] = str
-			_, _, err = nodeutil.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), node, newNode)
-			if err != nil {
-				logger.Error("failed to patch volcano npu resource: %v", zap.Error(err))
-				return false, nil
-			}
+
+		groupAllocatableDevs := ki.groupDevByPower(allocatableDevices)
+		newNode := ki.updateNodeAnnotations(devType, groupAllocatableDevs, node)
+		_, _, err = nodeutil.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), node, newNode)
+		if err != nil {
+			hwlog.Errorf("failed to patch volcano npu resource: %v", err)
+			return false, nil
 		}
 		return true, nil
 	})
 	return err
 }
 
-func checkNeedUpdate(isNil bool, annotation string, allocatableDevices sets.String) bool {
-	return !isNil || !judegeSameAscend(annotation, allocatableDevices) || strings.TrimSpace(annotation) == ""
+func (ki *KubeInteractor) updateNodeAnnotations(devType string, groupAllocatableDevs map[string]string,
+	node *v1.Node) *v1.Node {
+	newNode := node.DeepCopy()
+	if devType != "" {
+		annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, devType)
+		newNode.Annotations[annotationTag] = groupAllocatableDevs[annotationTag]
+		return newNode
+	}
+
+	for annotationTag, deviceNames := range groupAllocatableDevs {
+		annotation, isNil := node.Annotations[annotationTag]
+		setDevs := ki.convertStringToSet(deviceNames)
+		if !checkNeedUpdate(isNil, annotation, setDevs) {
+			continue
+		}
+		newNode.Annotations[annotationTag] = deviceNames
+	}
+	return newNode
 }
 
-func judegeSameAscend(annotation string, allocatableDevices sets.String) bool {
+func (ki *KubeInteractor) groupDevByPower(allocatableDevices sets.String) map[string]string {
+	var pwrSuffix = []string{hiAIAscend910Prefix, pwr2CSuffix, pwr4CSuffix, pwr8CSuffix, pwr16CSuffix}
+	var groupAllocatableDevs = make(map[string]string, len(pwrSuffix))
+	for _, suffix := range pwrSuffix {
+		powerAnnotation := ki.filterTagPowerDevice(allocatableDevices, suffix)
+		annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, suffix)
+		groupAllocatableDevs[annotationTag] = powerAnnotation
+	}
+	return groupAllocatableDevs
+}
+
+func (ki *KubeInteractor) filterTagPowerDevice(allocatableDevices sets.String, suffix string) string {
+	var powerAnnotation []string
+	for deviceName := range allocatableDevices {
+		switch suffix {
+		case hiAIAscend910Prefix:
+			if !IsVirtualDev(deviceName) {
+				powerAnnotation = append(powerAnnotation, deviceName)
+			}
+		default:
+			if strings.Contains(deviceName, suffix) {
+				powerAnnotation = append(powerAnnotation, deviceName)
+			}
+		}
+	}
+	return strings.Join(powerAnnotation, ",")
+}
+
+func (ki *KubeInteractor) convertStringToSet(deviceNames string) sets.String {
+	setDevs := sets.NewString()
+	for _, deviceName := range strings.Split(deviceNames, ",") {
+		setDevs.Insert(deviceName)
+	}
+	return setDevs
+}
+
+func checkNeedUpdate(isNil bool, annotation string, allocatableDevices sets.String) bool {
+	return !isNil || !judgeSameAscend(annotation, allocatableDevices) || strings.TrimSpace(annotation) == ""
+}
+
+func judgeSameAscend(annotation string, allocatableDevices sets.String) bool {
 	annotationSet := sets.String{}
 	for _, device := range strings.Split(annotation, ",") {
 		annotationSet.Insert(device)

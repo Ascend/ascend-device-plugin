@@ -17,11 +17,13 @@
 package huawei
 
 import (
+	"Ascend-device-plugin/src/plugin/pkg/npu/hwlog"
 	"fmt"
-	"go.uber.org/zap"
+	"go.uber.org/atomic"
 	"google.golang.org/grpc"
 	"k8s.io/apimachinery/pkg/util/sets"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+	"testing"
 )
 
 type fakeHwPluginServe struct {
@@ -48,6 +50,60 @@ func NewFakeHwPluginServe(hdm *HwDevManager, devType string, socket string) HwPl
 	}
 }
 
+// TestStart for test Start
+func TestStart(t *testing.T) {
+	fakeHwDevManager := &HwDevManager{
+		runMode:  "ascend910",
+		dmgr:     newFakeDeviceManager(),
+		stopFlag: atomic.NewBool(false),
+	}
+	pluginSocket := "Ascend910.sock"
+	pluginSocketPath := "/var/lib/kubelet/device-plugins/" + pluginSocket
+	hps := NewHwPluginServe(fakeHwDevManager, "Ascend910", pluginSocketPath)
+	err := hps.Start(pluginSocket, pluginSocketPath)
+	if err != nil {
+		t.Fatal("TestStart Run Failed")
+	}
+	t.Logf("TestStart Run Pass")
+}
+
+// TestStop for test Stop
+func TestStop(t *testing.T) {
+	fakeHwDevManager := &HwDevManager{
+		runMode:  "ascend910",
+		stopFlag: atomic.NewBool(false),
+	}
+	pluginSocket := "Ascend910.sock"
+	pluginSocketPath := "/var/lib/kubelet/device-plugins/" + pluginSocket
+	hps := NewHwPluginServe(fakeHwDevManager, "Ascend910", pluginSocketPath)
+	err := hps.Stop()
+	if err != nil {
+		t.Fatal("TestStop Run Failed")
+	}
+	err = hps.cleanSock()
+	if err != nil {
+		t.Fatal("TestStop Run Failed")
+	}
+	t.Logf("TestStop Run Pass")
+}
+
+// TestGetDevByType for test GetDevByType
+func TestGetDevByType(t *testing.T) {
+	fakeHwDevManager := createFakeDevManager("")
+	err := fakeHwDevManager.GetNPUs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	pluginSocket := "Ascend310.sock"
+	pluginSocketPath := "/var/lib/kubelet/device-plugins/" + pluginSocket
+	hps := NewHwPluginServe(fakeHwDevManager, "Ascend310", pluginSocketPath)
+	err = hps.GetDevByType()
+	if err != nil {
+		t.Fatal("TestGetDevByType Run Failed")
+	}
+	t.Logf("TestGetDevByType Run Pass")
+}
+
 // GetDevByType by fake
 func (hps *fakeHwPluginServe) GetDevByType() error {
 	return nil
@@ -55,16 +111,16 @@ func (hps *fakeHwPluginServe) GetDevByType() error {
 
 // Start starts the gRPC server of the device plugin
 func (hps *fakeHwPluginServe) Start(pluginSocket, pluginSocketPath string) error {
-	logger.Info("device plugin start serving.")
+	hwlog.Infof("device plugin start serving.")
 	// Registers To Kubelet.
 	resourceName := fmt.Sprintf("%s%s", resourceNamePrefix, hps.devType)
 	k8sSocketPath := pluginapi.KubeletSocket
 	err := hps.Register(k8sSocketPath, pluginSocket, resourceName)
 	if err == nil {
-		logger.Info("register to kubelet success.")
+		hwlog.Infof("register to kubelet success.")
 		return nil
 	}
-	logger.Error("register to kubelet failed.", zap.String("err", err.Error()))
+	hwlog.Errorf("register to kubelet failed, err: %s", err.Error())
 	return err
 }
 

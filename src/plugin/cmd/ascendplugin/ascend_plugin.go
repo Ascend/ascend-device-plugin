@@ -19,25 +19,33 @@ package main
 
 import (
 	hwmanager "Ascend-device-plugin/src/plugin/pkg/npu/huawei"
+	"Ascend-device-plugin/src/plugin/pkg/npu/hwlog"
 	"flag"
 	"fmt"
-	"go.uber.org/zap"
 	"os"
 )
 
 const (
 	// socket name
-	kubeletSocket = "kubelet.sock"
-	dlogPath      = "/var/dlog"
-	socketPath    = "/var/lib/kubelet/device-plugins"
+	socketPath     = "/var/lib/kubelet/device-plugins"
+	defaultLogPath = "/var/log/mindx-dl/devicePlugin/devicePlugin.log"
 )
 
 var (
-	mode           = flag.String("mode", "", "device plugin running mode")
-	fdFlag         = flag.Bool("fdFlag", false, "set the connect system is fd system")
-	useAscendDocer = flag.Bool("useAscendDocker", true, "use ascend docker or not")
-	volcanoType    = flag.Bool("volcanoType", false, "use volcano to schedue")
-	version        = flag.Bool("version", false, "show k8s device plugin version ")
+	mode            = flag.String("mode", "", "Device plugin running mode: ascend310, ascend710, ascend910")
+	fdFlag          = flag.Bool("fdFlag", false, "Whether to use fd system to manage device")
+	useAscendDocker = flag.Bool("useAscendDocker", true, "Whether to use ascend docker")
+	volcanoType     = flag.Bool("volcanoType", false, "Whether to use volcano for scheduling")
+	version         = flag.Bool("version", false, "Output version information")
+	edgeLogFile     = flag.String("edgeLogFile", "/var/alog/AtlasEdge_log/devicePlugin.log",
+		"Log file path in edge scene")
+	logLevel = flag.Int("logLevel", 0,
+		"Log level, -1-debug, 0-info(default), 1-warning, 2-error, 3-dpanic, 4-panic, 5-fatal")
+	logMaxAge     = flag.Int("maxAge", hwmanager.MaxAge, "Maximum number of days for backup log files")
+	logIsCompress = flag.Bool("isCompress", false,
+		"Whether backup files need to be compressed")
+	logFile       = flag.String("logFile", defaultLogPath, "The log file path")
+	logMaxBackups = flag.Int("maxBackups", hwmanager.MaxBackups, "Maximum number of backup log files")
 )
 
 var (
@@ -45,13 +53,28 @@ var (
 	BuildName string
 	// BuildVersion show app version
 	BuildVersion string
-	// BuildTime show build time
-	BuildTime string
 )
 
+func initLogModule(stopCh <-chan struct{}) {
+	var loggerPath string
+	loggerPath = *logFile
+	if *fdFlag {
+		loggerPath = *edgeLogFile
+	}
+	hwLogConfig := hwlog.LogConfig{
+		LogFileName: loggerPath,
+		LogLevel:    *logLevel,
+		MaxBackups:  *logMaxBackups,
+		MaxAge:      *logMaxAge,
+		IsCompress:  *logIsCompress,
+	}
+	if err := hwlog.Init(&hwLogConfig, stopCh); err != nil {
+		fmt.Printf("init hwlog error %v", err.Error())
+		os.Exit(1)
+	}
+}
+
 func main() {
-	var log *zap.Logger
-	log = hwmanager.ConfigLog(hwmanager.LogPath)
 
 	flag.Parse()
 
@@ -60,30 +83,34 @@ func main() {
 		os.Exit(0)
 	}
 
+	stopCh := make(chan struct{})
+	defer close(stopCh)
+	initLogModule(stopCh)
+
 	neverStop := make(chan struct{})
 	switch *mode {
-	case "ascend310", "pci", "vnpu", "ascend910", "ascend710", "":
-		log.Info("ascend device plugin running mode", zap.String("mode", *mode))
+	case "ascend310", "ascend910", "ascend710", "":
+		hwlog.Infof("ascend device plugin running mode: %s", *mode)
 	default:
-		log.Info("unSupport mode, waiting indefinitely", zap.String("mode", *mode))
+		hwlog.Infof("unSupport mode: %s, waiting indefinitely", *mode)
 		<-neverStop
 	}
 
-	hdm := hwmanager.NewHwDevManager(*mode, dlogPath)
-	hdm.SetParameters(*fdFlag, *useAscendDocer, *volcanoType)
+	hdm := hwmanager.NewHwDevManager(*mode)
+	hdm.SetParameters(*fdFlag, *useAscendDocker, *volcanoType)
 	if err := hdm.GetNPUs(); err != nil {
-		log.Error("no devices found. waiting indefinitely", zap.String("err", err.Error()))
+		hwlog.Errorf("no devices found. waiting indefinitely, err: %s", err.Error())
 		<-neverStop
 	}
 
 	devTypes := hdm.GetDevType()
 	if len(devTypes) == 0 {
-		log.Error("no devices type found. waiting indefinitely")
+		hwlog.Errorf("no devices type found. waiting indefinitely")
 		<-neverStop
 	}
 
 	for _, devType := range devTypes {
-		log.Info("ascend device serve started", zap.String("devType", devType))
+		hwlog.Infof("ascend device serve started, devType: %s", devType)
 		pluginSocket := fmt.Sprintf("%s.sock", devType)
 		go hdm.Serve(devType, socketPath, pluginSocket, hwmanager.NewHwPluginServe)
 	}

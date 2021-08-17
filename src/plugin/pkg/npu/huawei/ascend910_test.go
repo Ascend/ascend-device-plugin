@@ -81,34 +81,15 @@ func TestHwAscend910Manager_GetDevState(t *testing.T) {
 // TestHwAscend910Manager_GetDevPath for getDevPath
 func TestHwAscend910Manager_GetDevPath(t *testing.T) {
 	hdm := createFake910HwDevManager("", true, false, false)
-	containerPath, hostPath := hdm.manager.GetDevPath("0", PHYSICAL_DEV)
+	containerPath, hostPath := hdm.manager.GetDevPath("0", physicalDev)
 	if hostPath != containerPath && hostPath != "/dev/davinci0" {
 		t.Fatal("TestHwAscend910Manager_GetDevPath Run Failed")
 	}
 	t.Logf("TestHwAscend910Manager_GetDevPath Run Pass")
 }
 
-// TestHwAscend910Manager_GetLogPath for getLogPath
-func TestHwAscend910Manager_GetLogPath(t *testing.T) {
-	hdm := createFake910HwDevManager("", true, false, false)
-
-	var logPath string
-	devID := make([]string, 0)
-	devID = append(devID, "Ascend910-0")
-	t.Logf("deviceId%v, %d", devID, len(devID))
-	err := hdm.manager.GetLogPath(devID, "/var/dlog", PHYSICAL_DEV, &logPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	splitstring := strings.Split(logPath, "_")
-	if len(splitstring) != splitTestStringNum || !strings.Contains(logPath, "0") {
-		t.Fail()
-	}
-	t.Logf("TestHwAscend910Manager_GetLogPath Run Pass ")
-}
-
 func createFake910HwDevManager(mode string, fdFlag, useAscendDocker, volcanoType bool) *HwDevManager {
-	hdm := NewHwDevManager(mode, "/var/dlog")
+	hdm := NewHwDevManager(mode)
 	hdm.SetParameters(fdFlag, useAscendDocker, volcanoType)
 	hdm.manager = NewFakeHwAscend910Manager()
 	hdm.manager.SetDmgr(newFakeDeviceManager())

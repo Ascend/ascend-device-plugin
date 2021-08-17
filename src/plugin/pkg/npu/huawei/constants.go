@@ -40,20 +40,20 @@ const (
 	hiAISlogdConfig     = "/etc/slog.conf"
 	hiAIMaxDeviceNum    = 64
 	idSplitNum          = 2
+	deviceIPLength      = 4
 	// The unit is seconds
 	sleepTime = 5
 
 	// logger setting
-
-	// LogPath save log file
-	LogPath                 = "/var/log/devicePlugin/devicePlugin.log"
-	fileMaxSize             = 1000                                                    // each log file size
-	maxBackups              = 20                                                      // max backup
-	maxAge                  = 28                                                      // the log file last time
+	
+	// MaxBackups log file max backup
+	MaxBackups = 30
+	// MaxAge the log file last time
+	MaxAge                  = 7
 	podDeviceKey            = "ascend.kubectl.kubernetes.io/ascend-910-configuration" // config map name
 	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"                                // visible env
 	ascendRuntimeOptionsEnv = "ASCEND_RUNTIME_OPTIONS"                                // virtual runtime option env
-	logChmod                = 0640
+	socketChmod    = 0600
 
 	huaweiAscend910  = "huawei.com/Ascend910"
 	podPredicateTime = "predicate-time"
@@ -65,16 +65,19 @@ const (
 	timeout          = 10
 	maxChipName      = 32
 
-	virtualDevicesPattern         = `Ascend910-(2|4|8|16)c`
-	logicIDIndexInVirtualDevID910 = 3
+	virtualDevicesPattern = "Ascend910-(2|4|8|16)c"
+	pwr2CSuffix           = "Ascend910-2c"
+	pwr4CSuffix           = "Ascend910-4c"
+	pwr8CSuffix           = "Ascend910-8c"
+	pwr16CSuffix          = "Ascend910-16c"
 
-	// Ascend device type identification
-	Infer710 = "710"
-	Infer310 = "310"
+	logicIDIndexInVirtualDevID910 = 3
 
 	// FunctionNotFound for describe dsmi interface function is exist or not
 	FunctionNotFound = "-99998"
 
 	// MaxVirtualDevNum is the max virtual devices number
 	MaxVirtualDevNum = 128
+
+	resetZero = 0
 )

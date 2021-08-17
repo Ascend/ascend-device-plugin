@@ -1,6 +1,7 @@
-#!/bin/sh
+#!/bin/bash
 # Perform  test for  k8s-device-plugin
 # Copyright @ Huawei Technologies CO., Ltd. 2020-2020. All rights reserved
+set -e
 export GO111MODULE="on"
 export PATH=$GOPATH/bin:$PATH
 CUR_DIR=$(dirname $(readlink -f $0))
