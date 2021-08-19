@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright @ Huawei Technologies CO., Ltd. 2020-2021. All rights reserved
+# Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
 set -e
 CUR_DIR=$(dirname $(readlink -f $0))
 TOP_DIR=$(realpath "${CUR_DIR}"/..)
