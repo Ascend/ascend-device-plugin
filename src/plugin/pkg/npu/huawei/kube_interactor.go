@@ -1,17 +1,5 @@
 /*
-Copyright 2020 The Volcano Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+Copyright(C) 2020-2021. Huawei Technologies Co.,Ltd.  All rights reserved.
 */
 
 package huawei
@@ -116,7 +104,7 @@ func checkNodeName(nodeName string) error {
 	return nil
 }
 
-func (ki *KubeInteractor) patchAnnotationOnNode(allocatableDevices sets.String, devType string) error {
+func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]string, devType string) error {
 	var err error
 	err = wait.PollImmediate(interval*time.Second, timeout*time.Second, func() (bool, error) {
 		var node *v1.Node
@@ -127,7 +115,6 @@ func (ki *KubeInteractor) patchAnnotationOnNode(allocatableDevices sets.String, 
 			return false, nil
 		}
 
-		groupAllocatableDevs := ki.groupDevByPower(allocatableDevices)
 		newNode := ki.updateNodeAnnotations(devType, groupAllocatableDevs, node)
 		if devType == "" {
 			newLabelsRecoverDev, newAscend910 := getUnHealthDev(totalUHDevices,
@@ -200,34 +187,6 @@ func (ki *KubeInteractor) updateNodeAnnotations(devType string, groupAllocatable
 		newNode.Annotations[annotationTag] = deviceNames
 	}
 	return newNode
-}
-
-func (ki *KubeInteractor) groupDevByPower(allocatableDevices sets.String) map[string]string {
-	var pwrSuffix = []string{hiAIAscend910Prefix, pwr2CSuffix, pwr4CSuffix, pwr8CSuffix, pwr16CSuffix}
-	var groupAllocatableDevs = make(map[string]string, len(pwrSuffix))
-	for _, suffix := range pwrSuffix {
-		powerAnnotation := ki.filterTagPowerDevice(allocatableDevices, suffix)
-		annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, suffix)
-		groupAllocatableDevs[annotationTag] = powerAnnotation
-	}
-	return groupAllocatableDevs
-}
-
-func (ki *KubeInteractor) filterTagPowerDevice(allocatableDevices sets.String, suffix string) string {
-	var powerAnnotation []string
-	for deviceName := range allocatableDevices {
-		switch suffix {
-		case hiAIAscend910Prefix:
-			if !IsVirtualDev(deviceName) {
-				powerAnnotation = append(powerAnnotation, deviceName)
-			}
-		default:
-			if strings.Contains(deviceName, suffix) {
-				powerAnnotation = append(powerAnnotation, deviceName)
-			}
-		}
-	}
-	return strings.Join(powerAnnotation, ",")
 }
 
 func (ki *KubeInteractor) convertStringToSet(deviceNames string) sets.String {

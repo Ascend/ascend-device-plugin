@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright @ Huawei Technologies CO., Ltd. 2020-2021. All rights reserved
+# Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
 set -e
 CUR_DIR=$(dirname $(readlink -f $0))
 TOP_DIR=$(realpath "${CUR_DIR}"/..)
@@ -7,6 +7,10 @@ export GO111MODULE="on"
 export PATH=$GOPATH/bin:$PATH
 
 go get github.com/golang/mock/mockgen
+go get golang.org/x/net
+go get golang.org/x/term
+go get golang.org/x/text
+go get github.com/golang/protobuf/ptypes/empty@v1.3.2
 MOCK_TOP=${TOP_DIR}/src/plugin/pkg/npu/huawei
 mkdir -p "${MOCK_TOP}/mock_v1"
 mkdir -p "${MOCK_TOP}/mock_kubernetes"
