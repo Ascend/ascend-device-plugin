@@ -1,6 +1,6 @@
 /*
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020. All rights reserved.
-*/
+ */
 
 package huawei
 

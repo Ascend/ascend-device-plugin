@@ -1,6 +1,6 @@
 /*
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
-*/
+ */
 
 package huawei
 
@@ -48,7 +48,7 @@ func createFakeDevManager(runMode string) *HwDevManager {
 // TestHwDevManager_Serve for serve
 func TestHwDevManager_Serve(t *testing.T) {
 	fakeHwDevManager := createFakeDevManager("")
-	errDir := os.MkdirAll("/var/lib/kubelet/device-plugins/",os.ModePerm)
+	errDir := os.MkdirAll("/var/lib/kubelet/device-plugins/", os.ModePerm)
 	if errDir != nil {
 		t.Fatal("TestHwDevManager_Serve Run FAiled, reason is failed to create folder file")
 	}

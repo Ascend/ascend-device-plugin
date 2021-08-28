@@ -3,7 +3,9 @@ module Ascend-device-plugin
 go 1.14
 
 require (
+	github.com/agiledragon/gomonkey/v2 v2.2.0
 	github.com/fsnotify/fsnotify v1.4.9
+	github.com/smartystreets/goconvey v1.6.4
 	go.uber.org/atomic v1.6.0
 	golang.org/x/net v0.0.0-20191004110552-13f9640d40b9
 	google.golang.org/grpc v1.23.1

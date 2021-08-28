@@ -1,6 +1,6 @@
 /*
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
-*/
+ */
 
 // Package huawei implements the query and allocation of the device and the function of the log.
 package huawei
@@ -35,7 +35,7 @@ func (hnm *HwAscend310Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe, isS
 	getNodeNpuUsed(&usedDevices, hps)
 	freeDevices := hps.healthDevice.Difference(usedDevices)
 	groupAllocatableDevs := groupDevByPower(freeDevices, hps.devType)
-	if err := hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, hps.devType); err != nil {
+	if err := hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, ""); err != nil {
 		hwlog.Errorf("Ascend310 patch Annotation failed, err: %v", err)
 	}
 }

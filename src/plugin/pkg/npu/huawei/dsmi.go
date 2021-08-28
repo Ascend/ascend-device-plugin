@@ -1,6 +1,6 @@
 /*
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
-*/
+ */
 
 package huawei
 
@@ -67,6 +67,11 @@ int dsmi_get_device_errorcode(int device_id, int *errorcount, unsigned int *perr
     CALL_FUNC(dsmi_get_device_errorcode,device_id,errorcount,perrorcode)
 }
 
+int (*dsmi_get_network_health_func)(int device_id, DSMI_NET_HEALTH_STATUS *presult);
+int dsmi_get_network_health(int device_id, DSMI_NET_HEALTH_STATUS *presult){
+    CALL_FUNC(dsmi_get_network_health,device_id,presult)
+}
+
 // load .so files and functions
 int dsmiInit_dl(void){
 	dsmiHandle = dlopen("libdrvdsmi_host.so",RTLD_LAZY);
@@ -94,6 +99,8 @@ int dsmiInit_dl(void){
 	dsmi_get_vdevice_info_func = dlsym(dsmiHandle,"dsmi_get_vdevice_info");
 
 	dsmi_get_device_errorcode_func = dlsym(dsmiHandle,"dsmi_get_device_errorcode");
+
+	dsmi_get_network_health_func = dlsym(dsmiHandle,"dsmi_get_network_health");
 
 	return SUCCESS;
 }
@@ -139,21 +146,21 @@ type ChipInfo struct {
 type CgoDsmiSubVDevInfo struct {
 	status uint32
 	vdevid uint32
-	vfid uint32
-	cid uint64
-	spec CgoDsmiVdevSpecInfo
+	vfid   uint32
+	cid    uint64
+	spec   CgoDsmiVdevSpecInfo
 }
 
 // CgoDsmiVdevSpecInfo is special info
 type CgoDsmiVdevSpecInfo struct {
-	coreNum string
+	coreNum  string
 	reserved string
 }
 
 // CgoDsmiVDevInfo total VDevInfos info
 type CgoDsmiVDevInfo struct {
-	vDevNum uint32
-	coreNumUnused uint32
+	vDevNum             uint32
+	coreNumUnused       uint32
 	cgoDsmiSubVDevInfos []CgoDsmiSubVDevInfo
 }
 
@@ -168,6 +175,7 @@ type DeviceMgrInterface interface {
 	GetDeviceIP(int32) (string, error)
 	GetVDevicesInfo(uint32) (CgoDsmiVDevInfo, error)
 	GetDeviceErrorCode(uint32) error
+	GetDeviceNetworkHealth(int32) (uint32, error)
 	ShutDown()
 }
 
@@ -322,21 +330,21 @@ func (d *DeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error)
 	err := C.dsmi_get_vdevice_info(C.uint(logicID), &dsmiVDevInfo)
 
 	if err != 0 || int(dsmiVDevInfo.vdev_num) < 0 || int(dsmiVDevInfo.vdev_num) > dsmiMaxVdevNum {
-		return CgoDsmiVDevInfo{}, fmt.Errorf("get virtual device info failed, error code is: %d " +
+		return CgoDsmiVDevInfo{}, fmt.Errorf("get virtual device info failed, error code is: %d "+
 			"and vdev num is: %d", int32(err), int32(dsmiVDevInfo.vdev_num))
 	}
 	cgoDsmiVDevInfos := CgoDsmiVDevInfo{
-		vDevNum: uint32(dsmiVDevInfo.vdev_num),
+		vDevNum:       uint32(dsmiVDevInfo.vdev_num),
 		coreNumUnused: uint32(dsmiVDevInfo.spec_unused.core_num),
 	}
 
 	for i := uint32(0); i < cgoDsmiVDevInfos.vDevNum; i++ {
 		coreNum := fmt.Sprintf("%v", dsmiVDevInfo.vdev[i].spec.core_num)
-		cgoDsmiVDevInfos.cgoDsmiSubVDevInfos= append(cgoDsmiVDevInfos.cgoDsmiSubVDevInfos, CgoDsmiSubVDevInfo{
+		cgoDsmiVDevInfos.cgoDsmiSubVDevInfos = append(cgoDsmiVDevInfos.cgoDsmiSubVDevInfos, CgoDsmiSubVDevInfo{
 			status: uint32(dsmiVDevInfo.vdev[i].status),
 			vdevid: uint32(dsmiVDevInfo.vdev[i].vdevid),
-			vfid: uint32(dsmiVDevInfo.vdev[i].vfid),
-			cid: uint64(dsmiVDevInfo.vdev[i].cid),
+			vfid:   uint32(dsmiVDevInfo.vdev[i].vfid),
+			cid:    uint64(dsmiVDevInfo.vdev[i].cid),
 			spec: CgoDsmiVdevSpecInfo{
 				coreNum: coreNum,
 			},
@@ -350,15 +358,31 @@ func (d *DeviceManager) GetDeviceErrorCode(logicID uint32) error {
 	var errorCount C.int
 	var pErrorCode [MaxErrorCodeCount]C.uint
 	if err := C.dsmi_get_device_errorcode(C.int(logicID), &errorCount, &pErrorCode[0]); err != 0 {
-		return fmt.Errorf("get device %d errorcode failed, erro is: %d", logicID, int32(err))
+		return fmt.Errorf("get device %d errorcode failed, error is: %d", logicID, int32(err))
 	}
 
 	if int32(errorCount) < 0 || int32(errorCount) > MaxErrorCodeCount {
 		return fmt.Errorf("get wrong errorcode count, device: %d, errorcode count: %d", logicID, int32(errorCount))
 	}
 
-	hwlog.Infof("get device error code, " +
-		"logicID: %d, errorCount: %d, pErrorCode: %d", logicID, int(errorCount),int(pErrorCode[0]))
+	hwlog.Infof("get device error code, "+
+		"logicID: %d, errorCount: %d, pErrorCode: %d", logicID, int(errorCount), int(pErrorCode[0]))
 
 	return nil
+}
+
+// GetDeviceNetworkHealth the return value 'healthCode' is as follows:
+// 0 : device network is right
+// 6 : the IP address of the detected object may not be configured. We also think the network of devices is correct.
+// other : the network of device is error
+func (d *DeviceManager) GetDeviceNetworkHealth(logicID int32) (uint32, error) {
+	var healthCode C.DSMI_NET_HEALTH_STATUS
+
+	err := C.dsmi_get_network_health(C.int(logicID), &healthCode)
+	if err != 0 {
+		return unretError, fmt.Errorf("get wrong device network healthCode, device: %d, error is: %d, "+
+			"healthCode is : %d", logicID, int32(err), uint32(healthCode))
+	}
+
+	return uint32(healthCode), nil
 }

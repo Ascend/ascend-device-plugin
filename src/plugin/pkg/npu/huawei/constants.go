@@ -1,6 +1,6 @@
 /*
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
-*/
+ */
 
 package huawei
 
@@ -33,7 +33,7 @@ const (
 	sleepTime = 5
 
 	// logger setting
-	
+
 	// MaxBackups log file max backup
 	MaxBackups = 30
 	// MaxAge the log file last time
@@ -41,7 +41,7 @@ const (
 	podDeviceKey            = "ascend.kubectl.kubernetes.io/ascend-910-configuration" // config map name
 	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"                                // visible env
 	ascendRuntimeOptionsEnv = "ASCEND_RUNTIME_OPTIONS"                                // virtual runtime option env
-	socketChmod    = 0600
+	socketChmod             = 0600
 
 	huaweiAscend910  = "huawei.com/Ascend910"
 	podPredicateTime = "predicate-time"
@@ -59,9 +59,11 @@ const (
 	pwr8CSuffix           = "Ascend910-8c"
 	pwr16CSuffix          = "Ascend910-16c"
 
-	logicIDIndexInVirtualDevID910 = 3
-	huaweiUnHealthAscend910       = "huawei.com/Ascend910-Unhealthy"
-	huaweiRecoverAscend910        = "huawei.com/Ascend910-Recover"
+	logicIDIndexInVirtualDevID910  = 3
+	huaweiNetworkUnHealthAscend910 = "huawei.com/Ascend910-NetworkUnhealthy"
+	huaweiNetworkRecoverAscend910  = "huawei.com/Ascend910-NetworkRecover"
+	huaweiUnHealthAscend910        = "huawei.com/Ascend910-Unhealthy"
+	huaweiRecoverAscend910         = "huawei.com/Ascend910-Recover"
 
 	// FunctionNotFound for describe dsmi interface function is exist or not
 	FunctionNotFound = "-99998"

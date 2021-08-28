@@ -1,6 +1,6 @@
 /*
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
-*/
+ */
 
 package huawei
 
@@ -17,10 +17,11 @@ import (
 )
 
 type npuDevice struct {
-	devType string
-	pciID   string
-	ID      string
-	Health  string
+	devType       string
+	pciID         string
+	ID            string
+	Health        string
+	networkHealth string
 }
 
 // HwDevManager manages huawei device devices.
@@ -60,6 +61,7 @@ type devManager interface {
 	GetMatchingDeviType() string
 	GetPhyDevMapVirtualDev() map[uint32]string
 	DoWithVolcanoListAndWatch(*HwPluginServe, bool)
+	GetDeviceNetworkState(int32) (string, error)
 }
 
 // NewHwDevManager function is used to new a dev manager.

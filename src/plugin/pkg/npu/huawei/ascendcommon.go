@@ -1,6 +1,6 @@
 /*
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
-*/
+ */
 
 // Package huawei implements the query and allocation of the device and the function of the log.
 package huawei
@@ -117,6 +117,34 @@ func getUnHealthDev(listenUHDev, annotationUHDev, labelsRecoverDev, device910 se
 	return newLabelsRecoverDev, strings.Join(newAscend910, ",")
 }
 
+// getNewNetworkRecoverDev
+// return new devices to be restored and network unhealthy device in this times
+func getNewNetworkRecoverDev(nnu, nnr sets.String) (sets.String, sets.String) {
+	// nnu means node annotation network unhealthy devices
+	// nnr means device's network is ok and to be restored
+
+	// this time network unhealthy devices
+	tud := totalNetworkUnhealthDevices
+	// if there is no network unhealthy device and autoStowingDevs is true
+	if autoStowingDevs {
+		return sets.String{}, tud
+	}
+
+	// devices recovered between the last check and this check
+	recoveredDevSets := lastTimeNetworkRecoverDevices.Difference(nnr)
+
+	newNetworkRecoverDevSets := sets.String{}
+	newNetworkRecoverDevSets = newNetworkRecoverDevSets.Union(nnu.Difference(tud))
+	// remove the device that network is unhealthy in this times
+	newNetworkRecoverDevSets = newNetworkRecoverDevSets.Difference(nnr.Intersection(tud))
+	// remove the device that recovered
+	newNetworkRecoverDevSets = newNetworkRecoverDevSets.Difference(recoveredDevSets)
+
+	newNetworkUnhealthDevSets := nnu.Union(tud).Difference(recoveredDevSets)
+
+	return newNetworkRecoverDevSets, newNetworkUnhealthDevSets
+}
+
 func unhealthyState(healthyState uint32, logicID uint32, healthyType string, dmgr DeviceMgrInterface) error {
 	phyID, err := dmgr.GetPhyID(logicID)
 	if err != nil {
@@ -188,10 +216,11 @@ func VerifyPath(verifyPath string) bool {
 func (adc *ascendCommonFunction) AssembleNpuDeviceStruct(deviType, devID string) npuDevice {
 	hwlog.Infof("Found Huawei Ascend, deviceType: %s, deviceID: %s", deviType, devID)
 	return npuDevice{
-		devType: deviType,
-		pciID:   "",
-		ID:      devID,
-		Health:  pluginapi.Healthy,
+		devType:       deviType,
+		pciID:         "",
+		ID:            devID,
+		Health:        pluginapi.Healthy,
+		networkHealth: pluginapi.Healthy,
 	}
 }
 
@@ -289,4 +318,9 @@ func (adc *ascendCommonFunction) GetPhyDevMapVirtualDev() map[uint32]string {
 // DoWithVolcanoListAndWatch ascend710 do nothing
 func (adc *ascendCommonFunction) DoWithVolcanoListAndWatch(hps *HwPluginServe, isStateChange bool) {
 	return
+}
+
+// GetDeviceNetworkState check Ascend910 only
+func (adc *ascendCommonFunction) GetDeviceNetworkState(logicID int32) (string, error) {
+	return "", nil
 }
