@@ -1,6 +1,6 @@
 /*
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
-*/
+ */
 
 package huawei
 
@@ -60,6 +60,14 @@ func (d *fakeDeviceManager) GetDeviceList(devices *[hiAIMaxDeviceNum]uint32) (in
 
 //  GetDeviceHealth get device health by id
 func (d *fakeDeviceManager) GetDeviceHealth(logicID int32) (uint32, error) {
+	if logicID == unHealthyTestLogicID {
+		return uint32(unHealthyTestLogicID), nil
+	}
+	return uint32(0), nil
+}
+
+//  GetDeviceNetworkHealth get device network health by id
+func (d *fakeDeviceManager) GetDeviceNetworkHealth(logicID int32) (uint32, error) {
 	if logicID == unHealthyTestLogicID {
 		return uint32(unHealthyTestLogicID), nil
 	}

@@ -1,9 +1,11 @@
 #!/bin/bash
 # Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
 set -e
-CUR_DIR=$(dirname $(readlink -f $0))
+CUR_DIR=$(dirname "$(readlink -f $0)")
 TOP_DIR=$(realpath "${CUR_DIR}"/..)
 export GO111MODULE="on"
+export GONOSUMDB="*"
+export GOPROXY="http://mirrors.tools.huawei.com/goproxy/,direct"
 export PATH=$GOPATH/bin:$PATH
 
 go get github.com/golang/mock/mockgen
@@ -25,7 +27,7 @@ mockgen k8s.io/client-go/kubernetes/typed/core/v1 PodInterface >${MOCK_TOP}/mock
 export PKG_CONFIG_PATH=${TOP_DIR}/src/plugin/config/config_310/:$PKG_CONFIG_PATH
 
 function execute_test() {
-  if ! (go test -v -race -coverprofile cov.out ${TOP_DIR}/src/plugin/pkg/npu/huawei/ >./$file_input); then
+  if ! (go test -mod=mod -v -race -coverprofile cov.out ${TOP_DIR}/src/plugin/pkg/npu/huawei/ >./$file_input); then
     echo '****** go test cases error! ******'
     echo 'Failed' >$file_input
     exit 1

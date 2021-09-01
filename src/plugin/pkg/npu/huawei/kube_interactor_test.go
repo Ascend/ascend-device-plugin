@@ -1,6 +1,6 @@
 /*
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
-*/
+ */
 
 package huawei
 
@@ -39,7 +39,7 @@ func TestPatchAnnotationOnNode(t *testing.T) {
 		nodeName:  "NODE_NAME",
 	}
 	groupAllocatableDevs := groupDevByPower(freeDevices, "Ascend910")
-	err := fakeKubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, "")
+	err := fakeKubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, hiAIAscend910Prefix)
 	if err != nil {
 		t.Fatal(err)
 	}

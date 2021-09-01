@@ -1,6 +1,6 @@
 /*
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
-*/
+ */
 
 package huawei
 
@@ -51,12 +51,13 @@ type Device struct { // Device
 }
 
 var (
-	ip             string
-	totalDevices   sets.String
-	stateThreadNum int
-	m              sync.Mutex
-	firstTimeList  bool
-	totalUHDevices sets.String
+	totalDevices                  sets.String
+	stateThreadNum                int
+	m                             sync.Mutex
+	firstTimeList                 = true
+	totalUHDevices                sets.String
+	totalNetworkUnhealthDevices   sets.String
+	lastTimeNetworkRecoverDevices sets.String
 )
 
 const (
@@ -129,7 +130,7 @@ func (s *pluginAPI) ListAndWatch(emtpy *pluginapi.Empty, stream pluginapi.Device
 		}
 		if isStateChange {
 			// turn on log print
-			logFlag, firstTimeList = true, true
+			logFlag, firstTimeList = true, false
 			resp.Devices = resp.Devices[:0]
 			s.updateKubeletDevInfo(resp, stream)
 		}
@@ -141,7 +142,7 @@ func (s *pluginAPI) updateKubeletDevInfo(resp *pluginapi.ListAndWatchResponse,
 	stream pluginapi.DevicePlugin_ListAndWatchServer) {
 	for _, dev := range s.hps.devices {
 		resp.Devices = append(resp.Devices, &pluginapi.Device{ID: dev.ID, Health: dev.Health})
-		if !firstTimeList {
+		if firstTimeList {
 			s.hps.healthDevice.Insert(dev.ID)
 		}
 	}
@@ -195,11 +196,57 @@ func (s *pluginAPI) listenPhysicalDevices() bool {
 		state := s.hps.hdm.manager.GetDevState(id, s.hps.hdm.dmgr)
 		if dev.Health != state {
 			isStateChange = true
-			dev.Health = state
-			s.hps.devices[id] = dev
+			s.hps.devices[id].Health = state
+		}
+
+		// If the device type is Ascend910, check the network health status of the device.
+		if s.hps.devType == hiAIAscend910Prefix {
+			isStateChange = s.checkDeviceNetworkHealthStatus(dev) || isStateChange
 		}
 	}
 	return isStateChange
+}
+
+// check device network health status
+// only for Ascend910 and Non-virtual device
+func (s *pluginAPI) checkDeviceNetworkHealthStatus(device *npuDevice) bool {
+	// virtual devices do not check network health status.
+	if IsVirtualDev(s.hps.devType) {
+		return false
+	}
+
+	// if device is unhealthy then device network must be unhealthy
+	if device.Health == pluginapi.Unhealthy {
+		if device.networkHealth != device.Health {
+			device.networkHealth = pluginapi.Unhealthy
+			return true
+		}
+	}
+
+	phyID, err := getPhyIDByName(device.ID)
+	if err != nil {
+		hwlog.Error(err)
+		return false
+	}
+
+	logicID, err := s.hps.hdm.dmgr.GetLogicID(phyID)
+	if err != nil {
+		hwlog.Error(err)
+		return false
+	}
+
+	healthStatus, err := s.hps.hdm.manager.GetDeviceNetworkState(int32(logicID))
+	if err != nil {
+		hwlog.Error(err)
+		return false
+	}
+
+	if healthStatus != device.networkHealth {
+		device.networkHealth = healthStatus
+		return true
+	}
+
+	return false
 }
 
 // Allocate is called by kubelet to mount device to k8s pod.
@@ -705,14 +752,14 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int) (map[string]string, e
 		hwlog.Errorf("get NPU Annotation failed, err: %v", err)
 		return nil, err
 	}
-	if errors := s.getAscendVisiDevsWithVolcano(allocateDevice, &ascendVisibleDevices); errors != nil{
+	if errors := s.getAscendVisiDevsWithVolcano(allocateDevice, &ascendVisibleDevices); errors != nil {
 		hwlog.Errorf("get ascend devs with volcano failed, err: %v", err)
 	}
 	usedDevices := sets.NewString()
 	getNodeNpuUsed(&usedDevices, s.hps)
 	freeDevices := s.hps.healthDevice.Difference(usedDevices)
 	groupAllocatableDevs := groupDevByPower(freeDevices, s.hps.devType)
-	errs := s.hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, s.hps.devType)
+	errs := s.hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, "")
 	if errs != nil {
 		hwlog.Errorf("patch Annotations failed, err: %v", err)
 		return nil, err

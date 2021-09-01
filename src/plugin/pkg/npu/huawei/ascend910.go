@@ -1,6 +1,6 @@
 /*
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
-*/
+ */
 
 // Package huawei implements the query and allocation of the device and the function of the log.
 package huawei
@@ -18,6 +18,9 @@ const (
 	zeroCore = "0"
 	// noVDevFound means not supported in the current scenario.
 	noVDevFound = "65534"
+
+	networkDetectOK   = uint32(0)
+	networkDetectInit = uint32(6)
 )
 
 // HwAscend910Manager manages huawei Ascend910 devices.
@@ -133,7 +136,7 @@ func (hnm *HwAscend910Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe, isS
 	stateThreadNum += interval
 	if stateThreadNum == len(hps.hdm.allDevTypes) {
 		groupAllocatableDevs := groupDevByPower(totalDevices, hps.devType)
-		if err := hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, ""); err != nil {
+		if err := hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, hiAIAscend910Prefix); err != nil {
 			hwlog.Errorf("patch Annotation failed, err: %v", err)
 		}
 		totalDevices = totalDevices.Intersection(sets.String{})
@@ -142,22 +145,43 @@ func (hnm *HwAscend910Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe, isS
 	m.Unlock()
 }
 
+// GetDeviceNetworkState check NPU network health
+func (hnm *HwAscend910Manager) GetDeviceNetworkState(logicID int32) (string, error) {
+	healthCode, err := hnm.dmgr.GetDeviceNetworkHealth(logicID)
+	if err != nil {
+		return "", err
+	}
+
+	switch healthCode {
+	case networkDetectOK, networkDetectInit:
+		return pluginapi.Healthy, nil
+	default:
+		return pluginapi.Unhealthy, nil
+	}
+}
+
 func (hnm *HwAscend910Manager) groupDevsByStatus(hps *HwPluginServe, isStateChange bool) {
 	if !isStateChange {
 		return
 	}
 	if hps.devType == hiAIAscend910Prefix && isStateChange {
 		totalUHDevices = sets.String{}
+		totalNetworkUnhealthDevices = sets.String{}
 	}
 	hps.healthDevice = sets.String{}
-	uhDevice := sets.String{}
 	for _, device := range hps.devices {
-		if device.Health != pluginapi.Healthy && !IsVirtualDev(device.ID) {
-			uhDevice.Insert(device.ID)
-			totalUHDevices = totalUHDevices.Union(uhDevice)
+		if device.networkHealth != pluginapi.Healthy {
+			totalNetworkUnhealthDevices.Insert(device.ID)
+		}
+
+		if IsVirtualDev(device.ID) || device.Health == pluginapi.Healthy {
+			hps.healthDevice.Insert(device.ID)
 			continue
 		}
-		hps.healthDevice.Insert(device.ID)
+
+		if device.Health != pluginapi.Healthy {
+			totalUHDevices.Insert(device.ID)
+		}
 	}
 }
 

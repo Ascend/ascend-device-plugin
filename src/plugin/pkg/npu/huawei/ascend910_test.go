@@ -1,12 +1,13 @@
 /*
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
-*/
+ */
 
 package huawei
 
 import (
 	"fmt"
 	"github.com/golang/protobuf/ptypes/empty"
+	"k8s.io/apimachinery/pkg/util/sets"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"sort"
 	"strings"
@@ -82,4 +83,9 @@ func createFake910HwDevManager(mode string, fdFlag, useAscendDocker, volcanoType
 	hdm.manager = NewFakeHwAscend910Manager()
 	hdm.manager.SetDmgr(newFakeDeviceManager())
 	return hdm
+}
+
+func TestGroupDevByPower(t *testing.T) {
+	groupDevByPower(sets.String{}, hiAIAscend310Prefix)
+	t.Logf("TestGroupDevByPower Run Pass")
 }

@@ -1,6 +1,6 @@
 /*
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
-*/
+ */
 
 // Package main implements initialization of the startup parameters of the device plugin.
 package main
@@ -15,8 +15,8 @@ import (
 
 const (
 	// socket name
-	socketPath = "/var/lib/kubelet/device-plugins"
-	defaultLogPath    = "/var/log/mindx-dl/devicePlugin/devicePlugin.log"
+	socketPath     = "/var/lib/kubelet/device-plugins"
+	defaultLogPath = "/var/log/mindx-dl/devicePlugin/devicePlugin.log"
 
 	// defaultListWatchPeriod is the default listening device state's period
 	defaultListWatchPeriod = 5
@@ -37,14 +37,14 @@ var (
 		"Log file path in edge scene")
 	listWatchPeriod = flag.Int("listWatchPeriod", defaultListWatchPeriod, "Listen and "+
 		"watch device state's period, unit second, range [3, 60]")
-	autoStowing     = flag.Bool("autoStowing", true, "Whether to automatically stow the fixed device")
-	logLevel        = flag.Int("logLevel", 0,
+	autoStowing = flag.Bool("autoStowing", true, "Whether to automatically stow the fixed device")
+	logLevel    = flag.Int("logLevel", 0,
 		"Log level, -1-debug, 0-info(default), 1-warning, 2-error, 3-dpanic, 4-panic, 5-fatal")
-	logMaxAge       = flag.Int("maxAge", hwmanager.MaxAge, "Maximum number of days for backup log files")
-	logIsCompress   = flag.Bool("isCompress", false,
+	logMaxAge     = flag.Int("maxAge", hwmanager.MaxAge, "Maximum number of days for backup log files")
+	logIsCompress = flag.Bool("isCompress", false,
 		"Whether backup files need to be compressed")
-	logFile         = flag.String("logFile", defaultLogPath, "The log file path")
-	logMaxBackups   = flag.Int("maxBackups", hwmanager.MaxBackups, "Maximum number of backup log files")
+	logFile       = flag.String("logFile", defaultLogPath, "The log file path")
+	logMaxBackups = flag.Int("maxBackups", hwmanager.MaxBackups, "Maximum number of backup log files")
 )
 
 var (
@@ -54,18 +54,18 @@ var (
 	BuildVersion string
 )
 
-func initLogModule( stopCh <-chan struct{}) {
+func initLogModule(stopCh <-chan struct{}) {
 	var loggerPath string
 	loggerPath = *logFile
 	if *fdFlag {
 		loggerPath = *edgeLogFile
 	}
 	hwLogConfig := hwlog.LogConfig{
-		LogFileName:   loggerPath,
-		LogLevel:      *logLevel,
-		MaxBackups:    *logMaxBackups,
-		MaxAge:        *logMaxAge,
-		IsCompress:    *logIsCompress,
+		LogFileName: loggerPath,
+		LogLevel:    *logLevel,
+		MaxBackups:  *logMaxBackups,
+		MaxAge:      *logMaxAge,
+		IsCompress:  *logIsCompress,
 	}
 	if err := hwlog.Init(&hwLogConfig, stopCh); err != nil {
 		fmt.Printf("init hwlog error %v", err.Error())

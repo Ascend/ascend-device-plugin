@@ -116,23 +116,47 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 		}
 
 		newNode := ki.updateNodeAnnotations(devType, groupAllocatableDevs, node)
-		if devType == "" {
-			newLabelsRecoverDev, newAscend910 := getUnHealthDev(totalUHDevices,
-				ki.convertDevListToSets(node.Annotations[huaweiUnHealthAscend910], nodeAnnotationsDeviceSep),
-				ki.convertDevListToSets(node.Labels[huaweiRecoverAscend910], nodeLabelsDeviceSep),
-				ki.convertDevListToSets(groupAllocatableDevs[huaweiAscend910], nodeAnnotationsDeviceSep))
-			newNode.Annotations[huaweiAscend910] = newAscend910
-			newNode.Annotations[huaweiUnHealthAscend910] = ki.convertSetsToString(totalUHDevices, nodeAnnotationsDeviceSep)
-			newNode.Labels[huaweiRecoverAscend910] = ki.convertSetsToString(newLabelsRecoverDev, nodeLabelsDeviceSep)
+		// variables are defined in advance
+		// the value will be used in subsequent assignment
+		newNetworkRecoverDevSets := sets.String{}
+		// Ascend910
+		if devType == hiAIAscend910Prefix {
+			ki.prepareAnnotationData(node, newNode, groupAllocatableDevs, &newNetworkRecoverDevSets)
 		}
 		_, _, err = nodeutil.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), node, newNode)
 		if err != nil {
 			hwlog.Errorf("failed to patch volcano npu resource: %v", err)
 			return false, nil
 		}
+		// if update success, update the lastTimeNetworkRecoverDevices
+		// Ascend910
+		if devType == hiAIAscend910Prefix {
+			lastTimeNetworkRecoverDevices = newNetworkRecoverDevSets
+		}
 		return true, nil
 	})
 	return err
+}
+
+func (ki *KubeInteractor) prepareAnnotationData(node, newNode *v1.Node, groupAllocatableDevs map[string]string,
+	newNetworkRecoverDevSets *sets.String) {
+	newLabelsRecoverDev, newAscend910 := getUnHealthDev(totalUHDevices,
+		ki.convertDevListToSets(node.Annotations[huaweiUnHealthAscend910], nodeAnnotationsDeviceSep),
+		ki.convertDevListToSets(node.Labels[huaweiRecoverAscend910], nodeLabelsDeviceSep),
+		ki.convertDevListToSets(groupAllocatableDevs[huaweiAscend910], nodeAnnotationsDeviceSep))
+
+	newRecoverDevSets, newNetworkUnhealthDevSets := getNewNetworkRecoverDev(
+		ki.convertDevListToSets(node.Annotations[huaweiNetworkUnHealthAscend910], nodeAnnotationsDeviceSep),
+		ki.convertDevListToSets(node.Labels[huaweiNetworkRecoverAscend910], nodeLabelsDeviceSep))
+
+	newNode.Annotations[huaweiAscend910] = newAscend910
+	newNode.Annotations[huaweiUnHealthAscend910] = ki.convertSetsToString(totalUHDevices, nodeAnnotationsDeviceSep)
+	newNode.Annotations[huaweiNetworkUnHealthAscend910] = ki.convertSetsToString(newNetworkUnhealthDevSets,
+		nodeAnnotationsDeviceSep)
+	newNode.Labels[huaweiRecoverAscend910] = ki.convertSetsToString(newLabelsRecoverDev, nodeLabelsDeviceSep)
+	newNode.Labels[huaweiNetworkRecoverAscend910] = ki.convertSetsToString(newRecoverDevSets, nodeLabelsDeviceSep)
+
+	*newNetworkRecoverDevSets = newRecoverDevSets
 }
 
 func (ki *KubeInteractor) convertDevListToSets(devices string, sepType string) sets.String {
@@ -165,11 +189,13 @@ func (ki *KubeInteractor) convertSetsToString(annotationUHDevice sets.String, se
 
 func (ki *KubeInteractor) updateNodeAnnotations(devType string, groupAllocatableDevs map[string]string,
 	node *v1.Node) *v1.Node {
-	if !firstTimeList {
+	if firstTimeList {
 		delete(node.Annotations, huaweiUnHealthAscend910)
+		delete(node.Annotations, huaweiNetworkUnHealthAscend910)
 		delete(node.Annotations, huaweiAscend910)
 		delete(node.Labels, huaweiRecoverAscend910)
-		firstTimeList = true
+		delete(node.Labels, huaweiNetworkRecoverAscend910)
+		firstTimeList = false
 	}
 	newNode := node.DeepCopy()
 	if devType != "" {

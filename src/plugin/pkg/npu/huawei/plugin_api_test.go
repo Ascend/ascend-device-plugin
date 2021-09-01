@@ -1,6 +1,6 @@
 /*
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
-*/
+ */
 
 package huawei
 
@@ -9,9 +9,12 @@ import (
 	"Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_kubernetes"
 	"Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_v1"
 	"fmt"
+	. "github.com/agiledragon/gomonkey/v2"
 	"github.com/golang/mock/gomock"
+	. "github.com/smartystreets/goconvey/convey"
 	"go.uber.org/atomic"
 	"golang.org/x/net/context"
+	"huawei.com/npu-exporter/hwlog"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -274,4 +277,112 @@ func mockPodList() []v1.Pod {
 			},
 		},
 	}
+}
+
+func TestCheckDeviceNetworkHealthStatus(t *testing.T) {
+	Convey("checkDeviceNetworkHealthStatus", t, func() {
+		Convey("network status unchanged", func() {
+			patches := ApplyFunc(hwlog.Error, func(args ...interface{}) {
+				return
+			})
+			defer patches.Reset()
+			hdm := createFake910HwDevManager("ascend910", false, false, false)
+			hdm.dmgr = newFakeDeviceManager()
+			pluginSockPath := fmt.Sprintf("%s.sock", "Ascend910")
+			fakeKubeInteractor := &KubeInteractor{}
+			device := &npuDevice{
+				devType:       "Ascend910",
+				pciID:         "",
+				ID:            "Ascend910-0",
+				Health:        pluginapi.Healthy,
+				networkHealth: pluginapi.Healthy,
+			}
+			fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", pluginSockPath, fakeKubeInteractor)
+			ret := fakePluginAPI.checkDeviceNetworkHealthStatus(device)
+			So(ret, ShouldBeFalse)
+		})
+	})
+}
+
+func TestCheckDeviceNetworkStatusChange(t *testing.T) {
+	Convey("network health status", t, func() {
+		Convey("network status changed to unhealthy", func() {
+			patches := ApplyFunc(hwlog.Error, func(args ...interface{}) {
+				return
+			})
+			defer patches.Reset()
+			hdm := createFake910HwDevManager("ascend910", false, false, false)
+			hdm.dmgr = newFakeDeviceManager()
+			pluginSockPath := fmt.Sprintf("%s.sock", "Ascend910")
+			fakeKubeInteractor := &KubeInteractor{}
+			device := &npuDevice{
+				devType:       "Ascend910",
+				pciID:         "",
+				ID:            "Ascend910-3",
+				Health:        pluginapi.Healthy,
+				networkHealth: pluginapi.Healthy,
+			}
+			fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", pluginSockPath, fakeKubeInteractor)
+			ret := fakePluginAPI.checkDeviceNetworkHealthStatus(device)
+			So(ret, ShouldBeTrue)
+		})
+		Convey("network status and device health status both are unhealthy", func() {
+			hdm := createFakeDevManager("ascend910")
+			pluginSockPath := fmt.Sprintf("%s.sock", "Ascend910")
+			fakeKubeInteractor := &KubeInteractor{}
+			device := &npuDevice{
+				devType:       "Ascend910",
+				pciID:         "",
+				ID:            "Ascend910-1",
+				Health:        pluginapi.Unhealthy,
+				networkHealth: pluginapi.Healthy,
+			}
+			fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", pluginSockPath, fakeKubeInteractor)
+			ret := fakePluginAPI.checkDeviceNetworkHealthStatus(device)
+			So(ret, ShouldBeTrue)
+		})
+	})
+}
+
+func TestDonotCheckNetworkStatus(t *testing.T) {
+	Convey("do not check device network status", t, func() {
+		Convey("virtual device don't check network healthy", func() {
+			hdm := createFakeDevManager("ascend910")
+			pluginSockPath := fmt.Sprintf("%s.sock", "Ascend910")
+			fakeKubeInteractor := &KubeInteractor{}
+			device := &npuDevice{
+				devType:       "Ascend910-8c",
+				pciID:         "",
+				ID:            "Ascend910-8c-1-1",
+				Health:        pluginapi.Healthy,
+				networkHealth: pluginapi.Healthy,
+			}
+			fakePluginAPI := createFakePluginAPI(hdm, "Ascend910-8c", pluginSockPath, fakeKubeInteractor)
+			ret := fakePluginAPI.checkDeviceNetworkHealthStatus(device)
+			So(ret, ShouldBeFalse)
+		})
+		Convey("device id error", func() {
+			patches := ApplyFunc(hwlog.Errorf, func(format string, args ...interface{}) {
+				return
+			})
+			patches2 := ApplyFunc(hwlog.Error, func(args ...interface{}) {
+				return
+			})
+			defer patches.Reset()
+			defer patches2.Reset()
+			hdm := createFake910HwDevManager("ascend910", false, false, false)
+			pluginSockPath := fmt.Sprintf("%s.sock", "Ascend910")
+			fakeKubeInteractor := &KubeInteractor{}
+			device := &npuDevice{
+				devType:       "Ascend910",
+				pciID:         "",
+				ID:            "Ascend910-1000",
+				Health:        pluginapi.Healthy,
+				networkHealth: pluginapi.Healthy,
+			}
+			fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", pluginSockPath, fakeKubeInteractor)
+			ret := fakePluginAPI.checkDeviceNetworkHealthStatus(device)
+			So(ret, ShouldBeFalse)
+		})
+	})
 }
