@@ -2,7 +2,7 @@
 # Perform  build k8s-device-plugin
 # Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
 set -e
-CUR_DIR=$(dirname $(readlink -f "$0"))
+CUR_DIR=$(dirname "$(readlink -f "$0")")
 TOP_DIR=$(realpath "${CUR_DIR}"/..)
 build_version="v2.0.3"
 version_file="${TOP_DIR}"/service_config.ini
@@ -13,13 +13,7 @@ if  [ -f "$version_file" ]; then
 fi
 
 output_name="device-plugin"
-docker_images_name="ascend-k8sdeviceplugin:v2.0.3"
 os_type=$(arch)
-if [ "${os_type}" = "aarch64" ]; then
-  os_type="arm64"
-else
-  os_type="x86"
-fi
 build_type=build
 
 if [ "$1" == "ci" ] || [ "$2" == "ci" ]; then
@@ -39,7 +33,7 @@ function build_plugin() {
     export CGO_CFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
     export CGO_CPPFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv" 
     go build -buildmode=pie -ldflags "-X main.BuildName=${output_name} \
-            -X main.BuildVersion=${build_version} \
+            -X main.BuildVersion=${build_version}_linux-${os_type} \
             -buildid none     \
             -s   \
             -extldflags=-Wl,-z,relro,-z,now,-z,noexecstack" \
