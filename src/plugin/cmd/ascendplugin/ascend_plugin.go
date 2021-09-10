@@ -48,7 +48,7 @@ var (
 )
 
 var (
-	// BuildName is k8s-device-plugin
+	// BuildName show app name
 	BuildName string
 	// BuildVersion show app version
 	BuildVersion string
