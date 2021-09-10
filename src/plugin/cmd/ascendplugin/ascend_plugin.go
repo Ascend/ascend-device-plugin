@@ -90,6 +90,7 @@ func main() {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 	initLogModule(stopCh)
+	hwlog.Infof("ascend device plugin starting and the version is %s", BuildVersion)
 
 	neverStop := make(chan struct{})
 	switch *mode {
