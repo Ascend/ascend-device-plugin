@@ -215,14 +215,6 @@ func (s *pluginAPI) checkDeviceNetworkHealthStatus(device *npuDevice) bool {
 		return false
 	}
 
-	// if device is unhealthy then device network must be unhealthy
-	if device.Health == pluginapi.Unhealthy {
-		if device.networkHealth != device.Health {
-			device.networkHealth = pluginapi.Unhealthy
-			return true
-		}
-	}
-
 	phyID, err := getPhyIDByName(device.ID)
 	if err != nil {
 		hwlog.Error(err)
@@ -235,7 +227,7 @@ func (s *pluginAPI) checkDeviceNetworkHealthStatus(device *npuDevice) bool {
 		return false
 	}
 
-	healthStatus, err := s.hps.hdm.manager.GetDeviceNetworkState(int32(logicID))
+	healthStatus, err := s.hps.hdm.manager.GetDeviceNetworkState(int32(logicID), device)
 	if err != nil {
 		hwlog.Error(err)
 		return false

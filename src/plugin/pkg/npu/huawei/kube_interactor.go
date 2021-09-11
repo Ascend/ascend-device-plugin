@@ -140,23 +140,68 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 
 func (ki *KubeInteractor) prepareAnnotationData(node, newNode *v1.Node, groupAllocatableDevs map[string]string,
 	newNetworkRecoverDevSets *sets.String) {
+
+	// format recover label data
+	formatedLabelRecover := changeToLongFormat(ki.convertDevListToSets(node.Labels[huaweiRecoverAscend910],
+		nodeLabelsDeviceSep))
 	newLabelsRecoverDev, newAscend910 := getUnHealthDev(totalUHDevices,
 		ki.convertDevListToSets(node.Annotations[huaweiUnHealthAscend910], nodeAnnotationsDeviceSep),
-		ki.convertDevListToSets(node.Labels[huaweiRecoverAscend910], nodeLabelsDeviceSep),
+		formatedLabelRecover,
 		ki.convertDevListToSets(groupAllocatableDevs[huaweiAscend910], nodeAnnotationsDeviceSep))
 
+	// format network recover label data
+	formatedLabelNetworkRecover := changeToLongFormat(ki.convertDevListToSets(node.
+		Labels[huaweiNetworkRecoverAscend910], nodeLabelsDeviceSep))
 	newRecoverDevSets, newNetworkUnhealthDevSets := getNewNetworkRecoverDev(
 		ki.convertDevListToSets(node.Annotations[huaweiNetworkUnHealthAscend910], nodeAnnotationsDeviceSep),
-		ki.convertDevListToSets(node.Labels[huaweiNetworkRecoverAscend910], nodeLabelsDeviceSep))
+		formatedLabelNetworkRecover)
+
+	// change to short format
+	shortNewLabelsRecoverDev := changeToShortFormat(newLabelsRecoverDev)
+	shortNewRecoverDevSets := changeToShortFormat(newRecoverDevSets)
 
 	newNode.Annotations[huaweiAscend910] = newAscend910
 	newNode.Annotations[huaweiUnHealthAscend910] = ki.convertSetsToString(totalUHDevices, nodeAnnotationsDeviceSep)
 	newNode.Annotations[huaweiNetworkUnHealthAscend910] = ki.convertSetsToString(newNetworkUnhealthDevSets,
 		nodeAnnotationsDeviceSep)
-	newNode.Labels[huaweiRecoverAscend910] = ki.convertSetsToString(newLabelsRecoverDev, nodeLabelsDeviceSep)
-	newNode.Labels[huaweiNetworkRecoverAscend910] = ki.convertSetsToString(newRecoverDevSets, nodeLabelsDeviceSep)
+	newNode.Labels[huaweiRecoverAscend910] = ki.convertSetsToString(shortNewLabelsRecoverDev, nodeLabelsDeviceSep)
+	newNode.Labels[huaweiNetworkRecoverAscend910] = ki.convertSetsToString(shortNewRecoverDevSets, nodeLabelsDeviceSep)
 
 	*newNetworkRecoverDevSets = newRecoverDevSets
+}
+
+// get elements one by one from the sets and change the element "x" to "Ascend910-x"
+func changeToLongFormat(chips sets.String) sets.String {
+	if chips.Len() == 0 {
+		return sets.String{}
+	}
+
+	newSets := sets.String{}
+	for devID := range chips {
+		tmpName := fmt.Sprintf("%s-%s", hiAIAscend910Prefix, devID)
+		newSets.Insert(tmpName)
+	}
+
+	return newSets
+}
+
+// get elements one by one from the sets and change the element "Ascend910-x" to "x"
+func changeToShortFormat(chips sets.String) sets.String {
+	if chips.Len() == 0 {
+		return sets.String{}
+	}
+
+	newSets := sets.String{}
+	for devName := range chips {
+		if len(devName) > 1 {
+			idSplit := strings.Split(devName, "-")
+			devID := idSplit[len(idSplit)-1]
+			newSets.Insert(devID)
+		}
+
+	}
+
+	return newSets
 }
 
 func (ki *KubeInteractor) convertDevListToSets(devices string, sepType string) sets.String {
