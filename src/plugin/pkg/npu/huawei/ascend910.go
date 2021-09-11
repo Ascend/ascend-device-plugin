@@ -156,7 +156,7 @@ func (hnm *HwAscend910Manager) GetDeviceNetworkState(logicID int32, device *npuD
 	case networkDetectOK, networkDetectInit:
 		return pluginapi.Healthy, nil
 	default:
-		hwlog.Warnf("%s network status is unhealthy, code value is %v", device.ID, healthCode)
+		hwlog.Debugf("%s network status is unhealthy, code value is %v", device.ID, healthCode)
 		return pluginapi.Unhealthy, nil
 	}
 }

@@ -170,7 +170,7 @@ func (ki *KubeInteractor) prepareAnnotationData(node, newNode *v1.Node, groupAll
 	*newNetworkRecoverDevSets = newRecoverDevSets
 }
 
-// get elements one by one from the sets and change the element "x" to "Ascend910-x"
+// get elements one by one from the sets and mark the physical id "x" to "Ascend910-x"
 func changeToLongFormat(chips sets.String) sets.String {
 	if chips.Len() == 0 {
 		return sets.String{}
