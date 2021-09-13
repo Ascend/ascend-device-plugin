@@ -8,6 +8,7 @@ import (
 	"Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_kubernetes"
 	"Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_v1"
 	"github.com/golang/mock/gomock"
+	. "github.com/smartystreets/goconvey/convey"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -44,4 +45,28 @@ func TestPatchAnnotationOnNode(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Logf("TestPatchAnnotationOnNode Run Pass")
+}
+
+// TestChangeLabelFormat for test label format
+func TestChangeLabelFormat(t *testing.T) {
+	Convey("format change", t, func() {
+		Convey("empty sets", func() {
+			emptySets := changeToShortFormat(sets.String{})
+			emptySets2 := changeToLongFormat(sets.String{})
+			So(emptySets, ShouldBeEmpty)
+			So(emptySets2, ShouldBeEmpty)
+		})
+		Convey("long format", func() {
+			shortSets := sets.String{}
+			shortSets.Insert("1")
+			longSets := changeToLongFormat(shortSets)
+			So(longSets, ShouldEqual, sets.String{"Ascend910-1": sets.Empty{}})
+		})
+		Convey("short format", func() {
+			longSets := sets.String{}
+			longSets.Insert("Ascend910-1")
+			shortSets := changeToShortFormat(longSets)
+			So(shortSets, ShouldEqual, sets.String{"1": sets.Empty{}})
+		})
+	})
 }

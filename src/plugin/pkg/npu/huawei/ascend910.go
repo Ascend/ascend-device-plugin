@@ -146,7 +146,7 @@ func (hnm *HwAscend910Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe, isS
 }
 
 // GetDeviceNetworkState check NPU network health
-func (hnm *HwAscend910Manager) GetDeviceNetworkState(logicID int32) (string, error) {
+func (hnm *HwAscend910Manager) GetDeviceNetworkState(logicID int32, device *npuDevice) (string, error) {
 	healthCode, err := hnm.dmgr.GetDeviceNetworkHealth(logicID)
 	if err != nil {
 		return "", err
@@ -156,6 +156,7 @@ func (hnm *HwAscend910Manager) GetDeviceNetworkState(logicID int32) (string, err
 	case networkDetectOK, networkDetectInit:
 		return pluginapi.Healthy, nil
 	default:
+		hwlog.Debugf("%s network status is unhealthy, code value is %v", device.ID, healthCode)
 		return pluginapi.Unhealthy, nil
 	}
 }

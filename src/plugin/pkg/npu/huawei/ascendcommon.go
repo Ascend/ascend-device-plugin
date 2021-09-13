@@ -321,6 +321,6 @@ func (adc *ascendCommonFunction) DoWithVolcanoListAndWatch(hps *HwPluginServe, i
 }
 
 // GetDeviceNetworkState check Ascend910 only
-func (adc *ascendCommonFunction) GetDeviceNetworkState(logicID int32) (string, error) {
+func (adc *ascendCommonFunction) GetDeviceNetworkState(logicID int32, d *npuDevice) (string, error) {
 	return "", nil
 }

@@ -326,21 +326,6 @@ func TestCheckDeviceNetworkStatusChange(t *testing.T) {
 			ret := fakePluginAPI.checkDeviceNetworkHealthStatus(device)
 			So(ret, ShouldBeTrue)
 		})
-		Convey("network status and device health status both are unhealthy", func() {
-			hdm := createFakeDevManager("ascend910")
-			pluginSockPath := fmt.Sprintf("%s.sock", "Ascend910")
-			fakeKubeInteractor := &KubeInteractor{}
-			device := &npuDevice{
-				devType:       "Ascend910",
-				pciID:         "",
-				ID:            "Ascend910-1",
-				Health:        pluginapi.Unhealthy,
-				networkHealth: pluginapi.Healthy,
-			}
-			fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", pluginSockPath, fakeKubeInteractor)
-			ret := fakePluginAPI.checkDeviceNetworkHealthStatus(device)
-			So(ret, ShouldBeTrue)
-		})
 	})
 }
 
