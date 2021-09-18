@@ -57,6 +57,7 @@ func TestHwDevManager_Serve(t *testing.T) {
 	fakeHwDevManager := createFakeDevManager("")
 	f, err := os.Create(serverSock310)
 	if err != nil {
+		hwlog.Info(err)
 		t.Fatal("TestHwDevManager_Serve Run FAiled, reason is failed to create sock file")
 	}
 	f.Chmod(socketChmod)

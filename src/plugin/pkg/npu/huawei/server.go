@@ -136,7 +136,7 @@ func (hps *HwPluginServe) setSocket(pluginSocketPath string) {
 	hps.grpcServer = grpc.NewServer()
 	// Registers service.
 	plugin := &pluginAPI{hps: hps, outbreak: atomic.NewBool(false)}
-	pluginapi.RegisterDevicePluginServer(plugin.hps.grpcServer, plugin)
+	pluginapi.RegisterDevicePluginServer(hps.grpcServer, plugin)
 }
 
 // Stop the gRPC server

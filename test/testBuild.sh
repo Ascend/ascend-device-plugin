@@ -31,7 +31,6 @@ go test -v -race -coverprofile cov.out ${TOP_DIR}/src/plugin/pkg/npu/huawei/ >./
 
 if [ $? != 0 ]; then
   echo '****** go test cases error! ******'
-  echo 'Failed' >$file_input
   exit 1
 else
   echo ${file_detail_output}
