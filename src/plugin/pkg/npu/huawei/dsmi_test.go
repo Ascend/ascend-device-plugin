@@ -6,7 +6,6 @@ package huawei
 
 import (
 	"fmt"
-	"github.com/golang/protobuf/ptypes/empty"
 	"os"
 	"strconv"
 	"strings"
@@ -187,17 +186,17 @@ func TestGetDefaultDevices(t *testing.T) {
 	if err != nil {
 		t.Errorf("TestGetDefaultDevices Run Failed")
 	}
-	defaultMap := make(map[string]empty.Empty)
-	defaultMap[hiAIHDCDevice] = empty.Empty{}
-	defaultMap[hiAIManagerDevice] = empty.Empty{}
-	defaultMap[hiAISVMDevice] = empty.Empty{}
-	defaultMap[hiAi200RCEventSched] = empty.Empty{}
-	defaultMap[hiAi200RCHiDvpp] = empty.Empty{}
-	defaultMap[hiAi200RCLog] = empty.Empty{}
-	defaultMap[hiAi200RCMemoryBandwidth] = empty.Empty{}
-	defaultMap[hiAi200RCSVM0] = empty.Empty{}
-	defaultMap[hiAi200RCTsAisle] = empty.Empty{}
-	defaultMap[hiAi200RCUpgrade] = empty.Empty{}
+	defaultMap := make(map[string]string)
+	defaultMap[hiAIHDCDevice] = ""
+	defaultMap[hiAIManagerDevice] = ""
+	defaultMap[hiAISVMDevice] = ""
+	defaultMap[hiAi200RCEventSched] = ""
+	defaultMap[hiAi200RCHiDvpp] = ""
+	defaultMap[hiAi200RCLog] = ""
+	defaultMap[hiAi200RCMemoryBandwidth] = ""
+	defaultMap[hiAi200RCSVM0] = ""
+	defaultMap[hiAi200RCTsAisle] = ""
+	defaultMap[hiAi200RCUpgrade] = ""
 
 	for _, str := range defaultDeivces {
 		_, ok := defaultMap[str]

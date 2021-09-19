@@ -6,7 +6,6 @@ package huawei
 
 import (
 	"fmt"
-	"github.com/golang/protobuf/ptypes/empty"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"strings"
 	"testing"
@@ -19,9 +18,9 @@ func NewFakeHwAscend710Manager() *HwAscend710Manager {
 
 // TestHwAscend710Manager_GetNPUs for GetNPUs
 func TestHwAscend710Manager_GetNPUs(t *testing.T) {
-	resultDevMap := make(map[string]empty.Empty)
+	resultDevMap := make(map[string]string)
 	for i := 0; i < npuTestNum; i++ {
-		resultDevMap[fmt.Sprintf("Ascend710-%d", i)] = empty.Empty{}
+		resultDevMap[fmt.Sprintf("Ascend710-%d", i)] = ""
 	}
 	hdm := createFake710HwDevManager("ascend710", false, false, false)
 	err := hdm.manager.GetNPUs(&hdm.allDevs, &hdm.allDevTypes, hdm.manager.GetMatchingDeviType())

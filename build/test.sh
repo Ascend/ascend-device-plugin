@@ -12,7 +12,9 @@ go get github.com/golang/mock/mockgen
 go get golang.org/x/net
 go get golang.org/x/term
 go get golang.org/x/text
-go get github.com/golang/protobuf/ptypes/empty@v1.3.2
+go get k8s.io/client-go@v0.22.1
+go get k8s.io/kubelet@v0.22.1
+go get k8s.io/kubernetes@v1.22.1
 MOCK_TOP=${TOP_DIR}/src/plugin/pkg/npu/huawei
 mkdir -p "${MOCK_TOP}/mock_v1"
 mkdir -p "${MOCK_TOP}/mock_kubernetes"
@@ -66,5 +68,3 @@ rm -rf ${MOCK_TOP}/mock_v1
 rm -rf ${MOCK_TOP}/mock_kubernetes
 rm -rf ${MOCK_TOP}/mock_kubelet_v1beta1
 exit 0
-
-}

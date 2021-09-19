@@ -9,12 +9,12 @@ import (
 	"Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_v1"
 	"github.com/golang/mock/gomock"
 	. "github.com/smartystreets/goconvey/convey"
+	ctx "golang.org/x/net/context"
 	"huawei.com/npu-exporter/hwlog"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"testing"
-	ctx "golang.org/x/net/context"
 )
 
 const nodeRunTime = 2
@@ -30,8 +30,8 @@ func TestPatchAnnotationOnNode(t *testing.T) {
 	mockK8s := mock_kubernetes.NewMockInterface(ctrl)
 	mockV1 := mock_v1.NewMockCoreV1Interface(ctrl)
 	mockNode := mock_v1.NewMockNodeInterface(ctrl)
-	mockNode.EXPECT().Get(ctx.Background(),gomock.Any(), metav1.GetOptions{}).Return(node1, nil)
-	mockNode.EXPECT().Patch(ctx.Background(),gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(node1, nil)
+	mockNode.EXPECT().Get(ctx.Background(), gomock.Any(), metav1.GetOptions{}).Return(node1, nil)
+	mockNode.EXPECT().Patch(ctx.Background(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(node1, nil)
 	mockV1.EXPECT().Nodes().Return(mockNode).Times(nodeRunTime)
 	mockK8s.EXPECT().CoreV1().Return(mockV1).Times(nodeRunTime)
 	freeDevices := sets.NewString()
