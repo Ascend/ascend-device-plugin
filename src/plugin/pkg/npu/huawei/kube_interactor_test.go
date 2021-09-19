@@ -1,17 +1,5 @@
 /*
-* Copyright(C) 2020. Huawei Technologies Co.,Ltd. All rights reserved.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
+* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
  */
 
 package huawei
@@ -19,9 +7,8 @@ package huawei
 import (
 	"Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_kubernetes"
 	"Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_v1"
-	"context"
 	"github.com/golang/mock/gomock"
-	"huawei.com/npu-exporter/hwlog"
+	. "github.com/smartystreets/goconvey/convey"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -41,8 +28,8 @@ func TestPatchAnnotationOnNode(t *testing.T) {
 	mockK8s := mock_kubernetes.NewMockInterface(ctrl)
 	mockV1 := mock_v1.NewMockCoreV1Interface(ctrl)
 	mockNode := mock_v1.NewMockNodeInterface(ctrl)
-	mockNode.EXPECT().Get(context.Background(), gomock.Any(), metav1.GetOptions{}).Return(node1, nil)
-	mockNode.EXPECT().Patch(context.Background(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(node1, nil)
+	mockNode.EXPECT().Get(gomock.Any(), metav1.GetOptions{}).Return(node1, nil)
+	mockNode.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(node1, nil)
 	mockV1.EXPECT().Nodes().Return(mockNode).Times(nodeRunTime)
 	mockK8s.EXPECT().CoreV1().Return(mockV1).Times(nodeRunTime)
 	freeDevices := sets.NewString()
@@ -52,18 +39,34 @@ func TestPatchAnnotationOnNode(t *testing.T) {
 		clientset: mockK8s,
 		nodeName:  "NODE_NAME",
 	}
-	err := fakeKubeInteractor.patchAnnotationOnNode(freeDevices, "")
+	groupAllocatableDevs := groupDevByPower(freeDevices, "Ascend910")
+	err := fakeKubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, hiAIAscend910Prefix)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Logf("TestPatchAnnotationOnNode Run Pass")
 }
 
-func init() {
-	stopCh := make(chan struct{})
-	defer close(stopCh)
-	hwLogConfig := hwlog.LogConfig{
-		OnlyToStdout: true,
-	}
-	hwlog.Init(&hwLogConfig, stopCh)
+// TestChangeLabelFormat for test label format
+func TestChangeLabelFormat(t *testing.T) {
+	Convey("format change", t, func() {
+		Convey("empty sets", func() {
+			emptySets := changeToShortFormat(sets.String{})
+			emptySets2 := changeToLongFormat(sets.String{})
+			So(emptySets, ShouldBeEmpty)
+			So(emptySets2, ShouldBeEmpty)
+		})
+		Convey("long format", func() {
+			shortSets := sets.String{}
+			shortSets.Insert("1")
+			longSets := changeToLongFormat(shortSets)
+			So(longSets, ShouldEqual, sets.String{"Ascend910-1": sets.Empty{}})
+		})
+		Convey("short format", func() {
+			longSets := sets.String{}
+			longSets.Insert("Ascend910-1")
+			shortSets := changeToShortFormat(longSets)
+			So(shortSets, ShouldEqual, sets.String{"1": sets.Empty{}})
+		})
+	})
 }

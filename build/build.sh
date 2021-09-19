@@ -1,18 +1,19 @@
 #!/bin/bash
 # Perform  build k8s-device-plugin
-# Copyright @ Huawei Technologies CO., Ltd. 2020-2021. All rights reserved
+# Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
 set -e
-CUR_DIR=$(dirname $(readlink -f "$0"))
+CUR_DIR=$(dirname "$(readlink -f "$0")")
 TOP_DIR=$(realpath "${CUR_DIR}"/..)
-build_version="v2.0.2"
-output_name="device-plugin"
-docker_images_name="ascend-k8sdeviceplugin:v2.0.2"
-os_type=$(arch)
-if [ "${os_type}" = "aarch64" ]; then
-  os_type="arm64"
-else
-  os_type="x86"
+build_version="v2.0.3"
+version_file="${TOP_DIR}"/service_config.ini
+if  [ -f "$version_file" ]; then
+  line=$(sed -n '4p' "$version_file" 2>&1)
+  #cut the chars after ':'
+  build_version=${line#*:}
 fi
+
+output_name="device-plugin"
+os_type=$(arch)
 build_type=build
 
 if [ "$1" == "ci" ] || [ "$2" == "ci" ]; then
@@ -32,7 +33,7 @@ function build_plugin() {
     export CGO_CFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
     export CGO_CPPFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv" 
     go build -buildmode=pie -ldflags "-X main.BuildName=${output_name} \
-            -X main.BuildVersion=${build_version} \
+            -X main.BuildVersion=${build_version}_linux-${os_type} \
             -buildid none     \
             -s   \
             -extldflags=-Wl,-z,relro,-z,now,-z,noexecstack" \
@@ -56,34 +57,25 @@ function change_mod() {
 
 function modify_version() {
     cd "${TOP_DIR}"
-    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/ascendplugin.yaml
-    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/ascendplugin-volcano.yaml
-    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/ascendplugin-310.yaml
-    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${version}/" "$TOP_DIR"/ascendplugin-710.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$TOP_DIR"/ascendplugin-910.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$TOP_DIR"/ascendplugin-volcano.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$TOP_DIR"/ascendplugin-310.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$TOP_DIR"/ascendplugin-310-volcano.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$TOP_DIR"/ascendplugin-710.yaml
 
     cp "$TOP_DIR"/Dockerfile "$TOP_DIR"/output/
-    cp "$TOP_DIR"/ascendplugin.yaml "$TOP_DIR"/output/device-plugin-"${version}".yaml
-    cp "$TOP_DIR"/ascendplugin-volcano.yaml "$TOP_DIR"/output/device-plugin-volcano-"${version}".yaml
-    cp "$TOP_DIR"/ascendplugin-310.yaml "$TOP_DIR"/output/device-plugin-310-"${version}".yaml
-    cp "$TOP_DIR"/ascendplugin-710.yaml "$TOP_DIR"/output/device-plugin-710-"${version}".yaml
+    cp "$TOP_DIR"/ascendplugin-910.yaml "$TOP_DIR"/output/device-plugin-910-"${build_version}".yaml
+    cp "$TOP_DIR"/ascendplugin-volcano.yaml "$TOP_DIR"/output/device-plugin-volcano-"${build_version}".yaml
+    cp "$TOP_DIR"/ascendplugin-310.yaml "$TOP_DIR"/output/device-plugin-310-"${build_version}".yaml
+    cp "$TOP_DIR"/ascendplugin-310-volcano.yaml "$TOP_DIR"/output/device-plugin-310-volcano-"${build_version}".yaml
+    cp "$TOP_DIR"/ascendplugin-710.yaml "$TOP_DIR"/output/device-plugin-710-"${build_version}".yaml
 
     sed -i "s#output/device-plugin#device-plugin#" "$TOP_DIR"/output/Dockerfile
 }
 
-function parse_version() {
-    version_file="${TOP_DIR}"/service_config.ini
-    version=${build_version}
-    if  [ -f "$version_file" ]; then
-      line=$(sed -n '4p' "$version_file" 2>&1)
-      #cut the chars after ':'
-      version=${line#*:}
-      build_version=${version}
-    fi
-}
 
 function main() {
   clear_env
-  parse_version
   build_plugin
   mv_file
   modify_version

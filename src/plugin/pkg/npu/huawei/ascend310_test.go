@@ -1,17 +1,5 @@
 /*
-* Copyright(C) 2020. Huawei Technologies Co.,Ltd. All rights reserved.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
+* Copyright(C) 2020-2021. Huawei Technologies Co.,Ltd. All rights reserved.
  */
 
 package huawei
@@ -19,15 +7,25 @@ package huawei
 import (
 	"fmt"
 	"github.com/golang/protobuf/ptypes/empty"
+	"huawei.com/npu-exporter/hwlog"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"strings"
 	"testing"
 )
 
 const (
-	npuTestNum         = 8
-	splitTestStringNum = 2
+	npuTestNum = 8
 )
+
+func init() {
+	hwLogConfig := hwlog.LogConfig{
+		LogFileName: "/var/log/mindx-dl/devicePlugin/devicePluginUt.log",
+	}
+	stopCh := make(chan struct{})
+	if err := hwlog.Init(&hwLogConfig, stopCh); err != nil {
+		fmt.Printf("init hwlog error %v", err.Error())
+	}
+}
 
 // NewFakeHwAscend310Manager used to create ascend 310 manager
 func NewFakeHwAscend310Manager() *HwAscend310Manager {

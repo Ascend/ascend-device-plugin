@@ -1,17 +1,5 @@
 /*
-* Copyright(C) 2020. Huawei Technologies Co.,Ltd. All rights reserved.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
+* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
  */
 
 // Package huawei implements the query and allocation of the device and the function of the log.
@@ -129,6 +117,34 @@ func getUnHealthDev(listenUHDev, annotationUHDev, labelsRecoverDev, device910 se
 	return newLabelsRecoverDev, strings.Join(newAscend910, ",")
 }
 
+// getNewNetworkRecoverDev
+// return new devices to be restored and network unhealthy device in this times
+func getNewNetworkRecoverDev(nnu, nnr sets.String) (sets.String, sets.String) {
+	// nnu means node annotation network unhealthy devices
+	// nnr means device's network is ok and to be restored
+
+	// this time network unhealthy devices
+	tud := totalNetworkUnhealthDevices
+	// if there is no network unhealthy device and autoStowingDevs is true
+	if autoStowingDevs {
+		return sets.String{}, tud
+	}
+
+	// devices recovered between the last check and this check
+	recoveredDevSets := lastTimeNetworkRecoverDevices.Difference(nnr)
+
+	newNetworkRecoverDevSets := sets.String{}
+	newNetworkRecoverDevSets = newNetworkRecoverDevSets.Union(nnu.Difference(tud))
+	// remove the device that network is unhealthy in this times
+	newNetworkRecoverDevSets = newNetworkRecoverDevSets.Difference(nnr.Intersection(tud))
+	// remove the device that recovered
+	newNetworkRecoverDevSets = newNetworkRecoverDevSets.Difference(recoveredDevSets)
+
+	newNetworkUnhealthDevSets := nnu.Union(tud).Difference(recoveredDevSets)
+
+	return newNetworkRecoverDevSets, newNetworkUnhealthDevSets
+}
+
 func unhealthyState(healthyState uint32, logicID uint32, healthyType string, dmgr DeviceMgrInterface) error {
 	phyID, err := dmgr.GetPhyID(logicID)
 	if err != nil {
@@ -200,10 +216,11 @@ func VerifyPath(verifyPath string) bool {
 func (adc *ascendCommonFunction) AssembleNpuDeviceStruct(deviType, devID string) npuDevice {
 	hwlog.Infof("Found Huawei Ascend, deviceType: %s, deviceID: %s", deviType, devID)
 	return npuDevice{
-		devType: deviType,
-		pciID:   "",
-		ID:      devID,
-		Health:  pluginapi.Healthy,
+		devType:       deviType,
+		pciID:         "",
+		ID:            devID,
+		Health:        pluginapi.Healthy,
+		networkHealth: pluginapi.Healthy,
 	}
 }
 
@@ -296,4 +313,14 @@ func (adc *ascendCommonFunction) GetDmgr() DeviceMgrInterface {
 // GetPhyDevMapVirtualDev get phy devices and virtual devices mapping
 func (adc *ascendCommonFunction) GetPhyDevMapVirtualDev() map[uint32]string {
 	return adc.phyDevMapVirtualDev
+}
+
+// DoWithVolcanoListAndWatch ascend710 do nothing
+func (adc *ascendCommonFunction) DoWithVolcanoListAndWatch(hps *HwPluginServe, isStateChange bool) {
+	return
+}
+
+// GetDeviceNetworkState check Ascend910 only
+func (adc *ascendCommonFunction) GetDeviceNetworkState(logicID int32, d *npuDevice) (string, error) {
+	return "", nil
 }

@@ -1,17 +1,5 @@
 /*
-Copyright 2020 The Volcano Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+Copyright(C) 2020-2021. Huawei Technologies Co.,Ltd.  All rights reserved.
 */
 
 package huawei
@@ -117,7 +105,7 @@ func checkNodeName(nodeName string) error {
 	return nil
 }
 
-func (ki *KubeInteractor) patchAnnotationOnNode(allocatableDevices sets.String, devType string) error {
+func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]string, devType string) error {
 	var err error
 	err = wait.PollImmediate(interval*time.Second, timeout*time.Second, func() (bool, error) {
 		var node *v1.Node
@@ -128,25 +116,93 @@ func (ki *KubeInteractor) patchAnnotationOnNode(allocatableDevices sets.String, 
 			return false, nil
 		}
 
-		groupAllocatableDevs := ki.groupDevByPower(allocatableDevices)
 		newNode := ki.updateNodeAnnotations(devType, groupAllocatableDevs, node)
-		if devType == "" {
-			newLabelsRecoverDev, newAscend910 := getUnHealthDev(totalUHDevices,
-				ki.convertDevListToSets(node.Annotations[huaweiUnHealthAscend910], nodeAnnotationsDeviceSep),
-				ki.convertDevListToSets(node.Labels[huaweiRecoverAscend910], nodeLabelsDeviceSep),
-				ki.convertDevListToSets(groupAllocatableDevs[huaweiAscend910], nodeAnnotationsDeviceSep))
-			newNode.Annotations[huaweiAscend910] = newAscend910
-			newNode.Annotations[huaweiUnHealthAscend910] = ki.convertSetsToString(totalUHDevices, nodeAnnotationsDeviceSep)
-			newNode.Labels[huaweiRecoverAscend910] = ki.convertSetsToString(newLabelsRecoverDev, nodeLabelsDeviceSep)
+		// variables are defined in advance
+		// the value will be used in subsequent assignment
+		newNetworkRecoverDevSets := sets.String{}
+		// Ascend910
+		if devType == hiAIAscend910Prefix {
+			ki.prepareAnnotationData(node, newNode, groupAllocatableDevs, &newNetworkRecoverDevSets)
 		}
 		_, _, err = nodeutil.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), node, newNode)
 		if err != nil {
 			hwlog.Errorf("failed to patch volcano npu resource: %v", err)
 			return false, nil
 		}
+		// if update success, update the lastTimeNetworkRecoverDevices
+		// Ascend910
+		if devType == hiAIAscend910Prefix {
+			lastTimeNetworkRecoverDevices = newNetworkRecoverDevSets
+		}
 		return true, nil
 	})
 	return err
+}
+
+func (ki *KubeInteractor) prepareAnnotationData(node, newNode *v1.Node, groupAllocatableDevs map[string]string,
+	newNetworkRecoverDevSets *sets.String) {
+
+	// format recover label data
+	formatedLabelRecover := changeToLongFormat(ki.convertDevListToSets(node.Labels[huaweiRecoverAscend910],
+		nodeLabelsDeviceSep))
+	newLabelsRecoverDev, newAscend910 := getUnHealthDev(totalUHDevices,
+		ki.convertDevListToSets(node.Annotations[huaweiUnHealthAscend910], nodeAnnotationsDeviceSep),
+		formatedLabelRecover,
+		ki.convertDevListToSets(groupAllocatableDevs[huaweiAscend910], nodeAnnotationsDeviceSep))
+
+	// format network recover label data
+	formatedLabelNetworkRecover := changeToLongFormat(ki.convertDevListToSets(node.
+		Labels[huaweiNetworkRecoverAscend910], nodeLabelsDeviceSep))
+	newRecoverDevSets, newNetworkUnhealthDevSets := getNewNetworkRecoverDev(
+		ki.convertDevListToSets(node.Annotations[huaweiNetworkUnHealthAscend910], nodeAnnotationsDeviceSep),
+		formatedLabelNetworkRecover)
+
+	// change to short format
+	shortNewLabelsRecoverDev := changeToShortFormat(newLabelsRecoverDev)
+	shortNewRecoverDevSets := changeToShortFormat(newRecoverDevSets)
+
+	newNode.Annotations[huaweiAscend910] = newAscend910
+	newNode.Annotations[huaweiUnHealthAscend910] = ki.convertSetsToString(totalUHDevices, nodeAnnotationsDeviceSep)
+	newNode.Annotations[huaweiNetworkUnHealthAscend910] = ki.convertSetsToString(newNetworkUnhealthDevSets,
+		nodeAnnotationsDeviceSep)
+	newNode.Labels[huaweiRecoverAscend910] = ki.convertSetsToString(shortNewLabelsRecoverDev, nodeLabelsDeviceSep)
+	newNode.Labels[huaweiNetworkRecoverAscend910] = ki.convertSetsToString(shortNewRecoverDevSets, nodeLabelsDeviceSep)
+
+	*newNetworkRecoverDevSets = newRecoverDevSets
+}
+
+// get elements one by one from the sets and mark the physical id "x" to "Ascend910-x"
+func changeToLongFormat(chips sets.String) sets.String {
+	if chips.Len() == 0 {
+		return sets.String{}
+	}
+
+	newSets := sets.String{}
+	for devID := range chips {
+		tmpName := fmt.Sprintf("%s-%s", hiAIAscend910Prefix, devID)
+		newSets.Insert(tmpName)
+	}
+
+	return newSets
+}
+
+// get elements one by one from the sets and change the element "Ascend910-x" to "x"
+func changeToShortFormat(chips sets.String) sets.String {
+	if chips.Len() == 0 {
+		return sets.String{}
+	}
+
+	newSets := sets.String{}
+	for devName := range chips {
+		if len(devName) > 1 {
+			idSplit := strings.Split(devName, "-")
+			devID := idSplit[len(idSplit)-1]
+			newSets.Insert(devID)
+		}
+
+	}
+
+	return newSets
 }
 
 func (ki *KubeInteractor) convertDevListToSets(devices string, sepType string) sets.String {
@@ -179,11 +235,13 @@ func (ki *KubeInteractor) convertSetsToString(annotationUHDevice sets.String, se
 
 func (ki *KubeInteractor) updateNodeAnnotations(devType string, groupAllocatableDevs map[string]string,
 	node *v1.Node) *v1.Node {
-	if !firstTimeList {
+	if firstTimeList {
 		delete(node.Annotations, huaweiUnHealthAscend910)
+		delete(node.Annotations, huaweiNetworkUnHealthAscend910)
 		delete(node.Annotations, huaweiAscend910)
 		delete(node.Labels, huaweiRecoverAscend910)
-		firstTimeList = true
+		delete(node.Labels, huaweiNetworkRecoverAscend910)
+		firstTimeList = false
 	}
 	newNode := node.DeepCopy()
 	if devType != "" {
@@ -201,34 +259,6 @@ func (ki *KubeInteractor) updateNodeAnnotations(devType string, groupAllocatable
 		newNode.Annotations[annotationTag] = deviceNames
 	}
 	return newNode
-}
-
-func (ki *KubeInteractor) groupDevByPower(allocatableDevices sets.String) map[string]string {
-	var pwrSuffix = []string{hiAIAscend910Prefix, pwr2CSuffix, pwr4CSuffix, pwr8CSuffix, pwr16CSuffix}
-	var groupAllocatableDevs = make(map[string]string, len(pwrSuffix))
-	for _, suffix := range pwrSuffix {
-		powerAnnotation := ki.filterTagPowerDevice(allocatableDevices, suffix)
-		annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, suffix)
-		groupAllocatableDevs[annotationTag] = powerAnnotation
-	}
-	return groupAllocatableDevs
-}
-
-func (ki *KubeInteractor) filterTagPowerDevice(allocatableDevices sets.String, suffix string) string {
-	var powerAnnotation []string
-	for deviceName := range allocatableDevices {
-		switch suffix {
-		case hiAIAscend910Prefix:
-			if !IsVirtualDev(deviceName) {
-				powerAnnotation = append(powerAnnotation, deviceName)
-			}
-		default:
-			if strings.Contains(deviceName, suffix) {
-				powerAnnotation = append(powerAnnotation, deviceName)
-			}
-		}
-	}
-	return strings.Join(powerAnnotation, ",")
 }
 
 func (ki *KubeInteractor) convertStringToSet(deviceNames string) sets.String {

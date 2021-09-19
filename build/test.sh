@@ -1,11 +1,18 @@
-#!/bin/sh
+#!/bin/bash
+# Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
 set -e
-CUR_DIR=$(dirname $(readlink -f $0))
+CUR_DIR=$(dirname "$(readlink -f $0)")
 TOP_DIR=$(realpath "${CUR_DIR}"/..)
 export GO111MODULE="on"
+export GONOSUMDB="*"
+export GOPROXY="http://mirrors.tools.huawei.com/goproxy/,direct"
 export PATH=$GOPATH/bin:$PATH
 
 go get github.com/golang/mock/mockgen
+go get golang.org/x/net
+go get golang.org/x/term
+go get golang.org/x/text
+go get github.com/golang/protobuf/ptypes/empty@v1.3.2
 MOCK_TOP=${TOP_DIR}/src/plugin/pkg/npu/huawei
 mkdir -p "${MOCK_TOP}/mock_v1"
 mkdir -p "${MOCK_TOP}/mock_kubernetes"
@@ -19,24 +26,31 @@ mockgen k8s.io/client-go/kubernetes/typed/core/v1 PodInterface >${MOCK_TOP}/mock
 
 export PKG_CONFIG_PATH=${TOP_DIR}/src/plugin/config/config_310/:$PKG_CONFIG_PATH
 
-file_input='testDeviceplugin.txt'
-file_detail_output='DevicepluginCoverageReport.html'
+function execute_test() {
+  if ! (go test -mod=mod -v -race -coverprofile cov.out ${TOP_DIR}/src/plugin/pkg/npu/huawei/ >./$file_input); then
+    echo '****** go test cases error! ******'
+    echo 'Failed' >$file_input
+    exit 1
+  else
+    echo ${file_detail_output}
+    gocov convert cov.out | gocov-html >${file_detail_output}
+    gotestsum --junitfile unit-tests.xml "${TOP_DIR}"/src/plugin/pkg/npu/huawei/...
+  fi
+}
+
+file_input='testDevicePlugin.txt'
+file_detail_output='api.html'
 
 echo "************************************* Start LLT Test *************************************"
 mkdir -p "${TOP_DIR}"/test/
 cd "${TOP_DIR}"/test/
-rm -rf $file_detail_output $file_input
-
-go test -v -race -coverprofile cov.out ${TOP_DIR}/src/plugin/pkg/npu/huawei/ >./$file_input
-
-if [ $? != 0 ]; then
-  echo '****** go test cases error! ******'
-  exit 1
-else
-  echo ${file_detail_output}
-  gocov convert cov.out | gocov-html >${file_detail_output}
+if [ -f "$file_detail_output" ]; then
+  rm -rf $file_detail_output
 fi
-
+if [ -f "$file_input" ]; then
+  rm -rf $file_input
+fi
+execute_test
 echo "<html<body><h1>==================================================</h1><table border="2">" >>./$file_detail_output
 echo "<html<body><h1>DevicePlugin testCase</h1><table border="1">" >>./$file_detail_output
 echo "<html<body><h1>==================================================</h1><table border="2">" >>./$file_detail_output
@@ -53,3 +67,5 @@ rm -rf ${MOCK_TOP}/mock_v1
 rm -rf ${MOCK_TOP}/mock_kubernetes
 rm -rf ${MOCK_TOP}/mock_kubelet_v1beta1
 exit 0
+
+}

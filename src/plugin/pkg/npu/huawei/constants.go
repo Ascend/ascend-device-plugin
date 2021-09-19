@@ -1,17 +1,5 @@
 /*
-* Copyright(C) 2020. Huawei Technologies Co.,Ltd. All rights reserved.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
+* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
  */
 
 package huawei
@@ -40,11 +28,12 @@ const (
 	hiAISlogdConfig     = "/etc/slog.conf"
 	hiAIMaxDeviceNum    = 64
 	idSplitNum          = 2
+	deviceIPLength      = 4
 	// The unit is seconds
 	sleepTime = 5
 
 	// logger setting
-	
+
 	// MaxBackups log file max backup
 	MaxBackups = 30
 	// MaxAge the log file last time
@@ -52,7 +41,7 @@ const (
 	podDeviceKey            = "ascend.kubectl.kubernetes.io/ascend-910-configuration" // config map name
 	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"                                // visible env
 	ascendRuntimeOptionsEnv = "ASCEND_RUNTIME_OPTIONS"                                // virtual runtime option env
-	socketChmod    = 0600
+	socketChmod             = 0600
 
 	huaweiAscend910  = "huawei.com/Ascend910"
 	podPredicateTime = "predicate-time"
@@ -70,9 +59,11 @@ const (
 	pwr8CSuffix           = "Ascend910-8c"
 	pwr16CSuffix          = "Ascend910-16c"
 
-	logicIDIndexInVirtualDevID910 = 3
-	huaweiUnHealthAscend910       = "huawei.com/Ascend910-Unhealthy"
-	huaweiRecoverAscend910        = "huawei.com/Ascend910-Recover"
+	logicIDIndexInVirtualDevID910  = 3
+	huaweiNetworkUnHealthAscend910 = "huawei.com/Ascend910-NetworkUnhealthy"
+	huaweiNetworkRecoverAscend910  = "huawei.com/Ascend910-NetworkRecover"
+	huaweiUnHealthAscend910        = "huawei.com/Ascend910-Unhealthy"
+	huaweiRecoverAscend910         = "huawei.com/Ascend910-Recover"
 
 	// FunctionNotFound for describe dsmi interface function is exist or not
 	FunctionNotFound = "-99998"

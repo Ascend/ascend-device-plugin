@@ -1,27 +1,18 @@
 /*
-* Copyright(C) 2020. Huawei Technologies Co.,Ltd. All rights reserved.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
+* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
  */
 
 package huawei
 
 import (
 	"fmt"
+	"go.uber.org/atomic"
 	"google.golang.org/grpc"
 	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/apimachinery/pkg/util/sets"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+	"os"
+	"testing"
 )
 
 type fakeHwPluginServe struct {
@@ -40,14 +31,70 @@ type fakeHwPluginServe struct {
 // NewFakeHwPluginServe to create fakePlugin
 func NewFakeHwPluginServe(hdm *HwDevManager, devType string, socket string) HwPluginServeInterface {
 	return &fakeHwPluginServe{
-		devType:      devType,
-		hdm:          hdm,
-		runMode:      hdm.runMode,
-		devices:      make(map[string]*npuDevice),
-		socket:       socket,
-		healthDevice: sets.String{},
+		devType:        devType,
+		hdm:            hdm,
+		runMode:        hdm.runMode,
+		devices:        make(map[string]*npuDevice),
+		socket:         socket,
+		healthDevice:   sets.String{},
 		unHealthDevice: sets.String{},
 	}
+}
+
+// TestStart for test Start
+func TestStart(t *testing.T) {
+	fakeHwDevManager := &HwDevManager{
+		runMode:  "ascend910",
+		dmgr:     newFakeDeviceManager(),
+		stopFlag: atomic.NewBool(false),
+	}
+	pluginSocket := "Ascend910.sock"
+	pluginSocketPath := "/var/lib/kubelet/device-plugins/" + pluginSocket
+	hps := NewHwPluginServe(fakeHwDevManager, "Ascend910", pluginSocketPath)
+	err := hps.Start(pluginSocket, pluginSocketPath)
+	kubeSocketPath := "/var/lib/kubelet/device-plugins/kubelet.sock"
+	_, kubeErr := os.Stat(kubeSocketPath)
+	if err != nil && kubeErr != nil && os.IsExist(kubeErr) {
+		t.Fatal("TestStart Run Failed")
+	}
+	t.Logf("TestStart Run Pass")
+}
+
+// TestStop for test Stop
+func TestStop(t *testing.T) {
+	fakeHwDevManager := &HwDevManager{
+		runMode:  "ascend910",
+		stopFlag: atomic.NewBool(false),
+	}
+	pluginSocket := "Ascend910.sock"
+	pluginSocketPath := "/var/lib/kubelet/device-plugins/" + pluginSocket
+	hps := NewHwPluginServe(fakeHwDevManager, "Ascend910", pluginSocketPath)
+	err := hps.Stop()
+	if err != nil {
+		t.Fatal("TestStop Run Failed")
+	}
+	err = hps.cleanSock()
+	if err != nil {
+		t.Fatal("TestStop Run Failed")
+	}
+	t.Logf("TestStop Run Pass")
+}
+
+// TestGetDevByType for test GetDevByType
+func TestGetDevByType(t *testing.T) {
+	fakeHwDevManager := createFakeDevManager("")
+	err := fakeHwDevManager.GetNPUs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	pluginSocket := "Ascend310.sock"
+	pluginSocketPath := "/var/lib/kubelet/device-plugins/" + pluginSocket
+	hps := NewHwPluginServe(fakeHwDevManager, "Ascend310", pluginSocketPath)
+	err = hps.GetDevByType()
+	if err != nil {
+		t.Fatal("TestGetDevByType Run Failed")
+	}
+	t.Logf("TestGetDevByType Run Pass")
 }
 
 // GetDevByType by fake

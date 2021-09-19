@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: ascend-device-plugin2-daemonset
+  name: ascend-device-plugin-daemonset
   namespace: kube-system
 spec:
   selector:
@@ -19,7 +19,7 @@ spec:
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
-        - key: huawei.com/Ascend310
+        - key: huawei.com/Ascend910
           operator: Exists
           effect: NoSchedule
         - key: "device-plugin"
@@ -28,7 +28,7 @@ spec:
           effect: NoSchedule
       priorityClassName: "system-node-critical"
       nodeSelector:
-        accelerator: huawei-Ascend310
+        accelerator: huawei-Ascend910
       containers:
       - image: ascend-k8sdeviceplugin:v2.0.3
         name: device-plugin-01
@@ -53,8 +53,6 @@ spec:
             mountPath: /usr/local/Ascend/driver
           - name: log-path
             mountPath: /var/log/mindx-dl/devicePlugin
-          - name: localtime
-            mountPath: /etc/localtime
       volumes:
         - name: device-plugin
           hostPath:
@@ -66,6 +64,3 @@ spec:
           hostPath:
             path: /var/log/mindx-dl/devicePlugin
             type: Directory
-        - name: localtime
-          hostPath:
-            path: /etc/localtime

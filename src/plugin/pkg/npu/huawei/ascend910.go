@@ -1,18 +1,6 @@
 /*
-* Copyright(C) 2020. Huawei Technologies Co.,Ltd. All rights reserved.
-*
- * Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
+ */
 
 // Package huawei implements the query and allocation of the device and the function of the log.
 package huawei
@@ -20,6 +8,8 @@ package huawei
 import (
 	"fmt"
 	"huawei.com/npu-exporter/hwlog"
+	"k8s.io/apimachinery/pkg/util/sets"
+	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"strings"
 )
 
@@ -28,10 +18,10 @@ const (
 	zeroCore = "0"
 	// noVDevFound means not supported in the current scenario.
 	noVDevFound = "65534"
-)
 
-// switch error log
-var logFlag = true
+	networkDetectOK   = uint32(0)
+	networkDetectInit = uint32(6)
+)
 
 // HwAscend910Manager manages huawei Ascend910 devices.
 type HwAscend910Manager struct {
@@ -133,4 +123,99 @@ func (hnm *HwAscend910Manager) getVirtualDevice(logicID uint32) (CgoDsmiVDevInfo
 		return CgoDsmiVDevInfo{}, fmt.Errorf("query virtual device info failure: %s", err)
 	}
 	return cgoDsmiVDevInfos, nil
+}
+
+// DoWithVolcanoListAndWatch ascend910 affinity scheduling
+func (hnm *HwAscend910Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe, isStateChange bool) {
+	hnm.groupDevsByStatus(hps, isStateChange)
+	m.Lock()
+	usedDevices := sets.NewString()
+	getNodeNpuUsed(&usedDevices, hps)
+	freeDevices := hps.healthDevice.Difference(usedDevices)
+	totalDevices = totalDevices.Union(freeDevices)
+	stateThreadNum += interval
+	if stateThreadNum == len(hps.hdm.allDevTypes) {
+		groupAllocatableDevs := groupDevByPower(totalDevices, hps.devType)
+		if err := hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, hiAIAscend910Prefix); err != nil {
+			hwlog.Errorf("patch Annotation failed, err: %v", err)
+		}
+		totalDevices = totalDevices.Intersection(sets.String{})
+		stateThreadNum = resetZero
+	}
+	m.Unlock()
+}
+
+// GetDeviceNetworkState check NPU network health
+func (hnm *HwAscend910Manager) GetDeviceNetworkState(logicID int32, device *npuDevice) (string, error) {
+	healthCode, err := hnm.dmgr.GetDeviceNetworkHealth(logicID)
+	if err != nil {
+		return "", err
+	}
+
+	switch healthCode {
+	case networkDetectOK, networkDetectInit:
+		return pluginapi.Healthy, nil
+	default:
+		hwlog.Debugf("%s network status is unhealthy, code value is %v", device.ID, healthCode)
+		return pluginapi.Unhealthy, nil
+	}
+}
+
+func (hnm *HwAscend910Manager) groupDevsByStatus(hps *HwPluginServe, isStateChange bool) {
+	if !isStateChange {
+		return
+	}
+	if hps.devType == hiAIAscend910Prefix && isStateChange {
+		totalUHDevices = sets.String{}
+		totalNetworkUnhealthDevices = sets.String{}
+	}
+	hps.healthDevice = sets.String{}
+	for _, device := range hps.devices {
+		if device.networkHealth != pluginapi.Healthy {
+			totalNetworkUnhealthDevices.Insert(device.ID)
+		}
+
+		if IsVirtualDev(device.ID) || device.Health == pluginapi.Healthy {
+			hps.healthDevice.Insert(device.ID)
+			continue
+		}
+
+		if device.Health != pluginapi.Healthy {
+			totalUHDevices.Insert(device.ID)
+		}
+	}
+}
+
+func groupDevByPower(allocatableDevices sets.String, devType string) map[string]string {
+	var pwrSuffix = []string{hiAIAscend910Prefix, pwr2CSuffix, pwr4CSuffix, pwr8CSuffix, pwr16CSuffix}
+	var groupAllocatableDevs = make(map[string]string, len(pwrSuffix))
+	if devType == hiAIAscend310Prefix {
+		chipAnnotation := filterTagPowerDevice(allocatableDevices, hiAIAscend310Prefix)
+		annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, hiAIAscend310Prefix)
+		groupAllocatableDevs[annotationTag] = chipAnnotation
+		return groupAllocatableDevs
+	}
+	for _, suffix := range pwrSuffix {
+		powerAnnotation := filterTagPowerDevice(allocatableDevices, suffix)
+		annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, suffix)
+		groupAllocatableDevs[annotationTag] = powerAnnotation
+	}
+	return groupAllocatableDevs
+}
+
+func filterTagPowerDevice(allocatableDevices sets.String, suffix string) string {
+	var powerAnnotation []string
+	for deviceName := range allocatableDevices {
+		switch suffix {
+		case hiAIAscend910Prefix:
+			if !IsVirtualDev(deviceName) {
+				powerAnnotation = append(powerAnnotation, deviceName)
+			}
+		default:
+			if strings.Contains(deviceName, suffix) {
+				powerAnnotation = append(powerAnnotation, deviceName)
+			}
+		}
+	}
+	return strings.Join(powerAnnotation, ",")
 }
