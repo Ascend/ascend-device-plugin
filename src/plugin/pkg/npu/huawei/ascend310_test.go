@@ -6,8 +6,6 @@ package huawei
 
 import (
 	"fmt"
-	"github.com/golang/protobuf/ptypes/empty"
-	"huawei.com/npu-exporter/hwlog"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"strings"
 	"testing"
@@ -17,16 +15,6 @@ const (
 	npuTestNum = 8
 )
 
-func init() {
-	hwLogConfig := hwlog.LogConfig{
-		LogFileName: "/var/log/mindx-dl/devicePlugin/devicePluginUt.log",
-	}
-	stopCh := make(chan struct{})
-	if err := hwlog.Init(&hwLogConfig, stopCh); err != nil {
-		fmt.Printf("init hwlog error %v", err.Error())
-	}
-}
-
 // NewFakeHwAscend310Manager used to create ascend 310 manager
 func NewFakeHwAscend310Manager() *HwAscend310Manager {
 	return &HwAscend310Manager{}
@@ -34,9 +22,9 @@ func NewFakeHwAscend310Manager() *HwAscend310Manager {
 
 // TestHwAscend310Manager_GetNPUs for GetNPUs
 func TestHwAscend310Manager_GetNPUs(t *testing.T) {
-	resultDevMap := make(map[string]empty.Empty)
+	resultDevMap := make(map[string]string)
 	for i := 0; i < npuTestNum; i++ {
-		resultDevMap[fmt.Sprintf("davinci-mini-%d", i)] = empty.Empty{}
+		resultDevMap[fmt.Sprintf("davinci-mini-%d", i)] = ""
 	}
 	hdm := createFakeHwDevManager("", true, false, false)
 	err := hdm.manager.GetNPUs(&hdm.allDevs, &hdm.allDevTypes, hdm.manager.GetMatchingDeviType())

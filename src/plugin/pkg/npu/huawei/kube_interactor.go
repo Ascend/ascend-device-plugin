@@ -5,6 +5,7 @@ Copyright(C) 2020-2021. Huawei Technologies Co.,Ltd.  All rights reserved.
 package huawei
 
 import (
+	"context"
 	"fmt"
 	"huawei.com/npu-exporter/hwlog"
 	"os"
@@ -108,7 +109,7 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 	var err error
 	err = wait.PollImmediate(interval*time.Second, timeout*time.Second, func() (bool, error) {
 		var node *v1.Node
-		node, err = ki.clientset.CoreV1().Nodes().Get(ki.nodeName, metav1.GetOptions{})
+		node, err = ki.clientset.CoreV1().Nodes().Get(context.Background(), ki.nodeName, metav1.GetOptions{})
 
 		if err != nil {
 			hwlog.Errorf("failed to get node, nodeName: %s, err: %v", ki.nodeName, err)

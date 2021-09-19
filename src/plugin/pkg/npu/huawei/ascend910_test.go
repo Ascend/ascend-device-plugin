@@ -6,7 +6,6 @@ package huawei
 
 import (
 	"fmt"
-	"github.com/golang/protobuf/ptypes/empty"
 	"k8s.io/apimachinery/pkg/util/sets"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"sort"
@@ -21,9 +20,9 @@ func NewFakeHwAscend910Manager() *HwAscend910Manager {
 
 // TestHwAscend910Manager_GetNPUs for getNpus
 func TestHwAscend910Manager_GetNPUs(t *testing.T) {
-	resultDevMap := make(map[string]empty.Empty)
+	resultDevMap := make(map[string]string)
 	for i := 0; i < npuTestNum; i++ {
-		resultDevMap[fmt.Sprintf("Ascend910-%d", i)] = empty.Empty{}
+		resultDevMap[fmt.Sprintf("Ascend910-%d", i)] = ""
 	}
 	hdm := createFake910HwDevManager("ascend910", false, false, false)
 	err := hdm.manager.GetNPUs(&hdm.allDevs, &hdm.allDevTypes, hdm.manager.GetMatchingDeviType())
