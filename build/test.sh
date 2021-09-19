@@ -29,7 +29,6 @@ export PKG_CONFIG_PATH=${TOP_DIR}/src/plugin/config/config_310/:$PKG_CONFIG_PATH
 function execute_test() {
   if ! (go test -mod=mod -v -race -coverprofile cov.out ${TOP_DIR}/src/plugin/pkg/npu/huawei/ >./$file_input); then
     echo '****** go test cases error! ******'
-    echo 'Failed' >$file_input
     exit 1
   else
     echo ${file_detail_output}
