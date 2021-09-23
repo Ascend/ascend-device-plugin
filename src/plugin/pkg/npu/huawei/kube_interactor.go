@@ -242,7 +242,7 @@ func (ki *KubeInteractor) convertSetsToString(annotationUHDevice sets.String, se
 }
 
 func (ki *KubeInteractor) multiDevAnnotationUpdate(groupAllocatableDevs map[string]string,
-	node, newNode *v1.Node) *v1.Node {
+	node, newNode *v1.Node) {
 	for annotationTag, deviceNames := range groupAllocatableDevs {
 		annotation, isNil := node.Annotations[annotationTag]
 		setDevs := ki.convertStringToSet(deviceNames)
@@ -251,12 +251,10 @@ func (ki *KubeInteractor) multiDevAnnotationUpdate(groupAllocatableDevs map[stri
 		}
 		newNode.Annotations[annotationTag] = deviceNames
 	}
-	return newNode
 }
 
-func (ki *KubeInteractor) singleDevAnnotationUpdate(annotationTag, ascendDevices string, newNode *v1.Node) *v1.Node {
+func (ki *KubeInteractor) singleDevAnnotationUpdate(annotationTag, ascendDevices string, newNode *v1.Node) {
 	newNode.Annotations[annotationTag] = ascendDevices
-	return newNode
 }
 
 func (ki *KubeInteractor) isSingleDevType(groupAllocatableDevs map[string]string) bool {
