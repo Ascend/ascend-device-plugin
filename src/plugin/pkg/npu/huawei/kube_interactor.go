@@ -115,8 +115,16 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 			hwlog.Errorf("failed to get node, nodeName: %s, err: %v", ki.nodeName, err)
 			return false, nil
 		}
-
-		newNode := ki.updateNodeAnnotations(devType, groupAllocatableDevs, node)
+		if firstTimeList {
+			ki.resetNodeAnnotations(node)
+		}
+		newNode := node.DeepCopy()
+		if ki.isSingleDevType(groupAllocatableDevs) {
+			annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, devType)
+			ki.singleDevAnnotationUpdate(annotationTag, groupAllocatableDevs[annotationTag], newNode)
+		} else {
+			ki.multiDevAnnotationUpdate(groupAllocatableDevs, node, newNode)
+		}
 		// variables are defined in advance
 		// the value will be used in subsequent assignment
 		newNetworkRecoverDevSets := sets.String{}
@@ -233,23 +241,8 @@ func (ki *KubeInteractor) convertSetsToString(annotationUHDevice sets.String, se
 	return strings.Join(unHealthDevs, ",")
 }
 
-func (ki *KubeInteractor) updateNodeAnnotations(devType string, groupAllocatableDevs map[string]string,
-	node *v1.Node) *v1.Node {
-	if firstTimeList {
-		delete(node.Annotations, huaweiUnHealthAscend910)
-		delete(node.Annotations, huaweiNetworkUnHealthAscend910)
-		delete(node.Annotations, huaweiAscend910)
-		delete(node.Labels, huaweiRecoverAscend910)
-		delete(node.Labels, huaweiNetworkRecoverAscend910)
-		firstTimeList = false
-	}
-	newNode := node.DeepCopy()
-	if devType != "" {
-		annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, devType)
-		newNode.Annotations[annotationTag] = groupAllocatableDevs[annotationTag]
-		return newNode
-	}
-
+func (ki *KubeInteractor) multiDevAnnotationUpdate(groupAllocatableDevs map[string]string,
+	node, newNode *v1.Node) *v1.Node {
 	for annotationTag, deviceNames := range groupAllocatableDevs {
 		annotation, isNil := node.Annotations[annotationTag]
 		setDevs := ki.convertStringToSet(deviceNames)
@@ -259,6 +252,35 @@ func (ki *KubeInteractor) updateNodeAnnotations(devType string, groupAllocatable
 		newNode.Annotations[annotationTag] = deviceNames
 	}
 	return newNode
+}
+
+func (ki *KubeInteractor) singleDevAnnotationUpdate(annotationTag, ascendDevices string, newNode *v1.Node) *v1.Node {
+	newNode.Annotations[annotationTag] = ascendDevices
+	return newNode
+}
+
+func (ki *KubeInteractor) isSingleDevType(groupAllocatableDevs map[string]string) bool {
+	// For Ascend310
+	if len(groupAllocatableDevs) == 1 {
+		return true
+	}
+	// For Ascend910
+	devTypeNum := 0
+	for _, deviceNames := range groupAllocatableDevs {
+		if len(deviceNames) != 0 {
+			devTypeNum++
+		}
+	}
+	return devTypeNum == 1
+}
+
+func (ki *KubeInteractor) resetNodeAnnotations(node *v1.Node) {
+	delete(node.Annotations, huaweiUnHealthAscend910)
+	delete(node.Annotations, huaweiNetworkUnHealthAscend910)
+	delete(node.Annotations, huaweiAscend910)
+	delete(node.Labels, huaweiRecoverAscend910)
+	delete(node.Labels, huaweiNetworkRecoverAscend910)
+	firstTimeList = false
 }
 
 func (ki *KubeInteractor) convertStringToSet(deviceNames string) sets.String {
