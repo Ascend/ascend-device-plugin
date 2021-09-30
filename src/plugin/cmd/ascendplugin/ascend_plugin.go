@@ -29,9 +29,10 @@ const (
 
 var (
 	mode            = flag.String("mode", "", "Device plugin running mode: ascend310, ascend710, ascend910")
-	fdFlag          = flag.Bool("fdFlag", false, "Whether to use fd system to manage device")
+	fdFlag          = flag.Bool("fdFlag", false, "Whether to use fd system to manage device (default false)")
 	useAscendDocker = flag.Bool("useAscendDocker", true, "Whether to use ascend docker")
-	volcanoType     = flag.Bool("volcanoType", false, "Whether to use volcano for scheduling")
+	volcanoType     = flag.Bool("volcanoType", false,
+		"Whether to use volcano for scheduling when using chip with type of Ascend310 or Ascend910 (default false)")
 	version         = flag.Bool("version", false, "Output version information")
 	edgeLogFile     = flag.String("edgeLogFile", "/var/alog/AtlasEdge_log/devicePlugin.log",
 		"Log file path in edge scene")
@@ -42,9 +43,9 @@ var (
 		"Log level, -1-debug, 0-info(default), 1-warning, 2-error, 3-dpanic, 4-panic, 5-fatal")
 	logMaxAge     = flag.Int("maxAge", hwmanager.MaxAge, "Maximum number of days for backup log files")
 	logIsCompress = flag.Bool("isCompress", false,
-		"Whether backup files need to be compressed")
+		"Whether backup files need to be compressed (default false)")
 	logFile       = flag.String("logFile", defaultLogPath, "The log file path")
-	logMaxBackups = flag.Int("maxBackups", hwmanager.MaxBackups, "Maximum number of backup log files")
+	logMaxBackups = flag.Int("maxBackups", hwmanager.MaxBackups, "Maximum number of backup log files, range (0, 30]")
 )
 
 var (
