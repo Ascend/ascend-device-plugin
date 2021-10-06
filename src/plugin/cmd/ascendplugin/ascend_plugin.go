@@ -32,7 +32,7 @@ var (
 	fdFlag          = flag.Bool("fdFlag", false, "Whether to use fd system to manage device (default false)")
 	useAscendDocker = flag.Bool("useAscendDocker", true, "Whether to use ascend docker")
 	volcanoType     = flag.Bool("volcanoType", false,
-		"Whether to use volcano for scheduling when using chip with type of Ascend310 or Ascend910 (default false)")
+		"Specifies whether to use volcano for scheduling when the chip type is Ascend310 or Ascend910 (default false)")
 	version         = flag.Bool("version", false, "Output version information")
 	edgeLogFile     = flag.String("edgeLogFile", "/var/alog/AtlasEdge_log/devicePlugin.log",
 		"Log file path in edge scene")
@@ -44,8 +44,10 @@ var (
 	logMaxAge     = flag.Int("maxAge", hwmanager.MaxAge, "Maximum number of days for backup log files")
 	logIsCompress = flag.Bool("isCompress", false,
 		"Whether backup files need to be compressed (default false)")
-	logFile       = flag.String("logFile", defaultLogPath, "The log file path")
-	logMaxBackups = flag.Int("maxBackups", hwmanager.MaxBackups, "Maximum number of backup log files, range (0, 30]")
+	logFile       = flag.String("logFile", defaultLogPath,
+		"The log file path, if the file size exceeds 20MB, will be rotate")
+	logMaxBackups = flag.Int("maxBackups", hwmanager.MaxBackups,
+		"Maximum number of backup log files, range (0, 30]. if it's 0, will be reset to default value")
 )
 
 var (
