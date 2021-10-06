@@ -47,7 +47,7 @@ var (
 	logFile       = flag.String("logFile", defaultLogPath,
 		"The log file path, if the file size exceeds 20MB, will be rotate")
 	logMaxBackups = flag.Int("maxBackups", hwmanager.MaxBackups,
-		"Maximum number of backup log files, range (0, 30]. if it's 0, will be reset to default value")
+		"Maximum number of backup log files, range [0, 30]. if it's 0, will be reset to default value")
 )
 
 var (
