@@ -36,8 +36,8 @@ var (
 	version         = flag.Bool("version", false, "Output version information")
 	edgeLogFile     = flag.String("edgeLogFile", "/var/alog/AtlasEdge_log/devicePlugin.log",
 		"Log file path in edge scene")
-	listWatchPeriod = flag.Int("listWatchPeriod", defaultListWatchPeriod, "Listen and "+
-		"watch device state's period, unit second, range [3, 60]")
+	listWatchPeriod = flag.Int("listWatchPeriod", defaultListWatchPeriod,
+		"Listen and watch device state's period, unit second, range [3, 60]")
 	autoStowing = flag.Bool("autoStowing", true, "Whether to automatically stow the fixed device")
 	logLevel    = flag.Int("logLevel", 0,
 		"Log level, -1-debug, 0-info(default), 1-warning, 2-error, 3-dpanic, 4-panic, 5-fatal (default 0)")
