@@ -9,8 +9,10 @@ require (
 	github.com/smartystreets/goconvey v1.6.4
 	go.uber.org/atomic v1.7.0
 	golang.org/x/net v0.0.0-20210520170846-37e1c6afe023
+	golang.org/x/term v0.0.0-20201210144234-2321bbc49cbf // indirect
+	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/grpc v1.38.0
-	huawei.com/npu-exporter v0.0.2
+	huawei.com/npu-exporter v0.1.2
 	k8s.io/api v0.19.4
 	k8s.io/apimachinery v0.19.4
 	k8s.io/client-go v0.19.4
@@ -21,7 +23,7 @@ require (
 replace (
 	go.uber.org/atomic => go.uber.org/atomic v1.6.0
 	huawei.com/kmc => codehub-dg-y.huawei.com/it-edge-native/edge-native-core/coastguard.git v1.0.6
-	huawei.com/npu-exporter => codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.0.3
+	huawei.com/npu-exporter => codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.1.2
 	k8s.io/api => codehub-dg-y.huawei.com/OpenSourceCenter/kubernetes.git/staging/src/k8s.io/api v1.19.4-h2
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.19.4
 	k8s.io/apimachinery => codehub-dg-y.huawei.com/OpenSourceCenter/kubernetes.git/staging/src/k8s.io/apimachinery v1.19.4-h2

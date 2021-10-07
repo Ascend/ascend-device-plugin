@@ -282,7 +282,7 @@ func mockPodList() []v1.Pod {
 func TestCheckDeviceNetworkHealthStatus(t *testing.T) {
 	Convey("checkDeviceNetworkHealthStatus", t, func() {
 		Convey("network status unchanged", func() {
-			patches := ApplyFunc(hwlog.Error, func(args ...interface{}) {
+			patches := ApplyFunc(hwlog.RunLog.Error, func(args ...interface{}) {
 				return
 			})
 			defer patches.Reset()
@@ -307,7 +307,7 @@ func TestCheckDeviceNetworkHealthStatus(t *testing.T) {
 func TestCheckDeviceNetworkStatusChange(t *testing.T) {
 	Convey("network health status", t, func() {
 		Convey("network status changed to unhealthy", func() {
-			patches := ApplyFunc(hwlog.Error, func(args ...interface{}) {
+			patches := ApplyFunc(hwlog.RunLog.Error, func(args ...interface{}) {
 				return
 			})
 			defer patches.Reset()
@@ -347,10 +347,10 @@ func TestDonotCheckNetworkStatus(t *testing.T) {
 			So(ret, ShouldBeFalse)
 		})
 		Convey("device id error", func() {
-			patches := ApplyFunc(hwlog.Errorf, func(format string, args ...interface{}) {
+			patches := ApplyFunc(hwlog.RunLog.Errorf, func(format string, args ...interface{}) {
 				return
 			})
-			patches2 := ApplyFunc(hwlog.Error, func(args ...interface{}) {
+			patches2 := ApplyFunc(hwlog.RunLog.Error, func(args ...interface{}) {
 				return
 			})
 			defer patches.Reset()

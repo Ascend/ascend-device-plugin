@@ -46,7 +46,7 @@ func NewHwPluginServe(hdm *HwDevManager, devType string, socket string) HwPlugin
 	if useVolcanoType {
 		ki, err = NewKubeInteractor()
 		if err != nil {
-			hwlog.Errorf("cannot create kube interactor, err: %v", err)
+			hwlog.RunLog.Errorf("cannot create kube interactor, err: %v", err)
 		}
 	}
 	return &HwPluginServe{
@@ -103,19 +103,19 @@ func (hps *HwPluginServe) Start(pluginSocket, pluginSocketPath string) error {
 	for len(hps.grpcServer.GetServiceInfo()) <= 0 {
 		time.Sleep(1 * time.Second)
 	}
-	hwlog.Infof("device plugin start serving.")
+	hwlog.RunLog.Infof("device plugin start serving.")
 
 	// Registers To Kubelet.
 	resourceName := fmt.Sprintf("%s%s", resourceNamePrefix, hps.devType)
 	k8sSocketPath := pluginapi.KubeletSocket
 	err = hps.Register(k8sSocketPath, pluginSocket, resourceName)
 	if err == nil {
-		hwlog.Infof("register to kubelet success.")
+		hwlog.RunLog.Infof("register to kubelet success.")
 		return nil
 	}
 	hps.grpcServer.Stop()
 	time.Sleep(sleepTime * time.Second)
-	hwlog.Errorf("register to kubelet failed, err: %s", err.Error())
+	hwlog.RunLog.Errorf("register to kubelet failed, err: %s", err.Error())
 	return err
 }
 

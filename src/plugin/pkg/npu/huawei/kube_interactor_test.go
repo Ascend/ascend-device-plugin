@@ -79,5 +79,5 @@ func init() {
 	hwLogConfig := hwlog.LogConfig{
 		OnlyToStdout: true,
 	}
-	hwlog.Init(&hwLogConfig, stopCh)
+	hwlog.InitRunLogger(&hwLogConfig, stopCh)
 }

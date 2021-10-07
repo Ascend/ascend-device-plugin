@@ -112,7 +112,7 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 		node, err = ki.clientset.CoreV1().Nodes().Get(context.Background(), ki.nodeName, metav1.GetOptions{})
 
 		if err != nil {
-			hwlog.Errorf("failed to get node, nodeName: %s, err: %v", ki.nodeName, err)
+			hwlog.RunLog.Errorf("failed to get node, nodeName: %s, err: %v", ki.nodeName, err)
 			return false, nil
 		}
 		if firstTimeList {
@@ -134,7 +134,7 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 		}
 		_, _, err = nodeutil.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), node, newNode)
 		if err != nil {
-			hwlog.Errorf("failed to patch volcano npu resource: %v", err)
+			hwlog.RunLog.Errorf("failed to patch volcano npu resource: %v", err)
 			return false, nil
 		}
 		// if update success, update the lastTimeNetworkRecoverDevices

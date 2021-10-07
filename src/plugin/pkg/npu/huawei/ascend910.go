@@ -56,7 +56,7 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *
 		cgoDsmiVDevInfos, err := hnm.getVirtualDevice(ids[i])
 		if err != nil && !strings.Contains(err.Error(), FunctionNotFound) {
 			if !strings.Contains(err.Error(), noVDevFound) {
-				hwlog.Errorf("Query virtual device info failure!, err: %s", err.Error())
+				hwlog.RunLog.Errorf("Query virtual device info failure!, err: %s", err.Error())
 				continue
 			}
 		}
@@ -137,7 +137,7 @@ func (hnm *HwAscend910Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe, isS
 	if stateThreadNum == len(hps.hdm.allDevTypes) {
 		groupAllocatableDevs := groupDevByPower(totalDevices, hps.devType)
 		if err := hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, hiAIAscend910Prefix); err != nil {
-			hwlog.Errorf("patch Annotation failed, err: %v", err)
+			hwlog.RunLog.Errorf("patch Annotation failed, err: %v", err)
 		}
 		totalDevices = totalDevices.Intersection(sets.String{})
 		stateThreadNum = resetZero
@@ -156,7 +156,7 @@ func (hnm *HwAscend910Manager) GetDeviceNetworkState(logicID int32, device *npuD
 	case networkDetectOK, networkDetectInit:
 		return pluginapi.Healthy, nil
 	default:
-		hwlog.Debugf("%s network status is unhealthy, code value is %v", device.ID, healthCode)
+		hwlog.RunLog.Debugf("%s network status is unhealthy, code value is %v", device.ID, healthCode)
 		return pluginapi.Unhealthy, nil
 	}
 }

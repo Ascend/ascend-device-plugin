@@ -32,20 +32,21 @@ var (
 	fdFlag          = flag.Bool("fdFlag", false, "Whether to use fd system to manage device (default false)")
 	useAscendDocker = flag.Bool("useAscendDocker", true, "Whether to use ascend docker")
 	volcanoType     = flag.Bool("volcanoType", false,
-		"Whether to use volcano for scheduling when using chip with type of Ascend310 or Ascend910 (default false)")
+		"Specifies whether to use volcano for scheduling when the chip type is Ascend310 or Ascend910 (default false)")
 	version         = flag.Bool("version", false, "Output version information")
 	edgeLogFile     = flag.String("edgeLogFile", "/var/alog/AtlasEdge_log/devicePlugin.log",
 		"Log file path in edge scene")
-	listWatchPeriod = flag.Int("listWatchPeriod", defaultListWatchPeriod, "Listen and "+
-		"watch device state's period, unit second, range [3, 60]")
+	listWatchPeriod = flag.Int("listWatchPeriod", defaultListWatchPeriod,
+		"Listen and watch device state's period, unit second, range [3, 60]")
 	autoStowing = flag.Bool("autoStowing", true, "Whether to automatically stow the fixed device")
 	logLevel    = flag.Int("logLevel", 0,
-		"Log level, -1-debug, 0-info(default), 1-warning, 2-error, 3-dpanic, 4-panic, 5-fatal")
-	logMaxAge     = flag.Int("maxAge", hwmanager.MaxAge, "Maximum number of days for backup log files")
-	logIsCompress = flag.Bool("isCompress", false,
-		"Whether backup files need to be compressed (default false)")
-	logFile       = flag.String("logFile", defaultLogPath, "The log file path")
-	logMaxBackups = flag.Int("maxBackups", hwmanager.MaxBackups, "Maximum number of backup log files, range (0, 30]")
+		"Log level, -1-debug, 0-info(default), 1-warning, 2-error, 3-dpanic, 4-panic, 5-fatal (default 0)")
+	logMaxAge     = flag.Int("maxAge", hwmanager.MaxAge,
+		"Maximum number of days for backup run log files, must be greater than or equal to 7 days")
+	logFile       = flag.String("logFile", defaultLogPath,
+		"The log file path, if the file size exceeds 20MB, will be rotate")
+	logMaxBackups = flag.Int("maxBackups", hwmanager.MaxBackups,
+		"Maximum number of backup log files, range is (0, 30]")
 )
 
 var (
@@ -66,9 +67,8 @@ func initLogModule(stopCh <-chan struct{}) {
 		LogLevel:    *logLevel,
 		MaxBackups:  *logMaxBackups,
 		MaxAge:      *logMaxAge,
-		IsCompress:  *logIsCompress,
 	}
-	if err := hwlog.Init(&hwLogConfig, stopCh); err != nil {
+	if err := hwlog.InitRunLogger(&hwLogConfig, stopCh); err != nil {
 		fmt.Printf("init hwlog error %v", err.Error())
 		os.Exit(1)
 	}
@@ -91,32 +91,32 @@ func main() {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 	initLogModule(stopCh)
-	hwlog.Infof("ascend device plugin starting and the version is %s", BuildVersion)
+	hwlog.RunLog.Infof("ascend device plugin starting and the version is %s", BuildVersion)
 
 	neverStop := make(chan struct{})
 	switch *mode {
 	case "ascend310", "ascend910", "ascend710", "":
-		hwlog.Infof("ascend device plugin running mode: %s", *mode)
+		hwlog.RunLog.Infof("ascend device plugin running mode: %s", *mode)
 	default:
-		hwlog.Infof("unSupport mode: %s, waiting indefinitely", *mode)
+		hwlog.RunLog.Infof("unSupport mode: %s, waiting indefinitely", *mode)
 		<-neverStop
 	}
 
 	hdm := hwmanager.NewHwDevManager(*mode)
 	hdm.SetParameters(*fdFlag, *useAscendDocker, *volcanoType, *autoStowing, *listWatchPeriod)
 	if err := hdm.GetNPUs(); err != nil {
-		hwlog.Errorf("no devices found. waiting indefinitely, err: %s", err.Error())
+		hwlog.RunLog.Errorf("no devices found. waiting indefinitely, err: %s", err.Error())
 		<-neverStop
 	}
 
 	devTypes := hdm.GetDevType()
 	if len(devTypes) == 0 {
-		hwlog.Errorf("no devices type found. waiting indefinitely")
+		hwlog.RunLog.Errorf("no devices type found. waiting indefinitely")
 		<-neverStop
 	}
 
 	for _, devType := range devTypes {
-		hwlog.Infof("ascend device serve started, devType: %s", devType)
+		hwlog.RunLog.Infof("ascend device serve started, devType: %s", devType)
 		pluginSocket := fmt.Sprintf("%s.sock", devType)
 		go hdm.Serve(devType, socketPath, pluginSocket, hwmanager.NewHwPluginServe)
 	}
