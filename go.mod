@@ -9,6 +9,8 @@ require (
 	github.com/smartystreets/goconvey v1.6.4
 	go.uber.org/atomic v1.7.0
 	golang.org/x/net v0.0.0-20210520170846-37e1c6afe023
+	golang.org/x/term v0.0.0-20201210144234-2321bbc49cbf // indirect
+	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/grpc v1.38.0
 	huawei.com/npu-exporter v0.1.2
 	k8s.io/api v0.19.4
