@@ -78,7 +78,7 @@ func (hdm *HwDevManager) GetNPUs() error {
 
 	err := hdm.setRunMode()
 	if err != nil {
-		hwlog.Errorf("err to set Run mode, err: %v ", err)
+		hwlog.RunLog.Errorf("err to set Run mode, err: %v ", err)
 		return err
 	}
 
@@ -90,7 +90,7 @@ func (hdm *HwDevManager) GetNPUs() error {
 	case runMode710:
 		hdm.manager = NewHwAscend710Manager()
 	}
-	hwlog.Infof("device plugin start")
+	hwlog.RunLog.Infof("device plugin start")
 	hdm.manager.SetDmgr(hdm.dmgr)
 
 	if err := getDefaultDevices(&hdm.defaultDevs); err != nil {
@@ -113,20 +113,20 @@ func (hdm *HwDevManager) GetDevType() []string {
 func (hdm *HwDevManager) Serve(devType, socketPath, pluginSocket string, pluginServerFunc func(*HwDevManager, string, string) HwPluginServeInterface) {
 	// start sockPath monitor
 	if !VerifyPath(socketPath) {
-		hwlog.Errorf("socket path verify failed")
+		hwlog.RunLog.Errorf("socket path verify failed")
 		return
 	}
 	pluginSockPath := path.Join(socketPath, pluginSocket)
 
-	hwlog.Infof("Starting socket file watcher.")
+	hwlog.RunLog.Infof("Starting socket file watcher.")
 	watcher := NewFileWatch()
 	err := watcher.watchFile(pluginapi.DevicePluginPath)
 	if err != nil {
-		hwlog.Errorf("failed to create file watcher, err: %s", err.Error())
+		hwlog.RunLog.Errorf("failed to create file watcher, err: %s", err.Error())
 	}
 	defer watcher.fileWatcher.Close()
 
-	hwlog.Infof("Starting OS signs watcher.")
+	hwlog.RunLog.Infof("Starting OS signs watcher.")
 	osSignChan := newSignWatcher(syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGKILL)
 
 	restart := true
@@ -144,7 +144,7 @@ func (hdm *HwDevManager) Serve(devType, socketPath, pluginSocket string, pluginS
 			preStart(hps, pluginSockPath)
 			// end
 			if err := hps.Start(pluginSocket, pluginSockPath); err != nil {
-				hwlog.Errorf("Could not contact Kubelet, retrying. " +
+				hwlog.RunLog.Errorf("Could not contact Kubelet, retrying. " +
 					"Did you enable the device plugin feature gate?")
 				restart = true
 			} else {
@@ -165,13 +165,13 @@ func preStart(hps HwPluginServeInterface, pluginSockPath string) {
 		}
 		// Use non-default level to avoid log spam.
 		if logFlag {
-			hwlog.Errorf("hwPluginServe preStart failed, err: %s", err.Error())
+			hwlog.RunLog.Errorf("hwPluginServe preStart failed, err: %s", err.Error())
 		}
 		logFlag = false
 		time.Sleep(sleepTime * time.Second)
 	}
 	logFlag = true
-	hwlog.Infof("starting device-plugin server")
+	hwlog.RunLog.Infof("starting device-plugin server")
 }
 
 func (hdm *HwDevManager) signalWatch(watcher *fsnotify.Watcher, sigs chan os.Signal, restart bool, hps HwPluginServeInterface, pluginSockPath string) bool {
@@ -179,28 +179,28 @@ func (hdm *HwDevManager) signalWatch(watcher *fsnotify.Watcher, sigs chan os.Sig
 	select {
 	case event, signEnd := <-watcher.Events:
 		if signEnd == false {
-			hwlog.Infof("no watcher event, channel closed")
+			hwlog.RunLog.Infof("no watcher event, channel closed")
 			return restart
 		}
 		if event.Name == pluginSockPath && event.Op&fsnotify.Remove == fsnotify.Remove {
-			hwlog.Warnf("notify: sock file deleted, please check !")
+			hwlog.RunLog.Warnf("notify: sock file deleted, please check !")
 		}
 		if event.Name == pluginapi.KubeletSocket && event.Op&fsnotify.Create == fsnotify.Create {
-			hwlog.Infof("notify: kubelet.sock file created, restarting.")
+			hwlog.RunLog.Infof("notify: kubelet.sock file created, restarting.")
 			return true
 		}
 
 	case s, signEnd := <-sigs:
 		if signEnd == false {
-			hwlog.Infof("no watcher sign event, channel closed")
+			hwlog.RunLog.Infof("no watcher sign event, channel closed")
 			return restart
 		}
 		switch s {
 		case syscall.SIGHUP:
-			hwlog.Infof("Received SIGHUP, restarting.")
+			hwlog.RunLog.Infof("Received SIGHUP, restarting.")
 			return true
 		default:
-			hwlog.Infof("Received signal: %s, shutting down.", s.String())
+			hwlog.RunLog.Infof("Received signal: %s, shutting down.", s.String())
 			hps.Stop()
 			hdm.dmgr.ShutDown()
 			os.Exit(0)

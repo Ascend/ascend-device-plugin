@@ -54,7 +54,7 @@ func TestHwDevManager_Serve(t *testing.T) {
 	}
 	f, err := os.Create(serverSock310)
 	if err != nil {
-		hwlog.Info(err)
+		hwlog.RunLog.Info(err)
 		t.Fatal("TestHwDevManager_Serve Run FAiled, reason is failed to create sock file")
 	}
 	f.Chmod(socketChmod)
@@ -68,7 +68,7 @@ func TestHwDevManager_Serve(t *testing.T) {
 func deleteServerSocketByDevManager(serverSocket string, manager *HwDevManager) {
 	time.Sleep(sleepNumTwo * time.Second)
 	manager.stopFlag.Store(true)
-	hwlog.Infof("remove serverSocket: %s", serverSocket)
+	hwlog.RunLog.Infof("remove serverSocket: %s", serverSocket)
 	os.Remove(serverSocket)
 }
 
@@ -86,7 +86,7 @@ func TestSignalWatch(t *testing.T) {
 		t.Errorf("failed to create file watcher. %v", err)
 	}
 	defer watcher.fileWatcher.Close()
-	hwlog.Infof("Starting OS signs watcher.")
+	hwlog.RunLog.Infof("Starting OS signs watcher.")
 	osSignChan := newSignWatcher(syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	hdm := HwDevManager{}
 	useVolcanoType = true

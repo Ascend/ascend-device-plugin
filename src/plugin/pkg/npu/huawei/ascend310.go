@@ -38,7 +38,7 @@ func (hnm *HwAscend310Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe, isS
 	freeDevices := hps.healthDevice.Difference(usedDevices)
 	groupAllocatableDevs := groupDevByPower(freeDevices, hps.devType)
 	if err := hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, hiAIAscend310Prefix); err != nil {
-		hwlog.Errorf("Ascend310 patch Annotation failed, err: %v", err)
+		hwlog.RunLog.Errorf("Ascend310 patch Annotation failed, err: %v", err)
 	}
 }
 

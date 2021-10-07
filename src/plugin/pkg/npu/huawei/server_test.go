@@ -104,16 +104,16 @@ func (hps *fakeHwPluginServe) GetDevByType() error {
 
 // Start starts the gRPC server of the device plugin
 func (hps *fakeHwPluginServe) Start(pluginSocket, pluginSocketPath string) error {
-	hwlog.Infof("device plugin start serving.")
+	hwlog.RunLog.Infof("device plugin start serving.")
 	// Registers To Kubelet.
 	resourceName := fmt.Sprintf("%s%s", resourceNamePrefix, hps.devType)
 	k8sSocketPath := pluginapi.KubeletSocket
 	err := hps.Register(k8sSocketPath, pluginSocket, resourceName)
 	if err == nil {
-		hwlog.Infof("register to kubelet success.")
+		hwlog.RunLog.Infof("register to kubelet success.")
 		return nil
 	}
-	hwlog.Errorf("register to kubelet failed, err: %s", err.Error())
+	hwlog.RunLog.Errorf("register to kubelet failed, err: %s", err.Error())
 	return err
 }
 

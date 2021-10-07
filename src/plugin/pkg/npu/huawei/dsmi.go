@@ -365,7 +365,7 @@ func (d *DeviceManager) GetDeviceErrorCode(logicID uint32) error {
 		return fmt.Errorf("get wrong errorcode count, device: %d, errorcode count: %d", logicID, int32(errorCount))
 	}
 
-	hwlog.Infof("get device error code, "+
+	hwlog.RunLog.Infof("get device error code, "+
 		"logicID: %d, errorCount: %d, pErrorCode: %d", logicID, int(errorCount), int(pErrorCode[0]))
 
 	return nil

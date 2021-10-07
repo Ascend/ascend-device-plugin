@@ -53,17 +53,17 @@ func newSignWatcher(osSigns ...os.Signal) chan os.Signal {
 
 func createNetListen(pluginSocketPath string) (net.Listener, error) {
 	if _, err := os.Stat(pluginSocketPath); err == nil {
-		hwlog.Infof("Found exist sock file, sockName is: %s, now remove it.", path.Base(pluginSocketPath))
+		hwlog.RunLog.Infof("Found exist sock file, sockName is: %s, now remove it.", path.Base(pluginSocketPath))
 		os.Remove(pluginSocketPath)
 	}
 	netListen, err := net.Listen("unix", pluginSocketPath)
 	if err != nil {
-		hwlog.Errorf("device plugin start failed, err: %s", err.Error())
+		hwlog.RunLog.Errorf("device plugin start failed, err: %s", err.Error())
 		return nil, err
 	}
 	err = os.Chmod(pluginSocketPath, socketChmod)
 	if err != nil {
-		hwlog.Errorf("change file: %s mode error", path.Base(pluginSocketPath))
+		hwlog.RunLog.Errorf("change file: %s mode error", path.Base(pluginSocketPath))
 	}
 	return netListen, err
 }
