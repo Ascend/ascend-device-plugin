@@ -121,7 +121,7 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 		newNode := node.DeepCopy()
 		if ki.isSingleDevType(groupAllocatableDevs) {
 			annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, devType)
-			ki.singleDevAnnotationUpdate(annotationTag, groupAllocatableDevs[annotationTag], newNode)
+			ki.singleDevAnnotationUpdate(annotationTag, groupAllocatableDevs, node, newNode)
 		} else {
 			ki.multiDevAnnotationUpdate(groupAllocatableDevs, node, newNode)
 		}
@@ -253,8 +253,15 @@ func (ki *KubeInteractor) multiDevAnnotationUpdate(groupAllocatableDevs map[stri
 	}
 }
 
-func (ki *KubeInteractor) singleDevAnnotationUpdate(annotationTag, ascendDevices string, newNode *v1.Node) {
-	newNode.Annotations[annotationTag] = ascendDevices
+func (ki *KubeInteractor) singleDevAnnotationUpdate(annotationTag string, groupAllocatableDevs map[string]string,
+	node, newNode *v1.Node) {
+	for tag := range groupAllocatableDevs {
+		annotation, isNil := node.Annotations[tag]
+		if annotationTag != tag && isNil && len(annotation) > 0 {
+			newNode.Annotations[tag] = ""
+		}
+	}
+	newNode.Annotations[annotationTag] = groupAllocatableDevs[annotationTag]
 }
 
 func (ki *KubeInteractor) isSingleDevType(groupAllocatableDevs map[string]string) bool {
