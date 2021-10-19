@@ -23,15 +23,15 @@ if [ "$1" == "ci" ] || [ "$2" == "ci" ]; then
     build_type=ci
 fi
 
-function clear_env() {
+function clean() {
     rm -rf "${TOP_DIR}"/output/*
 }
 
 function build_plugin() {
     cd "${TOP_DIR}"/src/plugin/cmd/ascendplugin
-    export CGO_ENABLED=1 
+    export CGO_ENABLED=1
     export CGO_CFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
-    export CGO_CPPFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv" 
+    export CGO_CPPFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
     go build -buildmode=pie -ldflags "-X main.BuildName=${output_name} \
             -X main.BuildVersion=${build_version}_linux-${os_type} \
             -buildid none     \
@@ -75,11 +75,12 @@ function modify_version() {
 
 
 function main() {
-  clear_env
+  clean
   build_plugin
   mv_file
   modify_version
   change_mod
 }
+
 
 main
