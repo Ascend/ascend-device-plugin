@@ -97,7 +97,7 @@ func checkNodeName(nodeName string) error {
 	if len(nodeName) > kubeEnvMaxLength {
 		return fmt.Errorf("node name length %d is bigger than %d", len(nodeName), kubeEnvMaxLength)
 	}
-	pattern := "^[a-z0-9A-Z]+([a-z0-9A-Z\\-]*)[a-z0-9A-Z]+$"
+	pattern := `^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	reg := regexp.MustCompile(pattern)
 	if !reg.MatchString(nodeName) {
 		return fmt.Errorf("node name %s is illegal", nodeName)
