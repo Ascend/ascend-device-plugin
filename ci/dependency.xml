@@ -17,20 +17,5 @@
         </copies>
     </artifact>
     <dependencies>
-        <!-- aicpu_kernels infer -->
-        <dependency>
-            <versionType>BVersion</versionType>
-            <repoType>Generic</repoType>
-            <id>
-                <offering>Tuscany</offering>
-                <version>Tuscany V100R001C75B020</version>
-            </id>
-            <copies>
-                <copy>
-                    <source>Alpha/Inference/InstallPackages/Ascend310-driver-*.run</source>
-                    <dest>platform/Tuscany</dest>
-                </copy>
-            </copies>
-        </dependency>
     </dependencies>
 </project>
