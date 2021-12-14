@@ -8,6 +8,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"go.uber.org/atomic"
 	"huawei.com/npu-exporter/hwlog"
+	"k8s.io/apimachinery/pkg/util/sets"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"os"
 	"path"
@@ -62,6 +63,7 @@ type devManager interface {
 	GetPhyDevMapVirtualDev() map[uint32]string
 	DoWithVolcanoListAndWatch(*HwPluginServe, bool)
 	GetDeviceNetworkState(int32, *npuDevice) (string, error)
+	GetAnnotationMap(sets.String, string) map[string]string
 }
 
 // NewHwDevManager function is used to new a dev manager.

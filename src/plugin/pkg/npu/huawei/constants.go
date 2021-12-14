@@ -62,9 +62,10 @@ const (
 	logicIDIndexInVirtualDevID910  = 3
 	huaweiNetworkUnHealthAscend910 = "huawei.com/Ascend910-NetworkUnhealthy"
 	huaweiNetworkRecoverAscend910  = "huawei.com/Ascend910-NetworkRecover"
-	huaweiUnHealthAscend910        = "huawei.com/Ascend910-Unhealthy"
 	huaweiRecoverAscend910         = "huawei.com/Ascend910-Recover"
-
+	huaweiUnHealthAscend910        = "huawei.com/Ascend910-Unhealthy"
+	huaweiUnHealthAscend710        = "huawei.com/Ascend710-Unhealthy"
+	huaweiUnHealthAscend310        = "huawei.com/Ascend310-Unhealthy"
 	// FunctionNotFound for describe dsmi interface function is exist or not
 	FunctionNotFound = "-99998"
 
@@ -72,4 +73,6 @@ const (
 	MaxVirtualDevNum = 128
 
 	resetZero = 0
+
+	initMapCap = 5
 )
