@@ -14,7 +14,7 @@ rules:
     verbs: ["get", "list", "update"]
   - apiGroups: [""]
     resources: ["nodes"]
-    verbs: ["get"]
+    verbs: ["get", "patch"]
   - apiGroups: [""]
     resources: ["nodes/status"]
     verbs: ["get", "patch"]

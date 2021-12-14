@@ -85,6 +85,7 @@ func createFake910HwDevManager(mode string, fdFlag, useAscendDocker, volcanoType
 }
 
 func TestGroupDevByPower(t *testing.T) {
-	groupDevByPower(sets.String{}, hiAIAscend310Prefix)
+	hdm := createFake910HwDevManager("", true, false, false)
+	hdm.manager.GetAnnotationMap(sets.String{}, hiAIAscend310Prefix)
 	t.Logf("TestGroupDevByPower Run Pass")
 }

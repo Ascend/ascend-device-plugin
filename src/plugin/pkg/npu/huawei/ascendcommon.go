@@ -295,7 +295,6 @@ func (adc *ascendCommonFunction) GetNPUs(allDevices *[]npuDevice, allDeviceTypes
 	if getDevListErrInfo != nil {
 		return getDevListErrInfo
 	}
-
 	for i := int32(0); i < devNum; i++ {
 		phyID, err := adc.dmgr.GetPhyID(ids[i])
 		if err != nil {
@@ -338,12 +337,11 @@ func (adc *ascendCommonFunction) DoWithVolcanoListAndWatch(hps *HwPluginServe, i
 	freeDevices := hps.healthDevice.Difference(usedDevices)
 	annoMap := adc.GetAnnotationMap(freeDevices, hps.devType)
 	annoMap[adc.unHealthyKey] = filterTagPowerDevice(hps.unHealthDevice, adc.name)
-	hwlog.RunLog.Warn("patch node map, %+v", annoMap)
 	if err := hps.kubeInteractor.patchNode(func(node *v1.Node) []byte {
 		as := antStu{Metadata{Annotation: annoMap}}
 		bt, err := json.Marshal(as)
 		if err != nil {
-			hwlog.RunLog.Warn("patch node error, %v", err)
+			hwlog.RunLog.Warnf("patch node error, %v", err)
 			return nil
 		}
 		return bt

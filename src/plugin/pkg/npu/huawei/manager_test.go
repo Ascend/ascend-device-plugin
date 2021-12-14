@@ -54,6 +54,7 @@ func TestHwDevManager_Serve(t *testing.T) {
 		t.Fatal("TestHwDevManager_Serve Run FAiled, reason is failed to create folder file")
 	}
 	f, err := os.Create(serverSock310)
+	defer f.Close()
 	if err != nil {
 		hwlog.RunLog.Info(err)
 		t.Fatal("TestHwDevManager_Serve Run FAiled, reason is failed to create sock file")
@@ -62,9 +63,7 @@ func TestHwDevManager_Serve(t *testing.T) {
 	if err := f.Chmod(socketChmod); err != nil {
 		t.Fatal("TestHwDevManager_Serve Run FAiled, reason is failed to Chmod")
 	}
-	if err := f.Close(); err != nil {
-		t.Fatal("TestHwDevManager_Serve Run FAiled, reason is failed to Close")
-	}
+
 	go deleteServerSocketByDevManager(serverSock310, fakeHwDevManager)
 	fakeHwDevManager.Serve("Ascend310", "/var/lib/kubelet/device-plugins/",
 		"Ascend310.sock", NewFakeHwPluginServe)
@@ -84,14 +83,12 @@ func deleteServerSocketByDevManager(serverSocket string, manager *HwDevManager) 
 // TestSignalWatch for testSingalWatch
 func TestSignalWatch(t *testing.T) {
 	f, err := os.Create(serverSockFd)
+	defer f.Close()
 	if err != nil {
 		t.Fatal("TestSignalWatch Run FAiled, reason is failed to create sock file")
 	}
 	if err := f.Chmod(socketChmod); err != nil {
 		t.Fatal("TestHwDevManager_Serve Run FAiled, reason is failed to Chmod")
-	}
-	if err := f.Close(); err != nil {
-		t.Fatal("TestHwDevManager_Serve Run FAiled, reason is failed to Close")
 	}
 	watcher := NewFileWatch()
 	err = watcher.watchFile(pluginapi.DevicePluginPath)

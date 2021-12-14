@@ -15,11 +15,6 @@ const (
 	npuTestNum = 8
 )
 
-// NewFakeHwAscend310Manager used to create ascend 310 manager
-func NewFakeHwAscend310Manager() *HwAscend310Manager {
-	return &HwAscend310Manager{}
-}
-
 // TestHwAscend310Manager_GetNPUs for GetNPUs
 func TestHwAscend310Manager_GetNPUs(t *testing.T) {
 	resultDevMap := make(map[string]string)
@@ -31,6 +26,7 @@ func TestHwAscend310Manager_GetNPUs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("TestHwAscend310Manager_GetNPUs Run Failed")
 	}
+	t.Logf("TestHwAscend310Manager_GetNPUs %+v ", hdm.allDevTypes)
 	if hdm.allDevTypes[0] != "davinci-mini" {
 		t.Fatalf("TestHwAscend310Manager_GetNPUs Run Failed")
 	}
@@ -75,7 +71,7 @@ func TestHwAscend310Manager_GetDevPath(t *testing.T) {
 func createFakeHwDevManager(mode string, fdFlag, useAscendDocker, volcanoType bool) *HwDevManager {
 	hdm := NewHwDevManager(mode)
 	hdm.SetParameters(fdFlag, useAscendDocker, volcanoType, true, sleepTime)
-	hdm.manager = NewFakeHwAscend310Manager()
+	hdm.manager = NewHwAscend310Manager()
 	hdm.manager.SetDmgr(newFakeDeviceManager())
 	return hdm
 }

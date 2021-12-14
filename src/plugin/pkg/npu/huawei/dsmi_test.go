@@ -209,13 +209,11 @@ func TestGetDefaultDevices(t *testing.T) {
 
 func createFile(filePath string) error {
 	f, err := os.Create(filePath)
+	defer f.Close()
 	if err != nil {
 		return err
 	}
 	if err := f.Chmod(socketChmod); err != nil {
-		return err
-	}
-	if err := f.Close(); err != nil {
 		return err
 	}
 	return nil
