@@ -307,3 +307,19 @@ func judgeSameAscend(annotation string, allocatableDevices sets.String) bool {
 	}
 	return annotationSet.Equal(allocatableDevices)
 }
+
+func (ki *KubeInteractor) patchNode(patchFunc func(*v1.Node) []byte) error {
+	node, err := ki.clientset.CoreV1().Nodes().Get(context.TODO(), ki.nodeName, metav1.GetOptions{})
+	if err != nil {
+		hwlog.RunLog.Warnf("get node error, %v", err)
+		return err
+	}
+	pbyte := patchFunc(node)
+	_, err = ki.clientset.CoreV1().Nodes().Patch(context.TODO(), ki.nodeName, types.MergePatchType, pbyte,
+		metav1.PatchOptions{})
+	if err != nil {
+		hwlog.RunLog.Warnf("path node error, %v", err)
+		return err
+	}
+	return nil
+}

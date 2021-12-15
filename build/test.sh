@@ -26,10 +26,11 @@ mockgen k8s.io/client-go/kubernetes/typed/core/v1 NodeInterface >${MOCK_TOP}/moc
 mockgen k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1 DevicePlugin_ListAndWatchServer >${MOCK_TOP}/mock_kubelet_v1beta1/deviceplugin_mock.go
 mockgen k8s.io/client-go/kubernetes/typed/core/v1 PodInterface >${MOCK_TOP}/mock_v1/pod_interface_mock.go
 
+
 export PKG_CONFIG_PATH=${TOP_DIR}/src/plugin/config/config_310/:$PKG_CONFIG_PATH
 
 function execute_test() {
-  if ! (go test -mod=mod -v -race -coverprofile cov.out ${TOP_DIR}/src/plugin/pkg/npu/huawei/ >./$file_input); then
+  if ! (go test  -mod=mod -gcflags=all=-l -v -race -coverprofile cov.out ${TOP_DIR}/src/plugin/pkg/npu/huawei/ >./$file_input); then
     echo '****** go test cases error! ******'
     exit 1
   else

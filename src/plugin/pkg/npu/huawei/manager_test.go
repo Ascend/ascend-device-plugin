@@ -5,6 +5,7 @@
 package huawei
 
 import (
+	"fmt"
 	"go.uber.org/atomic"
 	"huawei.com/npu-exporter/hwlog"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
@@ -53,12 +54,16 @@ func TestHwDevManager_Serve(t *testing.T) {
 		t.Fatal("TestHwDevManager_Serve Run FAiled, reason is failed to create folder file")
 	}
 	f, err := os.Create(serverSock310)
+	defer f.Close()
 	if err != nil {
 		hwlog.RunLog.Info(err)
 		t.Fatal("TestHwDevManager_Serve Run FAiled, reason is failed to create sock file")
 	}
-	f.Chmod(socketChmod)
-	f.Close()
+
+	if err := f.Chmod(socketChmod); err != nil {
+		t.Fatal("TestHwDevManager_Serve Run FAiled, reason is failed to Chmod")
+	}
+
 	go deleteServerSocketByDevManager(serverSock310, fakeHwDevManager)
 	fakeHwDevManager.Serve("Ascend310", "/var/lib/kubelet/device-plugins/",
 		"Ascend310.sock", NewFakeHwPluginServe)
@@ -69,17 +74,22 @@ func deleteServerSocketByDevManager(serverSocket string, manager *HwDevManager) 
 	time.Sleep(sleepNumTwo * time.Second)
 	manager.stopFlag.Store(true)
 	hwlog.RunLog.Infof("remove serverSocket: %s", serverSocket)
-	os.Remove(serverSocket)
+	if err := os.Remove(serverSocket); err != nil {
+		fmt.Println(err)
+	}
+
 }
 
 // TestSignalWatch for testSingalWatch
 func TestSignalWatch(t *testing.T) {
 	f, err := os.Create(serverSockFd)
+	defer f.Close()
 	if err != nil {
 		t.Fatal("TestSignalWatch Run FAiled, reason is failed to create sock file")
 	}
-	f.Chmod(socketChmod)
-	f.Close()
+	if err := f.Chmod(socketChmod); err != nil {
+		t.Fatal("TestHwDevManager_Serve Run FAiled, reason is failed to Chmod")
+	}
 	watcher := NewFileWatch()
 	err = watcher.watchFile(pluginapi.DevicePluginPath)
 	if err != nil {
@@ -99,5 +109,7 @@ func TestSignalWatch(t *testing.T) {
 
 func deleteServerSocket(serverSocket string) {
 	time.Sleep(sleepNumTwo * time.Second)
-	os.Remove(serverSocket)
+	if err := os.Remove(serverSocket); err != nil {
+		fmt.Println(err)
+	}
 }

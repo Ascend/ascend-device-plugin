@@ -6,8 +6,10 @@
 package huawei
 
 import (
+	"encoding/json"
 	"fmt"
 	"huawei.com/npu-exporter/hwlog"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"os"
@@ -39,10 +41,23 @@ const (
 	rootGID = 0
 )
 
+type antStu struct {
+	// Metadata metadata
+	Metadata `json:"metadata,omitempty"`
+}
+
+// Metadata patch metadata
+type Metadata struct {
+	// Annotation Annotaions
+	Annotation map[string]string `json:"annotations,omitempty"`
+}
+
 // ascendCommonFunction struct definition
 type ascendCommonFunction struct {
 	dmgr                DeviceMgrInterface
 	phyDevMapVirtualDev map[uint32]string
+	name                string
+	unHealthyKey        string
 }
 
 func getDefaultDevices(defaultDevices *[]string) error {
@@ -280,7 +295,6 @@ func (adc *ascendCommonFunction) GetNPUs(allDevices *[]npuDevice, allDeviceTypes
 	if getDevListErrInfo != nil {
 		return getDevListErrInfo
 	}
-
 	for i := int32(0); i < devNum; i++ {
 		phyID, err := adc.dmgr.GetPhyID(ids[i])
 		if err != nil {
@@ -297,7 +311,7 @@ func (adc *ascendCommonFunction) GetNPUs(allDevices *[]npuDevice, allDeviceTypes
 
 // GetMatchingDeviType to get match device type
 func (adc *ascendCommonFunction) GetMatchingDeviType() string {
-	return hiAIAscend710Prefix
+	return adc.name
 }
 
 // SetDmgr to set dmgr
@@ -317,10 +331,51 @@ func (adc *ascendCommonFunction) GetPhyDevMapVirtualDev() map[uint32]string {
 
 // DoWithVolcanoListAndWatch ascend710 do nothing
 func (adc *ascendCommonFunction) DoWithVolcanoListAndWatch(hps *HwPluginServe, isStateChange bool) {
+	adc.reloadHealthDevice(isStateChange, hps)
+	usedDevices := sets.NewString()
+	getNodeNpuUsed(&usedDevices, hps)
+	freeDevices := hps.healthDevice.Difference(usedDevices)
+	annoMap := adc.GetAnnotationMap(freeDevices, hps.devType)
+	annoMap[adc.unHealthyKey] = filterTagPowerDevice(hps.unHealthDevice, adc.name)
+	if err := hps.kubeInteractor.patchNode(func(node *v1.Node) []byte {
+		as := antStu{Metadata{Annotation: annoMap}}
+		bt, err := json.Marshal(as)
+		if err != nil {
+			hwlog.RunLog.Warnf("patch node error, %v", err)
+			return nil
+		}
+		return bt
+	}); err != nil {
+		hwlog.RunLog.Errorf("%s patch Annotation failed, err: %v", adc.name, err)
+	}
 	return
 }
 
 // GetDeviceNetworkState check Ascend910 only
-func (adc *ascendCommonFunction) GetDeviceNetworkState(logicID int32, d *npuDevice) (string, error) {
+func (adc *ascendCommonFunction) GetDeviceNetworkState(_ int32, _ *npuDevice) (string, error) {
 	return "", nil
+}
+
+func (adc *ascendCommonFunction) reloadHealthDevice(isStateChange bool, hps *HwPluginServe) {
+	if !isStateChange {
+		return
+	}
+	hps.healthDevice = sets.String{}
+	hps.unHealthDevice = sets.String{}
+	for _, device := range hps.devices {
+		if device.Health == pluginapi.Healthy {
+			hps.healthDevice.Insert(device.ID)
+			continue
+		}
+		hps.unHealthDevice.Insert(device.ID)
+	}
+}
+
+// GetAnnotationMap Get AnnotationMap
+func (adc *ascendCommonFunction) GetAnnotationMap(allocatableDevices sets.String, _ string) map[string]string {
+	var antMap = make(map[string]string, initMapCap)
+	chipAnnotation := filterTagPowerDevice(allocatableDevices, adc.name)
+	annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, adc.name)
+	antMap[annotationTag] = chipAnnotation
+	return antMap
 }

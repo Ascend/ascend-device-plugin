@@ -11,11 +11,6 @@ import (
 	"testing"
 )
 
-// NewFakeHwAscend710Manager used to create ascend 710 manager
-func NewFakeHwAscend710Manager() *HwAscend710Manager {
-	return &HwAscend710Manager{}
-}
-
 // TestHwAscend710Manager_GetNPUs for GetNPUs
 func TestHwAscend710Manager_GetNPUs(t *testing.T) {
 	resultDevMap := make(map[string]string)
@@ -71,7 +66,7 @@ func TestHwAscend710Manager_GetDevPath(t *testing.T) {
 func createFake710HwDevManager(mode string, fdFlag, useAscendDocker, volcanoType bool) *HwDevManager {
 	hdm := NewHwDevManager(mode)
 	hdm.SetParameters(fdFlag, useAscendDocker, volcanoType, true, sleepTime)
-	hdm.manager = NewFakeHwAscend710Manager()
+	hdm.manager = NewHwAscend710Manager()
 	hdm.manager.SetDmgr(newFakeDeviceManager())
 	return hdm
 }

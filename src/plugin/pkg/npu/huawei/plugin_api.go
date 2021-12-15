@@ -149,7 +149,8 @@ func (s *pluginAPI) updateKubeletDevInfo(resp *pluginapi.ListAndWatchResponse,
 	}
 
 	if err := sendDevToKubelet(resp, stream); err != nil {
-		hwlog.RunLog.Errorf("listAndWatch: send device info failed, please check kubelet status, err: %s", err.Error())
+		hwlog.RunLog.Errorf("listAndWatch: send device info failed, please "+
+			"check kubelet status, err: %s", err.Error())
 	}
 }
 
@@ -351,7 +352,7 @@ func getNodeNpuUsed(usedDevices *sets.String, hps *HwPluginServe) {
 	)
 
 	kubeClient := hps.kubeInteractor.clientset
-	node, err := kubeClient.CoreV1().Nodes().Get(context.Background(),hps.kubeInteractor.nodeName, metav1.GetOptions{})
+	node, err := kubeClient.CoreV1().Nodes().Get(context.Background(), hps.kubeInteractor.nodeName, metav1.GetOptions{})
 	if err != nil {
 		hwlog.RunLog.Errorf("get node from k8s error: %v", err)
 		return
@@ -374,7 +375,7 @@ func getNodeNpuUsed(usedDevices *sets.String, hps *HwPluginServe) {
 
 func getNPUByStatus(kubeClient kubernetes.Interface, nodeName, status, devType string, useNpu *[]string) bool {
 	selector := fields.SelectorFromSet(fields.Set{"spec.nodeName": nodeName, "status.phase": status})
-	podList, err := kubeClient.CoreV1().Pods(v1.NamespaceAll).List(context.Background(),metav1.ListOptions{
+	podList, err := kubeClient.CoreV1().Pods(v1.NamespaceAll).List(context.Background(), metav1.ListOptions{
 		FieldSelector: selector.String()})
 	if err != nil {
 		hwlog.RunLog.Errorf(fmt.Sprintf("nodeName: %s, err: %v", nodeName, err))
@@ -526,7 +527,8 @@ func GetSlogConfigFilePath() string {
 
 func (s *pluginAPI) updatePodAnnotations(pod *v1.Pod, ascendVisibleDevices map[string]string) error {
 	kubeClient := s.hps.kubeInteractor.clientset
-	node, err := kubeClient.CoreV1().Nodes().Get(context.Background(),s.hps.kubeInteractor.nodeName, metav1.GetOptions{})
+	node, err := kubeClient.CoreV1().Nodes().Get(context.Background(),
+		s.hps.kubeInteractor.nodeName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -555,14 +557,16 @@ func (s *pluginAPI) updatePodAnnotations(pod *v1.Pod, ascendVisibleDevices map[s
 }
 
 func (s *pluginAPI) updatePod(pod *v1.Pod, podDeviceValue string) (*v1.Pod, error) {
-	pod1, err := s.hps.kubeInteractor.clientset.CoreV1().Pods(pod.Namespace).Get(context.Background(),pod.Name, metav1.GetOptions{})
+	pod1, err := s.hps.kubeInteractor.clientset.CoreV1().Pods(pod.Namespace).Get(context.Background(),
+		pod.Name, metav1.GetOptions{})
 	if err != nil {
 		hwlog.RunLog.Errorf("query pod info failed, err: %v", err)
 		return nil, fmt.Errorf("query pod info failed,%v", err)
 	}
 	pod1.Annotations[podPredicateTime] = strconv.FormatUint(math.MaxUint64, 10)
 	pod1.Annotations[podDeviceKey] = podDeviceValue
-	pod2, err := s.hps.kubeInteractor.clientset.CoreV1().Pods(pod.Namespace).Update(context.Background(),pod1,metav1.UpdateOptions{})
+	pod2, err := s.hps.kubeInteractor.clientset.CoreV1().Pods(pod.Namespace).Update(context.Background(),
+		pod1, metav1.UpdateOptions{})
 	if err != nil {
 		hwlog.RunLog.Errorf("update pod failed, err: %v", err)
 		return nil, fmt.Errorf("update pod failed,%v", err)
@@ -592,9 +596,10 @@ func (s *pluginAPI) getPendingPodsOnNode() ([]v1.Pod, error) {
 	nodeName := s.hps.kubeInteractor.nodeName
 	selector := fields.SelectorFromSet(fields.Set{"spec.nodeName": nodeName, "status.phase": string(v1.PodPending)})
 	err = wait.PollImmediate(interval*time.Second, timeout*time.Second, func() (bool, error) {
-		pl, err = s.hps.kubeInteractor.clientset.CoreV1().Pods(v1.NamespaceAll).List(context.Background(),metav1.ListOptions{
-			FieldSelector: selector.String(),
-		})
+		pl, err = s.hps.kubeInteractor.clientset.CoreV1().Pods(v1.NamespaceAll).List(
+			context.Background(), metav1.ListOptions{
+				FieldSelector: selector.String(),
+			})
 		if err != nil {
 			return false, nil
 		}
@@ -751,7 +756,7 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int) (map[string]string, e
 	usedDevices := sets.NewString()
 	getNodeNpuUsed(&usedDevices, s.hps)
 	freeDevices := s.hps.healthDevice.Difference(usedDevices)
-	groupAllocatableDevs := groupDevByPower(freeDevices, s.hps.devType)
+	groupAllocatableDevs := s.hps.hdm.manager.GetAnnotationMap(freeDevices, s.hps.devType)
 	errs := s.hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, s.hps.devType)
 	if errs != nil {
 		hwlog.RunLog.Errorf("patch Annotations failed, err: %v", err)
@@ -810,6 +815,7 @@ func (s *pluginAPI) getAscendVisiDevsWithVolcano(allocateDevice sets.String, dev
 }
 
 // GetPreferredAllocation implement the kubelet device plugin interface
-func (s *pluginAPI) GetPreferredAllocation(context.Context, *pluginapi.PreferredAllocationRequest) (*pluginapi.PreferredAllocationResponse, error) {
+func (s *pluginAPI) GetPreferredAllocation(context.Context, *pluginapi.PreferredAllocationRequest) (
+	*pluginapi.PreferredAllocationResponse, error) {
 	return nil, errors.New("not support")
 }

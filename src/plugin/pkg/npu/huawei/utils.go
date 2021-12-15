@@ -54,7 +54,8 @@ func newSignWatcher(osSigns ...os.Signal) chan os.Signal {
 func createNetListen(pluginSocketPath string) (net.Listener, error) {
 	if _, err := os.Stat(pluginSocketPath); err == nil {
 		hwlog.RunLog.Infof("Found exist sock file, sockName is: %s, now remove it.", path.Base(pluginSocketPath))
-		os.Remove(pluginSocketPath)
+		err := os.Remove(pluginSocketPath)
+		return nil, err
 	}
 	netListen, err := net.Listen("unix", pluginSocketPath)
 	if err != nil {
