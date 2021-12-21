@@ -794,7 +794,7 @@ func (s *pluginAPI) getAscendVisiDevsWithVolcano(allocateDevice sets.String, dev
 			hwlog.RunLog.Errorf("get phyID, err: %v", err)
 			return err
 		}
-		if s.hps.devType == hiAIAscend310Prefix {
+		if s.hps.devType == hiAIAscend310Prefix || s.hps.devType == hiAIAscend710Prefix {
 			hwlog.RunLog.Infof("%s not exist device ip", s.hps.devType)
 			(*devices)[deviceID] = ""
 			continue
