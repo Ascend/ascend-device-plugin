@@ -5,6 +5,7 @@
 package huawei
 
 import (
+	"fmt"
 	"github.com/fsnotify/fsnotify"
 	"go.uber.org/atomic"
 	"huawei.com/npu-exporter/hwlog"
@@ -177,6 +178,9 @@ func preStart(hps HwPluginServeInterface, pluginSockPath string) {
 }
 
 func (hdm *HwDevManager) signalWatch(watcher *fsnotify.Watcher, sigs chan os.Signal, restart bool, hps HwPluginServeInterface, pluginSockPath string) bool {
+	if sigs == nil {
+		return false
+	}
 	// start sockPath monitor
 	select {
 	case event, signEnd := <-watcher.Events:
@@ -238,7 +242,9 @@ func (hdm *HwDevManager) setRunMode() error {
 			return err
 		}
 	}
-
+	if chipinfo == nil {
+		return fmt.Errorf("chip info is nil")
+	}
 	if strings.Contains(chipinfo.ChipName, "310") {
 		hdm.runMode = runMode310
 		return nil
