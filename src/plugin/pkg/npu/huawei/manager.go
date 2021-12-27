@@ -228,9 +228,15 @@ func (hdm *HwDevManager) setRunMode() error {
 	if err != nil || devNum == 0 {
 		return err
 	}
-	chipinfo, err := hdm.dmgr.GetChipInfo(0)
-	if err != nil {
-		return err
+	var chipinfo *ChipInfo
+	for i := int32(0); i < devNum; i++ {
+		chipinfo, err = hdm.dmgr.GetChipInfo(i)
+		if err == nil {
+			break
+		}
+		if i == devNum-1 {
+			return err
+		}
 	}
 
 	if strings.Contains(chipinfo.ChipName, "310") {
