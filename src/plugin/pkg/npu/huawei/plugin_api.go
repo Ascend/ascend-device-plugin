@@ -100,6 +100,7 @@ func (hps *HwPluginServe) Register(k8sSocketPath, pluginSocket, resourceName str
 	if _, err = client.Register(context.Background(), reqt); err != nil {
 		return fmt.Errorf("register to kubelet fail: %v", err)
 	}
+	hps.vol2KlDevMap = make(map[string]string, maxTrainDevicesNum)
 	return nil
 }
 
@@ -142,7 +143,11 @@ func (s *pluginAPI) ListAndWatch(emtpy *pluginapi.Empty, stream pluginapi.Device
 func (s *pluginAPI) updateKubeletDevInfo(resp *pluginapi.ListAndWatchResponse,
 	stream pluginapi.DevicePlugin_ListAndWatchServer) {
 	for _, dev := range s.hps.devices {
-		resp.Devices = append(resp.Devices, &pluginapi.Device{ID: dev.ID, Health: dev.Health})
+		d, exist := s.hps.vol2KlDevMap[dev.ID]
+		if !exist {
+			d = dev.ID
+		}
+		resp.Devices = append(resp.Devices, &pluginapi.Device{ID: d, Health: dev.Health})
 		if firstTimeList {
 			s.hps.healthDevice.Insert(dev.ID)
 		}
@@ -260,14 +265,14 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 		if allocateNum > maxDevicesNum {
 			return nil, fmt.Errorf("the devices can't bigger than %d", maxDevicesNum)
 		}
-		ascendVisibleDevicesMap, errs := s.setEnvFromKubelet(rqt)
+		ascendVisibleDevicesMap, alloDevices, errs := s.setEnvFromKubelet(rqt)
 		if errs != nil {
 			hwlog.RunLog.Errorf("plugin doesn't have device, err: %v", errs)
 			return nil, errs
 		}
 		// 使用volcano调度
 		if useVolcanoType {
-			ascendVisibleDevicesMap, errs = s.doWithVolcanoSchedule(allocateNum)
+			ascendVisibleDevicesMap, errs = s.doWithVolcanoSchedule(allocateNum, alloDevices)
 			if errs != nil {
 				return nil, errs
 			}
@@ -302,18 +307,19 @@ func (s *pluginAPI) setAscendRuntimeOptions(requests *pluginapi.AllocateRequest)
 	return nil
 }
 
-func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (map[string]string, error) {
+func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (map[string]string, []string, error) {
 	// get id from kubelet
 	ascendVisibleDevices := make(map[string]string, MaxVirtualDevNum)
+	alloDevices := make([]string, maxChipName)
 	for _, id := range rqt.DevicesIDs {
 		_, ok := s.hps.devices[id]
 		if !ok {
-			return nil, fmt.Errorf("plugin doesn't have device %s", id)
+			return nil, nil, fmt.Errorf("plugin doesn't have device %s", id)
 		}
 		deviceID, virID, err := getDeviceID(id, s.ascendRuntimeOptions)
 		if err != nil {
 			hwlog.RunLog.Errorf("getDeviceID err: %v", err)
-			return nil, err
+			return nil, nil, err
 		}
 		var deviceIP string
 		if s.ascendRuntimeOptions == virtualDev {
@@ -325,13 +331,14 @@ func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (
 			deviceIP, err = s.getDeviceIP(deviceID)
 			if err != nil {
 				hwlog.RunLog.Errorf("Get device ip failed, deviceId: %s, err: %v", deviceID, err)
-				return nil, err
+				return nil, nil, err
 			}
 		}
 		ascendVisibleDevices[deviceID] = deviceIP
+		alloDevices = append(alloDevices, id)
 	}
 	hwlog.RunLog.Infof("Kubelet found ascendVisibleDevices: %v", ascendVisibleDevices)
-	return ascendVisibleDevices, nil
+	return ascendVisibleDevices, alloDevices, nil
 }
 
 func (s *pluginAPI) mountDefaultDevice(resp *pluginapi.ContainerAllocateResponse) {
@@ -732,7 +739,7 @@ func (s *pluginAPI) responseAnonation(resp *pluginapi.ContainerAllocateResponse,
 	resp.Annotations = annotation
 }
 
-func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int) (map[string]string, error) {
+func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int, devices []string) (map[string]string, error) {
 	ascendVisibleDevices := make(map[string]string, MaxVirtualDevNum)
 	pods, err := s.getPendingPodsOnNode()
 	if err != nil {
@@ -749,6 +756,14 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int) (map[string]string, e
 	if err != nil {
 		hwlog.RunLog.Errorf("get NPU Annotation failed, err: %v", err)
 		return nil, err
+	}
+	index := 0
+	for volDev, _ := range allocateDevice {
+		if index >= len(devices) {
+			break
+		}
+		s.hps.vol2KlDevMap[volDev] = devices[index]
+		index++
 	}
 	if errors := s.getAscendVisiDevsWithVolcano(allocateDevice, &ascendVisibleDevices); errors != nil {
 		hwlog.RunLog.Errorf("get ascend devs with volcano failed, err: %v", err)

@@ -20,13 +20,14 @@ type HwPluginServe struct {
 	hdm            *HwDevManager
 	devices        map[string]*npuDevice
 	grpcServer     *grpc.Server
-	devType        string
-	runMode        string
-	defaultDevs    []string
-	socket         string
+	vol2KlDevMap   map[string]string
 	kubeInteractor *KubeInteractor
 	healthDevice   sets.String
 	unHealthDevice sets.String
+	defaultDevs    []string
+	devType        string
+	runMode        string
+	socket         string
 }
 
 // HwPluginServeInterface the interface of PluginServer
