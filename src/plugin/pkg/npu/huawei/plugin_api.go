@@ -357,12 +357,12 @@ func getNodeNpuUsed(usedDevices *sets.String, hps *HwPluginServe) {
 		hwlog.RunLog.Errorf("get node from k8s error: %v", err)
 		return
 	}
-	getFailed := getNPUByStatus(kubeClient, node.Name, string(v1.PodRunning), hps.devType, &useNpu)
+	getFailed := getNPUByStatus(kubeClient, node.Name, hps.devType, &useNpu)
 	if getFailed {
 		return
 	}
 
-	getFailed = getNPUByStatus(kubeClient, node.Name, string(v1.PodPending), hps.devType, &useNpu)
+	getFailed = getNPUByStatus(kubeClient, node.Name, hps.devType, &useNpu)
 	if getFailed {
 		return
 	}
@@ -373,8 +373,8 @@ func getNodeNpuUsed(usedDevices *sets.String, hps *HwPluginServe) {
 	return
 }
 
-func getNPUByStatus(kubeClient kubernetes.Interface, nodeName, status, devType string, useNpu *[]string) bool {
-	selector := fields.SelectorFromSet(fields.Set{"spec.nodeName": nodeName, "status.phase": status})
+func getNPUByStatus(kubeClient kubernetes.Interface, nodeName, devType string, useNpu *[]string) bool {
+	selector := fields.SelectorFromSet(fields.Set{"spec.nodeName": nodeName})
 	podList, err := kubeClient.CoreV1().Pods(v1.NamespaceAll).List(context.Background(), metav1.ListOptions{
 		FieldSelector: selector.String()})
 	if err != nil {
