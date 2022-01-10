@@ -121,7 +121,11 @@ func (s *pluginAPI) ListAndWatch(emtpy *pluginapi.Empty, stream pluginapi.Device
 		if s.outbreak.Load() {
 			break
 		}
-		time.Sleep(time.Duration(listAndWatchPeriod-sleep2ListW) * time.Second)
+		sleepTime := listAndWatchPeriod - sleep2ListW
+		if sleepTime < 0 {
+			sleepTime = 0
+		}
+		time.Sleep(time.Duration(sleepTime) * time.Second)
 		isStateChange := s.isDeviceStatusChange()
 		if useVolcanoType {
 			s.hps.vol2KlDevMap = make(map[string]string, maxTrainDevicesNum)
