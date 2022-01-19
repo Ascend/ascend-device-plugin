@@ -80,8 +80,12 @@ const (
 )
 
 // Register function is use to register k8s devicePlugin to kubelet.
-func (hps *HwPluginServe) Register(k8sSocketPath, pluginSocket, resourceName string) error {
-	conn, err := grpc.Dial(k8sSocketPath, grpc.WithInsecure(),
+func (hps *HwPluginServe) Register() error {
+	realKubeletSockPath, isOk := VerifyPath(pluginapi.KubeletSocket)
+	if !isOk {
+		return fmt.Errorf("check kubelet socket file path failed")
+	}
+	conn, err := grpc.Dial(realKubeletSockPath, grpc.WithInsecure(),
 		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
 			return net.DialTimeout("unix", addr, timeout)
 		}))
@@ -91,11 +95,10 @@ func (hps *HwPluginServe) Register(k8sSocketPath, pluginSocket, resourceName str
 	}
 	defer conn.Close()
 	client := pluginapi.NewRegistrationClient(conn)
-
 	reqt := &pluginapi.RegisterRequest{
 		Version:      pluginapi.Version,
-		Endpoint:     pluginSocket,
-		ResourceName: resourceName,
+		Endpoint:     fmt.Sprintf("%s.sock", hps.devType),
+		ResourceName: resourceNamePrefix + hps.devType,
 	}
 	hwlog.RunLog.Infof("the device plugin api version is: %s", pluginapi.Version)
 	if _, err = client.Register(context.Background(), reqt); err != nil {
@@ -503,7 +506,7 @@ func (s *pluginAPI) setVirtualDevices(instance *Instance, device Device, deviceI
 }
 
 func (s *pluginAPI) getDeviceIP(phyID string) (string, error) {
-	transPhyID, err := strconv.ParseInt(phyID, 10, 32)
+	transPhyID, err := strconv.ParseInt(phyID, baseDec, bitSize32)
 	if err != nil {
 		hwlog.RunLog.Errorf(" Device id transform failed, DeviceName: %s", phyID)
 		return "", err
@@ -605,7 +608,7 @@ func (s *pluginAPI) updatePodAnnotations(pod *v1.Pod, ascendVisibleDevices map[s
 			hwlog.RunLog.Errorf("query pod info failed, err: %v", err)
 			return err
 		}
-		pod1.Annotations[podPredicateTime] = strconv.FormatUint(math.MaxUint64, 10)
+		pod1.Annotations[podPredicateTime] = strconv.FormatUint(math.MaxUint64, baseDec)
 		pod1.Annotations[podDeviceKey] = podDeviceValue
 		pod1.Annotations[pod2kl] = strings.Join(kltDevices, ",")
 		_, err = s.hps.kubeInteractor.clientset.CoreV1().Pods(pod.Namespace).Update(context.Background(),
@@ -707,7 +710,7 @@ func (s *pluginAPI) isShouldDeletePod(pod *v1.Pod) bool {
 
 func getPredicateTimeFromPodAnnotation(pod *v1.Pod) uint64 {
 	if assumeTimeStr, ok := pod.Annotations[podPredicateTime]; ok {
-		predicateTime, err := strconv.ParseUint(assumeTimeStr, 10, 64)
+		predicateTime, err := strconv.ParseUint(assumeTimeStr, baseDec, bitSize)
 		if err == nil {
 			return predicateTime
 		}

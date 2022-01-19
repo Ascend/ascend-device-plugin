@@ -10,6 +10,7 @@ import (
 	"huawei.com/npu-exporter/hwlog"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -32,6 +33,9 @@ const (
 
 	// nodeAnnotationsDeviceSep if the separator between devices on annotation
 	nodeAnnotationsDeviceSep = "comma"
+
+	// labelDeviceLen like Ascend910-0 split length is 2
+	labelDeviceLen = 2
 )
 
 // KubeInteractor include kubeclientSet & nodeName
@@ -204,10 +208,15 @@ func changeToShortFormat(chips sets.String) sets.String {
 	for devName := range chips {
 		if len(devName) > 1 {
 			idSplit := strings.Split(devName, "-")
+			if len(idSplit) != labelDeviceLen {
+				continue
+			}
 			devID := idSplit[len(idSplit)-1]
+			if _, err := strconv.ParseInt(devID, baseDec, bitSize); err != nil {
+				continue
+			}
 			newSets.Insert(devID)
 		}
-
 	}
 
 	return newSets
@@ -215,18 +224,33 @@ func changeToShortFormat(chips sets.String) sets.String {
 
 func (ki *KubeInteractor) convertDevListToSets(devices string, sepType string) sets.String {
 	deviceSets := sets.String{}
-	var devicesList []string
+	if devices == "" {
+		return deviceSets
+	}
 	if sepType == nodeLabelsDeviceSep {
-		devicesList = strings.Split(devices, ".")
-	} else {
-		devicesList = strings.Split(devices, ",")
-	}
-	for _, device := range devicesList {
-		if len(device) == 0 {
-			continue
+		// for label
+		// check device format, must 0.1.2 and more
+		for _, device := range strings.Split(devices, ".") {
+			if _, err := strconv.ParseInt(device, baseDec, bitSize); err != nil {
+				hwlog.RunLog.Warnf("current device id invalid, err: %v", err)
+				continue
+			}
+			deviceSets.Insert(device)
 		}
-		deviceSets.Insert(device)
+	} else {
+		// for annotation
+		// check device format, must Ascend910-0,Ascend910-1 and more
+		pattern := `^Ascend910-\d+`
+		reg := regexp.MustCompile(pattern)
+		for _, device := range strings.Split(devices, ",") {
+			if !reg.MatchString(device) {
+				hwlog.RunLog.Warnf("current device format error")
+				continue
+			}
+			deviceSets.Insert(device)
+		}
 	}
+
 	return deviceSets
 }
 

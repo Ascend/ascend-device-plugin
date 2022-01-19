@@ -77,4 +77,9 @@ const (
 	sleep2ListW = 3
 
 	initMapCap = 5
+
+	// for format change
+	baseDec = 10
+	bitSize = 64
+	bitSize32 = 32
 )

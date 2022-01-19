@@ -65,8 +65,7 @@ func TestHwDevManager_Serve(t *testing.T) {
 	}
 
 	go deleteServerSocketByDevManager(serverSock310, fakeHwDevManager)
-	fakeHwDevManager.Serve("Ascend310", "/var/lib/kubelet/device-plugins/",
-		"Ascend310.sock", NewFakeHwPluginServe)
+	fakeHwDevManager.Serve("Ascend310", NewFakeHwPluginServe)
 	t.Logf("TestHwDevManager_Serve Run Pass")
 }
 
