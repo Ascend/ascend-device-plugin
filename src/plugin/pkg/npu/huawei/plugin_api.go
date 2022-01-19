@@ -422,6 +422,9 @@ func getNPUByStatus(kubeClient kubernetes.Interface, nodeName string, hps *HwPlu
 		return true
 	}
 	for _, pod := range podList.Items {
+		if pod.Status.Phase == v1.PodSucceeded {
+			continue
+		}
 		annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, hps.devType)
 		tmpNpu, ok := pod.Annotations[annotationTag]
 		if !ok {
@@ -827,7 +830,7 @@ func (s *pluginAPI) checkPodNameAndSpace(podPara string, maxLength int) error {
 
 	reg := regexp.MustCompile(pattern)
 	if !reg.MatchString(podPara) {
-		return fmt.Errorf("para %s is illegal", podPara)
+		return fmt.Errorf("podPara is illegal")
 	}
 	return nil
 }

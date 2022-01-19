@@ -36,7 +36,9 @@ const (
 // TestPluginAPI_ListAndWatch for listAndWatch
 func TestPluginAPI_ListAndWatch(t *testing.T) {
 	hdm := createFakeDevManager("ascend910")
-	hdm.SetParameters(false, false, true, true, sleepTime)
+	o := Option{GetFdFlag: false, UseAscendDocker: false, UseVolcanoType: true, ListAndWatchPeriod: sleepTime,
+		AutoStowingDevs: true, KubeConfig: ""}
+	hdm.SetParameters(o)
 	if err := hdm.GetNPUs(); err != nil {
 		t.Fatal(err)
 	}
@@ -48,12 +50,9 @@ func TestPluginAPI_ListAndWatch(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	node1 := &v1.Node{
-		ObjectMeta: metav1.ObjectMeta{Annotations: make(map[string]string), Labels: make(map[string]string)},
-	}
+		ObjectMeta: metav1.ObjectMeta{Annotations: make(map[string]string), Labels: make(map[string]string)}}
 	podList := &v1.PodList{}
-	pod1 := v1.Pod{
-		ObjectMeta: metav1.ObjectMeta{Annotations: make(map[string]string), Labels: make(map[string]string)},
-	}
+	pod1 := v1.Pod{ObjectMeta: metav1.ObjectMeta{Annotations: make(map[string]string), Labels: make(map[string]string)}}
 	podList.Items = append(podList.Items, pod1)
 	node1.Annotations[huaweiAscend910] = "Ascend910-1,Ascend910-2"
 	pod1.Annotations[huaweiAscend910] = "Ascend910-1"
@@ -62,15 +61,13 @@ func TestPluginAPI_ListAndWatch(t *testing.T) {
 	mockNode := mock_v1.NewMockNodeInterface(ctrl)
 	mockPod := mock_v1.NewMockPodInterface(ctrl)
 	mockNode.EXPECT().Get(context.Background(), gomock.Any(), metav1.GetOptions{}).AnyTimes().Return(node1, nil)
-	mockNode.EXPECT().Patch(context.Background(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(node1, nil)
+	mockNode.EXPECT().Patch(context.Background(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
+		gomock.Any()).AnyTimes().Return(node1, nil)
 	mockPod.EXPECT().List(context.Background(), gomock.Any()).AnyTimes().Return(podList, nil)
 	mockV1.EXPECT().Pods(gomock.Any()).AnyTimes().Return(mockPod)
 	mockV1.EXPECT().Nodes().AnyTimes().Return(mockNode)
 	mockK8s.EXPECT().CoreV1().AnyTimes().Return(mockV1)
-	fakeKubeInteractor := &KubeInteractor{
-		clientset: mockK8s,
-		nodeName:  "NODE_NAME",
-	}
+	fakeKubeInteractor := &KubeInteractor{clientset: mockK8s, nodeName: "NODE_NAME"}
 	for _, devType := range devTypes {
 		mockstream := mock_v1beta1.NewMockDevicePlugin_ListAndWatchServer(ctrl)
 		mockstream.EXPECT().Send(&pluginapi.ListAndWatchResponse{}).Return(nil)
@@ -109,7 +106,15 @@ func createFakePluginAPI(hdm *HwDevManager, devType string, socket string, ki *K
 // TestAddAnnotation for test AddAnnotation
 func TestAddAnnotation(t *testing.T) {
 	hdm := createFakeDevManager("ascend910")
-	hdm.SetParameters(false, false, true, true, sleepTime)
+	o := Option{
+		GetFdFlag:          false,
+		UseAscendDocker:    false,
+		UseVolcanoType:     true,
+		ListAndWatchPeriod: sleepTime,
+		AutoStowingDevs:    true,
+		KubeConfig:         "",
+	}
+	hdm.SetParameters(o)
 	if err := hdm.GetNPUs(); err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +152,9 @@ func TestAddAnnotation(t *testing.T) {
 // TestAllocate for test Allocate
 func TestAllocate(t *testing.T) {
 	hdm := createFakeDevManager("ascend910")
-	hdm.SetParameters(false, false, false, true, sleepTime)
+	o := Option{GetFdFlag: false, UseAscendDocker: false, UseVolcanoType: false, ListAndWatchPeriod: sleepTime,
+		AutoStowingDevs: true, KubeConfig: ""}
+	hdm.SetParameters(o)
 	if err := hdm.GetNPUs(); err != nil {
 		t.Fatal(err)
 	}

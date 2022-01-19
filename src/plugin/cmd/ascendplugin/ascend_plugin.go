@@ -32,20 +32,22 @@ var (
 	useAscendDocker = flag.Bool("useAscendDocker", true, "Whether to use ascend docker")
 	volcanoType     = flag.Bool("volcanoType", false,
 		"Specifies whether to use volcano for scheduling when the chip type is Ascend310 or Ascend910 (default false)")
-	version         = flag.Bool("version", false, "Output version information")
-	edgeLogFile     = flag.String("edgeLogFile", "/var/alog/AtlasEdge_log/devicePlugin.log",
+	version     = flag.Bool("version", false, "Output version information")
+	edgeLogFile = flag.String("edgeLogFile", "/var/alog/AtlasEdge_log/devicePlugin.log",
 		"Log file path in edge scene")
 	listWatchPeriod = flag.Int("listWatchPeriod", defaultListWatchPeriod,
 		"Listen and watch device state's period, unit second, range [3, 60]")
 	autoStowing = flag.Bool("autoStowing", true, "Whether to automatically stow the fixed device")
 	logLevel    = flag.Int("logLevel", 0,
 		"Log level, -1-debug, 0-info(default), 1-warning, 2-error, 3-dpanic, 4-panic, 5-fatal (default 0)")
-	logMaxAge     = flag.Int("maxAge", hwmanager.MaxAge,
+	logMaxAge = flag.Int("maxAge", hwmanager.MaxAge,
 		"Maximum number of days for backup run log files, must be greater than or equal to 7 days")
-	logFile       = flag.String("logFile", defaultLogPath,
+	logFile = flag.String("logFile", defaultLogPath,
 		"The log file path, if the file size exceeds 20MB, will be rotate")
 	logMaxBackups = flag.Int("maxBackups", hwmanager.MaxBackups,
 		"Maximum number of backup log files, range is (0, 30]")
+	kubeconfig = flag.String("kubeConfig", "", "Path to a kubeconfig. "+
+		"Only required if out-of-cluster.")
 )
 
 var (
@@ -102,7 +104,9 @@ func main() {
 	}
 
 	hdm := hwmanager.NewHwDevManager(*mode)
-	hdm.SetParameters(*fdFlag, *useAscendDocker, *volcanoType, *autoStowing, *listWatchPeriod)
+	o := hwmanager.Option{GetFdFlag: *fdFlag, UseAscendDocker: *useAscendDocker, UseVolcanoType: *volcanoType,
+		AutoStowingDevs: *autoStowing, ListAndWatchPeriod: *listWatchPeriod, KubeConfig: *kubeconfig}
+	hdm.SetParameters(o)
 	if err := hdm.GetNPUs(); err != nil {
 		hwlog.RunLog.Errorf("no devices found. waiting indefinitely, err: %s", err.Error())
 		<-neverStop

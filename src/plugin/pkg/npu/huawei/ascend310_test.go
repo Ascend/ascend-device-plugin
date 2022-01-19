@@ -70,7 +70,15 @@ func TestHwAscend310Manager_GetDevPath(t *testing.T) {
 
 func createFakeHwDevManager(mode string, fdFlag, useAscendDocker, volcanoType bool) *HwDevManager {
 	hdm := NewHwDevManager(mode)
-	hdm.SetParameters(fdFlag, useAscendDocker, volcanoType, true, sleepTime)
+	o := Option{
+		GetFdFlag:          fdFlag,
+		UseAscendDocker:    useAscendDocker,
+		UseVolcanoType:     volcanoType,
+		ListAndWatchPeriod: sleepTime,
+		AutoStowingDevs:    true,
+		KubeConfig:         "",
+	}
+	hdm.SetParameters(o)
 	hdm.manager = NewHwAscend310Manager()
 	hdm.manager.SetDmgr(newFakeDeviceManager())
 	return hdm

@@ -37,6 +37,23 @@ type HwDevManager struct {
 	dmgr        DeviceMgrInterface
 }
 
+// Option option
+type Option struct {
+	// GetFdFlag to describe FdFlag
+	GetFdFlag bool
+	// UseAscendDocker to chose docker type
+	UseAscendDocker bool
+	UseVolcanoType  bool
+
+	// ListAndWatchPeriod set listening device state period
+	ListAndWatchPeriod int
+
+	// AutoStowingDevs auto stowing fixes devices or not
+	AutoStowingDevs bool
+
+	KubeConfig string
+}
+
 var (
 	// GetFdFlag to describe FdFlag
 	GetFdFlag bool
@@ -44,12 +61,13 @@ var (
 	UseAscendDocker bool
 	useVolcanoType  bool
 
-	// listAndWatchPeriod set listening device state period
+	// ListAndWatchPeriod set listening device state period
 	listAndWatchPeriod int
 
-	// autoStowingDevs auto stowing fixes devices or not
+	// AutoStowingDevs auto stowing fixes devices or not
 	autoStowingDevs bool
 
+	kubeConfig string
 	// switch error log
 	logFlag = true
 )
@@ -217,12 +235,13 @@ func (hdm *HwDevManager) signalWatch(watcher *fsnotify.Watcher, sigs chan os.Sig
 }
 
 // SetParameters to set Parameters
-func (hdm *HwDevManager) SetParameters(fdFlag, useAscendDocker, volcanoType, autoStowing bool, listWatchPeriod int) {
-	GetFdFlag = fdFlag
-	UseAscendDocker = useAscendDocker
-	useVolcanoType = volcanoType
-	listAndWatchPeriod = listWatchPeriod
-	autoStowingDevs = autoStowing
+func (hdm *HwDevManager) SetParameters(option Option) {
+	GetFdFlag = option.GetFdFlag
+	UseAscendDocker = option.UseAscendDocker
+	useVolcanoType = option.UseVolcanoType
+	listAndWatchPeriod = option.ListAndWatchPeriod
+	autoStowingDevs = option.AutoStowingDevs
+	kubeConfig = option.KubeConfig
 }
 
 func (hdm *HwDevManager) setRunMode() error {

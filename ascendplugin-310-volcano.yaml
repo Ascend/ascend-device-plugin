@@ -90,6 +90,8 @@ spec:
             mountPath: /var/log/mindx-dl/devicePlugin
           - name: localtime
             mountPath: /etc/localtime
+          - name: kmckeystore
+            mountPath: /etc/mindx-dl
         env:
           - name: NODE_NAME
             valueFrom:
@@ -109,3 +111,6 @@ spec:
         - name: localtime
           hostPath:
             path: /etc/localtime
+        - name: kmckeystore
+          hostPath:
+            path: /etc/mindx-dl
