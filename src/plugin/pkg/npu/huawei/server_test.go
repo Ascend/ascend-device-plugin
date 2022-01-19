@@ -46,7 +46,7 @@ func TestStart(t *testing.T) {
 		dmgr:     newFakeDeviceManager(),
 		stopFlag: atomic.NewBool(false),
 	}
-	pluginSocket := "Ascend10.sock"
+	pluginSocket := "Ascend910.sock"
 	pluginSocketPath := "/var/lib/kubelet/device-plugins/" + pluginSocket
 	hps := NewHwPluginServe(fakeHwDevManager, "Ascend910", pluginSocketPath)
 	err := hps.Start(pluginSocketPath)
