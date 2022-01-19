@@ -90,13 +90,8 @@ func (d *fakeDeviceManager) ShutDown() {
 }
 
 // GetChipInfo for fakeDeviceManager
-func (d *fakeDeviceManager) GetChipInfo(logicID int32) (*ChipInfo, error) {
-	chip := &ChipInfo{
-		ChipName: "310",
-		ChipType: "ASCEND",
-		ChipVer:  "",
-	}
-	return chip, nil
+func (d *fakeDeviceManager) GetChipInfo(logicID int32) (string, error) {
+	return "310", nil
 }
 
 // GetDeviceIP get deviceIP

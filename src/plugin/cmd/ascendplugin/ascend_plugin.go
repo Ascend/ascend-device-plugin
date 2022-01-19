@@ -15,7 +15,6 @@ import (
 
 const (
 	// socket name
-	socketPath     = "/var/lib/kubelet/device-plugins"
 	defaultLogPath = "/var/log/mindx-dl/devicePlugin/devicePlugin.log"
 
 	// defaultListWatchPeriod is the default listening device state's period
@@ -117,8 +116,7 @@ func main() {
 
 	for _, devType := range devTypes {
 		hwlog.RunLog.Infof("ascend device serve started, devType: %s", devType)
-		pluginSocket := fmt.Sprintf("%s.sock", devType)
-		go hdm.Serve(devType, socketPath, pluginSocket, hwmanager.NewHwPluginServe)
+		go hdm.Serve(devType, hwmanager.NewHwPluginServe)
 	}
 
 	<-neverStop

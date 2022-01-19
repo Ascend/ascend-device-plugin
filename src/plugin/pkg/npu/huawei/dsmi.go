@@ -135,13 +135,6 @@ const (
 	MaxErrorCodeCount = 128
 )
 
-// ChipInfo chip info
-type ChipInfo struct {
-	ChipType string
-	ChipName string
-	ChipVer  string
-}
-
 // CgoDsmiSubVDevInfo single VDevInfo info
 type CgoDsmiSubVDevInfo struct {
 	status uint32
@@ -171,7 +164,7 @@ type DeviceMgrInterface interface {
 	GetDeviceHealth(int32) (uint32, error)
 	GetPhyID(uint32) (uint32, error)
 	GetLogicID(uint32) (uint32, error)
-	GetChipInfo(int32) (*ChipInfo, error)
+	GetChipInfo(int32) (string, error)
 	GetDeviceIP(int32) (string, error)
 	GetVDevicesInfo(uint32) (CgoDsmiVDevInfo, error)
 	GetDeviceErrorCode(uint32) error
@@ -269,33 +262,22 @@ func (d *DeviceManager) GetLogicID(phyID uint32) (uint32, error) {
 }
 
 // GetChipInfo get chipInfo
-func (d *DeviceManager) GetChipInfo(logicID int32) (*ChipInfo, error) {
+func (d *DeviceManager) GetChipInfo(logicID int32) (string, error) {
 	var chipInfo C.struct_dsmi_chip_info_stru
-	err := C.dsmi_get_chip_info(C.int(logicID), &chipInfo)
-	if err != 0 {
-		return nil, fmt.Errorf("get device Chip info failed, error code: %d", int32(err))
+	if err := C.dsmi_get_chip_info(C.int(logicID), &chipInfo); err != 0 {
+		return "", fmt.Errorf("get device Chip info failed, error code: %d", int32(err))
 	}
-	var name []rune
-	var cType []rune
-	var ver []rune
-	name = convertToCharArr(name, chipInfo.chip_name)
-	cType = convertToCharArr(cType, chipInfo.chip_type)
-	ver = convertToCharArr(ver, chipInfo.chip_ver)
-	chip := &ChipInfo{
-		ChipName: string(name),
-		ChipType: string(cType),
-		ChipVer:  string(ver),
-	}
-	return chip, nil
+	return convertToString(chipInfo.chip_name), nil
 }
 
-func convertToCharArr(charArr []rune, cgoArr [maxChipName]C.uchar) []rune {
+func convertToString(cgoArr [maxChipName]C.uchar) string {
+	var chipName []rune
 	for _, v := range cgoArr {
 		if v != 0 {
-			charArr = append(charArr, rune(v))
+			chipName = append(chipName, rune(v))
 		}
 	}
-	return charArr
+	return string(chipName)
 }
 
 // GetDeviceIP get deviceIP

@@ -5,12 +5,10 @@
 package huawei
 
 import (
-	"fmt"
 	"go.uber.org/atomic"
 	"google.golang.org/grpc"
 	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/apimachinery/pkg/util/sets"
-	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"os"
 	"testing"
 )
@@ -48,10 +46,10 @@ func TestStart(t *testing.T) {
 		dmgr:     newFakeDeviceManager(),
 		stopFlag: atomic.NewBool(false),
 	}
-	pluginSocket := "Ascend910.sock"
+	pluginSocket := "Ascend10.sock"
 	pluginSocketPath := "/var/lib/kubelet/device-plugins/" + pluginSocket
 	hps := NewHwPluginServe(fakeHwDevManager, "Ascend910", pluginSocketPath)
-	err := hps.Start(pluginSocket, pluginSocketPath)
+	err := hps.Start(pluginSocketPath)
 	kubeSocketPath := "/var/lib/kubelet/device-plugins/kubelet.sock"
 	_, kubeErr := os.Stat(kubeSocketPath)
 	if err != nil && kubeErr != nil && os.IsExist(kubeErr) {
@@ -103,12 +101,10 @@ func (hps *fakeHwPluginServe) GetDevByType() error {
 }
 
 // Start starts the gRPC server of the device plugin
-func (hps *fakeHwPluginServe) Start(pluginSocket, pluginSocketPath string) error {
+func (hps *fakeHwPluginServe) Start(pluginSocketPath string) error {
 	hwlog.RunLog.Infof("device plugin start serving.")
 	// Registers To Kubelet.
-	resourceName := fmt.Sprintf("%s%s", resourceNamePrefix, hps.devType)
-	k8sSocketPath := pluginapi.KubeletSocket
-	err := hps.Register(k8sSocketPath, pluginSocket, resourceName)
+	err := hps.Register()
 	if err == nil {
 		hwlog.RunLog.Infof("register to kubelet success.")
 		return nil
@@ -133,6 +129,6 @@ func (hps *fakeHwPluginServe) cleanSock() error {
 }
 
 // Register function is use to register k8s devicePlugin to kubelet.
-func (hps *fakeHwPluginServe) Register(k8sSocketPath, pluginSocket, resourceName string) error {
+func (hps *fakeHwPluginServe) Register() error {
 	return nil
 }
