@@ -13,6 +13,7 @@ COPY ./lib  /usr/local/lib
 RUN chmod 550 /usr/local/bin/device-plugin &&\
     chmod 550 /usr/local/bin &&\
     chmod 750 /home/HwHiAiUser &&\
+    chmod 550 /usr/local/lib/ &&\
     chmod 500 /usr/local/lib/* &&\
     echo 'umask 027' >> /etc/profile &&\
     echo 'source /etc/profile' >> ~/.bashrc
