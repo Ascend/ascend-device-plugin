@@ -98,7 +98,7 @@ func TestSignalWatch(t *testing.T) {
 	hwlog.RunLog.Infof("Starting OS signs watcher.")
 	osSignChan := newSignWatcher(syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	hdm := HwDevManager{}
-	useVolcanoType = true
+	useVolcanoType = false
 	hps := NewHwPluginServe(&hdm, "", "")
 	var restart bool
 	go deleteServerSocket(serverSockFd)

@@ -32,7 +32,7 @@ function build_plugin() {
     export CGO_ENABLED=1
     export CGO_CFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
     export CGO_CPPFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
-    go build -buildmode=pie -ldflags "-X main.BuildName=${output_name} \
+    go build -mod=mod -buildmode=pie -ldflags "-X main.BuildName=${output_name} \
             -X main.BuildVersion=${build_version}_linux-${os_type} \
             -buildid none     \
             -s   \
