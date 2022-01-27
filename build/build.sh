@@ -11,6 +11,7 @@ if  [ -f "$version_file" ]; then
   #cut the chars after ':'
   build_version=${line#*:}
 fi
+npu_exporter_folder="${TOP_DIR}/npu-exporter"
 
 output_name="device-plugin"
 os_type=$(arch)
@@ -32,7 +33,7 @@ function build_plugin() {
     export CGO_ENABLED=1
     export CGO_CFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
     export CGO_CPPFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
-    go build -buildmode=pie -ldflags "-X main.BuildName=${output_name} \
+    go build -mod=mod -buildmode=pie -ldflags "-X main.BuildName=${output_name} \
             -X main.BuildVersion=${build_version}_linux-${os_type} \
             -buildid none     \
             -s   \
@@ -44,6 +45,14 @@ function build_plugin() {
         echo "fail to find device-plugin"
         exit 1
     fi
+}
+
+function copy_kmc_files() {
+    cp -rf "${npu_exporter_folder}/lib" "${TOP_DIR}"/output
+    cp -rf "${npu_exporter_folder}/cert-importer" "${TOP_DIR}"/output
+    chmod 550 "${TOP_DIR}"/output/lib
+    chmod 500 "${TOP_DIR}"/output/lib/*
+    chmod 500 "${TOP_DIR}/output/cert-importer"
 }
 
 function mv_file() {
@@ -81,7 +90,10 @@ function main() {
   mv_file
   modify_version
   change_mod
+  if [ "$1" != nokmc ]; then
+   copy_kmc_files
+  fi
 }
 
 
-main
+main $1

@@ -203,28 +203,28 @@ func IsVirtualDev(devType string) bool {
 }
 
 // VerifyPath used to verify the validity of the path
-func VerifyPath(verifyPath string) bool {
+func VerifyPath(verifyPath string) (string, bool) {
 	absVerifyPath, err := filepath.Abs(verifyPath)
 	if err != nil {
 		hwlog.RunLog.Errorf("abs current path failed")
-		return false
+		return "", false
 	}
 	pathInfo, err := os.Stat(absVerifyPath)
 	if err != nil || os.IsNotExist(err) {
 		hwlog.RunLog.Errorf("file path not exist")
-		return false
+		return "", false
 	}
 	realPath, err := filepath.EvalSymlinks(absVerifyPath)
 	if err != nil || absVerifyPath != realPath {
 		hwlog.RunLog.Errorf("Symlinks is not allowed")
-		return false
+		return "", false
 	}
 	stat, ok := pathInfo.Sys().(*syscall.Stat_t)
 	if !ok || stat.Uid != rootUID || stat.Gid != rootGID {
 		hwlog.RunLog.Errorf("Non-root owner group of the path")
-		return false
+		return "", false
 	}
-	return true
+	return realPath, true
 }
 
 // AssembleNpuDeviceStruct is used to create a struct of npuDevice

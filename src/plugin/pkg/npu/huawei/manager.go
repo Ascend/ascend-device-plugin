@@ -37,6 +37,23 @@ type HwDevManager struct {
 	dmgr        DeviceMgrInterface
 }
 
+// Option option
+type Option struct {
+	// GetFdFlag to describe FdFlag
+	GetFdFlag bool
+	// UseAscendDocker to chose docker type
+	UseAscendDocker bool
+	UseVolcanoType  bool
+
+	// ListAndWatchPeriod set listening device state period
+	ListAndWatchPeriod int
+
+	// AutoStowingDevs auto stowing fixes devices or not
+	AutoStowingDevs bool
+
+	KubeConfig string
+}
+
 var (
 	// GetFdFlag to describe FdFlag
 	GetFdFlag bool
@@ -44,12 +61,13 @@ var (
 	UseAscendDocker bool
 	useVolcanoType  bool
 
-	// listAndWatchPeriod set listening device state period
+	// ListAndWatchPeriod set listening device state period
 	listAndWatchPeriod int
 
-	// autoStowingDevs auto stowing fixes devices or not
+	// AutoStowingDevs auto stowing fixes devices or not
 	autoStowingDevs bool
 
+	kubeConfig string
 	// switch error log
 	logFlag = true
 )
@@ -113,18 +131,19 @@ func (hdm *HwDevManager) GetDevType() []string {
 }
 
 // Serve start grpc server
-func (hdm *HwDevManager) Serve(devType, socketPath, pluginSocket string, pluginServerFunc func(*HwDevManager, string, string) HwPluginServeInterface) {
+func (hdm *HwDevManager) Serve(devType string, pluginServerFunc func(*HwDevManager,
+	string, string) HwPluginServeInterface) {
 	// start sockPath monitor
-	if !VerifyPath(socketPath) {
-		hwlog.RunLog.Errorf("socket path verify failed")
+	hwlog.RunLog.Infof("Starting check device socket file path.")
+	realDevSockPath, isOk := VerifyPath(pluginapi.DevicePluginPath)
+	if !isOk {
+		hwlog.RunLog.Errorf("socket path verify failed!")
 		return
 	}
-	pluginSockPath := path.Join(socketPath, pluginSocket)
-
+	pluginSockPath := path.Join(realDevSockPath, fmt.Sprintf("%s.sock", devType))
 	hwlog.RunLog.Infof("Starting socket file watcher.")
 	watcher := NewFileWatch()
-	err := watcher.watchFile(pluginapi.DevicePluginPath)
-	if err != nil {
+	if err := watcher.watchFile(realDevSockPath); err != nil {
 		hwlog.RunLog.Errorf("failed to create file watcher, err: %s", err.Error())
 	}
 	defer watcher.fileWatcher.Close()
@@ -144,9 +163,9 @@ func (hdm *HwDevManager) Serve(devType, socketPath, pluginSocket string, pluginS
 			}
 			// start
 			hps = pluginServerFunc(hdm, devType, pluginSockPath)
-			preStart(hps, pluginSockPath)
+			preStart(hps)
 			// end
-			if err := hps.Start(pluginSocket, pluginSockPath); err != nil {
+			if err := hps.Start(pluginSockPath); err != nil {
 				hwlog.RunLog.Errorf("Could not contact Kubelet, retrying. " +
 					"Did you enable the device plugin feature gate?")
 				restart = true
@@ -160,7 +179,7 @@ func (hdm *HwDevManager) Serve(devType, socketPath, pluginSocket string, pluginS
 
 }
 
-func preStart(hps HwPluginServeInterface, pluginSockPath string) {
+func preStart(hps HwPluginServeInterface) {
 	for {
 		err := hps.GetDevByType()
 		if err == nil {
@@ -216,12 +235,13 @@ func (hdm *HwDevManager) signalWatch(watcher *fsnotify.Watcher, sigs chan os.Sig
 }
 
 // SetParameters to set Parameters
-func (hdm *HwDevManager) SetParameters(fdFlag, useAscendDocker, volcanoType, autoStowing bool, listWatchPeriod int) {
-	GetFdFlag = fdFlag
-	UseAscendDocker = useAscendDocker
-	useVolcanoType = volcanoType
-	listAndWatchPeriod = listWatchPeriod
-	autoStowingDevs = autoStowing
+func (hdm *HwDevManager) SetParameters(option Option) {
+	GetFdFlag = option.GetFdFlag
+	UseAscendDocker = option.UseAscendDocker
+	useVolcanoType = option.UseVolcanoType
+	listAndWatchPeriod = option.ListAndWatchPeriod
+	autoStowingDevs = option.AutoStowingDevs
+	kubeConfig = option.KubeConfig
 }
 
 func (hdm *HwDevManager) setRunMode() error {
@@ -232,9 +252,9 @@ func (hdm *HwDevManager) setRunMode() error {
 	if err != nil || devNum == 0 {
 		return err
 	}
-	var chipinfo *ChipInfo
+	chipName := ""
 	for i := int32(0); i < devNum; i++ {
-		chipinfo, err = hdm.dmgr.GetChipInfo(i)
+		chipName, err = hdm.dmgr.GetChipInfo(i)
 		if err == nil {
 			break
 		}
@@ -242,19 +262,20 @@ func (hdm *HwDevManager) setRunMode() error {
 			return err
 		}
 	}
-	if chipinfo == nil {
-		return fmt.Errorf("chip info is nil")
-	}
-	if strings.Contains(chipinfo.ChipName, "310") {
+	if strings.Contains(chipName, "310") {
 		hdm.runMode = runMode310
 		return nil
 	}
 
-	if strings.Contains(chipinfo.ChipName, "710") {
+	if strings.Contains(chipName, "710") {
 		hdm.runMode = runMode710
 		return nil
 	}
 
-	hdm.runMode = runMode910
-	return nil
+	if strings.Contains(chipName, "910") {
+		hdm.runMode = runMode910
+		return nil
+	}
+
+	return fmt.Errorf("failed to get ascend device run mode")
 }

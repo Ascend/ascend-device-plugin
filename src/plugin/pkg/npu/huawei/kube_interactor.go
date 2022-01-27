@@ -8,10 +8,11 @@ import (
 	"context"
 	"fmt"
 	"huawei.com/npu-exporter/hwlog"
+	hwutil "huawei.com/npu-exporter/utils"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -20,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 	nodeutil "k8s.io/kubernetes/pkg/util/node"
 )
 
@@ -32,6 +32,11 @@ const (
 
 	// nodeAnnotationsDeviceSep if the separator between devices on annotation
 	nodeAnnotationsDeviceSep = "comma"
+
+	// labelDeviceLen like Ascend910-0 split length is 2
+	labelDeviceLen = 2
+
+	component = "device-plugin"
 )
 
 // KubeInteractor include kubeclientSet & nodeName
@@ -42,22 +47,7 @@ type KubeInteractor struct {
 
 // NewKubeClient get client from KUBECONFIG  or not
 func NewKubeClient() (*kubernetes.Clientset, error) {
-	kubeConfig := os.Getenv("KUBECONFIG")
-	if err := checkKubeConfig(kubeConfig); err != nil {
-		return nil, fmt.Errorf("check kube config failed: %v", err)
-	}
-
-	clientCfg, err := clientcmd.BuildConfigFromFlags("", kubeConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	clientset, err := kubernetes.NewForConfig(clientCfg)
-	if err != nil {
-		return nil, err
-	}
-
-	return clientset, nil
+	return hwutil.K8sClientFor(kubeConfig, component)
 }
 
 // NewKubeInteractor create KubeInteractor
@@ -76,21 +66,6 @@ func NewKubeInteractor() (*KubeInteractor, error) {
 		clientset: client,
 		nodeName:  nodeName,
 	}, nil
-}
-
-func checkKubeConfig(kubeConfig string) error {
-	if len(kubeConfig) > kubeEnvMaxLength {
-		return fmt.Errorf("kube config length %d is bigger than %d", len(kubeConfig), kubeEnvMaxLength)
-	}
-	kubeConfigPathInfo, err := os.Stat(kubeConfig)
-	if err != nil || os.IsNotExist(err) {
-		return nil
-	}
-	stat, ok := kubeConfigPathInfo.Sys().(*syscall.Stat_t)
-	if !ok || stat.Uid != rootUID || stat.Gid != rootGID {
-		return fmt.Errorf("non-root owner group of the path")
-	}
-	return nil
 }
 
 func checkNodeName(nodeName string) error {
@@ -204,10 +179,15 @@ func changeToShortFormat(chips sets.String) sets.String {
 	for devName := range chips {
 		if len(devName) > 1 {
 			idSplit := strings.Split(devName, "-")
+			if len(idSplit) != labelDeviceLen {
+				continue
+			}
 			devID := idSplit[len(idSplit)-1]
+			if _, err := strconv.ParseInt(devID, baseDec, bitSize); err != nil {
+				continue
+			}
 			newSets.Insert(devID)
 		}
-
 	}
 
 	return newSets
@@ -215,18 +195,33 @@ func changeToShortFormat(chips sets.String) sets.String {
 
 func (ki *KubeInteractor) convertDevListToSets(devices string, sepType string) sets.String {
 	deviceSets := sets.String{}
-	var devicesList []string
+	if devices == "" {
+		return deviceSets
+	}
 	if sepType == nodeLabelsDeviceSep {
-		devicesList = strings.Split(devices, ".")
-	} else {
-		devicesList = strings.Split(devices, ",")
-	}
-	for _, device := range devicesList {
-		if len(device) == 0 {
-			continue
+		// for label
+		// check device format, must 0.1.2 and more
+		for _, device := range strings.Split(devices, ".") {
+			if _, err := strconv.ParseInt(device, baseDec, bitSize); err != nil {
+				hwlog.RunLog.Warnf("current device id invalid, err: %v", err)
+				continue
+			}
+			deviceSets.Insert(device)
 		}
-		deviceSets.Insert(device)
+	} else {
+		// for annotation
+		// check device format, must Ascend910-0,Ascend910-1 and more
+		pattern := `^Ascend910-\d+`
+		reg := regexp.MustCompile(pattern)
+		for _, device := range strings.Split(devices, ",") {
+			if !reg.MatchString(device) {
+				hwlog.RunLog.Warnf("current device format error")
+				continue
+			}
+			deviceSets.Insert(device)
+		}
 	}
+
 	return deviceSets
 }
 

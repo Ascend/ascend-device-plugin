@@ -45,10 +45,10 @@ const (
 
 	huaweiAscend910  = "huawei.com/Ascend910"
 	podPredicateTime = "predicate-time"
+	pod2kl           = "huawei/kltDev"
 	runMode310       = "ascend310"
 	runMode910       = "ascend910"
 	runMode710       = "ascend710"
-	retryTime        = 3
 	interval         = 1
 	timeout          = 10
 	maxChipName      = 32
@@ -74,5 +74,12 @@ const (
 
 	resetZero = 0
 
+	sleep2ListW = 3
+
 	initMapCap = 5
+
+	// for format change
+	baseDec = 10
+	bitSize = 64
+	bitSize32 = 32
 )

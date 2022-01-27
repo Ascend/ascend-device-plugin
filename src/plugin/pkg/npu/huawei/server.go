@@ -20,23 +20,24 @@ type HwPluginServe struct {
 	hdm            *HwDevManager
 	devices        map[string]*npuDevice
 	grpcServer     *grpc.Server
-	devType        string
-	runMode        string
-	defaultDevs    []string
-	socket         string
+	vol2KlDevMap   map[string]string
 	kubeInteractor *KubeInteractor
 	healthDevice   sets.String
 	unHealthDevice sets.String
+	defaultDevs    []string
+	devType        string
+	runMode        string
+	socket         string
 }
 
 // HwPluginServeInterface the interface of PluginServer
 type HwPluginServeInterface interface {
 	GetDevByType() error
-	Start(pluginSocket, pluginSocketPath string) error
+	Start(pluginSocketPath string) error
 	setSocket(pluginSocketPath string)
 	Stop() error
 	cleanSock() error
-	Register(k8sSocketPath, pluginSocket, resourceName string) error
+	Register() error
 }
 
 // NewHwPluginServe new a device plugin server
@@ -89,7 +90,7 @@ func (hps *HwPluginServe) GetDevByType() error {
 }
 
 // Start starts the gRPC server of the device plugin
-func (hps *HwPluginServe) Start(pluginSocket, pluginSocketPath string) error {
+func (hps *HwPluginServe) Start(pluginSocketPath string) error {
 	netListen, err := createNetListen(pluginSocketPath)
 	if err != nil {
 		return err
@@ -101,15 +102,12 @@ func (hps *HwPluginServe) Start(pluginSocket, pluginSocketPath string) error {
 
 	// Wait for grpcServer
 	for len(hps.grpcServer.GetServiceInfo()) <= 0 {
-		time.Sleep(1 * time.Second)
+		time.Sleep(time.Second)
 	}
 	hwlog.RunLog.Infof("device plugin start serving.")
 
 	// Registers To Kubelet.
-	resourceName := fmt.Sprintf("%s%s", resourceNamePrefix, hps.devType)
-	k8sSocketPath := pluginapi.KubeletSocket
-	err = hps.Register(k8sSocketPath, pluginSocket, resourceName)
-	if err == nil {
+	if err = hps.Register(); err == nil {
 		hwlog.RunLog.Infof("register to kubelet success.")
 		return nil
 	}

@@ -65,8 +65,7 @@ func TestHwDevManager_Serve(t *testing.T) {
 	}
 
 	go deleteServerSocketByDevManager(serverSock310, fakeHwDevManager)
-	fakeHwDevManager.Serve("Ascend310", "/var/lib/kubelet/device-plugins/",
-		"Ascend310.sock", NewFakeHwPluginServe)
+	fakeHwDevManager.Serve("Ascend310", NewFakeHwPluginServe)
 	t.Logf("TestHwDevManager_Serve Run Pass")
 }
 
@@ -99,7 +98,7 @@ func TestSignalWatch(t *testing.T) {
 	hwlog.RunLog.Infof("Starting OS signs watcher.")
 	osSignChan := newSignWatcher(syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	hdm := HwDevManager{}
-	useVolcanoType = true
+	useVolcanoType = false
 	hps := NewHwPluginServe(&hdm, "", "")
 	var restart bool
 	go deleteServerSocket(serverSockFd)
