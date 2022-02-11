@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: ascend-device-plugin-sa
+  name: ascend-device-plugin-sa-310
   namespace: kube-system
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: pods-node-ascend-device-plugin-role
+  name: pods-node-ascend-device-plugin-role-310
 rules:
   - apiGroups: [""]
     resources: ["pods"]
@@ -22,20 +22,20 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: pods-node-ascend-device-plugin-rolebinding
+  name: pods-node-ascend-device-plugin-rolebinding-310
 subjects:
   - kind: ServiceAccount
-    name: ascend-device-plugin-sa
+    name: ascend-device-plugin-sa-310
     namespace: kube-system
 roleRef:
   kind: ClusterRole
-  name: pods-node-ascend-device-plugin-role
+  name: pods-node-ascend-device-plugin-role-310
   apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: ascend-device-plugin2-daemonset
+  name: ascend-device-plugin2-daemonset-310
   namespace: kube-system
 spec:
   selector:
