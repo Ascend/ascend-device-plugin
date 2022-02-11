@@ -25,7 +25,7 @@ metadata:
   name: pods-node-ascend-device-plugin-rolebinding-710
 subjects:
   - kind: ServiceAccount
-    name: ascend-device-plugin-sa-910
+    name: ascend-device-plugin-sa-710
     namespace: kube-system
 roleRef:
   kind: ClusterRole
