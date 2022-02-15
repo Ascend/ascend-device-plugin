@@ -165,7 +165,7 @@ func (hnm *HwAscend910Manager) groupDevsByStatus(hps *HwPluginServe, isStateChan
 	if !isStateChange {
 		return
 	}
-	if hps.devType == hiAIAscend910Prefix && isStateChange {
+	if hps.devType == hiAIAscend910Prefix {
 		totalUHDevices = sets.String{}
 		totalNetworkUnhealthDevices = sets.String{}
 	}
