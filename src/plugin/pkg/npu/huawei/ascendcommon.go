@@ -210,7 +210,7 @@ func VerifyPath(verifyPath string) (string, bool) {
 		return "", false
 	}
 	pathInfo, err := os.Stat(absVerifyPath)
-	if err != nil || os.IsNotExist(err) {
+	if err != nil {
 		hwlog.RunLog.Errorf("file path not exist")
 		return "", false
 	}
@@ -337,7 +337,7 @@ func (adc *ascendCommonFunction) DoWithVolcanoListAndWatch(hps *HwPluginServe, i
 	freeDevices := hps.healthDevice.Difference(usedDevices)
 	annoMap := adc.GetAnnotationMap(freeDevices, hps.devType)
 	annoMap[adc.unHealthyKey] = filterTagPowerDevice(hps.unHealthDevice, adc.name)
-	if err := hps.kubeInteractor.patchNode(func(node *v1.Node) []byte {
+	if err := hps.kubeInteractor.patchNode(func(_ *v1.Node) []byte {
 		as := antStu{Metadata{Annotation: annoMap}}
 		bt, err := json.Marshal(as)
 		if err != nil {

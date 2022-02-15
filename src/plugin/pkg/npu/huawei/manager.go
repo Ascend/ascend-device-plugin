@@ -97,8 +97,7 @@ func NewHwDevManager(mode string) *HwDevManager {
 // GetNPUs get npu types
 func (hdm *HwDevManager) GetNPUs() error {
 
-	err := hdm.setRunMode()
-	if err != nil {
+	if err := hdm.setRunMode(); err != nil {
 		hwlog.RunLog.Errorf("err to set Run mode, err: %v ", err)
 		return err
 	}
@@ -249,7 +248,7 @@ func (hdm *HwDevManager) setRunMode() error {
 		return nil
 	}
 	devNum, err := hdm.dmgr.GetDeviceCount()
-	if err != nil || devNum == 0 {
+	if err != nil {
 		return err
 	}
 	chipName := ""
