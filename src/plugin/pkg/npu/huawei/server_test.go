@@ -20,20 +20,18 @@ type fakeHwPluginServe struct {
 	devType        string
 	runMode        string
 	defaultDevs    []string
-	socket         string
 	kubeInteractor *KubeInteractor
 	healthDevice   sets.String
 	unHealthDevice sets.String
 }
 
 // NewFakeHwPluginServe to create fakePlugin
-func NewFakeHwPluginServe(hdm *HwDevManager, devType string, socket string) HwPluginServeInterface {
+func NewFakeHwPluginServe(hdm *HwDevManager, devType string) HwPluginServeInterface {
 	return &fakeHwPluginServe{
 		devType:        devType,
 		hdm:            hdm,
 		runMode:        hdm.runMode,
 		devices:        make(map[string]*npuDevice),
-		socket:         socket,
 		healthDevice:   sets.String{},
 		unHealthDevice: sets.String{},
 	}
@@ -48,7 +46,7 @@ func TestStart(t *testing.T) {
 	}
 	pluginSocket := "Ascend910.sock"
 	pluginSocketPath := "/var/lib/kubelet/device-plugins/" + pluginSocket
-	hps := NewHwPluginServe(fakeHwDevManager, "Ascend910", pluginSocketPath)
+	hps := NewHwPluginServe(fakeHwDevManager, "Ascend910")
 	err := hps.Start(pluginSocketPath)
 	kubeSocketPath := "/var/lib/kubelet/device-plugins/kubelet.sock"
 	_, kubeErr := os.Stat(kubeSocketPath)
@@ -64,17 +62,8 @@ func TestStop(t *testing.T) {
 		runMode:  "ascend910",
 		stopFlag: atomic.NewBool(false),
 	}
-	pluginSocket := "Ascend910.sock"
-	pluginSocketPath := "/var/lib/kubelet/device-plugins/" + pluginSocket
-	hps := NewHwPluginServe(fakeHwDevManager, "Ascend910", pluginSocketPath)
-	err := hps.Stop()
-	if err != nil {
-		t.Fatal("TestStop Run Failed")
-	}
-	err = hps.cleanSock()
-	if err != nil {
-		t.Fatal("TestStop Run Failed")
-	}
+	hps := NewHwPluginServe(fakeHwDevManager, "Ascend910")
+	hps.Stop()
 	t.Logf("TestStop Run Pass")
 }
 
@@ -85,9 +74,7 @@ func TestGetDevByType(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pluginSocket := "Ascend310.sock"
-	pluginSocketPath := "/var/lib/kubelet/device-plugins/" + pluginSocket
-	hps := NewHwPluginServe(fakeHwDevManager, "Ascend310", pluginSocketPath)
+	hps := NewHwPluginServe(fakeHwDevManager, "Ascend310")
 	err = hps.GetDevByType()
 	if err != nil {
 		t.Fatal("TestGetDevByType Run Failed")
@@ -113,19 +100,13 @@ func (hps *fakeHwPluginServe) Start(pluginSocketPath string) error {
 	return err
 }
 
-func (hps *fakeHwPluginServe) setSocket(pluginSocketPath string) {
+func (hps *fakeHwPluginServe) setSocket() {
 	// Registers service.
 }
 
 // Stop the gRPC server
-func (hps *fakeHwPluginServe) Stop() error {
-
-	return hps.cleanSock()
-}
-
-// if device plugin stopped,the socket file should be removed
-func (hps *fakeHwPluginServe) cleanSock() error {
-	return nil
+func (hps *fakeHwPluginServe) Stop() {
+	return
 }
 
 // Register function is use to register k8s devicePlugin to kubelet.

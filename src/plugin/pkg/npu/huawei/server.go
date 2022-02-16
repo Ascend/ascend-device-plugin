@@ -11,7 +11,6 @@ import (
 	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/apimachinery/pkg/util/sets"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
-	"os"
 	"time"
 )
 
@@ -27,21 +26,19 @@ type HwPluginServe struct {
 	defaultDevs    []string
 	devType        string
 	runMode        string
-	socket         string
 }
 
 // HwPluginServeInterface the interface of PluginServer
 type HwPluginServeInterface interface {
 	GetDevByType() error
 	Start(pluginSocketPath string) error
-	setSocket(pluginSocketPath string)
-	Stop() error
-	cleanSock() error
+	setSocket()
+	Stop()
 	Register() error
 }
 
 // NewHwPluginServe new a device plugin server
-func NewHwPluginServe(hdm *HwDevManager, devType string, socket string) HwPluginServeInterface {
+func NewHwPluginServe(hdm *HwDevManager, devType string) HwPluginServeInterface {
 	var ki *KubeInteractor
 	var err error
 	if useVolcanoType {
@@ -55,7 +52,6 @@ func NewHwPluginServe(hdm *HwDevManager, devType string, socket string) HwPlugin
 		hdm:            hdm,
 		runMode:        hdm.runMode,
 		devices:        make(map[string]*npuDevice, hiAIMaxDeviceNum),
-		socket:         socket,
 		kubeInteractor: ki,
 		healthDevice:   sets.String{},
 		unHealthDevice: sets.String{},
@@ -95,7 +91,7 @@ func (hps *HwPluginServe) Start(pluginSocketPath string) error {
 	if err != nil {
 		return err
 	}
-	hps.setSocket(pluginSocketPath)
+	hps.setSocket()
 
 	// noinspection ALL
 	go hps.grpcServer.Serve(netListen)
@@ -117,8 +113,7 @@ func (hps *HwPluginServe) Start(pluginSocketPath string) error {
 	return err
 }
 
-func (hps *HwPluginServe) setSocket(pluginSocketPath string) {
-	hps.socket = pluginSocketPath
+func (hps *HwPluginServe) setSocket() {
 	hps.grpcServer = grpc.NewServer()
 	// Registers service.
 	plugin := &pluginAPI{hps: hps, outbreak: atomic.NewBool(false)}
@@ -126,22 +121,12 @@ func (hps *HwPluginServe) setSocket(pluginSocketPath string) {
 }
 
 // Stop the gRPC server
-func (hps *HwPluginServe) Stop() error {
+func (hps *HwPluginServe) Stop() {
 	if hps.grpcServer == nil {
-		return nil
+		return
 	}
 	hps.grpcServer.Stop()
 	hps.grpcServer = nil
 
-	return hps.cleanSock()
-}
-
-// if device plugin stopped,the socket file should be removed
-func (hps *HwPluginServe) cleanSock() error {
-
-	if err := os.Remove(hps.socket); err != nil && !os.IsNotExist(err) {
-		return err
-	}
-
-	return nil
+	return
 }
