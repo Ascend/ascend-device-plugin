@@ -99,7 +99,7 @@ func TestSignalWatch(t *testing.T) {
 	osSignChan := newSignWatcher(syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	hdm := HwDevManager{}
 	useVolcanoType = false
-	hps := NewHwPluginServe(&hdm, "", "")
+	hps := NewHwPluginServe(&hdm, "")
 	var restart bool
 	go deleteServerSocket(serverSockFd)
 	restart = hdm.signalWatch(watcher.fileWatcher, osSignChan, restart, hps, "")

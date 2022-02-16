@@ -8,7 +8,6 @@ import (
 	mock_v1beta1 "Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_kubelet_v1beta1"
 	"Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_kubernetes"
 	"Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_v1"
-	"fmt"
 	. "github.com/agiledragon/gomonkey/v2"
 	"github.com/golang/mock/gomock"
 	. "github.com/smartystreets/goconvey/convey"
@@ -20,7 +19,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
-	"path"
 	"testing"
 	"time"
 )
@@ -71,9 +69,7 @@ func TestPluginAPI_ListAndWatch(t *testing.T) {
 	for _, devType := range devTypes {
 		mockstream := mock_v1beta1.NewMockDevicePlugin_ListAndWatchServer(ctrl)
 		mockstream.EXPECT().Send(&pluginapi.ListAndWatchResponse{}).Return(nil)
-		pluginSocket := fmt.Sprintf("%s.sock", devType)
-		pluginSockPath := path.Join(pluginapi.DevicePluginPath, pluginSocket)
-		fakePluginAPI = createFakePluginAPI(hdm, devType, pluginSockPath, fakeKubeInteractor)
+		fakePluginAPI = createFakePluginAPI(hdm, devType, fakeKubeInteractor)
 		go changeBreakFlag(fakePluginAPI)
 		err := fakePluginAPI.ListAndWatch(&pluginapi.Empty{}, mockstream)
 		if err != nil {
@@ -88,13 +84,12 @@ func changeBreakFlag(api *pluginAPI) {
 	api.outbreak.Store(true)
 }
 
-func createFakePluginAPI(hdm *HwDevManager, devType string, socket string, ki *KubeInteractor) *pluginAPI {
+func createFakePluginAPI(hdm *HwDevManager, devType string, ki *KubeInteractor) *pluginAPI {
 	return &pluginAPI{hps: &HwPluginServe{
 		devType:        devType,
 		hdm:            hdm,
 		runMode:        hdm.runMode,
 		devices:        make(map[string]*npuDevice),
-		socket:         socket,
 		kubeInteractor: ki,
 		healthDevice:   sets.String{},
 		unHealthDevice: sets.String{},
@@ -134,9 +129,7 @@ func TestAddAnnotation(t *testing.T) {
 		if IsVirtualDev(devType) {
 			continue
 		}
-		pluginSocket := fmt.Sprintf("%s.sock", devType)
-		pluginSockPath := path.Join(pluginapi.DevicePluginPath, pluginSocket)
-		fakePluginAPI = createFakePluginAPI(hdm, devType, pluginSockPath, fakeKubeInteractor)
+		fakePluginAPI = createFakePluginAPI(hdm, devType, fakeKubeInteractor)
 	}
 	devices := make(map[string]string, 2)
 	devices["0"] = "0.0.0.0"
@@ -183,8 +176,7 @@ func TestAllocate(t *testing.T) {
 		clientset: mockK8s,
 		nodeName:  "NODE_NAME",
 	}
-	pluginSockPath := fmt.Sprintf("%s.sock", "Ascend910")
-	fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", pluginSockPath, fakeKubeInteractor)
+	fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", fakeKubeInteractor)
 	var ctx context.Context
 	fakePluginAPI.hps.devices["Ascend910-8c-1-1"] = &npuDevice{
 		devType: "Ascend910-8c",
@@ -206,9 +198,8 @@ func TestGetDevicePluginOptions(t *testing.T) {
 	var ctx context.Context
 	var pe pluginapi.Empty
 	hdm := createFakeDevManager("ascend910")
-	pluginSockPath := fmt.Sprintf("%s.sock", "Ascend910")
 	fakeKubeInteractor := &KubeInteractor{}
-	fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", pluginSockPath, fakeKubeInteractor)
+	fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", fakeKubeInteractor)
 	_, err := fakePluginAPI.GetDevicePluginOptions(ctx, &pe)
 	if err != nil {
 		t.Fatal("TestGetDevicePluginOptions Run Failed")
@@ -222,9 +213,8 @@ func TestGetNPUAnnotationOfPod(t *testing.T) {
 	var res []v1.Pod
 	ascendVisibleDevices := make(map[string]string, MaxVirtualDevNum)
 	hdm := createFakeDevManager("ascend910")
-	pluginSockPath := fmt.Sprintf("%s.sock", "Ascend910")
 	fakeKubeInteractor := &KubeInteractor{}
-	fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", pluginSockPath, fakeKubeInteractor)
+	fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", fakeKubeInteractor)
 	for _, pod := range pods {
 		if err := fakePluginAPI.checkPodNameAndSpace(pod.Name, podNameMaxLength); err != nil {
 			t.Fatal("TestGetNPUAnnotationOfPod Run Failed")
@@ -295,7 +285,6 @@ func TestCheckDeviceNetworkHealthStatus(t *testing.T) {
 			defer patches.Reset()
 			hdm := createFake910HwDevManager("ascend910", false, false, false)
 			hdm.dmgr = newFakeDeviceManager()
-			pluginSockPath := fmt.Sprintf("%s.sock", "Ascend910")
 			fakeKubeInteractor := &KubeInteractor{}
 			device := &npuDevice{
 				devType:       "Ascend910",
@@ -304,7 +293,7 @@ func TestCheckDeviceNetworkHealthStatus(t *testing.T) {
 				Health:        pluginapi.Healthy,
 				networkHealth: pluginapi.Healthy,
 			}
-			fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", pluginSockPath, fakeKubeInteractor)
+			fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", fakeKubeInteractor)
 			ret := fakePluginAPI.checkDeviceNetworkHealthStatus(device)
 			So(ret, ShouldBeFalse)
 		})
@@ -320,7 +309,6 @@ func TestCheckDeviceNetworkStatusChange(t *testing.T) {
 			defer patches.Reset()
 			hdm := createFake910HwDevManager("ascend910", false, false, false)
 			hdm.dmgr = newFakeDeviceManager()
-			pluginSockPath := fmt.Sprintf("%s.sock", "Ascend910")
 			fakeKubeInteractor := &KubeInteractor{}
 			device := &npuDevice{
 				devType:       "Ascend910",
@@ -329,7 +317,7 @@ func TestCheckDeviceNetworkStatusChange(t *testing.T) {
 				Health:        pluginapi.Healthy,
 				networkHealth: pluginapi.Healthy,
 			}
-			fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", pluginSockPath, fakeKubeInteractor)
+			fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", fakeKubeInteractor)
 			ret := fakePluginAPI.checkDeviceNetworkHealthStatus(device)
 			So(ret, ShouldBeTrue)
 		})
@@ -340,7 +328,6 @@ func TestDonotCheckNetworkStatus(t *testing.T) {
 	Convey("do not check device network status", t, func() {
 		Convey("virtual device don't check network healthy", func() {
 			hdm := createFakeDevManager("ascend910")
-			pluginSockPath := fmt.Sprintf("%s.sock", "Ascend910")
 			fakeKubeInteractor := &KubeInteractor{}
 			device := &npuDevice{
 				devType:       "Ascend910-8c",
@@ -349,7 +336,7 @@ func TestDonotCheckNetworkStatus(t *testing.T) {
 				Health:        pluginapi.Healthy,
 				networkHealth: pluginapi.Healthy,
 			}
-			fakePluginAPI := createFakePluginAPI(hdm, "Ascend910-8c", pluginSockPath, fakeKubeInteractor)
+			fakePluginAPI := createFakePluginAPI(hdm, "Ascend910-8c", fakeKubeInteractor)
 			ret := fakePluginAPI.checkDeviceNetworkHealthStatus(device)
 			So(ret, ShouldBeFalse)
 		})
@@ -363,7 +350,6 @@ func TestDonotCheckNetworkStatus(t *testing.T) {
 			defer patches.Reset()
 			defer patches2.Reset()
 			hdm := createFake910HwDevManager("ascend910", false, false, false)
-			pluginSockPath := fmt.Sprintf("%s.sock", "Ascend910")
 			fakeKubeInteractor := &KubeInteractor{}
 			device := &npuDevice{
 				devType:       "Ascend910",
@@ -372,7 +358,7 @@ func TestDonotCheckNetworkStatus(t *testing.T) {
 				Health:        pluginapi.Healthy,
 				networkHealth: pluginapi.Healthy,
 			}
-			fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", pluginSockPath, fakeKubeInteractor)
+			fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", fakeKubeInteractor)
 			ret := fakePluginAPI.checkDeviceNetworkHealthStatus(device)
 			So(ret, ShouldBeFalse)
 		})
