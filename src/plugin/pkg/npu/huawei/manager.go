@@ -5,6 +5,7 @@
 package huawei
 
 import (
+	"errors"
 	"fmt"
 	"github.com/fsnotify/fsnotify"
 	"go.uber.org/atomic"
@@ -109,6 +110,9 @@ func (hdm *HwDevManager) GetNPUs() error {
 		hdm.manager = NewHwAscend910Manager()
 	case runMode710:
 		hdm.manager = NewHwAscend710Manager()
+	default:
+		hwlog.RunLog.Errorf("found an unsupported device type")
+		return errors.New("an unsupported device type")
 	}
 	hwlog.RunLog.Infof("device plugin start")
 	hdm.manager.SetDmgr(hdm.dmgr)
