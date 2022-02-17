@@ -97,8 +97,7 @@ func NewHwDevManager(mode string) *HwDevManager {
 // GetNPUs get npu types
 func (hdm *HwDevManager) GetNPUs() error {
 
-	err := hdm.setRunMode()
-	if err != nil {
+	if err := hdm.setRunMode(); err != nil {
 		hwlog.RunLog.Errorf("err to set Run mode, err: %v ", err)
 		return err
 	}
@@ -132,7 +131,7 @@ func (hdm *HwDevManager) GetDevType() []string {
 
 // Serve start grpc server
 func (hdm *HwDevManager) Serve(devType string, pluginServerFunc func(*HwDevManager,
-	string, string) HwPluginServeInterface) {
+	string) HwPluginServeInterface) {
 	// start sockPath monitor
 	hwlog.RunLog.Infof("Starting check device socket file path.")
 	realDevSockPath, isOk := VerifyPath(pluginapi.DevicePluginPath)
@@ -162,7 +161,7 @@ func (hdm *HwDevManager) Serve(devType string, pluginServerFunc func(*HwDevManag
 				hps.Stop()
 			}
 			// start
-			hps = pluginServerFunc(hdm, devType, pluginSockPath)
+			hps = pluginServerFunc(hdm, devType)
 			preStart(hps)
 			// end
 			if err := hps.Start(pluginSockPath); err != nil {
@@ -249,7 +248,7 @@ func (hdm *HwDevManager) setRunMode() error {
 		return nil
 	}
 	devNum, err := hdm.dmgr.GetDeviceCount()
-	if err != nil || devNum == 0 {
+	if err != nil {
 		return err
 	}
 	chipName := ""

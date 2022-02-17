@@ -195,7 +195,10 @@ func (d *DeviceManager) GetDeviceCount() (int32, error) {
 	if int(count) < 0 || int(count) > hiAIMaxDeviceNum {
 		return retError, fmt.Errorf("number of deviceis incorrect: %d", int(count))
 	}
-	return int32(count), nil
+	if int(count) == 0 {
+		return 0, fmt.Errorf("the number of available chips is 0")
+	}
+ 	return int32(count), nil
 }
 
 // GetDeviceList device get list
@@ -206,12 +209,17 @@ func (d *DeviceManager) GetDeviceList(devices *[hiAIMaxDeviceNum]uint32) (int32,
 	}
 
 	var ids [hiAIMaxDeviceNum]C.int
+	// ids is an integer array, but its value cannot be less than 0
 	if err := C.dsmi_list_device(&ids[0], C.int(devNum)); err != 0 {
 		return retError, fmt.Errorf("unable to get device list, return error: %d", int32(err))
 	}
 	// transfer device list
 	var i int32
 	for i = 0; i < devNum; i++ {
+		if int(ids[i]) < 0 {
+			hwlog.RunLog.Errorf("device logical ID is less than 0")
+			continue
+		}
 		(*devices)[i] = uint32(ids[i])
 	}
 

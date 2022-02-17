@@ -63,7 +63,7 @@ spec:
       priorityClassName: "system-node-critical"
       nodeSelector:
         accelerator: huawei-Ascend710
-      serviceAccountName: ascend-device-plugin-sa
+      serviceAccountName: ascend-device-plugin-sa-710
       containers:
       - image: ascend-k8sdeviceplugin:v2.0.3
         name: device-plugin-01
