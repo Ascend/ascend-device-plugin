@@ -100,7 +100,6 @@ func (hps *HwPluginServe) Register() error {
 		Endpoint:     fmt.Sprintf("%s.sock", hps.devType),
 		ResourceName: resourceNamePrefix + hps.devType,
 	}
-	hwlog.RunLog.Infof("the device plugin api version is: %s", pluginapi.Version)
 	if _, err = client.Register(context.Background(), reqt); err != nil {
 		return fmt.Errorf("register to kubelet fail: %v", err)
 	}
@@ -291,7 +290,7 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 	error) {
 
 	resps := new(pluginapi.AllocateResponse)
-	hwlog.RunLog.Infof("allocate request: %s", requests.String())
+	hwlog.RunLog.Infof("allocate request: %#v", requests.String())
 	requestErrs := s.setAscendRuntimeOptions(requests)
 	if requestErrs != nil {
 		return nil, requestErrs
@@ -437,7 +436,7 @@ func getNPUByStatus(kubeClient kubernetes.Interface, nodeName string, hps *HwPlu
 		}
 		kltDevsList := strings.Split(kltDevs, ",")
 		if len(tmpNpuList) != len(kltDevsList) {
-			hwlog.RunLog.Warnf("klt len not equ vol , klt : %s vol : %s", kltDevs, tmpNpu)
+			hwlog.RunLog.Warnf("klt len not equ vol , klt : %#v vol : %#v", kltDevs, tmpNpu)
 			*useNpu = append(*useNpu, tmpNpuList...)
 			continue
 		}
@@ -445,7 +444,7 @@ func getNPUByStatus(kubeClient kubernetes.Interface, nodeName string, hps *HwPlu
 			hps.vol2KlDevMap[vol] = kltDevsList[i]
 		}
 		*useNpu = append(*useNpu, tmpNpuList...)
-		hwlog.RunLog.Debugf(" pod Name %s  getNPUByStatus klt : %s vol : %s", pod.Name, kltDevs, tmpNpu)
+		hwlog.RunLog.Debugf(" pod Name %s  getNPUByStatus klt : %#v vol : %#v", pod.Name, kltDevs, tmpNpu)
 	}
 	hwlog.RunLog.Debugf("useNpu: " + strings.Join(*useNpu, ","))
 	return false
