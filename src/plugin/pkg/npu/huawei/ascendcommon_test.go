@@ -47,7 +47,7 @@ func TestGetDeviceID(t *testing.T) {
 			So(virID, ShouldBeEmpty)
 		})
 		Convey("ascendRuntimeOptions is virtualDev", func() {
-			deviceName := "Ascend910-1"
+			deviceName := "Ascend910-2c-112-1"
 			ascendRuntimeOptions := virtualDev
 			_, virID, err := getDeviceID(deviceName, ascendRuntimeOptions)
 			So(err, ShouldBeNil)
