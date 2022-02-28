@@ -128,7 +128,7 @@ const (
 	// UnRetError return error
 	unretError = 100
 
-	// dsmiMaxVdevNum is number of vdevice the devid spilt
+	// dsmiMaxVdevNum is max number of vdevice, value is from driver specification
 	dsmiMaxVdevNum = 16
 
 	// MaxErrorCodeCount is the max number of error code
@@ -329,14 +329,17 @@ func (d *DeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error)
 	}
 
 	for i := uint32(0); i < cgoDsmiVDevInfos.vDevNum; i++ {
-		coreNum := fmt.Sprintf("%v", dsmiVDevInfo.vdev[i].spec.core_num)
+		cNum := dsmiVDevInfo.vdev[i].spec.core_num
+		if cNum == 1 {
+			continue
+		}
 		cgoDsmiVDevInfos.cgoDsmiSubVDevInfos = append(cgoDsmiVDevInfos.cgoDsmiSubVDevInfos, CgoDsmiSubVDevInfo{
 			status: uint32(dsmiVDevInfo.vdev[i].status),
 			vdevid: uint32(dsmiVDevInfo.vdev[i].vdevid),
 			vfid:   uint32(dsmiVDevInfo.vdev[i].vfid),
 			cid:    uint64(dsmiVDevInfo.vdev[i].cid),
 			spec: CgoDsmiVdevSpecInfo{
-				coreNum: coreNum,
+				coreNum: fmt.Sprintf("%v", cNum),
 			},
 		})
 	}

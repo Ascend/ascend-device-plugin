@@ -189,8 +189,8 @@ func getDeviceID(deviceName string, ascendRuntimeOptions string) (string, string
 	}
 	var virID string
 	deviceID := idSplit[len(idSplit)-1]
-	if ascendRuntimeOptions == virtualDev {
-		virID = idSplit[len(idSplit)-2]
+	if ascendRuntimeOptions == virtualDev && len(idSplit) == virDeviceLen {
+		virID = idSplit[idSplitNum]
 	}
 	return deviceID, virID, nil
 }

@@ -58,6 +58,7 @@ const (
 	pwr4CSuffix           = "Ascend910-4c"
 	pwr8CSuffix           = "Ascend910-8c"
 	pwr16CSuffix          = "Ascend910-16c"
+	virDeviceLen          = 4
 
 	logicIDIndexInVirtualDevID910  = 3
 	huaweiNetworkUnHealthAscend910 = "huawei.com/Ascend910-NetworkUnhealthy"
