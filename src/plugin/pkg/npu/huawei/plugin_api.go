@@ -93,7 +93,12 @@ func (hps *HwPluginServe) Register() error {
 		hwlog.RunLog.Errorf("connect to kubelet failed, err: %s", err.Error())
 		return fmt.Errorf("connect to kubelet fail: %v", err)
 	}
-	defer conn.Close()
+	defer func() {
+		if err := conn.Close(); err != nil {
+			hwlog.RunLog.Errorf("close kubelet connect failed, err: %s", err.Error())
+		}
+	}()
+
 	client := pluginapi.NewRegistrationClient(conn)
 	reqt := &pluginapi.RegisterRequest{
 		Version:      pluginapi.Version,
