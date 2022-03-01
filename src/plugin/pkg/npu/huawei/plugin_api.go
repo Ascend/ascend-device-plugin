@@ -320,6 +320,7 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 			}
 		}
 		if s.hps.runMode == runMode910 {
+			s.mountfile(resp)
 			s.responseAnonation(resp, ascendVisibleDevicesMap)
 		}
 		addEnv(ascendVisibleDevicesMap, s.ascendRuntimeOptions, resp)
@@ -530,6 +531,47 @@ func (s *pluginAPI) PreStartContainer(ctx context.Context,
 	r *pluginapi.PreStartContainerRequest) (*pluginapi.PreStartContainerResponse, error) {
 	hwlog.RunLog.Infof("PreStart just call in UT.")
 	return &pluginapi.PreStartContainerResponse{}, nil
+}
+
+func (s *pluginAPI) mountfile(resp *pluginapi.ContainerAllocateResponse) {
+	timeStr := time.Now().Format("20060102150405")
+	rankID := "" + timeStr + "-0"
+	slogConfigPath := GetSlogConfigFilePath()
+	resp.Mounts = append(resp.Mounts, &pluginapi.Mount{
+		ContainerPath: slogConfigPath,
+		HostPath:      slogConfigPath,
+		ReadOnly:      true,
+	})
+	// mount log format
+
+	logPath := "/var/log/npu"
+	hostLogPath := logPath + "/slog/container/" + rankID
+	resp.Mounts = append(resp.Mounts, &pluginapi.Mount{
+		ContainerPath: logPath + "/slog",
+		HostPath:      hostLogPath,
+		ReadOnly:      false,
+	})
+
+	hostProfilingPath := logPath + "/profiling/container/" + rankID
+	resp.Mounts = append(resp.Mounts, &pluginapi.Mount{
+		ContainerPath: logPath + "/profiling",
+		HostPath:      hostProfilingPath,
+		ReadOnly:      false,
+	})
+
+	hostDumpPath := logPath + "/dump/container/" + rankID
+	resp.Mounts = append(resp.Mounts, &pluginapi.Mount{
+		ContainerPath: logPath + "/dump",
+		HostPath:      hostDumpPath,
+		ReadOnly:      false,
+	})
+
+	hostDockerSlogPath := logPath + "/docker_slog_" + rankID
+	resp.Mounts = append(resp.Mounts, &pluginapi.Mount{
+		ContainerPath: "/usr/slog",
+		HostPath:      hostDockerSlogPath,
+		ReadOnly:      false,
+	})
 }
 
 func sendDevToKubelet(resp *pluginapi.ListAndWatchResponse, stream pluginapi.DevicePlugin_ListAndWatchServer) error {
