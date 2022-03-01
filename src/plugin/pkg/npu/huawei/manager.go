@@ -149,7 +149,11 @@ func (hdm *HwDevManager) Serve(devType string, pluginServerFunc func(*HwDevManag
 	if err := watcher.watchFile(realDevSockPath); err != nil {
 		hwlog.RunLog.Errorf("failed to create file watcher, err: %s", err.Error())
 	}
-	defer watcher.fileWatcher.Close()
+	defer func() {
+		if err := watcher.fileWatcher.Close(); err != nil {
+			hwlog.RunLog.Errorf("close file watcher, err: %s", err.Error())
+		}
+	}()
 
 	hwlog.RunLog.Infof("Starting OS signs watcher.")
 	osSignChan := newSignWatcher(syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGKILL)
