@@ -146,17 +146,19 @@ func (hdm *HwDevManager) Serve(devType string, pluginServerFunc func(*HwDevManag
 	pluginSockPath := path.Join(realDevSockPath, fmt.Sprintf("%s.sock", devType))
 	hwlog.RunLog.Infof("Starting socket file watcher.")
 	watcher := NewFileWatch()
-	if err := watcher.watchFile(realDevSockPath); err != nil {
-		hwlog.RunLog.Errorf("failed to create file watcher, err: %s", err.Error())
+	if watcher == nil {
+		hwlog.RunLog.Errorf("failed to create file watcher")
+		return
 	}
 	defer func() {
 		if err := watcher.fileWatcher.Close(); err != nil {
 			hwlog.RunLog.Errorf("close file watcher, err: %s", err.Error())
 		}
 	}()
-
-	hwlog.RunLog.Infof("Starting OS signs watcher.")
-	osSignChan := newSignWatcher(syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGKILL)
+	if err := watcher.watchFile(realDevSockPath); err != nil {
+		hwlog.RunLog.Errorf("failed to create file watcher, err: %s", err.Error())
+		return
+	}
 
 	restart := true
 	var hps HwPluginServeInterface
@@ -170,6 +172,10 @@ func (hdm *HwDevManager) Serve(devType string, pluginServerFunc func(*HwDevManag
 			}
 			// start
 			hps = pluginServerFunc(hdm, devType)
+			if hps == nil {
+				hwlog.RunLog.Error("failed to create kube interactor")
+				return
+			}
 			preStart(hps)
 			// end
 			if err := hps.Start(pluginSockPath); err != nil {
@@ -181,6 +187,7 @@ func (hdm *HwDevManager) Serve(devType string, pluginServerFunc func(*HwDevManag
 			}
 		}
 		// Monitor file signals and system signals
+		osSignChan := newSignWatcher(syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGKILL)
 		restart = hdm.signalWatch(watcher.fileWatcher, osSignChan, restart, hps, pluginSockPath)
 	}
 

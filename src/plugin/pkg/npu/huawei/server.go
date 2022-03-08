@@ -45,6 +45,7 @@ func NewHwPluginServe(hdm *HwDevManager, devType string) HwPluginServeInterface 
 		ki, err = NewKubeInteractor()
 		if err != nil {
 			hwlog.RunLog.Errorf("cannot create kube interactor, err: %v", err)
+			return nil
 		}
 	}
 	return &HwPluginServe{
