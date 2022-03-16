@@ -13,6 +13,7 @@ spec:
     metadata:
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ""
+        seccomp.security.alpha.kubernetes.io/pod: runtime/default
       labels:
         name: ascend-device-plugin-ds
     spec:
