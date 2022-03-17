@@ -5,7 +5,6 @@ CUR_DIR=$(dirname "$(readlink -f $0)")
 TOP_DIR=$(realpath "${CUR_DIR}"/..)
 export GO111MODULE="on"
 export GONOSUMDB="*"
-export GOPROXY="http://mirrors.tools.huawei.com/goproxy/,direct"
 export PATH=$GOPATH/bin:$PATH
 
 go get github.com/golang/mock/mockgen

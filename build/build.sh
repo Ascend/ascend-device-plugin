@@ -19,7 +19,6 @@ build_type=build
 
 if [ "$1" == "ci" ] || [ "$2" == "ci" ]; then
     export GO111MODULE="on"
-    export GOPROXY="http://mirrors.tools.huawei.com/goproxy/"
     export GONOSUMDB="*"
     build_type=ci
 fi
