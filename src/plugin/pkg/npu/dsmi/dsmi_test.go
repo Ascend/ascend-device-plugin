@@ -1,7 +1,7 @@
 /*
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
  */
-
+// Package dsmi is driver dsmi interface related
 package dsmi
 
 import (
@@ -11,6 +11,8 @@ import (
 	"testing"
 )
 
+const testLogicID = 3
+
 // EnableContainerService for enableContainerService
 func (d *fakeDeviceManager) EnableContainerService() error {
 	return nil
@@ -18,7 +20,7 @@ func (d *fakeDeviceManager) EnableContainerService() error {
 
 // TestUnhealthyState for UnhealthyState
 func TestUnhealthyState(t *testing.T) {
-	err := huawei.UnhealthyState(1, uint32(3), "healthState", NewFakeDeviceManager())
+	err := huawei.UnhealthyState(1, uint32(testLogicID), "healthState", NewFakeDeviceManager())
 	if err != nil {
 		t.Errorf("TestUnhealthyState Run Failed")
 	}

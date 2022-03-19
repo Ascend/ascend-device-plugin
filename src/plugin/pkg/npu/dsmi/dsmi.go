@@ -155,9 +155,9 @@ const (
 // CgoDsmiSubVDevInfo single VDevInfo info
 type CgoDsmiSubVDevInfo struct {
 	Status uint32
-	Vdevid uint32
-	Vfid   uint32
-	Cid    uint64
+	VDevID uint32
+	VfID   uint32
+	CID    uint64
 	Spec   CgoDsmiVdevSpecInfo
 }
 
@@ -280,7 +280,7 @@ func (d *DeviceManager) GetLogicID(phyID uint32) (uint32, error) {
 	if err != 0 {
 		return unretError, fmt.Errorf("get logic id failed ,error code is : %d", int32(err))
 	}
-	if uint32(logicID) > uint32(hiAIMaxDeviceNum) {
+	if uint32(logicID) >= uint32(hiAIMaxDeviceNum) {
 		return unretError, fmt.Errorf("get invalid logic id: %d", uint32(logicID))
 	}
 
@@ -314,7 +314,9 @@ func (d *DeviceManager) GetDeviceIP(logicID int32) (string, error) {
 	var ipAddress [hiAIMaxDeviceNum]C.ip_addr_t
 	var maskAddress [hiAIMaxDeviceNum]C.ip_addr_t
 	var deviceIP []string
-
+	if logicID >= hiAIMaxDeviceNum {
+		return ERROR, fmt.Errorf("getDevice IP address failed, error logicID")
+	}
 	retCode := C.dsmi_get_device_ip_address(C.int(logicID), portType, portID, &ipAddress[C.int(logicID)],
 		&maskAddress[C.int(logicID)])
 	if retCode != 0 {
@@ -354,9 +356,9 @@ func (d *DeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error)
 		}
 		cgoDsmiVDevInfos.CgoDsmiSubVDevInfos = append(cgoDsmiVDevInfos.CgoDsmiSubVDevInfos, CgoDsmiSubVDevInfo{
 			Status: uint32(dsmiVDevInfo.vdev[i].status),
-			Vdevid: uint32(dsmiVDevInfo.vdev[i].vdevid),
-			Vfid:   uint32(dsmiVDevInfo.vdev[i].vfid),
-			Cid:    uint64(dsmiVDevInfo.vdev[i].cid),
+			VDevID: uint32(dsmiVDevInfo.vdev[i].vdevid),
+			VfID:   uint32(dsmiVDevInfo.vdev[i].vfid),
+			CID:    uint64(dsmiVDevInfo.vdev[i].cid),
 			Spec: CgoDsmiVdevSpecInfo{
 				CoreNum: fmt.Sprintf("%v", cNum),
 			},

@@ -1,5 +1,5 @@
 // Copyright (c) 2022. Huawei Technologies Co., Ltd. All rights reserved.
-// Package common, a series of common function
+// Package common a series of common function
 package common
 
 import (
@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	hwutil "huawei.com/npu-exporter/utils"
+	"huawei.com/npu-exporter/utils"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -34,11 +34,9 @@ type NpuDevice struct {
 
 // GetDeviceID get phyID and virtualID
 func GetDeviceID(deviceName string, ascendRuntimeOptions string) (string, string, error) {
-
 	// hiAIAscend310Prefix: davinci-mini
 	// vnpu: davinci-coreNum-vid-devID, like Ascend910-2c-111-0
 	// ascend310:  davinci-mini0
-
 	idSplit := strings.Split(deviceName, "-")
 
 	if len(idSplit) < idSplitNum {
@@ -67,5 +65,5 @@ func CheckNodeName(nodeName string) error {
 
 // NewKubeClient get client from KUBECONFIG  or not
 func NewKubeClient(kubeConfig string) (*kubernetes.Clientset, error) {
-	return hwutil.K8sClientFor(kubeConfig, component)
+	return utils.K8sClientFor(kubeConfig, component)
 }

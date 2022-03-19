@@ -1,11 +1,8 @@
 // Copyright (c) 2022. Huawei Technologies Co., Ltd. All rights reserved.
-// Package common, a series of constants
+// Package common a series of constants
 package common
 
 const (
-	// All HUAWEI Ascend910 cards should be mounted with hiAIHDCDevice and hiAIManagerDevice
-	// If the driver installed correctly, these two devices will be there.
-
 	// HiAIHDCDevice hisi_hdc
 	HiAIHDCDevice = "/dev/hisi_hdc"
 	// HiAIManagerDevice davinci_manager
