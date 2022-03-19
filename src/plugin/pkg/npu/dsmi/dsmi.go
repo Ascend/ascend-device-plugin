@@ -1,6 +1,7 @@
 /*
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
  */
+
 // Package dsmi is driver dsmi interface related
 package dsmi
 
@@ -434,8 +435,8 @@ func (d *DeviceManager) create710VirDevice(vDevInfos CgoDsmiVDevInfo, logicID ui
 }
 
 // DestroyVirtualDevice destroy spec virtual device
-func (d *DeviceManager) DestroyVirtualDevice(logicID uint32, vDevId uint32) error {
-	if err := C.dsmi_destroy_vdevice(C.uint(logicID), C.uint(vDevId)); err != 0 {
+func (d *DeviceManager) DestroyVirtualDevice(logicID uint32, vDevID uint32) error {
+	if err := C.dsmi_destroy_vdevice(C.uint(logicID), C.uint(vDevID)); err != 0 {
 		return fmt.Errorf("%v", err)
 	}
 	return nil

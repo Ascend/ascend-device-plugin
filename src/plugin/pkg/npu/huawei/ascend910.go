@@ -111,11 +111,11 @@ func (hnm *HwAscend910Manager) assembleVirtualDevices(phyID uint32, cgoDsmiVDevI
 			continue
 		}
 		vDeviType := fmt.Sprintf("%s-%sc", hiAIAscend910Prefix, dsmiSubVDevInfo.Spec.CoreNum)
-		devID := fmt.Sprintf("%s-%sc-%d-%d", hiAIAscend910Prefix, dsmiSubVDevInfo.Spec.CoreNum, dsmiSubVDevInfo.Vdevid, phyID)
+		devID := fmt.Sprintf("%s-%sc-%d-%d", hiAIAscend910Prefix, dsmiSubVDevInfo.Spec.CoreNum, dsmiSubVDevInfo.VDevID, phyID)
 		device := hnm.AssembleNpuDeviceStruct(vDeviType, devID)
 		devices = append(devices, device)
 		vDeviTypes = append(vDeviTypes, vDeviType)
-		vDevID = append(vDevID, fmt.Sprintf("%d", dsmiSubVDevInfo.Vdevid))
+		vDevID = append(vDevID, fmt.Sprintf("%d", dsmiSubVDevInfo.VDevID))
 	}
 	return devices, vDeviTypes, vDevID
 }

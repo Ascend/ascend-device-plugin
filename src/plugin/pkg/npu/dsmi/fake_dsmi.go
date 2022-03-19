@@ -1,4 +1,5 @@
 // Copyright (c) 2022. Huawei Technologies Co., Ltd. All rights reserved.
+
 // Package dsmi using driver interface
 package dsmi
 
@@ -24,6 +25,7 @@ const (
 	testPhyDevID = "0234567"
 )
 
+// FakeDeviceManager fakeDeviceManager
 type FakeDeviceManager struct{}
 
 // NewFakeDeviceManager FakeDeviceManager
@@ -61,7 +63,7 @@ func (d *FakeDeviceManager) GetDeviceList(devices *[hiAIMaxDeviceNum]uint32) (in
 	return devNum, nil
 }
 
-//  GetDeviceHealth get device health by id
+// GetDeviceHealth get device health by id
 func (d *FakeDeviceManager) GetDeviceHealth(logicID int32) (uint32, error) {
 	if logicID == unHealthyTestLogicID {
 		return uint32(unHealthyTestLogicID), nil
@@ -69,7 +71,7 @@ func (d *FakeDeviceManager) GetDeviceHealth(logicID int32) (uint32, error) {
 	return uint32(0), nil
 }
 
-//  GetDeviceNetworkHealth get device network health by id
+// GetDeviceNetworkHealth get device network health by id
 func (d *FakeDeviceManager) GetDeviceNetworkHealth(logicID int32) (uint32, error) {
 	if logicID == unHealthyTestLogicID {
 		return uint32(unHealthyTestLogicID), nil

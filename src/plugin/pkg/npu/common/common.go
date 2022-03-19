@@ -1,4 +1,5 @@
 // Copyright (c) 2022. Huawei Technologies Co., Ltd. All rights reserved.
+
 // Package common a series of common function
 package common
 
