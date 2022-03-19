@@ -5,53 +5,55 @@
 package huawei
 
 import (
-	. "github.com/smartystreets/goconvey/convey"
-	"k8s.io/apimachinery/pkg/util/sets"
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 	"testing"
+
+	"github.com/smartystreets/goconvey/convey"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 func TestGetNewNetworkRecoverDev(t *testing.T) {
-	Convey("getNewNetworkRecoverDev test", t, func() {
-		Convey("autoStowing is true", func() {
+	convey.Convey("getNewNetworkRecoverDev test", t, func() {
+		convey.Convey("autoStowing is true", func() {
 			autoStowingDevs = true
 			totalNetworkUnhealthDevices = sets.String{}
 			emptySets := sets.String{}
 			newNetworkRecoverDevSets, newNetworkUnhealthDevSets := getNewNetworkRecoverDev(emptySets, emptySets)
-			So(newNetworkRecoverDevSets, ShouldEqual, emptySets)
-			So(newNetworkUnhealthDevSets, ShouldEqual, totalNetworkUnhealthDevices)
+			convey.So(newNetworkRecoverDevSets, convey.ShouldEqual, emptySets)
+			convey.So(newNetworkUnhealthDevSets, convey.ShouldEqual, totalNetworkUnhealthDevices)
 		})
-		Convey("autoStowing is false", func() {
+		convey.Convey("autoStowing is false", func() {
 			autoStowingDevs = false
 			totalNetworkUnhealthDevices = sets.String{}
 			emptySets := sets.String{}
 			newNetworkRecoverDevSets, newNetworkUnhealthDevSets := getNewNetworkRecoverDev(emptySets, emptySets)
-			So(newNetworkRecoverDevSets, ShouldHaveSameTypeAs, emptySets)
-			So(newNetworkUnhealthDevSets, ShouldHaveSameTypeAs, emptySets)
+			convey.So(newNetworkRecoverDevSets, convey.ShouldHaveSameTypeAs, emptySets)
+			convey.So(newNetworkUnhealthDevSets, convey.ShouldHaveSameTypeAs, emptySets)
 		})
 	})
 }
 
 func TestGetDeviceID(t *testing.T) {
-	Convey("getDeviceID test", t, func() {
-		Convey("getDeviceID get error", func() {
+	convey.Convey("getDeviceID test", t, func() {
+		convey.Convey("getDeviceID get error", func() {
 			deviceName := ""
-			ascendRuntimeOptions := virtualDev
-			_, _, err := getDeviceID(deviceName, ascendRuntimeOptions)
-			So(err, ShouldBeError)
+			ascendRuntimeOptions := common.VirtualDev
+			_, _, err := common.GetDeviceID(deviceName, ascendRuntimeOptions)
+			convey.So(err, convey.ShouldBeError)
 		})
-		Convey("ascendRuntimeOptions is physicalDev", func() {
+		convey.Convey("ascendRuntimeOptions is physicalDev", func() {
 			deviceName := "Ascend910-1"
 			ascendRuntimeOptions := physicalDev
-			_, virID, err := getDeviceID(deviceName, ascendRuntimeOptions)
-			So(err, ShouldBeNil)
-			So(virID, ShouldBeEmpty)
+			_, virID, err := common.GetDeviceID(deviceName, ascendRuntimeOptions)
+			convey.So(err, convey.ShouldBeNil)
+			convey.So(virID, convey.ShouldBeEmpty)
 		})
-		Convey("ascendRuntimeOptions is virtualDev", func() {
+		convey.Convey("ascendRuntimeOptions is virtualDev", func() {
 			deviceName := "Ascend910-2c-112-1"
-			ascendRuntimeOptions := virtualDev
-			_, virID, err := getDeviceID(deviceName, ascendRuntimeOptions)
-			So(err, ShouldBeNil)
-			So(virID, ShouldNotBeEmpty)
+			ascendRuntimeOptions := common.VirtualDev
+			_, virID, err := common.GetDeviceID(deviceName, ascendRuntimeOptions)
+			convey.So(err, convey.ShouldBeNil)
+			convey.So(virID, convey.ShouldNotBeEmpty)
 		})
 	})
 }

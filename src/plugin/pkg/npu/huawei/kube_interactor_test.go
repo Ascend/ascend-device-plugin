@@ -1,5 +1,5 @@
 /*
-* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
+* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
  */
 
 package huawei
@@ -7,14 +7,15 @@ package huawei
 import (
 	"Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_kubernetes"
 	"Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_v1"
+	"testing"
+
 	"github.com/golang/mock/gomock"
-	. "github.com/smartystreets/goconvey/convey"
-	ctx "golang.org/x/net/context"
+	"github.com/smartystreets/goconvey/convey"
+	"golang.org/x/net/context"
 	"huawei.com/npu-exporter/hwlog"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"testing"
 )
 
 const nodeRunTime = 2
@@ -30,8 +31,8 @@ func TestPatchAnnotationOnNode(t *testing.T) {
 	mockK8s := mock_kubernetes.NewMockInterface(ctrl)
 	mockV1 := mock_v1.NewMockCoreV1Interface(ctrl)
 	mockNode := mock_v1.NewMockNodeInterface(ctrl)
-	mockNode.EXPECT().Get(ctx.Background(), gomock.Any(), metav1.GetOptions{}).Return(node1, nil)
-	mockNode.EXPECT().Patch(ctx.Background(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(node1, nil)
+	mockNode.EXPECT().Get(context.Background(), gomock.Any(), metav1.GetOptions{}).Return(node1, nil)
+	mockNode.EXPECT().Patch(context.Background(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(node1, nil)
 	mockV1.EXPECT().Nodes().Return(mockNode).Times(nodeRunTime)
 	mockK8s.EXPECT().CoreV1().Return(mockV1).Times(nodeRunTime)
 	freeDevices := sets.NewString()
@@ -43,7 +44,7 @@ func TestPatchAnnotationOnNode(t *testing.T) {
 	}
 
 	groupAllocatableDevs := NewHwAscend910Manager().GetAnnotationMap(freeDevices, "Ascend910")
-	err := fakeKubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, hiAIAscend910Prefix)
+	err := fakeKubeInteractor.patchAnnotationOnNode(groupAllocatableDevs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,24 +53,24 @@ func TestPatchAnnotationOnNode(t *testing.T) {
 
 // TestChangeLabelFormat for test label format
 func TestChangeLabelFormat(t *testing.T) {
-	Convey("format change", t, func() {
-		Convey("empty sets", func() {
+	convey.Convey("format change", t, func() {
+		convey.Convey("empty sets", func() {
 			emptySets := changeToShortFormat(sets.String{})
 			emptySets2 := changeToLongFormat(sets.String{})
-			So(emptySets, ShouldBeEmpty)
-			So(emptySets2, ShouldBeEmpty)
+			convey.So(emptySets, convey.ShouldBeEmpty)
+			convey.So(emptySets2, convey.ShouldBeEmpty)
 		})
-		Convey("long format", func() {
+		convey.Convey("long format", func() {
 			shortSets := sets.String{}
 			shortSets.Insert("1")
 			longSets := changeToLongFormat(shortSets)
-			So(longSets, ShouldEqual, sets.String{"Ascend910-1": sets.Empty{}})
+			convey.So(longSets, convey.ShouldEqual, sets.String{"Ascend910-1": sets.Empty{}})
 		})
-		Convey("short format", func() {
+		convey.Convey("short format", func() {
 			longSets := sets.String{}
 			longSets.Insert("Ascend910-1")
 			shortSets := changeToShortFormat(longSets)
-			So(shortSets, ShouldEqual, sets.String{"1": sets.Empty{}})
+			convey.So(shortSets, convey.ShouldEqual, sets.String{"1": sets.Empty{}})
 		})
 	})
 }

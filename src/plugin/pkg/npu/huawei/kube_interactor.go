@@ -1,19 +1,20 @@
 /*
-Copyright(C) 2020-2021. Huawei Technologies Co.,Ltd.  All rights reserved.
+Copyright(C) 2020-2022. Huawei Technologies Co.,Ltd.  All rights reserved.
 */
 
 package huawei
 
 import (
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 	"context"
 	"fmt"
-	"huawei.com/npu-exporter/hwlog"
-	hwutil "huawei.com/npu-exporter/utils"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"huawei.com/npu-exporter/hwlog"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,8 +26,6 @@ import (
 )
 
 const (
-	kubeEnvMaxLength = 253
-
 	// nodeLabelsDeviceSep if the separator between devices on labels
 	nodeLabelsDeviceSep = "dot"
 
@@ -35,8 +34,6 @@ const (
 
 	// labelDeviceLen like Ascend910-0 split length is 2
 	labelDeviceLen = 2
-
-	component = "device-plugin"
 )
 
 // KubeInteractor include kubeclientSet & nodeName
@@ -45,20 +42,15 @@ type KubeInteractor struct {
 	nodeName  string
 }
 
-// NewKubeClient get client from KUBECONFIG  or not
-func NewKubeClient() (*kubernetes.Clientset, error) {
-	return hwutil.K8sClientFor(kubeConfig, component)
-}
-
 // NewKubeInteractor create KubeInteractor
 func NewKubeInteractor() (*KubeInteractor, error) {
-	client, err := NewKubeClient()
+	client, err := common.NewKubeClient(kubeConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create kube client: %v", err)
 	}
 
 	nodeName := os.Getenv("NODE_NAME")
-	if err := checkNodeName(nodeName); err != nil {
+	if err := common.CheckNodeName(nodeName); err != nil {
 		return nil, fmt.Errorf("check node name failed: %v", err)
 	}
 
@@ -68,19 +60,7 @@ func NewKubeInteractor() (*KubeInteractor, error) {
 	}, nil
 }
 
-func checkNodeName(nodeName string) error {
-	if len(nodeName) > kubeEnvMaxLength {
-		return fmt.Errorf("node name length %d is bigger than %d", len(nodeName), kubeEnvMaxLength)
-	}
-	pattern := `^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
-	reg := regexp.MustCompile(pattern)
-	if !reg.MatchString(nodeName) {
-		return fmt.Errorf("node name %s is illegal", nodeName)
-	}
-	return nil
-}
-
-func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]string, devType string) error {
+func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]string) error {
 	var err error
 	err = wait.PollImmediate(interval*time.Second, timeout*time.Second, func() (bool, error) {
 		var node *v1.Node
@@ -94,7 +74,8 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 			ki.resetNodeAnnotations(node)
 		}
 		newNode := node.DeepCopy()
-		if ki.isSingleDevType(groupAllocatableDevs) {
+		devType, isSingleRoutine := ki.isSingleDevType(groupAllocatableDevs)
+		if isSingleRoutine {
 			annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, devType)
 			ki.singleDevAnnotationUpdate(annotationTag, groupAllocatableDevs, node, newNode)
 		} else {
@@ -259,25 +240,31 @@ func (ki *KubeInteractor) singleDevAnnotationUpdate(annotationTag string, groupA
 	newNode.Annotations[annotationTag] = groupAllocatableDevs[annotationTag]
 }
 
-func (ki *KubeInteractor) isSingleDevType(groupAllocatableDevs map[string]string) bool {
+func (ki *KubeInteractor) isSingleDevType(groupAllocatableDevs map[string]string) (string, bool) {
+	devType := hiAIAscend310Prefix
 	// For Ascend310
 	if len(groupAllocatableDevs) == 1 {
-		return true
+		return devType, true
 	}
 	// For Ascend910
 	devTypeNum := 0
-	for _, deviceNames := range groupAllocatableDevs {
+	for devPrefix, deviceNames := range groupAllocatableDevs {
 		if len(deviceNames) != 0 {
+			devType = strings.Replace(devPrefix, resourceNamePrefix, "", -1)
 			devTypeNum++
 		}
 	}
-	return devTypeNum == 1
+	return devType, devTypeNum == 1
 }
 
 func (ki *KubeInteractor) resetNodeAnnotations(node *v1.Node) {
 	delete(node.Annotations, huaweiUnHealthAscend910)
 	delete(node.Annotations, huaweiNetworkUnHealthAscend910)
 	delete(node.Annotations, huaweiAscend910)
+	delete(node.Annotations, resourceNamePrefix+pwr2CSuffix)
+	delete(node.Annotations, resourceNamePrefix+pwr4CSuffix)
+	delete(node.Annotations, resourceNamePrefix+pwr8CSuffix)
+	delete(node.Annotations, resourceNamePrefix+pwr16CSuffix)
 	delete(node.Labels, huaweiRecoverAscend910)
 	delete(node.Labels, huaweiNetworkRecoverAscend910)
 	firstTimeList = false

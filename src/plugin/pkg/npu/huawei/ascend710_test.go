@@ -5,10 +5,12 @@
 package huawei
 
 import (
+	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 	"fmt"
-	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"strings"
 	"testing"
+
+	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
 // TestHwAscend710Manager_GetNPUs for GetNPUs
@@ -75,6 +77,6 @@ func createFake710HwDevManager(mode string, fdFlag, useAscendDocker, volcanoType
 	}
 	hdm.SetParameters(o)
 	hdm.manager = NewHwAscend710Manager()
-	hdm.manager.SetDmgr(newFakeDeviceManager())
+	hdm.manager.SetDmgr(dsmi.NewFakeDeviceManager())
 	return hdm
 }

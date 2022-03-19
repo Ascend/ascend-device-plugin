@@ -6,24 +6,24 @@
 package huawei
 
 import (
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
+	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 	"encoding/json"
 	"fmt"
-	"huawei.com/npu-exporter/hwlog"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
-	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
+
+	"huawei.com/npu-exporter/hwlog"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
+	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
 const (
-	// VirtualDev represent virtual device
-	virtualDev = "VIRTUAL"
-
 	// PhysicalDev represent physical device
 	physicalDev = ""
 
@@ -54,21 +54,22 @@ type Metadata struct {
 
 // ascendCommonFunction struct definition
 type ascendCommonFunction struct {
-	dmgr                DeviceMgrInterface
+	dmgr                dsmi.DeviceMgrInterface
 	phyDevMapVirtualDev map[uint32]string
 	name                string
 	unHealthyKey        string
 }
 
-func getDefaultDevices(defaultDevices *[]string) error {
+// GetDefaultDevices get default devices
+func GetDefaultDevices(defaultDevices *[]string) error {
 	// hiAIManagerDevice is required
-	if _, err := os.Stat(hiAIManagerDevice); err != nil {
+	if _, err := os.Stat(common.HiAIManagerDevice); err != nil {
 		return err
 	}
-	*defaultDevices = append(*defaultDevices, hiAIManagerDevice)
+	*defaultDevices = append(*defaultDevices, common.HiAIManagerDevice)
 
-	setDeviceByPath(defaultDevices, hiAIHDCDevice)
-	setDeviceByPath(defaultDevices, hiAISVMDevice)
+	setDeviceByPath(defaultDevices, common.HiAIHDCDevice)
+	setDeviceByPath(defaultDevices, common.HiAISVMDevice)
 	if GetFdFlag {
 		setDeviceByPathWhen200RC(defaultDevices)
 	}
@@ -76,13 +77,13 @@ func getDefaultDevices(defaultDevices *[]string) error {
 }
 
 func setDeviceByPathWhen200RC(defaultDevices *[]string) {
-	setDeviceByPath(defaultDevices, hiAi200RCEventSched)
-	setDeviceByPath(defaultDevices, hiAi200RCHiDvpp)
-	setDeviceByPath(defaultDevices, hiAi200RCLog)
-	setDeviceByPath(defaultDevices, hiAi200RCMemoryBandwidth)
-	setDeviceByPath(defaultDevices, hiAi200RCSVM0)
-	setDeviceByPath(defaultDevices, hiAi200RCTsAisle)
-	setDeviceByPath(defaultDevices, hiAi200RCUpgrade)
+	setDeviceByPath(defaultDevices, common.HiAi200RCEventSched)
+	setDeviceByPath(defaultDevices, common.HiAi200RCHiDvpp)
+	setDeviceByPath(defaultDevices, common.HiAi200RCLog)
+	setDeviceByPath(defaultDevices, common.HiAi200RCMemoryBandwidth)
+	setDeviceByPath(defaultDevices, common.HiAi200RCSVM0)
+	setDeviceByPath(defaultDevices, common.HiAi200RCTsAisle)
+	setDeviceByPath(defaultDevices, common.HiAi200RCUpgrade)
 }
 
 func setDeviceByPath(defaultDevices *[]string, device string) {
@@ -91,10 +92,10 @@ func setDeviceByPath(defaultDevices *[]string, device string) {
 	}
 }
 
-func getPhyIDByName(DeviceName string) (uint32, error) {
+// GetPhyIDByName get physical id from device name
+func GetPhyIDByName(DeviceName string) (uint32, error) {
 	var phyID uint32
-
-	deviceID, _, err := getDeviceID(DeviceName, physicalDev)
+	deviceID, _, err := common.GetDeviceID(DeviceName, physicalDev)
 	if err != nil {
 		hwlog.RunLog.Errorf("dev ID is invalid, deviceID: %s", DeviceName)
 		return phyID, err
@@ -160,7 +161,8 @@ func getNewNetworkRecoverDev(nnu, nnr sets.String) (sets.String, sets.String) {
 	return newNetworkRecoverDevSets, newNetworkUnhealthDevSets
 }
 
-func unhealthyState(healthyState uint32, logicID uint32, healthyType string, dmgr DeviceMgrInterface) error {
+// UnhealthyState state unhealth info
+func UnhealthyState(healthyState uint32, logicID uint32, healthyType string, dmgr dsmi.DeviceMgrInterface) error {
 	phyID, err := dmgr.GetPhyID(logicID)
 	if err != nil {
 		return fmt.Errorf("get phyID failed %v", err)
@@ -176,25 +178,6 @@ func unhealthyState(healthyState uint32, logicID uint32, healthyType string, dmg
 	return nil
 }
 
-func getDeviceID(deviceName string, ascendRuntimeOptions string) (string, string, error) {
-
-	// hiAIAscend310Prefix: davinci-mini
-	// vnpu: davinci-coreNum-vid-devID
-	// ascend310:  davinci-mini0
-
-	idSplit := strings.Split(deviceName, "-")
-
-	if len(idSplit) < idSplitNum {
-		return "", "", fmt.Errorf("id: %s is invalid", deviceName)
-	}
-	var virID string
-	deviceID := idSplit[len(idSplit)-1]
-	if ascendRuntimeOptions == virtualDev && len(idSplit) == virDeviceLen {
-		virID = idSplit[idSplitNum]
-	}
-	return deviceID, virID, nil
-}
-
 // IsVirtualDev used to judge whether a physical device or a virtual device
 func IsVirtualDev(devType string) bool {
 	pattern := virtualDevicesPattern
@@ -204,6 +187,7 @@ func IsVirtualDev(devType string) bool {
 
 // VerifyPath used to verify the validity of the path
 func VerifyPath(verifyPath string) (string, bool) {
+	hwlog.RunLog.Infof("starting check device socket file path.")
 	absVerifyPath, err := filepath.Abs(verifyPath)
 	if err != nil {
 		hwlog.RunLog.Errorf("abs current path failed")
@@ -228,14 +212,14 @@ func VerifyPath(verifyPath string) (string, bool) {
 }
 
 // AssembleNpuDeviceStruct is used to create a struct of npuDevice
-func (adc *ascendCommonFunction) AssembleNpuDeviceStruct(deviType, devID string) npuDevice {
+func (adc *ascendCommonFunction) AssembleNpuDeviceStruct(deviType, devID string) common.NpuDevice {
 	hwlog.RunLog.Infof("Found Huawei Ascend, deviceType: %s, deviceID: %s", deviType, devID)
-	return npuDevice{
-		devType:       deviType,
-		pciID:         "",
+	return common.NpuDevice{
+		DevType:       deviType,
+		PciID:         "",
 		ID:            devID,
 		Health:        pluginapi.Healthy,
-		networkHealth: pluginapi.Healthy,
+		NetworkHealth: pluginapi.Healthy,
 	}
 }
 
@@ -243,15 +227,15 @@ func (adc *ascendCommonFunction) AssembleNpuDeviceStruct(deviType, devID string)
 func (adc *ascendCommonFunction) GetDevPath(id, ascendRuntimeOptions string) (string, string) {
 	containerPath := fmt.Sprintf("%s%s", "/dev/davinci", id)
 	hostPath := containerPath
-	if ascendRuntimeOptions == virtualDev {
+	if ascendRuntimeOptions == common.VirtualDev {
 		hostPath = fmt.Sprintf("%s%s", "/dev/vdavinci", id)
 	}
 	return containerPath, hostPath
 }
 
 // GetDevState get device state
-func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr DeviceMgrInterface) string {
-	phyID, err := getPhyIDByName(DeviceName)
+func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr dsmi.DeviceMgrInterface) string {
+	phyID, err := GetPhyIDByName(DeviceName)
 	if err != nil {
 		if logFlag {
 			hwlog.RunLog.Errorf("get device phyID failed, deviceId: %s, err: %s", DeviceName, err.Error())
@@ -278,16 +262,17 @@ func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr DeviceMgrIn
 	case normalState, generalAlarm:
 		return pluginapi.Healthy
 	default:
-		err = unhealthyState(healthState, logicID, "healthState", dmgr)
+		err = UnhealthyState(healthState, logicID, "healthState", dmgr)
 		if err != nil {
-			hwlog.RunLog.Errorf("unhealthyState, err: %v", err)
+			hwlog.RunLog.Errorf("UnhealthyState, err: %v", err)
 		}
 		return pluginapi.Unhealthy
 	}
 }
 
 // GetNPUs Discovers all HUAWEI Ascend310/Ascend710 devices by call dsmi interface
-func (adc *ascendCommonFunction) GetNPUs(allDevices *[]npuDevice, allDeviceTypes *[]string, deviType string) error {
+func (adc *ascendCommonFunction) GetNPUs(allDevices *[]common.NpuDevice, allDeviceTypes *[]string,
+	deviType string) error {
 	hwlog.RunLog.Infof("--->< deviType: %s", deviType)
 
 	var ids [hiAIMaxDeviceNum]uint32
@@ -315,12 +300,12 @@ func (adc *ascendCommonFunction) GetMatchingDeviType() string {
 }
 
 // SetDmgr to set dmgr
-func (adc *ascendCommonFunction) SetDmgr(dmgr DeviceMgrInterface) {
+func (adc *ascendCommonFunction) SetDmgr(dmgr dsmi.DeviceMgrInterface) {
 	adc.dmgr = dmgr
 }
 
 // GetDmgr to get dmgr
-func (adc *ascendCommonFunction) GetDmgr() DeviceMgrInterface {
+func (adc *ascendCommonFunction) GetDmgr() dsmi.DeviceMgrInterface {
 	return adc.dmgr
 }
 
@@ -352,7 +337,7 @@ func (adc *ascendCommonFunction) DoWithVolcanoListAndWatch(hps *HwPluginServe, i
 }
 
 // GetDeviceNetworkState check Ascend910 only
-func (adc *ascendCommonFunction) GetDeviceNetworkState(_ int32, _ *npuDevice) (string, error) {
+func (adc *ascendCommonFunction) GetDeviceNetworkState(_ int32, _ *common.NpuDevice) (string, error) {
 	return "", nil
 }
 

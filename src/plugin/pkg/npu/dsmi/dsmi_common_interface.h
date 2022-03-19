@@ -91,6 +91,13 @@ struct dsmi_vdev_info {
     struct dsmi_sub_vdev_info vdev[DSMI_MAX_VDEV_NUM];
 };
 
+// Dsmi virtual device create
+struct dsmi_vdev_create_info {
+    unsigned int vdev_num;                              /**< number of vdevice the devid spilt */
+    struct dsmi_vdev_spec_info spec[DSMI_MAX_VDEV_NUM]; /**< specification of vdevice */
+    unsigned int vdevid[DSMI_MAX_VDEV_NUM];             /**< id number of vdevice */
+};
+
 /**
 * @ingroup driver
 * @brief Get the number of devices
@@ -208,6 +215,28 @@ int dsmi_get_vdevice_info(unsigned int devid, struct dsmi_vdev_info *info);
 * @note Support:Ascend310,Ascend710,Ascend910
 */
 int dsmi_get_device_errorcode(int device_id, int *errorcount, unsigned int *perrorcode);
+
+/**
+* @ingroup driver
+* @brief create a virtual device from a phy dev, by devid set
+* @attention NULL
+* @param [in] devid The device id
+* @param [out] *info The virtual device info
+* @return 0 for success, others for fail
+* @note Support:Ascend710,Ascend910
+*/
+int dsmi_create_vdevice(unsigned int devid, struct dsmi_vdev_create_info *info);
+
+/**
+* @ingroup driver
+* @brief Query the device errorcode by device_id(logicID)
+* @attention NULL
+* @param [in] devid The device id
+* @param [in] vdevid The virtual id, will be destroy
+* @return 0 for success, others for fail
+* @note Support:Ascend710,Ascend910
+*/
+int dsmi_destroy_vdevice(unsigned int devid, unsigned int vdevid);
 
 #ifdef __cplusplus
 }

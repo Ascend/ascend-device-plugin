@@ -1,29 +1,30 @@
 /*
-* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
+* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
  */
 
 package huawei
 
 import (
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 	"fmt"
+	"time"
+
 	"go.uber.org/atomic"
 	"google.golang.org/grpc"
 	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/apimachinery/pkg/util/sets"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
-	"time"
 )
 
 // HwPluginServe show plugin data
 type HwPluginServe struct {
 	hdm            *HwDevManager
-	devices        map[string]*npuDevice
+	devices        map[string]*common.NpuDevice
 	grpcServer     *grpc.Server
 	vol2KlDevMap   map[string]string
 	kubeInteractor *KubeInteractor
 	healthDevice   sets.String
 	unHealthDevice sets.String
-	defaultDevs    []string
 	devType        string
 	runMode        string
 }
@@ -52,7 +53,7 @@ func NewHwPluginServe(hdm *HwDevManager, devType string) HwPluginServeInterface 
 		devType:        devType,
 		hdm:            hdm,
 		runMode:        hdm.runMode,
-		devices:        make(map[string]*npuDevice, hiAIMaxDeviceNum),
+		devices:        make(map[string]*common.NpuDevice, hiAIMaxDeviceNum),
 		kubeInteractor: ki,
 		healthDevice:   sets.String{},
 		unHealthDevice: sets.String{},
@@ -65,24 +66,15 @@ func (hps *HwPluginServe) GetDevByType() error {
 	if len(allDevs) == 0 {
 		return fmt.Errorf("no device found")
 	}
-
 	for i := range allDevs {
 		dev := &allDevs[i]
-		if dev.devType == hps.devType {
+		if dev.DevType == hps.devType {
 			hps.devices[dev.ID] = dev
 		}
 	}
 	if len(hps.devices) == 0 {
 		return fmt.Errorf("no %s device found", hps.devType)
 	}
-
-	defaultDevs := hps.hdm.defaultDevs
-	if len(defaultDevs) != 0 {
-		for _, dev := range defaultDevs {
-			hps.defaultDevs = append(hps.defaultDevs, dev)
-		}
-	}
-
 	return nil
 }
 
