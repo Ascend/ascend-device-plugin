@@ -6,8 +6,6 @@
 package huawei
 
 import (
-	"Ascend-device-plugin/src/plugin/pkg/npu/common"
-	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -18,9 +16,12 @@ import (
 	"syscall"
 
 	"huawei.com/npu-exporter/hwlog"
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
+	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 )
 
 const (
@@ -109,7 +110,7 @@ func GetPhyIDByName(DeviceName string) (uint32, error) {
 	phyID = uint32(devidCheck)
 	if phyID > hiAIMaxDeviceNum || phyID < 0 {
 		hwlog.RunLog.Errorf("GetDeviceState phyID overflow, phyID: %d", phyID)
-		return phyID, fmt.Errorf("GetDevice phyid %d overflow", phyID)
+		return phyID, fmt.Errorf("getDevice phyid %d overflow", phyID)
 	}
 
 	return phyID, nil
@@ -133,12 +134,10 @@ func getUnHealthDev(listenUHDev, annotationUHDev, labelsRecoverDev, device910 se
 	return newLabelsRecoverDev, strings.Join(newAscend910, ",")
 }
 
-// getNewNetworkRecoverDev
-// return new devices to be restored and network unhealthy device in this times
+// getNewNetworkRecoverDev , return new devices to be restored and network unhealthy device in this times
 func getNewNetworkRecoverDev(nnu, nnr sets.String) (sets.String, sets.String) {
 	// nnu means node annotation network unhealthy devices
 	// nnr means device's network is ok and to be restored
-
 	// this time network unhealthy devices
 	tud := totalNetworkUnhealthDevices
 	// if there is no network unhealthy device and autoStowingDevs is true
@@ -218,8 +217,8 @@ func (adc *ascendCommonFunction) AssembleNpuDeviceStruct(deviType, devID string)
 		DevType:       deviType,
 		PciID:         "",
 		ID:            devID,
-		Health:        pluginapi.Healthy,
-		NetworkHealth: pluginapi.Healthy,
+		Health:        v1beta1.Healthy,
+		NetworkHealth: v1beta1.Healthy,
 	}
 }
 
@@ -240,7 +239,7 @@ func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr dsmi.Device
 		if logFlag {
 			hwlog.RunLog.Errorf("get device phyID failed, deviceId: %s, err: %s", DeviceName, err.Error())
 		}
-		return pluginapi.Unhealthy
+		return v1beta1.Unhealthy
 	}
 
 	logicID, err := dmgr.GetLogicID(phyID)
@@ -248,7 +247,7 @@ func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr dsmi.Device
 		if logFlag {
 			hwlog.RunLog.Errorf("get device logicID failed, deviceId: %s, err: %s", DeviceName, err.Error())
 		}
-		return pluginapi.Unhealthy
+		return v1beta1.Unhealthy
 	}
 
 	healthState, err := dmgr.GetDeviceHealth(int32(logicID))
@@ -256,17 +255,17 @@ func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr dsmi.Device
 		if logFlag {
 			hwlog.RunLog.Errorf("get device healthy state failed, deviceId: %d, err: %s", int32(logicID), err.Error())
 		}
-		return pluginapi.Unhealthy
+		return v1beta1.Unhealthy
 	}
 	switch healthState {
 	case normalState, generalAlarm:
-		return pluginapi.Healthy
+		return v1beta1.Healthy
 	default:
 		err = UnhealthyState(healthState, logicID, "healthState", dmgr)
 		if err != nil {
 			hwlog.RunLog.Errorf("UnhealthyState, err: %v", err)
 		}
-		return pluginapi.Unhealthy
+		return v1beta1.Unhealthy
 	}
 }
 
@@ -323,7 +322,7 @@ func (adc *ascendCommonFunction) DoWithVolcanoListAndWatch(hps *HwPluginServe, i
 	annoMap := adc.GetAnnotationMap(freeDevices, hps.devType)
 	annoMap[adc.unHealthyKey] = filterTagPowerDevice(hps.unHealthDevice, adc.name)
 	if err := hps.kubeInteractor.patchNode(func(_ *v1.Node) []byte {
-		as := antStu{Metadata{Annotation: annoMap}}
+		as := adc.getAntStu(annoMap)
 		bt, err := json.Marshal(as)
 		if err != nil {
 			hwlog.RunLog.Warnf("patch node error, %v", err)
@@ -334,6 +333,14 @@ func (adc *ascendCommonFunction) DoWithVolcanoListAndWatch(hps *HwPluginServe, i
 		hwlog.RunLog.Errorf("%s patch Annotation failed, err: %v", adc.name, err)
 	}
 	return
+}
+
+func (adc *ascendCommonFunction) getAntStu(annoMap map[string]string) antStu {
+	return antStu{
+		Metadata{
+			Annotation: annoMap,
+		},
+	}
 }
 
 // GetDeviceNetworkState check Ascend910 only
@@ -348,7 +355,7 @@ func (adc *ascendCommonFunction) reloadHealthDevice(isStateChange bool, hps *HwP
 	hps.healthDevice = sets.String{}
 	hps.unHealthDevice = sets.String{}
 	for _, device := range hps.devices {
-		if device.Health == pluginapi.Healthy {
+		if device.Health == v1beta1.Healthy {
 			hps.healthDevice.Insert(device.ID)
 			continue
 		}

@@ -31,7 +31,7 @@ import (
 	"google.golang.org/grpc"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"sync"
 )
@@ -85,7 +85,7 @@ const (
 
 // Register function is use to register k8s devicePlugin to kubelet.
 func (hps *HwPluginServe) Register() error {
-	realKubeletSockPath, isOk := VerifyPath(pluginapi.KubeletSocket)
+	realKubeletSockPath, isOk := VerifyPath(v1beta1.KubeletSocket)
 	if !isOk {
 		return fmt.Errorf("check kubelet socket file path failed")
 	}
@@ -103,9 +103,9 @@ func (hps *HwPluginServe) Register() error {
 		}
 	}()
 
-	client := pluginapi.NewRegistrationClient(conn)
-	reqt := &pluginapi.RegisterRequest{
-		Version:      pluginapi.Version,
+	client := v1beta1.NewRegistrationClient(conn)
+	reqt := &v1beta1.RegisterRequest{
+		Version:      v1beta1.Version,
 		Endpoint:     fmt.Sprintf("%s.sock", hps.devType),
 		ResourceName: resourceNamePrefix + hps.devType,
 	}
@@ -117,16 +117,16 @@ func (hps *HwPluginServe) Register() error {
 }
 
 // GetDevicePluginOptions is Standard interface to kubelet.
-func (s *pluginAPI) GetDevicePluginOptions(ctx context.Context, e *pluginapi.Empty) (*pluginapi.DevicePluginOptions,
+func (s *pluginAPI) GetDevicePluginOptions(ctx context.Context, e *v1beta1.Empty) (*v1beta1.DevicePluginOptions,
 	error) {
-	return &pluginapi.DevicePluginOptions{}, nil
+	return &v1beta1.DevicePluginOptions{}, nil
 }
 
 // ListAndWatch: if the server get stop signal ,the ListAndWatch should  stop,to be fix
-func (s *pluginAPI) ListAndWatch(emtpy *pluginapi.Empty, stream pluginapi.DevicePlugin_ListAndWatchServer) error {
+func (s *pluginAPI) ListAndWatch(emtpy *v1beta1.Empty, stream v1beta1.DevicePlugin_ListAndWatchServer) error {
 
 	hwlog.RunLog.Infof("device-plugin: ListAndWatch start")
-	resp := new(pluginapi.ListAndWatchResponse)
+	resp := new(v1beta1.ListAndWatchResponse)
 	s.updateKubeletDevInfo(resp, stream)
 	for {
 		if s.outbreak.Load() {
@@ -156,11 +156,11 @@ func (s *pluginAPI) ListAndWatch(emtpy *pluginapi.Empty, stream pluginapi.Device
 	return nil
 }
 
-func (s *pluginAPI) updateKubeletDevInfo(resp *pluginapi.ListAndWatchResponse,
-	stream pluginapi.DevicePlugin_ListAndWatchServer) {
+func (s *pluginAPI) updateKubeletDevInfo(resp *v1beta1.ListAndWatchResponse,
+	stream v1beta1.DevicePlugin_ListAndWatchServer) {
 	if firstTimeList {
 		for _, dev := range s.hps.devices {
-			resp.Devices = append(resp.Devices, &pluginapi.Device{ID: dev.ID, Health: dev.Health})
+			resp.Devices = append(resp.Devices, &v1beta1.Device{ID: dev.ID, Health: dev.Health})
 			s.hps.healthDevice.Insert(dev.ID)
 		}
 		if err := sendDevToKubelet(resp, stream); err != nil {
@@ -195,7 +195,7 @@ func (s *pluginAPI) updateKubeletDevInfo(resp *pluginapi.ListAndWatchResponse,
 			hwlog.RunLog.Warnf(" not exist map key, %s  map %+v", dev.ID, s.hps.vol2KlDevMap)
 			continue
 		}
-		resp.Devices = append(resp.Devices, &pluginapi.Device{ID: d, Health: dev.Health})
+		resp.Devices = append(resp.Devices, &v1beta1.Device{ID: d, Health: dev.Health})
 	}
 	time.Sleep(sleep2ListW * time.Second)
 	if err := sendDevToKubelet(resp, stream); err != nil {
@@ -293,10 +293,10 @@ func (s *pluginAPI) checkDeviceNetworkHealthStatus(device *common.NpuDevice) boo
 }
 
 // Allocate is called by kubelet to mount device to k8s pod.
-func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRequest) (*pluginapi.AllocateResponse,
+func (s *pluginAPI) Allocate(ctx context.Context, requests *v1beta1.AllocateRequest) (*v1beta1.AllocateResponse,
 	error) {
 
-	resps := new(pluginapi.AllocateResponse)
+	resps := new(v1beta1.AllocateResponse)
 	hwlog.RunLog.Infof("allocate request: %#v", requests.String())
 	requestErrs := s.setAscendRuntimeOptions(requests)
 	if requestErrs != nil {
@@ -304,7 +304,7 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 	}
 
 	for _, rqt := range requests.ContainerRequests {
-		resp := new(pluginapi.ContainerAllocateResponse)
+		resp := new(v1beta1.ContainerAllocateResponse)
 
 		allocateNum := len(rqt.DevicesIDs)
 		if allocateNum > maxDevicesNum {
@@ -337,7 +337,7 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 	return resps, nil
 }
 
-func (s *pluginAPI) setAscendRuntimeOptions(requests *pluginapi.AllocateRequest) error {
+func (s *pluginAPI) setAscendRuntimeOptions(requests *v1beta1.AllocateRequest) error {
 	for _, rqt := range requests.ContainerRequests {
 		for _, deviceName := range rqt.DevicesIDs {
 			if IsVirtualDev(deviceName) && len(rqt.DevicesIDs) > interval {
@@ -352,7 +352,7 @@ func (s *pluginAPI) setAscendRuntimeOptions(requests *pluginapi.AllocateRequest)
 	return nil
 }
 
-func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (map[string]string, []string, error) {
+func (s *pluginAPI) setEnvFromKubelet(rqt *v1beta1.ContainerAllocateRequest) (map[string]string, []string, error) {
 	// get id from kubelet
 	ascendVisibleDevices := make(map[string]string, MaxVirtualDevNum)
 	var alloDevices []string
@@ -386,10 +386,10 @@ func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (
 	return ascendVisibleDevices, alloDevices, nil
 }
 
-func (s *pluginAPI) mountDefaultDevice(resp *pluginapi.ContainerAllocateResponse) {
+func (s *pluginAPI) mountDefaultDevice(resp *v1beta1.ContainerAllocateResponse) {
 	// mount default devices
 	for _, d := range s.hps.hdm.defaultDevs {
-		resp.Devices = append(resp.Devices, &pluginapi.DeviceSpec{
+		resp.Devices = append(resp.Devices, &v1beta1.DeviceSpec{
 			HostPath:      d,
 			ContainerPath: d,
 			Permissions:   "rw",
@@ -458,7 +458,7 @@ func getNPUByStatus(kubeClient kubernetes.Interface, nodeName string, hps *HwPlu
 	return false
 }
 
-func addEnv(devices map[string]string, ascendRuntimeOptions string, resp *pluginapi.ContainerAllocateResponse) {
+func addEnv(devices map[string]string, ascendRuntimeOptions string, resp *v1beta1.ContainerAllocateResponse) {
 	// add env
 	var ascendVisibleDevices []string
 	if len((*resp).Envs) == 0 {
@@ -531,53 +531,53 @@ func (s *pluginAPI) getDeviceIP(phyID string) (string, error) {
 
 // PreStartContainer is Standard interface to kubelet with empty implement.
 func (s *pluginAPI) PreStartContainer(ctx context.Context,
-	r *pluginapi.PreStartContainerRequest) (*pluginapi.PreStartContainerResponse, error) {
+	r *v1beta1.PreStartContainerRequest) (*v1beta1.PreStartContainerResponse, error) {
 	hwlog.RunLog.Infof("PreStart just call in UT.")
-	return &pluginapi.PreStartContainerResponse{}, nil
+	return &v1beta1.PreStartContainerResponse{}, nil
 }
 
-func (s *pluginAPI) mountfile(resp *pluginapi.ContainerAllocateResponse) {
+func (s *pluginAPI) mountfile(resp *v1beta1.ContainerAllocateResponse) {
 	timeStr := time.Now().Format("20060102150405")
 	rankID := "" + timeStr + "-0"
 	slogConfigPath := GetSlogConfigFilePath()
-	resp.Mounts = append(resp.Mounts, &pluginapi.Mount{
+	resp.Mounts = append(resp.Mounts, &v1beta1.Mount{
 		ContainerPath: slogConfigPath,
 		HostPath:      slogConfigPath,
 		ReadOnly:      true,
 	})
-	// mount log format
 
+	// mount log format
 	logPath := "/var/log/npu"
 	hostLogPath := logPath + "/slog/container/" + rankID
-	resp.Mounts = append(resp.Mounts, &pluginapi.Mount{
+	resp.Mounts = append(resp.Mounts, &v1beta1.Mount{
 		ContainerPath: logPath + "/slog",
 		HostPath:      hostLogPath,
 		ReadOnly:      false,
 	})
 
 	hostProfilingPath := logPath + "/profiling/container/" + rankID
-	resp.Mounts = append(resp.Mounts, &pluginapi.Mount{
+	resp.Mounts = append(resp.Mounts, &v1beta1.Mount{
 		ContainerPath: logPath + "/profiling",
 		HostPath:      hostProfilingPath,
 		ReadOnly:      false,
 	})
 
 	hostDumpPath := logPath + "/dump/container/" + rankID
-	resp.Mounts = append(resp.Mounts, &pluginapi.Mount{
+	resp.Mounts = append(resp.Mounts, &v1beta1.Mount{
 		ContainerPath: logPath + "/dump",
 		HostPath:      hostDumpPath,
 		ReadOnly:      false,
 	})
 
 	hostDockerSlogPath := logPath + "/docker_slog_" + rankID
-	resp.Mounts = append(resp.Mounts, &pluginapi.Mount{
+	resp.Mounts = append(resp.Mounts, &v1beta1.Mount{
 		ContainerPath: "/usr/slog",
 		HostPath:      hostDockerSlogPath,
 		ReadOnly:      false,
 	})
 }
 
-func sendDevToKubelet(resp *pluginapi.ListAndWatchResponse, stream pluginapi.DevicePlugin_ListAndWatchServer) error {
+func sendDevToKubelet(resp *v1beta1.ListAndWatchResponse, stream v1beta1.DevicePlugin_ListAndWatchServer) error {
 	hwlog.RunLog.Infof("ListAndWatch: send devices, resp: %s", resp.String())
 	if err := stream.Send(resp); err != nil {
 		return err
@@ -681,10 +681,10 @@ func (s *pluginAPI) getPendingPodsOnNode() ([]v1.Pod, error) {
 	return res, nil
 }
 
-func (s *pluginAPI) mountDevice(resp *pluginapi.ContainerAllocateResponse, devices map[string]string) {
+func (s *pluginAPI) mountDevice(resp *v1beta1.ContainerAllocateResponse, devices map[string]string) {
 	for deviceID := range devices {
 		containerPath, hostPath := s.hps.hdm.manager.GetDevPath(fmt.Sprintf("%s", deviceID), s.ascendRuntimeOptions)
-		resp.Devices = append(resp.Devices, &pluginapi.DeviceSpec{
+		resp.Devices = append(resp.Devices, &v1beta1.DeviceSpec{
 			HostPath:      hostPath,
 			ContainerPath: containerPath,
 			Permissions:   "rw",
@@ -769,7 +769,7 @@ func (s *pluginAPI) getNPUAnnotationOfPod(pod *v1.Pod, allocateDevice *sets.Stri
 	return nil
 }
 
-func (s *pluginAPI) responseAnonation(resp *pluginapi.ContainerAllocateResponse, devices map[string]string) {
+func (s *pluginAPI) responseAnonation(resp *v1beta1.ContainerAllocateResponse, devices map[string]string) {
 	// Annotations
 	annotation := make(map[string]string, 1)
 	var instance Instance
@@ -871,7 +871,7 @@ func (s *pluginAPI) getAscendVisiDevsWithVolcano(allocateDevice sets.String, dev
 }
 
 // GetPreferredAllocation implement the kubelet device plugin interface
-func (s *pluginAPI) GetPreferredAllocation(context.Context, *pluginapi.PreferredAllocationRequest) (
-	*pluginapi.PreferredAllocationResponse, error) {
+func (s *pluginAPI) GetPreferredAllocation(context.Context, *v1beta1.PreferredAllocationRequest) (
+	*v1beta1.PreferredAllocationResponse, error) {
 	return nil, errors.New("not support")
 }

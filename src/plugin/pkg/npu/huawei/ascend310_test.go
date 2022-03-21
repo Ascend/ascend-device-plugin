@@ -1,24 +1,25 @@
 /*
-* Copyright(C) 2020-2021. Huawei Technologies Co.,Ltd. All rights reserved.
+* Copyright(C) 2020-2022. Huawei Technologies Co.,Ltd. All rights reserved.
  */
 
 package huawei
 
 import (
-	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 	"fmt"
 	"strings"
 	"testing"
 
-	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+
+	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 )
 
 const (
 	npuTestNum = 8
 )
 
-// TestHwAscend310Manager_GetNPUs for GetNPUs
-func TestHwAscend310Manager_GetNPUs(t *testing.T) {
+// TestHwAscend310ManagerGetNPUs for GetNPUs
+func TestHwAscend310ManagerGetNPUs(t *testing.T) {
 	resultDevMap := make(map[string]string)
 	for i := 0; i < npuTestNum; i++ {
 		resultDevMap[fmt.Sprintf("davinci-mini-%d", i)] = ""
@@ -41,8 +42,8 @@ func TestHwAscend310Manager_GetNPUs(t *testing.T) {
 	t.Logf("TestHwAscend310Manager_GetNPUs Run Pass")
 }
 
-// TestHwAscend310Manager_GetDevState for GetDevState
-func TestHwAscend310Manager_GetDevState(t *testing.T) {
+// TestHwAscend310ManagerGetDevState for GetDevState
+func TestHwAscend310ManagerGetDevState(t *testing.T) {
 	hdm := createFakeHwDevManager("", true, false, false)
 	err := hdm.manager.GetNPUs(&hdm.allDevs, &hdm.allDevTypes, hdm.manager.GetMatchingDeviType())
 	if err != nil {
@@ -50,18 +51,18 @@ func TestHwAscend310Manager_GetDevState(t *testing.T) {
 	}
 	for _, dev := range hdm.allDevs {
 		state := hdm.manager.GetDevState(dev.ID, hdm.manager.GetDmgr())
-		if strings.Contains(dev.ID, "3") && state != pluginapi.Unhealthy {
+		if strings.Contains(dev.ID, "3") && state != v1beta1.Unhealthy {
 			t.Fatalf("TestHwAscend310Manager_GetDevState Run Failed %v", dev)
 
-		} else if !strings.Contains(dev.ID, "3") && state == pluginapi.Unhealthy {
+		} else if !strings.Contains(dev.ID, "3") && state == v1beta1.Unhealthy {
 			t.Fatalf("TestHwAscend310Manager_GetDevState Run Failed %v", dev)
 		}
 	}
 	t.Logf("TestHwAscend310Manager_GetDevState Run Pass")
 }
 
-// TestHwAscend310Manager_GetDevPath for GetDevPath
-func TestHwAscend310Manager_GetDevPath(t *testing.T) {
+// TestHwAscend310ManagerGetDevPath for GetDevPath
+func TestHwAscend310ManagerGetDevPath(t *testing.T) {
 	hdm := createFakeHwDevManager("", true, false, false)
 	containerPath, hostPath := hdm.manager.GetDevPath("0", physicalDev)
 	if hostPath != containerPath && hostPath != "/dev/davinci0" {

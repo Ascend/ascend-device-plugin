@@ -5,7 +5,6 @@ Copyright(C) 2020-2022. Huawei Technologies Co.,Ltd.  All rights reserved.
 package huawei
 
 import (
-	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 	"context"
 	"fmt"
 	"os"
@@ -16,13 +15,15 @@ import (
 
 	"huawei.com/npu-exporter/hwlog"
 
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	nodeutil "k8s.io/kubernetes/pkg/util/node"
+
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 )
 
 const (

@@ -19,10 +19,13 @@ const (
 	// MaxBackups log file max backup
 	MaxBackups = 30
 	// MaxAge the log file last time
-	MaxAge                  = 7
-	podDeviceKey            = "ascend.kubectl.kubernetes.io/ascend-910-configuration" // config map name
-	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"                                // visible env
-	ascendRuntimeOptionsEnv = "ASCEND_RUNTIME_OPTIONS"                                // virtual runtime option env
+	MaxAge = 7
+	// config map name
+	podDeviceKey = "ascend.kubectl.kubernetes.io/ascend-910-configuration"
+	// visible env
+	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"
+	// virtual runtime option env
+	ascendRuntimeOptionsEnv = "ASCEND_RUNTIME_OPTIONS"
 
 	huaweiAscend910  = "huawei.com/Ascend910"
 	podPredicateTime = "predicate-time"

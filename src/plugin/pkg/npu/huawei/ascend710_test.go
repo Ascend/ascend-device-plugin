@@ -5,16 +5,17 @@
 package huawei
 
 import (
-	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 	"fmt"
 	"strings"
 	"testing"
 
-	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+
+	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 )
 
-// TestHwAscend710Manager_GetNPUs for GetNPUs
-func TestHwAscend710Manager_GetNPUs(t *testing.T) {
+// TestHwAscend710ManagerGetNPUs for GetNPUs
+func TestHwAscend710ManagerGetNPUs(t *testing.T) {
 	resultDevMap := make(map[string]string)
 	for i := 0; i < npuTestNum; i++ {
 		resultDevMap[fmt.Sprintf("Ascend710-%d", i)] = ""
@@ -36,8 +37,8 @@ func TestHwAscend710Manager_GetNPUs(t *testing.T) {
 	t.Logf("TestHwAscend710Manager_GetNPUs Run Pass")
 }
 
-// TestHwAscend710Manager_GetDevState for GetDevState
-func TestHwAscend710Manager_GetDevState(t *testing.T) {
+// TestHwAscend710ManagerGetDevState for GetDevState
+func TestHwAscend710ManagerGetDevState(t *testing.T) {
 	hdm := createFake710HwDevManager("ascend710", false, false, false)
 	err := hdm.manager.GetNPUs(&hdm.allDevs, &hdm.allDevTypes, hdm.manager.GetMatchingDeviType())
 	if err != nil {
@@ -45,18 +46,18 @@ func TestHwAscend710Manager_GetDevState(t *testing.T) {
 	}
 	for _, dev := range hdm.allDevs {
 		state := hdm.manager.GetDevState(dev.ID, hdm.manager.GetDmgr())
-		if strings.Contains(dev.ID, "3") && state != pluginapi.Unhealthy {
+		if strings.Contains(dev.ID, "3") && state != v1beta1.Unhealthy {
 			t.Fatalf("TestHwAscend710Manager_GetDevState Run Failed %v", dev)
 
-		} else if !strings.Contains(dev.ID, "3") && state == pluginapi.Unhealthy {
+		} else if !strings.Contains(dev.ID, "3") && state == v1beta1.Unhealthy {
 			t.Fatalf("TestHwAscend710Manager_GetDevState Run Failed %v", dev)
 		}
 	}
 	t.Logf("TestHwAscend710Manager_GetDevState Run Pass")
 }
 
-// TestHwAscend710Manager_GetDevPath for GetDevPath
-func TestHwAscend710Manager_GetDevPath(t *testing.T) {
+// TestHwAscend710ManagerGetDevPath for GetDevPath
+func TestHwAscend710ManagerGetDevPath(t *testing.T) {
 	hdm := createFake710HwDevManager("ascend710", false, false, false)
 	containerPath, hostPath := hdm.manager.GetDevPath("0", physicalDev)
 	if hostPath != containerPath && hostPath != "/dev/davinci0" {

@@ -1,15 +1,10 @@
 /*
-* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
+* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
  */
 
 package huawei
 
 import (
-	"Ascend-device-plugin/src/plugin/pkg/npu/common"
-	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
-	mock_v1beta1 "Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_kubelet_v1beta1"
-	"Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_kubernetes"
-	"Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_v1"
 	"testing"
 	"time"
 
@@ -19,23 +14,29 @@ import (
 	"go.uber.org/atomic"
 	"golang.org/x/net/context"
 	"huawei.com/npu-exporter/hwlog"
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
+	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
+	mock_v1beta1 "Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_kubelet_v1beta1"
+	"Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_kubernetes"
+	"Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_v1"
 )
 
 const (
-	annonationTest1 = "{\"pod_name\":\"pod_name\",\"server_id\":\"0.0.0.0\",\"devices\":[{\"device_id\":\"0\"," +
-		"\"device_ip\":\"0.0.0.0\"},{\"device_id\":\"1\",\"device_ip\":\"0.0.0.1\"}]}"
-	annonationTest2 = "{\"pod_name\":\"pod_name\",\"server_id\":\"0.0.0.0\",\"devices\":[{\"device_id\":\"1\"," +
-		"\"device_ip\":\"0.0.0.1\"},{\"device_id\":\"0\",\"device_ip\":\"0.0.0.0\"}]}"
+	device1 = `"devices":[{"device_id":"0","device_ip":"127.0.0.0"},{"device_id":"1","device_ip":"127.0.0.1"}]`
+	device2 = `"devices":[{"device_id":"1","device_ip":"127.0.0.1"},{"device_id":"0","device_ip":"127.0.0.0"}]`
+	annonationTest1 = `{"pod_name":"pod_name","server_id":"127.0.0.0",`+device1+`}`
+	annonationTest2 = `{"pod_name":"pod_name","server_id":"127.0.0.0",`+device2+`}`
 	sleepTestFour = 4
 )
 
-// TestPluginAPI_ListAndWatch for listAndWatch
-func TestPluginAPI_ListAndWatch(t *testing.T) {
+// TestPluginAPIListAndWatch for listAndWatch
+func TestPluginAPIListAndWatch(t *testing.T) {
 	hdm := createFakeDevManager("ascend910")
 	o := Option{GetFdFlag: false, UseAscendDocker: false, UseVolcanoType: true, ListAndWatchPeriod: sleepTime,
 		AutoStowingDevs: true, KubeConfig: ""}
@@ -71,10 +72,10 @@ func TestPluginAPI_ListAndWatch(t *testing.T) {
 	fakeKubeInteractor := &KubeInteractor{clientset: mockK8s, nodeName: "NODE_NAME"}
 	for _, devType := range devTypes {
 		mockstream := mock_v1beta1.NewMockDevicePlugin_ListAndWatchServer(ctrl)
-		mockstream.EXPECT().Send(&pluginapi.ListAndWatchResponse{}).Return(nil)
+		mockstream.EXPECT().Send(&v1beta1.ListAndWatchResponse{}).Return(nil)
 		fakePluginAPI = createFakePluginAPI(hdm, devType, fakeKubeInteractor)
 		go changeBreakFlag(fakePluginAPI)
-		err := fakePluginAPI.ListAndWatch(&pluginapi.Empty{}, mockstream)
+		err := fakePluginAPI.ListAndWatch(&v1beta1.Empty{}, mockstream)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -135,9 +136,12 @@ func TestAddAnnotation(t *testing.T) {
 		fakePluginAPI = createFakePluginAPI(hdm, devType, fakeKubeInteractor)
 	}
 	devices := make(map[string]string, 2)
-	devices["0"] = "0.0.0.0"
-	devices["1"] = "0.0.0.1"
-	annonationString := fakePluginAPI.addAnnotation(devices, "pod_name", "0.0.0.0")
+	devices["0"] = "127.0.0.0"
+	devices["1"] = "127.0.0.1"
+	annonationString := fakePluginAPI.addAnnotation(devices, "pod_name", "127.0.0.0")
+	hwlog.RunLog.Errorf("***********annonationString: %v\n", annonationString)
+	hwlog.RunLog.Errorf("***********annonationString == annonationTest1: %v\n", annonationString == annonationTest1)
+	hwlog.RunLog.Errorf("***********annonationString == annonationTest1: %v\n", annonationString == annonationTest2)
 	if annonationString == annonationTest1 || annonationString == annonationTest2 {
 		t.Logf("TestAddAnnotation Run Pass")
 	} else {
@@ -159,12 +163,12 @@ func TestAllocate(t *testing.T) {
 		t.Fatal("TestPluginAPI_Allocate Run Failed")
 	}
 	devicesIDs := []string{"Ascend910-8c-1-1"}
-	var containerRequests []*pluginapi.ContainerAllocateRequest
-	tmp := &pluginapi.ContainerAllocateRequest{
+	var containerRequests []*v1beta1.ContainerAllocateRequest
+	tmp := &v1beta1.ContainerAllocateRequest{
 		DevicesIDs: devicesIDs,
 	}
 	containerRequests = append(containerRequests, tmp)
-	requests := pluginapi.AllocateRequest{
+	requests := v1beta1.AllocateRequest{
 		ContainerRequests: containerRequests,
 	}
 	ctrl := gomock.NewController(t)
@@ -185,7 +189,7 @@ func TestAllocate(t *testing.T) {
 		DevType: "Ascend910-8c",
 		PciID:   "",
 		ID:      "Ascend910-8c-1-1",
-		Health:  pluginapi.Healthy,
+		Health:  v1beta1.Healthy,
 	}
 
 	_, requestErrs := fakePluginAPI.Allocate(ctx, &requests)
@@ -199,7 +203,7 @@ func TestAllocate(t *testing.T) {
 // TestGetDevicePluginOptions for test GetDevicePluginOptions
 func TestGetDevicePluginOptions(t *testing.T) {
 	var ctx context.Context
-	var pe pluginapi.Empty
+	var pe v1beta1.Empty
 	hdm := createFakeDevManager("ascend910")
 	fakeKubeInteractor := &KubeInteractor{}
 	fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", fakeKubeInteractor)
@@ -293,8 +297,8 @@ func TestCheckDeviceNetworkHealthStatus(t *testing.T) {
 				DevType:       "Ascend910",
 				PciID:         "",
 				ID:            "Ascend910-0",
-				Health:        pluginapi.Healthy,
-				NetworkHealth: pluginapi.Healthy,
+				Health:        v1beta1.Healthy,
+				NetworkHealth: v1beta1.Healthy,
 			}
 			fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", fakeKubeInteractor)
 			ret := fakePluginAPI.checkDeviceNetworkHealthStatus(device)
@@ -317,8 +321,8 @@ func TestCheckDeviceNetworkStatusChange(t *testing.T) {
 				DevType:       "Ascend910",
 				PciID:         "",
 				ID:            "Ascend910-3",
-				Health:        pluginapi.Healthy,
-				NetworkHealth: pluginapi.Healthy,
+				Health:        v1beta1.Healthy,
+				NetworkHealth: v1beta1.Healthy,
 			}
 			fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", fakeKubeInteractor)
 			ret := fakePluginAPI.checkDeviceNetworkHealthStatus(device)
@@ -336,8 +340,8 @@ func TestDonotCheckNetworkStatus(t *testing.T) {
 				DevType:       "Ascend910-8c",
 				PciID:         "",
 				ID:            "Ascend910-8c-1-1",
-				Health:        pluginapi.Healthy,
-				NetworkHealth: pluginapi.Healthy,
+				Health:        v1beta1.Healthy,
+				NetworkHealth: v1beta1.Healthy,
 			}
 			fakePluginAPI := createFakePluginAPI(hdm, "Ascend910-8c", fakeKubeInteractor)
 			ret := fakePluginAPI.checkDeviceNetworkHealthStatus(device)
@@ -358,8 +362,8 @@ func TestDonotCheckNetworkStatus(t *testing.T) {
 				DevType:       "Ascend910",
 				PciID:         "",
 				ID:            "Ascend910-1000",
-				Health:        pluginapi.Healthy,
-				NetworkHealth: pluginapi.Healthy,
+				Health:        v1beta1.Healthy,
+				NetworkHealth: v1beta1.Healthy,
 			}
 			fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", fakeKubeInteractor)
 			ret := fakePluginAPI.checkDeviceNetworkHealthStatus(device)

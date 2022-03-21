@@ -1,5 +1,5 @@
 /*
-* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
+* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
  */
 
 // Package huawei implements the query and allocation of the device and the function of the log.
@@ -14,6 +14,10 @@ type HwAscend710Manager struct {
 
 // NewHwAscend710Manager used to create ascend 710 manager
 func NewHwAscend710Manager() *HwAscend710Manager {
-	return &HwAscend710Manager{ascendCommonFunction{name: hiAIAscend710Prefix,
-		unHealthyKey: huaweiUnHealthAscend710}}
+	return &HwAscend710Manager{
+		ascendCommonFunction{
+			name:         hiAIAscend710Prefix,
+			unHealthyKey: huaweiUnHealthAscend710,
+		},
+	}
 }

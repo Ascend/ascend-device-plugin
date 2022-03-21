@@ -1,15 +1,16 @@
 /*
-* Copyright(C) 2021. Huawei Technologies Co.,Ltd. All rights reserved.
+* Copyright(C) 2021-2022. Huawei Technologies Co.,Ltd. All rights reserved.
  */
 
 package huawei
 
 import (
-	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 	"testing"
 
 	"github.com/smartystreets/goconvey/convey"
 	"k8s.io/apimachinery/pkg/util/sets"
+
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 )
 
 func TestGetNewNetworkRecoverDev(t *testing.T) {
