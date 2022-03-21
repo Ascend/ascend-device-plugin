@@ -136,6 +136,7 @@ import (
 	"huawei.com/npu-exporter/hwlog"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
+	"Ascend-device-plugin/src/plugin/pkg/npu/dcmi"
 )
 
 const (
@@ -198,6 +199,7 @@ type DeviceManager struct{}
 
 func init() {
 	C.dsmiInit_dl()
+	dcmi.Init()
 }
 
 // NewDeviceManager new DeviceManager instance
@@ -335,34 +337,32 @@ func (d *DeviceManager) GetDeviceIP(logicID int32) (string, error) {
 // ShutDown clean the dynamically loaded resource
 func (d *DeviceManager) ShutDown() {
 	C.dsmiShutDown()
+	dcmi.ShutDown()
 }
 
 // GetVDevicesInfo get the virtual device info by logicid
 func (d *DeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error) {
-	var dsmiVDevInfo C.struct_dsmi_vdev_info
-	err := C.dsmi_get_vdevice_info(C.uint(logicID), &dsmiVDevInfo)
-
-	if err != 0 || int(dsmiVDevInfo.vdev_num) < 0 || int(dsmiVDevInfo.vdev_num) > dsmiMaxVdevNum {
-		return CgoDsmiVDevInfo{}, fmt.Errorf("get virtual device info failed, error code is: %d "+
-			"and vdev num is: %d", int32(err), int32(dsmiVDevInfo.vdev_num))
+	dcmiVDevInfo, err := dcmi.GetVDeviceInfo(logicID)
+	if err != nil {
+		hwlog.RunLog.Error(err)
+		return CgoDsmiVDevInfo{}, fmt.Errorf("get virtual device info failed, error is: %v "+
+			"and vdev num is: %d", err, int32(dcmiVDevInfo.VDevNum))
 	}
+
 	cgoDsmiVDevInfos := CgoDsmiVDevInfo{
-		VDevNum:       uint32(dsmiVDevInfo.vdev_num),
-		CoreNumUnused: uint32(dsmiVDevInfo.spec_unused.core_num),
+		VDevNum:       dcmiVDevInfo.VDevNum,
+		CoreNumUnused: uint32(dcmiVDevInfo.CoreNumUnused),
 	}
 
 	for i := uint32(0); i < cgoDsmiVDevInfos.VDevNum; i++ {
-		cNum := dsmiVDevInfo.vdev[i].spec.core_num
-		if cNum == 1 {
-			continue
-		}
+		cNum := dcmiVDevInfo.CoreNum[i]
 		cgoDsmiVDevInfos.CgoDsmiSubVDevInfos = append(cgoDsmiVDevInfos.CgoDsmiSubVDevInfos, CgoDsmiSubVDevInfo{
-			Status: uint32(dsmiVDevInfo.vdev[i].status),
-			VDevID: uint32(dsmiVDevInfo.vdev[i].vdevid),
-			VfID:   uint32(dsmiVDevInfo.vdev[i].vfid),
-			CID:    uint64(dsmiVDevInfo.vdev[i].cid),
+			Status: dcmiVDevInfo.Status[i],
+			VDevID: dcmiVDevInfo.VDevID[i],
+			VfID:   dcmiVDevInfo.VfID[i],
+			CID:    dcmiVDevInfo.CID[i],
 			Spec: CgoDsmiVdevSpecInfo{
-				CoreNum: fmt.Sprintf("%v", cNum),
+				CoreNum: fmt.Sprintf("%v", int32(cNum)),
 			},
 		})
 	}
@@ -392,18 +392,16 @@ func (d *DeviceManager) create910VirDevice(vDevInfos CgoDsmiVDevInfo, logicID ui
 	if !isCoreNumEnough(vDevInfos.CoreNumUnused, vNPUs) {
 		return fmt.Errorf("create failure, no enough source to create virtual devices")
 	}
-	var dsmiVDevCreateInfo C.struct_dsmi_vdev_create_info
-	dsmiVDevCreateInfo.vdev_num = C.uint(len(vNPUs))
 	for i := 0; i < len(vNPUs); i++ {
 		coreStr := strings.Replace(strings.Split(vNPUs[i], "-")[1], "c", "", -1)
 		coreNum, err := strconv.Atoi(coreStr)
 		if err != nil {
 			continue
 		}
-		dsmiVDevCreateInfo.spec[i].core_num = C.uchar(coreNum)
-	}
-	if err := C.dsmi_create_vdevice(C.uint(logicID), &dsmiVDevCreateInfo); err != 0 {
-		return fmt.Errorf("create virtual device failed, error code: %d", int32(err))
+		if _, err := dcmi.CreateVDevice(logicID, uint32(coreNum)); err != nil {
+			hwlog.RunLog.Error(err)
+			return fmt.Errorf("create virtual device info failed, error is: %v", err)
+		}
 	}
 	return nil
 }
@@ -437,8 +435,9 @@ func (d *DeviceManager) create710VirDevice(vDevInfos CgoDsmiVDevInfo, logicID ui
 
 // DestroyVirtualDevice destroy spec virtual device
 func (d *DeviceManager) DestroyVirtualDevice(logicID uint32, vDevID uint32) error {
-	if err := C.dsmi_destroy_vdevice(C.uint(logicID), C.uint(vDevID)); err != 0 {
-		return fmt.Errorf("%v", err)
+	if err := dcmi.DestroyVDevice(logicID, vDevID); err != nil {
+		hwlog.RunLog.Error(err)
+		return fmt.Errorf("destroy virtual device info failed, error is: %v", err)
 	}
 	return nil
 }
