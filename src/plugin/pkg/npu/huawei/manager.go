@@ -1,41 +1,36 @@
 /*
-* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
+* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
  */
 
 package huawei
 
 import (
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
+	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 	"errors"
 	"fmt"
-	"github.com/fsnotify/fsnotify"
-	"go.uber.org/atomic"
-	"huawei.com/npu-exporter/hwlog"
-	"k8s.io/apimachinery/pkg/util/sets"
-	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"os"
 	"path"
 	"strings"
 	"syscall"
 	"time"
-)
 
-type npuDevice struct {
-	devType       string
-	pciID         string
-	ID            string
-	Health        string
-	networkHealth string
-}
+	"github.com/fsnotify/fsnotify"
+	"go.uber.org/atomic"
+	"huawei.com/npu-exporter/hwlog"
+	"k8s.io/apimachinery/pkg/util/sets"
+	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+)
 
 // HwDevManager manages huawei device devices.
 type HwDevManager struct {
 	manager     devManager
 	runMode     string
 	allDevTypes []string
-	allDevs     []npuDevice
+	allDevs     []common.NpuDevice
 	defaultDevs []string
 	stopFlag    *atomic.Bool
-	dmgr        DeviceMgrInterface
+	dmgr        dsmi.DeviceMgrInterface
 }
 
 // Option option
@@ -74,15 +69,15 @@ var (
 )
 
 type devManager interface {
-	GetNPUs(*[]npuDevice, *[]string, string) error
+	GetNPUs(*[]common.NpuDevice, *[]string, string) error
 	GetDevPath(string, string) (string, string)
-	GetDevState(string, DeviceMgrInterface) string
-	SetDmgr(DeviceMgrInterface)
-	GetDmgr() DeviceMgrInterface
+	GetDevState(string, dsmi.DeviceMgrInterface) string
+	SetDmgr(dsmi.DeviceMgrInterface)
+	GetDmgr() dsmi.DeviceMgrInterface
 	GetMatchingDeviType() string
 	GetPhyDevMapVirtualDev() map[uint32]string
 	DoWithVolcanoListAndWatch(*HwPluginServe, bool)
-	GetDeviceNetworkState(int32, *npuDevice) (string, error)
+	GetDeviceNetworkState(int32, *common.NpuDevice) (string, error)
 	GetAnnotationMap(sets.String, string) map[string]string
 }
 
@@ -90,7 +85,7 @@ type devManager interface {
 func NewHwDevManager(mode string) *HwDevManager {
 	return &HwDevManager{
 		runMode:  mode,
-		dmgr:     NewDeviceManager(),
+		dmgr:     dsmi.NewDeviceManager(),
 		stopFlag: atomic.NewBool(false),
 	}
 }
@@ -104,11 +99,11 @@ func (hdm *HwDevManager) GetNPUs() error {
 	}
 
 	switch hdm.runMode {
-	case runMode310:
+	case common.RunMode310:
 		hdm.manager = NewHwAscend310Manager()
-	case runMode910:
+	case common.RunMode910:
 		hdm.manager = NewHwAscend910Manager()
-	case runMode710:
+	case common.RunMode710:
 		hdm.manager = NewHwAscend710Manager()
 	default:
 		hwlog.RunLog.Errorf("found an unsupported device type")
@@ -117,14 +112,13 @@ func (hdm *HwDevManager) GetNPUs() error {
 	hwlog.RunLog.Infof("device plugin start")
 	hdm.manager.SetDmgr(hdm.dmgr)
 
-	if err := getDefaultDevices(&hdm.defaultDevs); err != nil {
+	if err := GetDefaultDevices(&hdm.defaultDevs); err != nil {
 		return err
 	}
 
 	if err := hdm.manager.GetNPUs(&hdm.allDevs, &hdm.allDevTypes, hdm.manager.GetMatchingDeviType()); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -134,32 +128,21 @@ func (hdm *HwDevManager) GetDevType() []string {
 }
 
 // Serve start grpc server
-func (hdm *HwDevManager) Serve(devType string, pluginServerFunc func(*HwDevManager,
-	string) HwPluginServeInterface) {
+func (hdm *HwDevManager) Serve(devType string) {
 	// start sockPath monitor
-	hwlog.RunLog.Infof("Starting check device socket file path.")
-	realDevSockPath, isOk := VerifyPath(pluginapi.DevicePluginPath)
-	if !isOk {
-		hwlog.RunLog.Errorf("socket path verify failed!")
-		return
-	}
-	pluginSockPath := path.Join(realDevSockPath, fmt.Sprintf("%s.sock", devType))
-	hwlog.RunLog.Infof("Starting socket file watcher.")
-	watcher := NewFileWatch()
-	if watcher == nil {
-		hwlog.RunLog.Errorf("failed to create file watcher")
+	hwlog.RunLog.Infof("starting the inspection of register devType %v", devType)
+	pluginSockPath, watcher, err := hdm.createSignWatchServe(devType)
+	if err != nil {
 		return
 	}
 	defer func() {
+		if watcher == nil {
+			return
+		}
 		if err := watcher.fileWatcher.Close(); err != nil {
 			hwlog.RunLog.Errorf("close file watcher, err: %s", err.Error())
 		}
 	}()
-	if err := watcher.watchFile(realDevSockPath); err != nil {
-		hwlog.RunLog.Errorf("failed to create file watcher, err: %s", err.Error())
-		return
-	}
-
 	restart := true
 	var hps HwPluginServeInterface
 	for !hdm.stopFlag.Load() {
@@ -167,30 +150,55 @@ func (hdm *HwDevManager) Serve(devType string, pluginServerFunc func(*HwDevManag
 			break
 		}
 		if restart {
-			if hps != nil {
-				hps.Stop()
-			}
-			// start
-			hps = pluginServerFunc(hdm, devType)
-			if hps == nil {
-				hwlog.RunLog.Error("failed to create kube interactor")
+			var err error
+			restart, err = hdm.reStartServe(&hps, devType, pluginSockPath)
+			if err != nil {
 				return
-			}
-			preStart(hps)
-			// end
-			if err := hps.Start(pluginSockPath); err != nil {
-				hwlog.RunLog.Errorf("Could not contact Kubelet, retrying. " +
-					"Did you enable the device plugin feature gate?")
-				restart = true
-			} else {
-				restart = false
 			}
 		}
 		// Monitor file signals and system signals
 		osSignChan := newSignWatcher(syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGKILL)
 		restart = hdm.signalWatch(watcher.fileWatcher, osSignChan, restart, hps, pluginSockPath)
 	}
+}
 
+func (hdm *HwDevManager) createSignWatchServe(devType string) (string, *FileWatch, error) {
+	realDevSockPath, isOk := VerifyPath(pluginapi.DevicePluginPath)
+	if !isOk {
+		hwlog.RunLog.Errorf("socket path verify failed!")
+		return "", nil, fmt.Errorf("socket path verify failed")
+	}
+	pluginSockPath := path.Join(realDevSockPath, fmt.Sprintf("%s.sock", devType))
+	hwlog.RunLog.Infof("starting socket file watcher.")
+	watcher := NewFileWatch()
+	if watcher == nil {
+		hwlog.RunLog.Errorf("failed to create file watcher")
+		return "", nil, fmt.Errorf("failed to create file watcher")
+	}
+	if err := watcher.watchFile(realDevSockPath); err != nil {
+		hwlog.RunLog.Errorf("failed to create file watcher, err: %s", err.Error())
+		return "", watcher, err
+	}
+	return pluginSockPath, watcher, nil
+}
+
+func (hdm *HwDevManager) reStartServe(hps *HwPluginServeInterface, devType, pluginSockPath string) (bool, error) {
+	if (*hps) != nil {
+		(*hps).Stop()
+	}
+	// restart serve
+	*hps = NewHwPluginServe(hdm, devType)
+	if *hps == nil {
+		hwlog.RunLog.Errorf("failed to create kube interactor")
+		return false, fmt.Errorf("failed to create kube interactor")
+	}
+	preStart(*hps)
+	if err := (*hps).Start(pluginSockPath); err != nil {
+		hwlog.RunLog.Errorf("Could not contact Kubelet, retrying. " +
+			"Did you enable the device plugin feature gate?")
+		return true, nil
+	}
+	return false, nil
 }
 
 func preStart(hps HwPluginServeInterface) {
@@ -201,7 +209,7 @@ func preStart(hps HwPluginServeInterface) {
 		}
 		// Use non-default level to avoid log spam.
 		if logFlag {
-			hwlog.RunLog.Errorf("hwPluginServe preStart failed, err: %s", err.Error())
+			hwlog.RunLog.Warnf("hwPluginServe preStart failed, err: %s", err.Error())
 		}
 		logFlag = false
 		time.Sleep(sleepTime * time.Second)
@@ -277,17 +285,17 @@ func (hdm *HwDevManager) setRunMode() error {
 		}
 	}
 	if strings.Contains(chipName, "310") {
-		hdm.runMode = runMode310
+		hdm.runMode = common.RunMode310
 		return nil
 	}
 
 	if strings.Contains(chipName, "710") {
-		hdm.runMode = runMode710
+		hdm.runMode = common.RunMode710
 		return nil
 	}
 
 	if strings.Contains(chipName, "910") {
-		hdm.runMode = runMode910
+		hdm.runMode = common.RunMode910
 		return nil
 	}
 

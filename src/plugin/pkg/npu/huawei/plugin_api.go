@@ -1,13 +1,23 @@
 /*
-* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
+* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
  */
 
 package huawei
 
 import (
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
+	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
+	"net"
+	"regexp"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
 	"go.uber.org/atomic"
 	"huawei.com/npu-exporter/hwlog"
 	v1 "k8s.io/api/core/v1"
@@ -16,13 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
-	"math"
-	"net"
-	"regexp"
-	"sort"
-	"strconv"
-	"strings"
-	"time"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -60,6 +63,7 @@ var (
 	totalUHDevices                sets.String
 	totalNetworkUnhealthDevices   sets.String
 	lastTimeNetworkRecoverDevices sets.String
+	listenDevCountIsChange        = make(map[string]bool, initMapCap)
 )
 
 const (
@@ -177,7 +181,6 @@ func (s *pluginAPI) updateKubeletDevInfo(resp *pluginapi.ListAndWatchResponse,
 		}
 		klDev.Insert(d)
 	}
-
 	notInKlDev := allDev.Difference(klDev)
 	index := 0
 	for d := range notInKlDev {
@@ -227,15 +230,14 @@ func (s *pluginAPI) listenVirtualDevices() bool {
 		for devID, device := range s.hps.devices {
 			if s.isPhyDevOwnThisVirtualDevice(device, phyID) && healthStatus != device.Health {
 				isStateChange = true
-				device.Health = healthStatus
-				s.hps.devices[devID] = device
+				s.hps.devices[devID].Health = healthStatus
 			}
 		}
 	}
 	return isStateChange
 }
 
-func (s *pluginAPI) isPhyDevOwnThisVirtualDevice(device *npuDevice, phyID uint32) bool {
+func (s *pluginAPI) isPhyDevOwnThisVirtualDevice(device *common.NpuDevice, phyID uint32) bool {
 	return strings.Split(device.ID, "-")[logicIDIndexInVirtualDevID910] == fmt.Sprintf("%d", phyID)
 }
 
@@ -258,13 +260,13 @@ func (s *pluginAPI) listenPhysicalDevices() bool {
 
 // check device network health status
 // only for Ascend910 and Non-virtual device
-func (s *pluginAPI) checkDeviceNetworkHealthStatus(device *npuDevice) bool {
+func (s *pluginAPI) checkDeviceNetworkHealthStatus(device *common.NpuDevice) bool {
 	// virtual devices do not check network health status.
 	if IsVirtualDev(s.hps.devType) {
 		return false
 	}
 
-	phyID, err := getPhyIDByName(device.ID)
+	phyID, err := GetPhyIDByName(device.ID)
 	if err != nil {
 		hwlog.RunLog.Error(err)
 		return false
@@ -282,8 +284,8 @@ func (s *pluginAPI) checkDeviceNetworkHealthStatus(device *npuDevice) bool {
 		return false
 	}
 
-	if healthStatus != device.networkHealth {
-		device.networkHealth = healthStatus
+	if healthStatus != device.NetworkHealth {
+		device.NetworkHealth = healthStatus
 		return true
 	}
 
@@ -300,6 +302,7 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 	if requestErrs != nil {
 		return nil, requestErrs
 	}
+
 	for _, rqt := range requests.ContainerRequests {
 		resp := new(pluginapi.ContainerAllocateResponse)
 
@@ -319,7 +322,7 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *pluginapi.AllocateRe
 				return nil, errs
 			}
 		}
-		if s.hps.runMode == runMode910 {
+		if s.hps.runMode == common.RunMode910 {
 			s.mountfile(resp)
 			s.responseAnonation(resp, ascendVisibleDevicesMap)
 		}
@@ -341,7 +344,7 @@ func (s *pluginAPI) setAscendRuntimeOptions(requests *pluginapi.AllocateRequest)
 				return fmt.Errorf("request more than one virtual device, current is %d", len(rqt.DevicesIDs))
 			}
 			if IsVirtualDev(deviceName) {
-				s.ascendRuntimeOptions = virtualDev
+				s.ascendRuntimeOptions = common.VirtualDev
 				return nil
 			}
 		}
@@ -358,13 +361,13 @@ func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (
 		if !ok {
 			return nil, nil, fmt.Errorf("plugin doesn't have device %s", id)
 		}
-		deviceID, virID, err := getDeviceID(id, s.ascendRuntimeOptions)
+		deviceID, virID, err := common.GetDeviceID(id, s.ascendRuntimeOptions)
 		if err != nil {
 			hwlog.RunLog.Errorf("getDeviceID err: %v", err)
 			return nil, nil, err
 		}
 		var deviceIP string
-		if s.ascendRuntimeOptions == virtualDev {
+		if s.ascendRuntimeOptions == common.VirtualDev {
 			ascendVisibleDevices[virID] = defaultDeviceIP
 			continue
 		}
@@ -385,7 +388,7 @@ func (s *pluginAPI) setEnvFromKubelet(rqt *pluginapi.ContainerAllocateRequest) (
 
 func (s *pluginAPI) mountDefaultDevice(resp *pluginapi.ContainerAllocateResponse) {
 	// mount default devices
-	for _, d := range s.hps.defaultDevs {
+	for _, d := range s.hps.hdm.defaultDevs {
 		resp.Devices = append(resp.Devices, &pluginapi.DeviceSpec{
 			HostPath:      d,
 			ContainerPath: d,
@@ -492,7 +495,7 @@ func (s *pluginAPI) setDevices(instance *Instance, devices map[string]string) {
 	sort.Strings(sortDevicesKey)
 	for _, deviceID := range sortDevicesKey {
 		var device Device
-		if s.ascendRuntimeOptions == virtualDev {
+		if s.ascendRuntimeOptions == common.VirtualDev {
 			s.setVirtualDevices(instance, device, deviceID)
 			continue
 		}
@@ -521,7 +524,7 @@ func (s *pluginAPI) getDeviceIP(phyID string) (string, error) {
 
 	logicID, err := s.hps.hdm.dmgr.GetLogicID(uint32(transPhyID))
 	if err != nil {
-		return ERROR, fmt.Errorf("transfor phyID %s to logicID failed, error code : %v", phyID, err)
+		return dsmi.ERROR, fmt.Errorf("transfor phyID %s to logicID failed, error code : %v", phyID, err)
 	}
 	return s.hps.hdm.dmgr.GetDeviceIP(int32(logicID))
 }
@@ -810,7 +813,7 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int, kltDevices []string) 
 	getNodeNpuUsed(&usedDevices, s.hps)
 	freeDevices := s.hps.healthDevice.Difference(usedDevices)
 	groupAllocatableDevs := s.hps.hdm.manager.GetAnnotationMap(freeDevices, s.hps.devType)
-	errs := s.hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, s.hps.devType)
+	errs := s.hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs)
 	if errs != nil {
 		hwlog.RunLog.Errorf("patch Annotations failed, err: %v", err)
 		return nil, err
@@ -842,7 +845,7 @@ func (s *pluginAPI) checkPodNameAndSpace(podPara string, maxLength int) error {
 func (s *pluginAPI) getAscendVisiDevsWithVolcano(allocateDevice sets.String, devices *map[string]string) error {
 	for _, id := range allocateDevice.List() {
 
-		deviceID, virID, err := getDeviceID(id, s.ascendRuntimeOptions)
+		deviceID, virID, err := common.GetDeviceID(id, s.ascendRuntimeOptions)
 		if err != nil {
 			hwlog.RunLog.Errorf("get phyID, err: %v", err)
 			return err
@@ -852,7 +855,7 @@ func (s *pluginAPI) getAscendVisiDevsWithVolcano(allocateDevice sets.String, dev
 			(*devices)[deviceID] = ""
 			continue
 		}
-		if s.ascendRuntimeOptions == virtualDev {
+		if s.ascendRuntimeOptions == common.VirtualDev {
 			(*devices)[virID] = defaultDeviceIP
 			continue
 		}

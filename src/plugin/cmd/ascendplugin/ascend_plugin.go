@@ -1,16 +1,17 @@
 /*
-* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
+* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
  */
 
 // Package main implements initialization of the startup parameters of the device plugin.
 package main
 
 import (
-	hwmanager "Ascend-device-plugin/src/plugin/pkg/npu/huawei"
+	"Ascend-device-plugin/src/plugin/pkg/npu/huawei"
 	"flag"
 	"fmt"
-	"huawei.com/npu-exporter/hwlog"
 	"os"
+
+	"huawei.com/npu-exporter/hwlog"
 )
 
 const (
@@ -40,11 +41,11 @@ var (
 	autoStowing = flag.Bool("autoStowing", true, "Whether to automatically stow the fixed device")
 	logLevel    = flag.Int("logLevel", 0,
 		"Log level, -1-debug, 0-info(default), 1-warning, 2-error, 3-dpanic, 4-panic, 5-fatal (default 0)")
-	logMaxAge = flag.Int("maxAge", hwmanager.MaxAge,
+	logMaxAge = flag.Int("maxAge", huawei.MaxAge,
 		"Maximum number of days for backup run log files, must be greater than or equal to 7 days")
 	logFile = flag.String("logFile", defaultLogPath,
 		"The log file path, if the file size exceeds 20MB, will be rotate")
-	logMaxBackups = flag.Int("maxBackups", hwmanager.MaxBackups,
+	logMaxBackups = flag.Int("maxBackups", huawei.MaxBackups,
 		"Maximum number of backup log files, range is (0, 30]")
 	kubeconfig = flag.String("kubeConfig", "", "Path to a kubeconfig. "+
 		"Only required if out-of-cluster.")
@@ -103,8 +104,8 @@ func main() {
 		<-neverStop
 	}
 
-	hdm := hwmanager.NewHwDevManager(*mode)
-	o := hwmanager.Option{GetFdFlag: *fdFlag, UseAscendDocker: *useAscendDocker, UseVolcanoType: *volcanoType,
+	hdm := huawei.NewHwDevManager(*mode)
+	o := huawei.Option{GetFdFlag: *fdFlag, UseAscendDocker: *useAscendDocker, UseVolcanoType: *volcanoType,
 		AutoStowingDevs: *autoStowing, ListAndWatchPeriod: *listWatchPeriod, KubeConfig: *kubeconfig}
 	hdm.SetParameters(o)
 	if err := hdm.GetNPUs(); err != nil {
@@ -117,11 +118,13 @@ func main() {
 		hwlog.RunLog.Errorf("no devices type found. waiting indefinitely")
 		<-neverStop
 	}
-
-	for _, devType := range devTypes {
-		hwlog.RunLog.Infof("ascend device serve started, devType: %s", devType)
-		go hdm.Serve(devType, hwmanager.NewHwPluginServe)
-	}
-
+	startDiffTypeServe(hdm, neverStop)
 	<-neverStop
+}
+
+func startDiffTypeServe(hdm *huawei.HwDevManager, neverStop chan struct{}) {
+	for _, devType := range hdm.GetDevType() {
+		hwlog.RunLog.Infof("ascend device serve started, devType: %s", devType)
+		go hdm.Serve(devType)
+	}
 }

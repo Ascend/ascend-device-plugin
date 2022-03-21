@@ -5,6 +5,8 @@
 package huawei
 
 import (
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
+	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 	"fmt"
 	"go.uber.org/atomic"
 	"huawei.com/npu-exporter/hwlog"
@@ -15,7 +17,11 @@ import (
 	"time"
 )
 
-const sleepNumTwo = 2
+const (
+	sleepNumTwo   = 2
+	serverSockFd  = "/var/lib/kubelet/device-plugins/davinci-mini.sock"
+	serverSock310 = "/var/lib/kubelet/device-plugins/Ascend310.sock"
+)
 
 // TestHwDevManager_GetNPUs for getNpus
 func TestHwDevManager_GetNPUs(t *testing.T) {
@@ -40,33 +46,10 @@ func TestHwDevManager_GetNPUs(t *testing.T) {
 func createFakeDevManager(runMode string) *HwDevManager {
 	fakeHwDevManager := &HwDevManager{
 		runMode:  runMode,
-		dmgr:     newFakeDeviceManager(),
+		dmgr:     dsmi.NewFakeDeviceManager(),
 		stopFlag: atomic.NewBool(false),
 	}
 	return fakeHwDevManager
-}
-
-// TestHwDevManager_Serve for serve
-func TestHwDevManager_Serve(t *testing.T) {
-	fakeHwDevManager := createFakeDevManager("")
-	errDir := os.MkdirAll("/var/lib/kubelet/device-plugins/", os.ModePerm)
-	if errDir != nil {
-		t.Fatal("TestHwDevManager_Serve Run FAiled, reason is failed to create folder file")
-	}
-	f, err := os.Create(serverSock310)
-	defer f.Close()
-	if err != nil {
-		hwlog.RunLog.Info(err)
-		t.Fatal("TestHwDevManager_Serve Run FAiled, reason is failed to create sock file")
-	}
-
-	if err := f.Chmod(socketChmod); err != nil {
-		t.Fatal("TestHwDevManager_Serve Run FAiled, reason is failed to Chmod")
-	}
-
-	go deleteServerSocketByDevManager(serverSock310, fakeHwDevManager)
-	fakeHwDevManager.Serve("Ascend310", NewFakeHwPluginServe)
-	t.Logf("TestHwDevManager_Serve Run Pass")
 }
 
 func deleteServerSocketByDevManager(serverSocket string, manager *HwDevManager) {
@@ -76,7 +59,7 @@ func deleteServerSocketByDevManager(serverSocket string, manager *HwDevManager) 
 	if err := os.Remove(serverSocket); err != nil {
 		fmt.Println(err)
 	}
-
+	hwlog.RunLog.Infof("remove serverSocket success")
 }
 
 // TestSignalWatch for testSingalWatch
@@ -86,7 +69,7 @@ func TestSignalWatch(t *testing.T) {
 	if err != nil {
 		t.Fatal("TestSignalWatch Run FAiled, reason is failed to create sock file")
 	}
-	if err := f.Chmod(socketChmod); err != nil {
+	if err := f.Chmod(common.SocketChmod); err != nil {
 		t.Fatal("TestHwDevManager_Serve Run FAiled, reason is failed to Chmod")
 	}
 	watcher := NewFileWatch()
@@ -96,7 +79,7 @@ func TestSignalWatch(t *testing.T) {
 	}
 	defer watcher.fileWatcher.Close()
 	hwlog.RunLog.Infof("Starting OS signs watcher.")
-	osSignChan := newSignWatcher(syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	osSignChan := newSignWatcher(syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGKILL)
 	hdm := HwDevManager{}
 	useVolcanoType = false
 	hps := NewHwPluginServe(&hdm, "")

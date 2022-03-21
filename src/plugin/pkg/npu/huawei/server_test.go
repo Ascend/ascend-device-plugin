@@ -1,21 +1,24 @@
 /*
-* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
+* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
  */
 
 package huawei
 
 import (
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
+	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
+	"os"
+	"testing"
+
 	"go.uber.org/atomic"
 	"google.golang.org/grpc"
 	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"os"
-	"testing"
 )
 
 type fakeHwPluginServe struct {
 	hdm            *HwDevManager
-	devices        map[string]*npuDevice
+	devices        map[string]*common.NpuDevice
 	grpcServer     *grpc.Server
 	devType        string
 	runMode        string
@@ -31,7 +34,7 @@ func NewFakeHwPluginServe(hdm *HwDevManager, devType string) HwPluginServeInterf
 		devType:        devType,
 		hdm:            hdm,
 		runMode:        hdm.runMode,
-		devices:        make(map[string]*npuDevice),
+		devices:        make(map[string]*common.NpuDevice),
 		healthDevice:   sets.String{},
 		unHealthDevice: sets.String{},
 	}
@@ -41,7 +44,7 @@ func NewFakeHwPluginServe(hdm *HwDevManager, devType string) HwPluginServeInterf
 func TestStart(t *testing.T) {
 	fakeHwDevManager := &HwDevManager{
 		runMode:  "ascend910",
-		dmgr:     newFakeDeviceManager(),
+		dmgr:     dsmi.NewFakeDeviceManager(),
 		stopFlag: atomic.NewBool(false),
 	}
 	pluginSocket := "Ascend910.sock"

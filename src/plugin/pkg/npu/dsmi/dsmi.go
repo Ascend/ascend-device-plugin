@@ -1,8 +1,9 @@
 /*
-* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
+* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
  */
 
-package huawei
+// Package dsmi is driver dsmi interface related
+package dsmi
 
 // #cgo LDFLAGS: -ldl
 /*
@@ -72,6 +73,16 @@ int dsmi_get_network_health(int device_id, DSMI_NET_HEALTH_STATUS *presult){
     CALL_FUNC(dsmi_get_network_health,device_id,presult)
 }
 
+int (*dsmi_destroy_vdevice_func)(unsigned int devid, unsigned int vdevid);
+int dsmi_destroy_vdevice(unsigned int devid, unsigned int vdevid){
+	CALL_FUNC(dsmi_destroy_vdevice,devid,vdevid)
+}
+
+int (*dsmi_create_vdevice_func)(unsigned int devid, struct dsmi_vdev_create_info *info);
+int dsmi_create_vdevice(unsigned int devid, struct dsmi_vdev_create_info *info){
+	CALL_FUNC(dsmi_create_vdevice,devid,info)
+}
+
 // load .so files and functions
 int dsmiInit_dl(void){
 	dsmiHandle = dlopen("libdrvdsmi_host.so",RTLD_LAZY);
@@ -102,6 +113,10 @@ int dsmiInit_dl(void){
 
 	dsmi_get_network_health_func = dlsym(dsmiHandle,"dsmi_get_network_health");
 
+	dsmi_destroy_vdevice_func = dlsym(dsmiHandle,"dsmi_destroy_vdevice");
+
+	dsmi_create_vdevice_func = dlsym(dsmiHandle,"dsmi_create_vdevice");
+
 	return SUCCESS;
 }
 
@@ -114,9 +129,12 @@ int dsmiShutDown(void){
 */
 import "C"
 import (
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 	"fmt"
-	"huawei.com/npu-exporter/hwlog"
+	"strconv"
 	"strings"
+
+	"huawei.com/npu-exporter/hwlog"
 )
 
 const (
@@ -137,24 +155,24 @@ const (
 
 // CgoDsmiSubVDevInfo single VDevInfo info
 type CgoDsmiSubVDevInfo struct {
-	status uint32
-	vdevid uint32
-	vfid   uint32
-	cid    uint64
-	spec   CgoDsmiVdevSpecInfo
+	Status uint32
+	VDevID uint32
+	VfID   uint32
+	CID    uint64
+	Spec   CgoDsmiVdevSpecInfo
 }
 
 // CgoDsmiVdevSpecInfo is special info
 type CgoDsmiVdevSpecInfo struct {
-	coreNum  string
-	reserved string
+	CoreNum  string
+	Reserved string
 }
 
 // CgoDsmiVDevInfo total VDevInfos info
 type CgoDsmiVDevInfo struct {
-	vDevNum             uint32
-	coreNumUnused       uint32
-	cgoDsmiSubVDevInfos []CgoDsmiSubVDevInfo
+	VDevNum             uint32
+	CoreNumUnused       uint32
+	CgoDsmiSubVDevInfos []CgoDsmiSubVDevInfo
 }
 
 // DeviceMgrInterface interface for dsmi
@@ -167,6 +185,8 @@ type DeviceMgrInterface interface {
 	GetChipInfo(int32) (string, error)
 	GetDeviceIP(int32) (string, error)
 	GetVDevicesInfo(uint32) (CgoDsmiVDevInfo, error)
+	CreateVirtualDevice(uint32, string, []string) error
+	DestroyVirtualDevice(uint32, uint32) error
 	GetDeviceErrorCode(uint32) error
 	GetDeviceNetworkHealth(int32) (uint32, error)
 	ShutDown()
@@ -198,7 +218,7 @@ func (d *DeviceManager) GetDeviceCount() (int32, error) {
 	if int(count) == 0 {
 		return 0, fmt.Errorf("the number of available chips is 0")
 	}
- 	return int32(count), nil
+	return int32(count), nil
 }
 
 // GetDeviceList device get list
@@ -261,7 +281,7 @@ func (d *DeviceManager) GetLogicID(phyID uint32) (uint32, error) {
 	if err != 0 {
 		return unretError, fmt.Errorf("get logic id failed ,error code is : %d", int32(err))
 	}
-	if uint32(logicID) > uint32(hiAIMaxDeviceNum) {
+	if uint32(logicID) >= uint32(hiAIMaxDeviceNum) {
 		return unretError, fmt.Errorf("get invalid logic id: %d", uint32(logicID))
 	}
 
@@ -295,7 +315,9 @@ func (d *DeviceManager) GetDeviceIP(logicID int32) (string, error) {
 	var ipAddress [hiAIMaxDeviceNum]C.ip_addr_t
 	var maskAddress [hiAIMaxDeviceNum]C.ip_addr_t
 	var deviceIP []string
-
+	if logicID >= hiAIMaxDeviceNum {
+		return ERROR, fmt.Errorf("getDevice IP address failed, error logicID")
+	}
 	retCode := C.dsmi_get_device_ip_address(C.int(logicID), portType, portID, &ipAddress[C.int(logicID)],
 		&maskAddress[C.int(logicID)])
 	if retCode != 0 {
@@ -324,26 +346,100 @@ func (d *DeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error)
 			"and vdev num is: %d", int32(err), int32(dsmiVDevInfo.vdev_num))
 	}
 	cgoDsmiVDevInfos := CgoDsmiVDevInfo{
-		vDevNum:       uint32(dsmiVDevInfo.vdev_num),
-		coreNumUnused: uint32(dsmiVDevInfo.spec_unused.core_num),
+		VDevNum:       uint32(dsmiVDevInfo.vdev_num),
+		CoreNumUnused: uint32(dsmiVDevInfo.spec_unused.core_num),
 	}
 
-	for i := uint32(0); i < cgoDsmiVDevInfos.vDevNum; i++ {
+	for i := uint32(0); i < cgoDsmiVDevInfos.VDevNum; i++ {
 		cNum := dsmiVDevInfo.vdev[i].spec.core_num
 		if cNum == 1 {
 			continue
 		}
-		cgoDsmiVDevInfos.cgoDsmiSubVDevInfos = append(cgoDsmiVDevInfos.cgoDsmiSubVDevInfos, CgoDsmiSubVDevInfo{
-			status: uint32(dsmiVDevInfo.vdev[i].status),
-			vdevid: uint32(dsmiVDevInfo.vdev[i].vdevid),
-			vfid:   uint32(dsmiVDevInfo.vdev[i].vfid),
-			cid:    uint64(dsmiVDevInfo.vdev[i].cid),
-			spec: CgoDsmiVdevSpecInfo{
-				coreNum: fmt.Sprintf("%v", cNum),
+		cgoDsmiVDevInfos.CgoDsmiSubVDevInfos = append(cgoDsmiVDevInfos.CgoDsmiSubVDevInfos, CgoDsmiSubVDevInfo{
+			Status: uint32(dsmiVDevInfo.vdev[i].status),
+			VDevID: uint32(dsmiVDevInfo.vdev[i].vdevid),
+			VfID:   uint32(dsmiVDevInfo.vdev[i].vfid),
+			CID:    uint64(dsmiVDevInfo.vdev[i].cid),
+			Spec: CgoDsmiVdevSpecInfo{
+				CoreNum: fmt.Sprintf("%v", cNum),
 			},
 		})
 	}
 	return cgoDsmiVDevInfos, nil
+}
+
+// CreateVirtualDevice to create a virtual device
+func (d *DeviceManager) CreateVirtualDevice(logicID uint32, runMode string, vNPUs []string) error {
+	cgoDsmiVDevInfos, err := d.GetVDevicesInfo(logicID)
+	if err != nil {
+		return err
+	}
+	switch runMode {
+	case common.RunMode710:
+		return d.create710VirDevice(cgoDsmiVDevInfos, logicID)
+	case common.RunMode910:
+		return d.create910VirDevice(cgoDsmiVDevInfos, logicID, vNPUs)
+	default:
+		return fmt.Errorf("not support runMode %s", runMode)
+	}
+}
+
+func (d *DeviceManager) create910VirDevice(vDevInfos CgoDsmiVDevInfo, logicID uint32, vNPUs []string) error {
+	if vDevInfos.CoreNumUnused <= 1 || vDevInfos.VDevNum > dsmiMaxVdevNum {
+		return fmt.Errorf("the specification used to create virtual device is error")
+	}
+	if !isCoreNumEnough(vDevInfos.CoreNumUnused, vNPUs) {
+		return fmt.Errorf("create failure, no enough source to create virtual devices")
+	}
+	var dsmiVDevCreateInfo C.struct_dsmi_vdev_create_info
+	dsmiVDevCreateInfo.vdev_num = C.uint(len(vNPUs))
+	for i := 0; i < len(vNPUs); i++ {
+		coreStr := strings.Replace(strings.Split(vNPUs[i], "-")[1], "c", "", -1)
+		coreNum, err := strconv.Atoi(coreStr)
+		if err != nil {
+			continue
+		}
+		dsmiVDevCreateInfo.spec[i].core_num = C.uchar(coreNum)
+	}
+	if err := C.dsmi_create_vdevice(C.uint(logicID), &dsmiVDevCreateInfo); err != 0 {
+		return fmt.Errorf("create virtual device failed, error code: %d", int32(err))
+	}
+	return nil
+}
+
+// isCoreNumEnough is enough core to create virtual device
+func isCoreNumEnough(freeCore uint32, vNPUs []string) bool {
+	coreCount, err := getCoreCountToCreate(vNPUs)
+	if err != nil {
+		return false
+	}
+	return freeCore >= uint32(coreCount)
+}
+
+func getCoreCountToCreate(vNPUs []string) (int, error) {
+	var needCoreCount int
+	for _, vNPU := range vNPUs {
+		coreStr := strings.Replace(strings.Split(vNPU, "-")[1], "c", "", -1)
+		coreNum, err := strconv.Atoi(coreStr)
+		if err != nil {
+			return 0, err
+		}
+		needCoreCount += coreNum
+	}
+	return needCoreCount, nil
+}
+
+func (d *DeviceManager) create710VirDevice(vDevInfos CgoDsmiVDevInfo, logicID uint32) error {
+	// todo need spec
+	return nil
+}
+
+// DestroyVirtualDevice destroy spec virtual device
+func (d *DeviceManager) DestroyVirtualDevice(logicID uint32, vDevID uint32) error {
+	if err := C.dsmi_destroy_vdevice(C.uint(logicID), C.uint(vDevID)); err != 0 {
+		return fmt.Errorf("%v", err)
+	}
+	return nil
 }
 
 // GetDeviceErrorCode get device error code

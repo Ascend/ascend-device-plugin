@@ -1,16 +1,18 @@
 /*
-* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
+* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
  */
 
 package huawei
 
 import (
-	"github.com/fsnotify/fsnotify"
-	"huawei.com/npu-exporter/hwlog"
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 	"net"
 	"os"
 	"os/signal"
 	"path"
+
+	"github.com/fsnotify/fsnotify"
+	"huawei.com/npu-exporter/hwlog"
 )
 
 // FileWatch is used to watch sock file
@@ -63,7 +65,7 @@ func createNetListen(pluginSocketPath string) (net.Listener, error) {
 		hwlog.RunLog.Errorf("device plugin start failed, err: %s", err.Error())
 		return nil, err
 	}
-	err = os.Chmod(pluginSocketPath, socketChmod)
+	err = os.Chmod(pluginSocketPath, common.SocketChmod)
 	if err != nil {
 		hwlog.RunLog.Errorf("change file: %s mode error", path.Base(pluginSocketPath))
 	}

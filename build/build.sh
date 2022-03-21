@@ -1,10 +1,10 @@
 #!/bin/bash
 # Perform  build k8s-device-plugin
-# Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
+# Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
 set -e
 CUR_DIR=$(dirname "$(readlink -f "$0")")
 TOP_DIR=$(realpath "${CUR_DIR}"/..)
-build_version="v2.0.3"
+build_version="v3.0.0"
 version_file="${TOP_DIR}"/service_config.ini
 if  [ -f "$version_file" ]; then
   line=$(sed -n '4p' "$version_file" 2>&1)
