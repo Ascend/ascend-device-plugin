@@ -5,16 +5,17 @@
 package dsmi
 
 import (
-	"Ascend-device-plugin/src/plugin/pkg/npu/common"
-	"Ascend-device-plugin/src/plugin/pkg/npu/huawei"
 	"os"
 	"testing"
+
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
+	"Ascend-device-plugin/src/plugin/pkg/npu/huawei"
 )
 
 const testLogicID = 3
 
 // EnableContainerService for enableContainerService
-func (d *fakeDeviceManager) EnableContainerService() error {
+func (d *FakeDeviceManager) EnableContainerService() error {
 	return nil
 }
 

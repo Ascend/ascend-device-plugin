@@ -6,12 +6,13 @@
 package main
 
 import (
-	"Ascend-device-plugin/src/plugin/pkg/npu/huawei"
 	"flag"
 	"fmt"
 	"os"
 
 	"huawei.com/npu-exporter/hwlog"
+
+	"Ascend-device-plugin/src/plugin/pkg/npu/huawei"
 )
 
 const (

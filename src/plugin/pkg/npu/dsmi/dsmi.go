@@ -129,12 +129,13 @@ int dsmiShutDown(void){
 */
 import "C"
 import (
-	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 	"fmt"
 	"strconv"
 	"strings"
 
 	"huawei.com/npu-exporter/hwlog"
+
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 )
 
 const (

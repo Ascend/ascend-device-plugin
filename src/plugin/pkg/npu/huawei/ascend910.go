@@ -6,14 +6,15 @@
 package huawei
 
 import (
-	"Ascend-device-plugin/src/plugin/pkg/npu/common"
-	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 	"fmt"
 	"strings"
 
 	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/apimachinery/pkg/util/sets"
-	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
+	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 )
 
 const (
@@ -157,10 +158,10 @@ func (hnm *HwAscend910Manager) GetDeviceNetworkState(logicID int32, device *comm
 
 	switch healthCode {
 	case networkDetectOK, networkDetectInit:
-		return pluginapi.Healthy, nil
+		return v1beta1.Healthy, nil
 	default:
 		hwlog.RunLog.Debugf("%s network status is unhealthy, code value is %v", device.ID, healthCode)
-		return pluginapi.Unhealthy, nil
+		return v1beta1.Unhealthy, nil
 	}
 }
 
@@ -174,16 +175,16 @@ func (hnm *HwAscend910Manager) groupDevsByStatus(hps *HwPluginServe, isStateChan
 	}
 	hps.healthDevice = sets.String{}
 	for _, device := range hps.devices {
-		if device.NetworkHealth != pluginapi.Healthy {
+		if device.NetworkHealth != v1beta1.Healthy {
 			totalNetworkUnhealthDevices.Insert(device.ID)
 		}
 
-		if IsVirtualDev(device.ID) || device.Health == pluginapi.Healthy {
+		if IsVirtualDev(device.ID) || device.Health == v1beta1.Healthy {
 			hps.healthDevice.Insert(device.ID)
 			continue
 		}
 
-		if device.Health != pluginapi.Healthy {
+		if device.Health != v1beta1.Healthy {
 			totalUHDevices.Insert(device.ID)
 		}
 	}

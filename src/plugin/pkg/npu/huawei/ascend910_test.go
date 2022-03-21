@@ -1,18 +1,20 @@
 /*
-* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
+* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
  */
 
 package huawei
 
 import (
-	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
+
 	"fmt"
 	"sort"
 	"strings"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/util/sets"
-	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+
+	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 )
 
 // NewFakeHwAscend910Manager for newFakeHwAscend910
@@ -20,8 +22,8 @@ func NewFakeHwAscend910Manager() *HwAscend910Manager {
 	return &HwAscend910Manager{}
 }
 
-// TestHwAscend910Manager_GetNPUs for getNpus
-func TestHwAscend910Manager_GetNPUs(t *testing.T) {
+// TestHwAscend910ManagerGetNPUs for getNpus
+func TestHwAscend910ManagerGetNPUs(t *testing.T) {
 	resultDevMap := make(map[string]string)
 	for i := 0; i < npuTestNum; i++ {
 		resultDevMap[fmt.Sprintf("Ascend910-%d", i)] = ""
@@ -47,8 +49,8 @@ func TestHwAscend910Manager_GetNPUs(t *testing.T) {
 	t.Logf("TestHwAscend910Manager_GetNPUs Run Pass")
 }
 
-// TestHwAscend910Manager_GetDevState for get DevState
-func TestHwAscend910Manager_GetDevState(t *testing.T) {
+// TestHwAscend910ManagerGetDevState for get DevState
+func TestHwAscend910ManagerGetDevState(t *testing.T) {
 	hdm := createFake910HwDevManager("", true, false, false)
 	err := hdm.manager.GetNPUs(&hdm.allDevs, &hdm.allDevTypes, hdm.manager.GetMatchingDeviType())
 	if err != nil {
@@ -59,17 +61,17 @@ func TestHwAscend910Manager_GetDevState(t *testing.T) {
 		if IsVirtualDev(dev.ID) {
 			continue
 		}
-		if strings.Contains(dev.ID, "3") && state != pluginapi.Unhealthy {
+		if strings.Contains(dev.ID, "3") && state != v1beta1.Unhealthy {
 			t.Fatalf("TestHwAscend910Manager_GetDevState Run Failed %v", dev)
-		} else if !strings.Contains(dev.ID, "3") && state == pluginapi.Unhealthy {
+		} else if !strings.Contains(dev.ID, "3") && state == v1beta1.Unhealthy {
 			t.Fatalf("TestHwAscend910Manager_GetDevState Run Failed %v", dev)
 		}
 	}
 	t.Logf("TestHwAscend910Manager_GetDevState Run Pass")
 }
 
-// TestHwAscend910Manager_GetDevPath for getDevPath
-func TestHwAscend910Manager_GetDevPath(t *testing.T) {
+// TestHwAscend910ManagerGetDevPath for getDevPath
+func TestHwAscend910ManagerGetDevPath(t *testing.T) {
 	hdm := createFake910HwDevManager("", true, false, false)
 	containerPath, hostPath := hdm.manager.GetDevPath("0", physicalDev)
 	if hostPath != containerPath && hostPath != "/dev/davinci0" {

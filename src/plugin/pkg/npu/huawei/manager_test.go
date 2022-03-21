@@ -1,20 +1,22 @@
 /*
-* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
+* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
  */
 
 package huawei
 
 import (
-	"Ascend-device-plugin/src/plugin/pkg/npu/common"
-	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 	"fmt"
-	"go.uber.org/atomic"
-	"huawei.com/npu-exporter/hwlog"
-	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"os"
 	"syscall"
 	"testing"
 	"time"
+
+	"go.uber.org/atomic"
+	"huawei.com/npu-exporter/hwlog"
+	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
+	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 )
 
 const (
@@ -23,8 +25,8 @@ const (
 	serverSock310 = "/var/lib/kubelet/device-plugins/Ascend310.sock"
 )
 
-// TestHwDevManager_GetNPUs for getNpus
-func TestHwDevManager_GetNPUs(t *testing.T) {
+// TestHwDevManagerGetNPUs for getNpus
+func TestHwDevManagerGetNPUs(t *testing.T) {
 	fakeHwDevManager := createFakeDevManager("")
 	err := fakeHwDevManager.GetNPUs()
 	if err != nil {
@@ -73,7 +75,7 @@ func TestSignalWatch(t *testing.T) {
 		t.Fatal("TestHwDevManager_Serve Run FAiled, reason is failed to Chmod")
 	}
 	watcher := NewFileWatch()
-	err = watcher.watchFile(pluginapi.DevicePluginPath)
+	err = watcher.watchFile(v1beta1.DevicePluginPath)
 	if err != nil {
 		t.Errorf("failed to create file watcher. %v", err)
 	}

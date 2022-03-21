@@ -5,8 +5,6 @@
 package huawei
 
 import (
-	"Ascend-device-plugin/src/plugin/pkg/npu/common"
-	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 	"os"
 	"testing"
 
@@ -14,6 +12,9 @@ import (
 	"google.golang.org/grpc"
 	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/apimachinery/pkg/util/sets"
+
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
+	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 )
 
 type fakeHwPluginServe struct {

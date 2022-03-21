@@ -5,7 +5,6 @@
 package huawei
 
 import (
-	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 	"net"
 	"os"
 	"os/signal"
@@ -13,6 +12,8 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"huawei.com/npu-exporter/hwlog"
+
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 )
 
 // FileWatch is used to watch sock file

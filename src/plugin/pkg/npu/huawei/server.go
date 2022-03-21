@@ -5,7 +5,6 @@
 package huawei
 
 import (
-	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 	"fmt"
 	"time"
 
@@ -13,7 +12,9 @@ import (
 	"google.golang.org/grpc"
 	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/apimachinery/pkg/util/sets"
-	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 )
 
 // HwPluginServe show plugin data
@@ -110,7 +111,7 @@ func (hps *HwPluginServe) setSocket() {
 	hps.grpcServer = grpc.NewServer()
 	// Registers service.
 	plugin := &pluginAPI{hps: hps, outbreak: atomic.NewBool(false)}
-	pluginapi.RegisterDevicePluginServer(hps.grpcServer, plugin)
+	v1beta1.RegisterDevicePluginServer(hps.grpcServer, plugin)
 }
 
 // Stop the gRPC server

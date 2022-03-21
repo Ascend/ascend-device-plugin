@@ -5,8 +5,6 @@
 package huawei
 
 import (
-	"Ascend-device-plugin/src/plugin/pkg/npu/common"
-	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 	"errors"
 	"fmt"
 	"os"
@@ -19,7 +17,10 @@ import (
 	"go.uber.org/atomic"
 	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/apimachinery/pkg/util/sets"
-	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
+	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 )
 
 // HwDevManager manages huawei device devices.
@@ -66,6 +67,9 @@ var (
 	kubeConfig string
 	// switch error log
 	logFlag = true
+
+	// ServeUpdateMap
+	ServeUpdateMap = make(map[string]chan int)
 )
 
 type devManager interface {
@@ -163,7 +167,7 @@ func (hdm *HwDevManager) Serve(devType string) {
 }
 
 func (hdm *HwDevManager) createSignWatchServe(devType string) (string, *FileWatch, error) {
-	realDevSockPath, isOk := VerifyPath(pluginapi.DevicePluginPath)
+	realDevSockPath, isOk := VerifyPath(v1beta1.DevicePluginPath)
 	if !isOk {
 		hwlog.RunLog.Errorf("socket path verify failed!")
 		return "", nil, fmt.Errorf("socket path verify failed")
@@ -218,7 +222,8 @@ func preStart(hps HwPluginServeInterface) {
 	hwlog.RunLog.Infof("starting device-plugin server")
 }
 
-func (hdm *HwDevManager) signalWatch(watcher *fsnotify.Watcher, sigs chan os.Signal, restart bool, hps HwPluginServeInterface, pluginSockPath string) bool {
+func (hdm *HwDevManager) signalWatch(watcher *fsnotify.Watcher, sigs chan os.Signal, restart bool,
+	hps HwPluginServeInterface, pluginSockPath string) bool {
 	if sigs == nil {
 		return false
 	}
@@ -232,7 +237,7 @@ func (hdm *HwDevManager) signalWatch(watcher *fsnotify.Watcher, sigs chan os.Sig
 		if event.Name == pluginSockPath && event.Op&fsnotify.Remove == fsnotify.Remove {
 			hwlog.RunLog.Warnf("notify: sock file deleted, please check !")
 		}
-		if event.Name == pluginapi.KubeletSocket && event.Op&fsnotify.Create == fsnotify.Create {
+		if event.Name == v1beta1.KubeletSocket && event.Op&fsnotify.Create == fsnotify.Create {
 			hwlog.RunLog.Infof("notify: kubelet.sock file created, restarting.")
 			return true
 		}
