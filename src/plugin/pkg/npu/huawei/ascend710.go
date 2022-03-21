@@ -16,7 +16,7 @@ type HwAscend710Manager struct {
 func NewHwAscend710Manager() *HwAscend710Manager {
 	return &HwAscend710Manager{
 		ascendCommonFunction{
-			name: hiAIAscend710Prefix,
+			name:         hiAIAscend710Prefix,
 			unHealthyKey: huaweiUnHealthAscend710,
 		},
 	}

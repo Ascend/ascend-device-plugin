@@ -5,7 +5,6 @@
 package huawei
 
 import (
-
 	"fmt"
 	"sort"
 	"strings"

@@ -68,7 +68,7 @@ var (
 	// switch error log
 	logFlag = true
 
-	// ServeUpdateMap
+	// ServeUpdateMap serveUpdateMap
 	ServeUpdateMap = make(map[string]chan int)
 )
 
