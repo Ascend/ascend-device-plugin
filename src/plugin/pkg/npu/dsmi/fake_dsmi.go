@@ -10,16 +10,17 @@ import (
 )
 
 const (
-	hiAIMaxDeviceNum     = 64
-	maxChipName          = 32
-	deviceIPLength       = 4
-	npuTestNum           = 8
-	maxAiCoreNum         = 32
-	testAiCoreNum        = 20
-	defaultVDevNum       = 0
-	testVDevNum          = 2
-	testComputeCoreNum   = 4
-	unHealthyTestLogicID = 3
+	hiAIMaxDeviceNum   = 64
+	maxChipName        = 32
+	deviceIPLength     = 4
+	npuTestNum         = 8
+	maxAiCoreNum       = 32
+	testAiCoreNum      = 20
+	defaultVDevNum     = 0
+	testVDevNum        = 2
+	testComputeCoreNum = 4
+	// UnHealthyTestLogicID use for ut, represent the device is unhealthy whose logicID is 3
+	UnHealthyTestLogicID = 3
 
 	// testPhyDevID use for ut, represent device id: 0,2,4,5,6,7
 	testPhyDevID = "0234567"
@@ -31,6 +32,11 @@ type FakeDeviceManager struct{}
 // NewFakeDeviceManager FakeDeviceManager
 func NewFakeDeviceManager() *FakeDeviceManager {
 	return &FakeDeviceManager{}
+}
+
+// EnableContainerService for enableContainerService
+func (d *FakeDeviceManager) EnableContainerService() error {
+	return nil
 }
 
 // CreateVirtualDevice for create virtual device
@@ -65,16 +71,16 @@ func (d *FakeDeviceManager) GetDeviceList(devices *[hiAIMaxDeviceNum]uint32) (in
 
 // GetDeviceHealth get device health by id
 func (d *FakeDeviceManager) GetDeviceHealth(logicID int32) (uint32, error) {
-	if logicID == unHealthyTestLogicID {
-		return uint32(unHealthyTestLogicID), nil
+	if logicID == UnHealthyTestLogicID {
+		return uint32(UnHealthyTestLogicID), nil
 	}
 	return uint32(0), nil
 }
 
 // GetDeviceNetworkHealth get device network health by id
 func (d *FakeDeviceManager) GetDeviceNetworkHealth(logicID int32) (uint32, error) {
-	if logicID == unHealthyTestLogicID {
-		return uint32(unHealthyTestLogicID), nil
+	if logicID == UnHealthyTestLogicID {
+		return uint32(UnHealthyTestLogicID), nil
 	}
 	return uint32(0), nil
 }
