@@ -254,11 +254,37 @@ type CgoDcmiSocTotalResource struct {
 type CgoVDevInfo struct {
 	VDevNum       uint32    // number of virtual devices
 	CoreNumUnused float32   // number of unused cores
-	Status        []uint32  // status of vitrual devices
+	Status        []uint32  // status of virtual devices
 	VDevID        []uint32  // id of virtual devices
 	VfID          []uint32  // id
 	CID           []uint64  // container id
 	CoreNum       []float32 // aicore num for virtual device
+}
+
+// DriverMgrInterface interface for dcmi
+type DriverMgrInterface interface {
+	ShutDown()
+	GetCardList() (int32, []int32, error)
+	GetDeviceNumInCard(int32) (int32, error)
+	GetDeviceLogicID(int32, int32) (uint32, error)
+	SetDestroyVirtualDevice(int32, int32, uint32) error
+	CreateVirtualDevice(int32, int32, int32, uint32) (CgoDcmiCreateVDevOut, error)
+	GetDeviceVDevResource(int32, int32, uint32) (CgoVDevQueryStru, error)
+	GetDeviceTotalResource(int32, int32) (CgoDcmiSocTotalResource, error)
+	GetDeviceFreeResource(int32, int32) (CgoDcmiSocFreeResource, error)
+	GetDeviceInfo(int32, int32) (CgoVDevInfo, error)
+	GetCardIDDeviceID(uint32) (int32, int32, error)
+	CreateVDevice(uint32, uint32) (uint32, error)
+	GetVDeviceInfo(uint32) (CgoVDevInfo, error)
+	DestroyVDevice(uint32, uint32) error
+}
+
+// DriverManager struct definition
+type DriverManager struct{}
+
+// NewDriverManager new DriverManager instance
+func NewDriverManager() *DriverManager {
+	return &DriverManager{}
 }
 
 // Init load symbol and initialize dcmi
@@ -273,14 +299,14 @@ func Init() {
 }
 
 // ShutDown clean the dynamically loaded resource
-func ShutDown() {
+func (d *DriverManager) ShutDown() {
 	if err := C.dcmiShutDown(); err != C.SUCCESS {
-		hwlog.RunLog.Error("dcmi shut down failed, error code: %d\n", int32(err))
+		hwlog.RunLog.Errorf("dcmi shut down failed, error code: %d\n", int32(err))
 	}
 }
 
 // GetCardList get card list
-func GetCardList() (int32, []int32, error) {
+func (d *DriverManager) GetCardList() (int32, []int32, error) {
 	var ids [hiAIMaxCardNum]C.int
 	var cNum C.int
 	if err := C.dcmi_get_card_num_list(&cNum, &ids[0], hiAIMaxCardNum); err != 0 {
@@ -306,7 +332,7 @@ func GetCardList() (int32, []int32, error) {
 }
 
 // GetDeviceNumInCard get device number in the npu card
-func GetDeviceNumInCard(cardID int32) (int32, error) {
+func (d *DriverManager) GetDeviceNumInCard(cardID int32) (int32, error) {
 	var deviceNum C.int
 	if err := C.dcmi_get_device_num_in_card(C.int(cardID), &deviceNum); err != 0 {
 		return retError, fmt.Errorf("get device count on the card failed, error code: %d", int32(err))
@@ -318,7 +344,7 @@ func GetDeviceNumInCard(cardID int32) (int32, error) {
 }
 
 // GetDeviceLogicID get device logicID
-func GetDeviceLogicID(cardID, deviceID int32) (uint32, error) {
+func (d *DriverManager) GetDeviceLogicID(cardID, deviceID int32) (uint32, error) {
 	var logicID C.int
 	if err := C.dcmi_get_device_logic_id(&logicID, C.int(cardID), C.int(deviceID)); err != 0 {
 		return unretError, fmt.Errorf("get logicID failed, error code: %d", int32(err))
@@ -332,7 +358,7 @@ func GetDeviceLogicID(cardID, deviceID int32) (uint32, error) {
 }
 
 // SetDestroyVirtualDevice destroy virtual device
-func SetDestroyVirtualDevice(cardID, deviceID int32, vDevID uint32) error {
+func (d *DriverManager) SetDestroyVirtualDevice(cardID, deviceID int32, vDevID uint32) error {
 	if err := C.dcmi_set_destroy_vdevice(C.int(cardID), C.int(deviceID), C.uint(vDevID)); err != 0 {
 		return fmt.Errorf("destroy virtual device failed, error code: %d", int32(err))
 	}
@@ -351,7 +377,8 @@ func convertCreateVDevOut(cCreateVDevOut C.struct_dcmi_create_vdev_out) CgoDcmiC
 }
 
 // CreateVirtualDevice create virtual device
-func CreateVirtualDevice(cardID, deviceID, vDevID int32, aiCore uint32) (CgoDcmiCreateVDevOut, error) {
+func (d *DriverManager) CreateVirtualDevice(cardID, deviceID, vDevID int32, aiCore uint32) (CgoDcmiCreateVDevOut,
+	error) {
 	templateName := fmt.Sprintf("%s%d", vDeviceCreateTemplateNamePrefix, aiCore)
 	cTemplateName := C.CString(templateName)
 	defer C.free(unsafe.Pointer(cTemplateName))
@@ -450,7 +477,7 @@ func convertVDevQueryStru(cVDevQueryStru C.struct_dcmi_vdev_query_stru) CgoVDevQ
 }
 
 // GetDeviceVDevResource get virtual device resource info
-func GetDeviceVDevResource(cardID, deviceID int32, vDevID uint32) (CgoVDevQueryStru, error) {
+func (d *DriverManager) GetDeviceVDevResource(cardID, deviceID int32, vDevID uint32) (CgoVDevQueryStru, error) {
 	var cMainCmd = C.enum_dcmi_main_cmd(MainCmdVDevMng)
 	subCmd := VmngSubCmdGetVDevResource
 	var vDevResource C.struct_dcmi_vdev_query_stru
@@ -479,7 +506,7 @@ func convertSocTotalResource(cSocTotalResource C.struct_dcmi_soc_total_resource)
 }
 
 // GetDeviceTotalResource get device total resource info
-func GetDeviceTotalResource(cardID, deviceID int32) (CgoDcmiSocTotalResource, error) {
+func (d *DriverManager) GetDeviceTotalResource(cardID, deviceID int32) (CgoDcmiSocTotalResource, error) {
 	var cMainCmd = C.enum_dcmi_main_cmd(MainCmdVDevMng)
 	subCmd := VmngSubCmdGetTotalResource
 	var totalResource C.struct_dcmi_soc_total_resource
@@ -507,7 +534,7 @@ func convertSocFreeResource(cSocFreeResource C.struct_dcmi_soc_free_resource) Cg
 }
 
 // GetDeviceFreeResource get device free resource info
-func GetDeviceFreeResource(cardID, deviceID int32) (CgoDcmiSocFreeResource, error) {
+func (d *DriverManager) GetDeviceFreeResource(cardID, deviceID int32) (CgoDcmiSocFreeResource, error) {
 	var cMainCmd = C.enum_dcmi_main_cmd(MainCmdVDevMng)
 	subCmd := VmngSubCmdGetFreeResource
 	var freeResource C.struct_dcmi_soc_free_resource
@@ -520,7 +547,7 @@ func GetDeviceFreeResource(cardID, deviceID int32) (CgoDcmiSocFreeResource, erro
 }
 
 // GetDeviceInfo get device resource info
-func GetDeviceInfo(cardID, deviceID int32) (CgoVDevInfo, error) {
+func (d *DriverManager) GetDeviceInfo(cardID, deviceID int32) (CgoVDevInfo, error) {
 	var unitType C.enum_dcmi_unit_type
 	if err := C.dcmi_get_device_type(C.int(cardID), C.int(deviceID), &unitType); err != 0 {
 		return CgoVDevInfo{}, fmt.Errorf("get device type failed, error is: %d", int32(err))
@@ -529,12 +556,12 @@ func GetDeviceInfo(cardID, deviceID int32) (CgoVDevInfo, error) {
 		return CgoVDevInfo{}, fmt.Errorf("not support unit type: %d", int32(unitType))
 	}
 
-	cgoDcmiSocTotalResource, err := GetDeviceTotalResource(cardID, deviceID)
+	cgoDcmiSocTotalResource, err := d.GetDeviceTotalResource(cardID, deviceID)
 	if err != nil {
 		return CgoVDevInfo{}, fmt.Errorf("get device total resource failed, error is: %v", err)
 	}
 
-	cgoDcmiSocFreeResource, err := GetDeviceFreeResource(cardID, deviceID)
+	cgoDcmiSocFreeResource, err := d.GetDeviceFreeResource(cardID, deviceID)
 	if err != nil {
 		return CgoVDevInfo{}, fmt.Errorf("get device free resource failed, error is: %v", err)
 	}
@@ -547,9 +574,9 @@ func GetDeviceInfo(cardID, deviceID int32) (CgoVDevInfo, error) {
 		dcmiVDevInfo.VDevID = append(dcmiVDevInfo.VDevID, cgoDcmiSocTotalResource.vDevID[i])
 	}
 	for _, vDevID := range cgoDcmiSocTotalResource.vDevID {
-		cgoVDevQueryStru, err := GetDeviceVDevResource(cardID, deviceID, vDevID)
+		cgoVDevQueryStru, err := d.GetDeviceVDevResource(cardID, deviceID, vDevID)
 		if err != nil {
-			return CgoVDevInfo{}, fmt.Errorf("get device vitrual resource failed, error is: %v", err)
+			return CgoVDevInfo{}, fmt.Errorf("get device virtual resource failed, error is: %v", err)
 		}
 		dcmiVDevInfo.Status = append(dcmiVDevInfo.Status, cgoVDevQueryStru.queryInfo.status)
 		dcmiVDevInfo.VfID = append(dcmiVDevInfo.VfID, cgoVDevQueryStru.queryInfo.vfid)
@@ -560,24 +587,24 @@ func GetDeviceInfo(cardID, deviceID int32) (CgoVDevInfo, error) {
 }
 
 // GetCardIDDeviceID get card id and device id from logic id
-func GetCardIDDeviceID(logicID uint32) (int32, int32, error) {
+func (d *DriverManager) GetCardIDDeviceID(logicID uint32) (int32, int32, error) {
 	if logicID > uint32(math.MaxInt8) {
 		return retError, retError, fmt.Errorf("input invalid logicID: %d", logicID)
 	}
 
-	_, cards, err := GetCardList()
+	_, cards, err := d.GetCardList()
 	if err != nil {
 		return retError, retError, fmt.Errorf("get card list failed, error is: %v", err)
 	}
 
 	for _, cardID := range cards {
-		deviceNum, err := GetDeviceNumInCard(cardID)
+		deviceNum, err := d.GetDeviceNumInCard(cardID)
 		if err != nil {
 			hwlog.RunLog.Errorf("get device num in card failed, error is: %v", err)
 			continue
 		}
 		for deviceID := int32(0); deviceID < deviceNum; deviceID++ {
-			logicIDGet, err := GetDeviceLogicID(cardID, deviceID)
+			logicIDGet, err := d.GetDeviceLogicID(cardID, deviceID)
 			if err != nil {
 				hwlog.RunLog.Errorf("get device logic id failed, error is: %v", err)
 				continue
@@ -592,13 +619,13 @@ func GetCardIDDeviceID(logicID uint32) (int32, int32, error) {
 }
 
 // CreateVDevice create virtual device by logic id
-func CreateVDevice(logicID uint32, aiCore uint32) (uint32, error) {
-	cardID, deviceID, err := GetCardIDDeviceID(logicID)
+func (d *DriverManager) CreateVDevice(logicID, aiCore uint32) (uint32, error) {
+	cardID, deviceID, err := d.GetCardIDDeviceID(logicID)
 	if err != nil {
 		return unretError, fmt.Errorf("get card id and device id failed, error is: %v", err)
 	}
 
-	cgoDcmiSocFreeResource, err := GetDeviceFreeResource(cardID, deviceID)
+	cgoDcmiSocFreeResource, err := d.GetDeviceFreeResource(cardID, deviceID)
 	if err != nil {
 		return unretError, fmt.Errorf("get virtual device info failed, error is: %v", err)
 	}
@@ -609,7 +636,7 @@ func CreateVDevice(logicID uint32, aiCore uint32) (uint32, error) {
 	}
 
 	var vDevID int32
-	createVDevOut, err := CreateVirtualDevice(cardID, deviceID, vDevID, aiCore)
+	createVDevOut, err := d.CreateVirtualDevice(cardID, deviceID, vDevID, aiCore)
 	if err != nil {
 		return unretError, fmt.Errorf("create virtual device failed, error is: %v", err)
 	}
@@ -617,13 +644,13 @@ func CreateVDevice(logicID uint32, aiCore uint32) (uint32, error) {
 }
 
 // GetVDeviceInfo get virtual device info by logic id
-func GetVDeviceInfo(logicID uint32) (CgoVDevInfo, error) {
-	cardID, deviceID, err := GetCardIDDeviceID(logicID)
+func (d *DriverManager) GetVDeviceInfo(logicID uint32) (CgoVDevInfo, error) {
+	cardID, deviceID, err := d.GetCardIDDeviceID(logicID)
 	if err != nil {
 		return CgoVDevInfo{}, fmt.Errorf("get card id and device id failed, error is: %v", err)
 	}
 
-	dcmiVDevInfo, err := GetDeviceInfo(cardID, deviceID)
+	dcmiVDevInfo, err := d.GetDeviceInfo(cardID, deviceID)
 	if err != nil {
 		return CgoVDevInfo{}, fmt.Errorf("get virtual device info failed, error is: %v", err)
 	}
@@ -631,13 +658,13 @@ func GetVDeviceInfo(logicID uint32) (CgoVDevInfo, error) {
 }
 
 // DestroyVDevice destroy spec virtual device by logic id
-func DestroyVDevice(logicID, vDevID uint32) error {
-	cardID, deviceID, err := GetCardIDDeviceID(logicID)
+func (d *DriverManager) DestroyVDevice(logicID, vDevID uint32) error {
+	cardID, deviceID, err := d.GetCardIDDeviceID(logicID)
 	if err != nil {
 		return fmt.Errorf("get card id and device id failed, error is: %v", err)
 	}
 
-	if err = SetDestroyVirtualDevice(cardID, deviceID, vDevID); err != nil {
+	if err = d.SetDestroyVirtualDevice(cardID, deviceID, vDevID); err != nil {
 		return fmt.Errorf("destroy virtual device failed, error is: %v", err)
 	}
 	return nil
