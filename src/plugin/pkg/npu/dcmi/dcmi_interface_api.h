@@ -142,6 +142,13 @@ struct dcmi_soc_total_resource {
     struct dcmi_media_resource media;
 };
 
+enum dcmi_unit_type {
+    NPU_TYPE = 0,
+    MCU_TYPE = 1,
+    CPU_TYPE = 2,
+    INVALID_TYPE = 0xFF
+};
+
 DCMIDLLEXPORT int dcmi_init(void);
 
 DCMIDLLEXPORT int dcmi_get_card_num_list(int *card_num, int *card_list, int list_len);
@@ -157,6 +164,8 @@ DCMIDLLEXPORT int dcmi_get_device_info(
     int card_id, int device_id, enum dcmi_main_cmd main_cmd, unsigned int sub_cmd, void *buf, unsigned int *size);
 
 DCMIDLLEXPORT int dcmi_get_device_logic_id(int *device_logic_id, int card_id, int device_id);
+
+DCMIDLLEXPORT int dcmi_get_device_type(int card_id, int device_id, enum dcmi_unit_type *device_type);
 
 #ifdef __cplusplus
 #if __cplusplus
