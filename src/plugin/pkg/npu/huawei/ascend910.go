@@ -21,7 +21,7 @@ const (
 	// ZeroCore is "0c"
 	zeroCore = "0"
 	// noVDevFound means not supported in the current scenario.
-	noVDevFound = "65534"
+	noVDevFound = "8255"
 
 	networkDetectOK   = uint32(0)
 	networkDetectInit = uint32(6)

@@ -61,6 +61,11 @@ int dcmi_set_destroy_vdevice(int card_id,int device_id, unsigned int VDevid){
 	CALL_FUNC(dcmi_set_destroy_vdevice,card_id,device_id,VDevid)
 }
 
+int (*dcmi_get_device_type_func)(int card_id,int device_id,enum dcmi_unit_type *device_type);
+int dcmi_get_device_type(int card_id,int device_id,enum dcmi_unit_type *device_type){
+	CALL_FUNC(dcmi_get_device_type,card_id,device_id,device_type)
+}
+
 // load .so files and functions
 int dcmiInit_dl(void){
 	dcmiHandle = dlopen("libdcmi.so",RTLD_LAZY | RTLD_GLOBAL);
@@ -82,6 +87,8 @@ int dcmiInit_dl(void){
 	dcmi_get_device_info_func = dlsym(dcmiHandle,"dcmi_get_device_info");
 
 	dcmi_set_destroy_vdevice_func = dlsym(dcmiHandle,"dcmi_set_destroy_vdevice");
+
+	dcmi_get_device_type_func = dlsym(dcmiHandle,"dcmi_get_device_type");
 
 	return SUCCESS;
 }
@@ -136,6 +143,8 @@ const (
 	VmngSubCmdGetTotalResource VDevMngSubCmd = 1
 	// VmngSubCmdGetFreeResource get free resource info
 	VmngSubCmdGetFreeResource VDevMngSubCmd = 2
+
+	npuType = 0
 )
 
 // CgoDcmiCreateVDevOut create virtual device info
@@ -512,9 +521,17 @@ func GetDeviceFreeResource(cardID, deviceID int32) (CgoDcmiSocFreeResource, erro
 
 // GetDeviceInfo get device resource info
 func GetDeviceInfo(cardID, deviceID int32) (CgoVDevInfo, error) {
+	var unitType C.enum_dcmi_unit_type
+	if err := C.dcmi_get_device_type(C.int(cardID), C.int(deviceID), &unitType); err != 0 {
+		return CgoVDevInfo{}, fmt.Errorf("get device type failed, error is: %d", int32(err))
+	}
+	if int32(unitType) != npuType {
+		return CgoVDevInfo{}, fmt.Errorf("not support unit type: %d", int32(unitType))
+	}
+
 	cgoDcmiSocTotalResource, err := GetDeviceTotalResource(cardID, deviceID)
 	if err != nil {
-		return CgoVDevInfo{}, fmt.Errorf("get device tatal resource failed, error is: %v", err)
+		return CgoVDevInfo{}, fmt.Errorf("get device total resource failed, error is: %v", err)
 	}
 
 	cgoDcmiSocFreeResource, err := GetDeviceFreeResource(cardID, deviceID)
