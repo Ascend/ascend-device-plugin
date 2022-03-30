@@ -229,6 +229,9 @@ func getNeedDestroyDev(dcmiDevices []common.NpuDevice, cardVNPUs []CardVNPUs, ru
 			continue
 		}
 		annotateDevs, err := getAnnotationFromNode(kubeClient, runMode, deviceID)
+		if err != nil {
+			continue
+		}
 		// npuDev.ID format is "Ascend910-8c-101-0"
 		if !isInVNpuCfg(npuDev.ID, cardVNPUs, getSpecCoreDevCount(dcmiDevices, deviceID), deviceID, annotateDevs) {
 			// not found in configMap, means need to be deleted

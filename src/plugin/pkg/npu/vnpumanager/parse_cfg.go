@@ -75,11 +75,7 @@ func GetVNpuCfg(client *kubernetes.Clientset) ([]CardVNPUs, error) {
 }
 
 func getVNpuCMFromK8s(client kubernetes.Interface, namespace, cmName string) (*v1.ConfigMap, error) {
-	cm, err := client.CoreV1().ConfigMaps(namespace).Get(context.TODO(), cmName, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return cm, nil
+	return client.CoreV1().ConfigMaps(namespace).Get(context.TODO(), cmName, metav1.GetOptions{})
 }
 
 // GetCfgContent get configMap
@@ -119,7 +115,12 @@ func ConvertCMToStruct(mtaObj metav1.Object) []CardVNPUs {
 	if mtaConfigMap.Name != CfgMapName || mtaConfigMap.Namespace != CfgMapNamespace {
 		return nil
 	}
-	cardVNPUs, err := GetCfgContent(mtaConfigMap.Data[common.VNpuCfgKey])
+	cmData, ok := mtaConfigMap.Data[common.VNpuCfgKey]
+	if !ok {
+		hwlog.RunLog.Errorf("failed to find vnpu configMap")
+		return nil
+	}
+	cardVNPUs, err := GetCfgContent(cmData)
 	if err != nil {
 		hwlog.RunLog.Errorf("failed to parse vnpu configMap, err: %v\n", err)
 		return nil
