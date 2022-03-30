@@ -253,7 +253,6 @@ func getSpecCoreDevCount(dcmiDevices []common.NpuDevice, deviceID string) int {
 }
 
 func isInVNpuCfg(devName string, cardVNPUs []CardVNPUs, dcmiDevCount int, deviceID string, annotateDevs []string) bool {
-	// cardVNPUs like "Cards": [{"CardName":"huawei.com/Ascend710-0","Req":["huawei.com/Ascend710-1c"],"Alloc":[]}]
 	for _, cardVPU := range cardVNPUs {
 		if strings.Split(cardVPU.CardName, "-")[1] != deviceID {
 			continue
@@ -265,7 +264,6 @@ func isInVNpuCfg(devName string, cardVNPUs []CardVNPUs, dcmiDevCount int, device
 			return true
 		}
 		usingDevs := convertToSets(cardVPU.Alloc).Union(convertToSets(annotateDevs))
-
 		for usingDev := range usingDevs {
 			if strings.Replace(usingDev, resourceNamePrefix, "", -1) == devName {
 				return true

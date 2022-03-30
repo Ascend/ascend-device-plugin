@@ -30,7 +30,7 @@ type ConfigMapAgent struct {
 // NewConfigMapAgent new ConfigMapAgent
 func NewConfigMapAgent(kubeClientSet kubernetes.Interface, hdm *HwDevManager) {
 	stopCh := make(chan struct{})
-	cmInformerFactory := informers.NewSharedInformerFactoryWithOptions(kubeClientSet, time.Second*initMapCap,
+	cmInformerFactory := informers.NewSharedInformerFactoryWithOptions(kubeClientSet, time.Second*sleep2ListW,
 		informers.WithTweakListOptions(func(options *v1.ListOptions) {}))
 
 	cmAgent := &ConfigMapAgent{

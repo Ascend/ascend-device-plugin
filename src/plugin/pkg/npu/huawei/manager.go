@@ -151,11 +151,9 @@ func (hdm *HwDevManager) Serve(devType string) {
 	var hps HwPluginServeInterface
 	for !hdm.stopFlag.Load() {
 		select {
-		case res, ok := <-ServeUpdateMap[devType]:
-			if ok && res == 1 {
-				hwlog.RunLog.Infof("update go routine %s", devType)
-				preStart(hps)
-			}
+		case _, _ = <-ServeUpdateMap[devType]:
+			hwlog.RunLog.Infof("update go routine %s", devType)
+			preStart(hps)
 		default:
 		}
 		if hdm.stopFlag.Load() {
