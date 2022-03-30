@@ -7,18 +7,17 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"Ascend-device-plugin/src/plugin/pkg/npu/dcmi"
 )
 
 const (
-	hiAIMaxDeviceNum   = 64
-	maxChipName        = 32
-	deviceIPLength     = 4
-	npuTestNum         = 8
-	maxAiCoreNum       = 32
-	testAiCoreNum      = 20
-	defaultVDevNum     = 0
-	testVDevNum        = 2
-	testComputeCoreNum = 4
+	hiAIMaxDeviceNum = 64
+	maxChipName      = 32
+	deviceIPLength   = 4
+	npuTestNum       = 8
+	maxAiCoreNum     = 32
+	defaultVDevNum   = 0
 	// UnHealthyTestLogicID use for ut, represent the device is unhealthy whose logicID is 3
 	UnHealthyTestLogicID = 3
 
@@ -27,11 +26,13 @@ const (
 )
 
 // FakeDeviceManager fakeDeviceManager
-type FakeDeviceManager struct{}
+type FakeDeviceManager struct {
+	driverMgr *dcmi.FakeDriverManager
+}
 
 // NewFakeDeviceManager FakeDeviceManager
 func NewFakeDeviceManager() *FakeDeviceManager {
-	return &FakeDeviceManager{}
+	return &FakeDeviceManager{driverMgr: dcmi.NewFakeDriverManager()}
 }
 
 // EnableContainerService for enableContainerService
@@ -122,19 +123,24 @@ func (d *FakeDeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, er
 		}
 		return cgoDsmiVDevInfos, nil
 	}
-	cgoDsmiVDevInfos = CgoDsmiVDevInfo{
-		VDevNum:       uint32(testVDevNum),
-		CoreNumUnused: uint32(testAiCoreNum),
+	dcmiVDevInfo, err := d.driverMgr.GetVDeviceInfo(logicID)
+	if err != nil {
+		return CgoDsmiVDevInfo{}, fmt.Errorf("get virtual device info failed, error is: %v "+
+			"and vdev num is: %d", err, int32(dcmiVDevInfo.VDevNum))
 	}
-	for i := 0; i < testVDevNum; i++ {
-		coreNum := fmt.Sprintf("%d", testComputeCoreNum*(i+1))
+	cgoDsmiVDevInfos = CgoDsmiVDevInfo{
+		VDevNum:       dcmiVDevInfo.VDevNum,
+		CoreNumUnused: uint32(dcmiVDevInfo.CoreNumUnused),
+	}
+	for i := uint32(0); i < dcmiVDevInfo.VDevNum; i++ {
+		cNum := dcmiVDevInfo.CoreNum[i]
 		cgoDsmiVDevInfos.CgoDsmiSubVDevInfos = append(cgoDsmiVDevInfos.CgoDsmiSubVDevInfos, CgoDsmiSubVDevInfo{
-			Status: uint32(0),
-			VDevID: uint32(int(logicID) + i),
-			VfID:   uint32(int(logicID) + i),
-			CID:    uint64(i),
+			Status: dcmiVDevInfo.Status[i],
+			VDevID: dcmiVDevInfo.VDevID[i],
+			VfID:   dcmiVDevInfo.VfID[i],
+			CID:    dcmiVDevInfo.CID[i],
 			Spec: CgoDsmiVdevSpecInfo{
-				CoreNum: coreNum,
+				CoreNum: fmt.Sprintf("%v", int32(cNum)),
 			},
 		})
 	}

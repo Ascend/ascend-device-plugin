@@ -195,7 +195,9 @@ type DeviceMgrInterface interface {
 }
 
 // DeviceManager struct definition
-type DeviceManager struct{}
+type DeviceManager struct {
+	driverMgr *dcmi.DriverManager
+}
 
 func init() {
 	C.dsmiInit_dl()
@@ -204,7 +206,7 @@ func init() {
 
 // NewDeviceManager new DeviceManager instance
 func NewDeviceManager() *DeviceManager {
-	return &DeviceManager{}
+	return &DeviceManager{driverMgr: dcmi.NewDriverManager()}
 }
 
 // GetDeviceCount get ascend910 device quantity
@@ -337,12 +339,12 @@ func (d *DeviceManager) GetDeviceIP(logicID int32) (string, error) {
 // ShutDown clean the dynamically loaded resource
 func (d *DeviceManager) ShutDown() {
 	C.dsmiShutDown()
-	dcmi.ShutDown()
+	d.driverMgr.ShutDown()
 }
 
 // GetVDevicesInfo get the virtual device info by logicid
 func (d *DeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error) {
-	dcmiVDevInfo, err := dcmi.GetVDeviceInfo(logicID)
+	dcmiVDevInfo, err := d.driverMgr.GetVDeviceInfo(logicID)
 	if err != nil {
 		hwlog.RunLog.Error(err)
 		return CgoDsmiVDevInfo{}, fmt.Errorf("get virtual device info failed, error is: %v "+
@@ -398,7 +400,7 @@ func (d *DeviceManager) create910VirDevice(vDevInfos CgoDsmiVDevInfo, logicID ui
 		if err != nil {
 			continue
 		}
-		if _, err := dcmi.CreateVDevice(logicID, uint32(coreNum)); err != nil {
+		if _, err := d.driverMgr.CreateVDevice(logicID, uint32(coreNum)); err != nil {
 			hwlog.RunLog.Error(err)
 			return fmt.Errorf("create virtual device info failed, error is: %v", err)
 		}
@@ -435,7 +437,7 @@ func (d *DeviceManager) create710VirDevice(vDevInfos CgoDsmiVDevInfo, logicID ui
 
 // DestroyVirtualDevice destroy spec virtual device
 func (d *DeviceManager) DestroyVirtualDevice(logicID uint32, vDevID uint32) error {
-	if err := dcmi.DestroyVDevice(logicID, vDevID); err != nil {
+	if err := d.driverMgr.DestroyVDevice(logicID, vDevID); err != nil {
 		hwlog.RunLog.Error(err)
 		return fmt.Errorf("destroy virtual device info failed, error is: %v", err)
 	}
