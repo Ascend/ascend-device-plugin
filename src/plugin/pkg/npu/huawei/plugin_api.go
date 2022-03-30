@@ -59,6 +59,7 @@ var (
 	totalDevices                  sets.String
 	stateThreadNum                int
 	m                             sync.Mutex
+	virLock                       sync.Mutex
 	firstTimeList                 = true
 	totalUHDevices                sets.String
 	totalNetworkUnhealthDevices   sets.String
@@ -122,6 +123,21 @@ func (s *pluginAPI) GetDevicePluginOptions(ctx context.Context, e *v1beta1.Empty
 	return &v1beta1.DevicePluginOptions{}, nil
 }
 
+func (s *pluginAPI) GetDevByType(devices map[string]*common.NpuDevice) bool {
+	allDevs := s.hps.hdm.allDevs
+	for npuIdx := range allDevs {
+		npuDev := &allDevs[npuIdx]
+		if npuDev.DevType == s.hps.devType {
+			devices[npuDev.ID] = npuDev
+		}
+	}
+	isCountChange, ok := listenDevCountIsChange[s.hps.devType]
+	if ok {
+		return isCountChange
+	}
+	return !s.convertToSets(devices).Equal(s.convertToSets(s.hps.devices))
+}
+
 // ListAndWatch: if the server get stop signal ,the ListAndWatch should  stop,to be fix
 func (s *pluginAPI) ListAndWatch(emtpy *v1beta1.Empty, stream v1beta1.DevicePlugin_ListAndWatchServer) error {
 
@@ -137,7 +153,12 @@ func (s *pluginAPI) ListAndWatch(emtpy *v1beta1.Empty, stream v1beta1.DevicePlug
 			sleepTime = 0
 		}
 		time.Sleep(time.Duration(sleepTime) * time.Second)
-		isStateChange := s.isDeviceStatusChange()
+		var devices = make(map[string]*common.NpuDevice)
+		m.Lock()
+		isStateChange := s.GetDevByType(devices)
+		s.hps.devices = devices
+		m.Unlock()
+		isStateChange = isStateChange || s.isDeviceStatusChange()
 		if useVolcanoType {
 			s.hps.vol2KlDevMap = make(map[string]string, maxTrainDevicesNum)
 			s.hps.hdm.manager.DoWithVolcanoListAndWatch(s.hps, isStateChange)
@@ -149,6 +170,7 @@ func (s *pluginAPI) ListAndWatch(emtpy *v1beta1.Empty, stream v1beta1.DevicePlug
 		if isStateChange {
 			// turn on log print
 			logFlag, firstTimeList = true, false
+			listenDevCountIsChange[s.hps.devType] = false
 			resp.Devices = resp.Devices[:0]
 			s.updateKubeletDevInfo(resp, stream)
 		}
@@ -169,6 +191,8 @@ func (s *pluginAPI) updateKubeletDevInfo(resp *v1beta1.ListAndWatchResponse,
 		}
 		return
 	}
+	m.Lock()
+	defer m.Unlock()
 	var notInVolDev []string
 	allDev := sets.String{}
 	klDev := sets.String{}
@@ -209,6 +233,14 @@ func (s *pluginAPI) isDeviceStatusChange() bool {
 		return s.listenVirtualDevices()
 	}
 	return s.listenPhysicalDevices()
+}
+
+func (s *pluginAPI) convertToSets(devList map[string]*common.NpuDevice) sets.String {
+	devSet := sets.String{}
+	for devID := range devList {
+		devSet.Insert(devID)
+	}
+	return devSet
 }
 
 func (s *pluginAPI) listenVirtualDevices() bool {
@@ -254,8 +286,31 @@ func (s *pluginAPI) listenPhysicalDevices() bool {
 		if s.hps.devType == hiAIAscend910Prefix {
 			isStateChange = s.checkDeviceNetworkHealthStatus(dev) || isStateChange
 		}
+		s.filterUNHealthDev(state, dev.ID)
 	}
 	return isStateChange
+}
+
+func (s *pluginAPI) filterUNHealthDev(state, deviceName string) {
+	if state != v1beta1.Unhealthy {
+		return
+	}
+	phyID, _, err := common.GetDeviceID(deviceName, "")
+	if err != nil {
+		return
+	}
+	for idx, dev := range Dev910PhyCoreCount {
+		if phyID == strings.Split(dev, "-")[0] {
+			Dev910PhyCoreCount = append(Dev910PhyCoreCount[:idx], Dev910PhyCoreCount[idx+1:]...)
+			return
+		}
+	}
+	for idx, dev := range Dev710PhyCoreCount {
+		if phyID == strings.Split(dev, "-")[0] {
+			Dev710PhyCoreCount = append(Dev710PhyCoreCount[:idx], Dev710PhyCoreCount[idx+1:]...)
+			return
+		}
+	}
 }
 
 // check device network health status
@@ -546,7 +601,6 @@ func (s *pluginAPI) mountfile(resp *v1beta1.ContainerAllocateResponse) {
 		ReadOnly:      true,
 	})
 
-	// mount log format
 	logPath := "/var/log/npu"
 	hostLogPath := logPath + "/slog/container/" + rankID
 	resp.Mounts = append(resp.Mounts, &v1beta1.Mount{

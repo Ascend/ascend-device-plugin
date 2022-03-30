@@ -67,6 +67,7 @@ func (hps *HwPluginServe) GetDevByType() error {
 	if len(allDevs) == 0 {
 		return fmt.Errorf("no device found")
 	}
+	hps.devices = make(map[string]*common.NpuDevice, 1)
 	for i := range allDevs {
 		dev := &allDevs[i]
 		if dev.DevType == hps.devType {

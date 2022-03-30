@@ -69,6 +69,8 @@ typedef struct ip_addr {
 
 #define DSMI_MAX_VDEV_NUM 16
 #define DSMI_MAX_SPEC_RESERVE 8
+#define DSMI_VDEV_FOR_RESERVE 32
+#define DSMI_VDEV_RES_NAME_LEN 16
 
 struct dsmi_vdev_spec_info {
     unsigned char core_num;                         /**< aicore num for virtual device */
@@ -96,6 +98,63 @@ struct dsmi_vdev_create_info {
     unsigned int vdev_num;                              /**< number of vdevice the devid spilt */
     struct dsmi_vdev_spec_info spec[DSMI_MAX_VDEV_NUM]; /**< specification of vdevice */
     unsigned int vdevid[DSMI_MAX_VDEV_NUM];             /**< id number of vdevice */
+};
+
+struct dsmi_base_resource {
+    unsigned long long token;
+    unsigned long long token_max;
+    unsigned long long task_timeout;
+    unsigned int vfg_id;
+    unsigned char vip_mode;
+    unsigned char reserved[DSMI_VDEV_FOR_RESERVE - 1];  /* bytes aligned */
+};
+
+/* configurable computing resource */
+struct dsmi_computing_configurable {
+    /* memory resource, MB as unit */
+    unsigned long long memory_size;
+
+    /* accelator resource */
+    float aic;
+    float aiv;
+    unsigned short dsa;
+    unsigned short rtsq;
+    unsigned short cdqm;
+
+    /* cpu resource */
+    unsigned short topic_schedule_aicpu;
+    unsigned short host_ctrl_cpu;
+    unsigned short host_aicpu;
+    unsigned short device_aicpu;
+
+    unsigned char reserved[DSMI_VDEV_FOR_RESERVE];
+};
+
+struct dsmi_media_resource {
+    /* dvpp resource */
+    float jpegd;
+    float jpege;
+    float vpc;
+    float vdec;
+    float pngd;
+    float venc;
+    unsigned char reserved[DSMI_VDEV_FOR_RESERVE];
+};
+
+struct dsmi_create_vdev_res_stru {
+    char name[DSMI_VDEV_RES_NAME_LEN];
+    struct dsmi_base_resource base;
+    struct dsmi_computing_configurable computing;
+    struct dsmi_media_resource media;
+};
+
+struct dsmi_create_vdev_result {
+    unsigned int vdev_id;
+    unsigned int pcie_bus;
+    unsigned int pcie_device;
+    unsigned int pcie_func;
+    unsigned int vfg_id;
+    unsigned char reserved[DSMI_VDEV_FOR_RESERVE];
 };
 
 /**
@@ -225,7 +284,8 @@ int dsmi_get_device_errorcode(int device_id, int *errorcount, unsigned int *perr
 * @return 0 for success, others for fail
 * @note Support:Ascend710,Ascend910
 */
-int dsmi_create_vdevice(unsigned int devid, struct dsmi_vdev_create_info *info);
+int dsmi_create_vdevice(unsigned int devid, unsigned int vdev_id, struct dsmi_create_vdev_res_stru *vdev_res,
+    struct dsmi_create_vdev_result *vdev_result);
 
 /**
 * @ingroup driver

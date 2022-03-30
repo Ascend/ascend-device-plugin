@@ -16,7 +16,8 @@ const (
 	kubeEnvMaxLength = 253
 	component        = "device-plugin"
 	idSplitNum       = 2
-	virDeviceLen     = 4
+	// VirDeviceLen is the length of virtual device
+	VirDeviceLen     = 4
 	// VirtualDev represent virtual device
 	VirtualDev = "VIRTUAL"
 
@@ -45,7 +46,7 @@ func GetDeviceID(deviceName string, ascendRuntimeOptions string) (string, string
 	}
 	var virID string
 	deviceID := idSplit[len(idSplit)-1]
-	if ascendRuntimeOptions == VirtualDev && len(idSplit) == virDeviceLen {
+	if ascendRuntimeOptions == VirtualDev && len(idSplit) == VirDeviceLen {
 		virID = idSplit[idSplitNum]
 	}
 	return deviceID, virID, nil

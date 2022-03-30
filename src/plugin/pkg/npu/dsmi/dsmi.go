@@ -78,9 +78,11 @@ int dsmi_destroy_vdevice(unsigned int devid, unsigned int vdevid){
 	CALL_FUNC(dsmi_destroy_vdevice,devid,vdevid)
 }
 
-int (*dsmi_create_vdevice_func)(unsigned int devid, struct dsmi_vdev_create_info *info);
-int dsmi_create_vdevice(unsigned int devid, struct dsmi_vdev_create_info *info){
-	CALL_FUNC(dsmi_create_vdevice,devid,info)
+int (*dsmi_create_vdevice_func)(unsigned int devid, unsigned int vdev_id,
+struct dsmi_create_vdev_res_stru *vdev_res,struct dsmi_create_vdev_result *vdev_result);
+int dsmi_create_vdevice(unsigned int devid, unsigned int vdev_id,
+struct dsmi_create_vdev_res_stru *vdev_res,struct dsmi_create_vdev_result *vdev_result){
+	CALL_FUNC(dsmi_create_vdevice,devid,vdev_id,vdev_res,vdev_result)
 }
 
 // load .so files and functions
@@ -151,6 +153,9 @@ const (
 	// dsmiMaxVdevNum is max number of vdevice, value is from driver specification
 	dsmiMaxVdevNum = 16
 
+	// dcmiMaxVdevNum is max number of 710 vdevice
+	dcmiMaxVdevNum = 8
+
 	// MaxErrorCodeCount is the max number of error code
 	MaxErrorCodeCount = 128
 )
@@ -174,6 +179,7 @@ type CgoDsmiVdevSpecInfo struct {
 type CgoDsmiVDevInfo struct {
 	VDevNum             uint32
 	CoreNumUnused       uint32
+	CoreCount           uint32
 	CgoDsmiSubVDevInfos []CgoDsmiSubVDevInfo
 }
 
@@ -350,24 +356,24 @@ func (d *DeviceManager) GetVDevicesInfo(logicID uint32) (CgoDsmiVDevInfo, error)
 		return CgoDsmiVDevInfo{}, fmt.Errorf("get virtual device info failed, error is: %v "+
 			"and vdev num is: %d", err, int32(dcmiVDevInfo.VDevNum))
 	}
-
 	cgoDsmiVDevInfos := CgoDsmiVDevInfo{
 		VDevNum:       dcmiVDevInfo.VDevNum,
 		CoreNumUnused: uint32(dcmiVDevInfo.CoreNumUnused),
 	}
-
+	usedCoreCount := uint32(0)
 	for i := uint32(0); i < cgoDsmiVDevInfos.VDevNum; i++ {
-		cNum := dcmiVDevInfo.CoreNum[i]
+		usedCoreCount += uint32(dcmiVDevInfo.CoreNum[i])
 		cgoDsmiVDevInfos.CgoDsmiSubVDevInfos = append(cgoDsmiVDevInfos.CgoDsmiSubVDevInfos, CgoDsmiSubVDevInfo{
 			Status: dcmiVDevInfo.Status[i],
 			VDevID: dcmiVDevInfo.VDevID[i],
 			VfID:   dcmiVDevInfo.VfID[i],
 			CID:    dcmiVDevInfo.CID[i],
 			Spec: CgoDsmiVdevSpecInfo{
-				CoreNum: fmt.Sprintf("%v", int32(cNum)),
+				CoreNum: fmt.Sprintf("%v", dcmiVDevInfo.CoreNum[i]),
 			},
 		})
 	}
+	cgoDsmiVDevInfos.CoreCount = cgoDsmiVDevInfos.CoreNumUnused + usedCoreCount
 	return cgoDsmiVDevInfos, nil
 }
 
@@ -379,7 +385,7 @@ func (d *DeviceManager) CreateVirtualDevice(logicID uint32, runMode string, vNPU
 	}
 	switch runMode {
 	case common.RunMode710:
-		return d.create710VirDevice(cgoDsmiVDevInfos, logicID)
+		return d.create710VirDevice(cgoDsmiVDevInfos, logicID, vNPUs)
 	case common.RunMode910:
 		return d.create910VirDevice(cgoDsmiVDevInfos, logicID, vNPUs)
 	default:
@@ -389,13 +395,10 @@ func (d *DeviceManager) CreateVirtualDevice(logicID uint32, runMode string, vNPU
 
 func (d *DeviceManager) create910VirDevice(vDevInfos CgoDsmiVDevInfo, logicID uint32, vNPUs []string) error {
 	if vDevInfos.CoreNumUnused <= 1 || vDevInfos.VDevNum > dsmiMaxVdevNum {
-		return fmt.Errorf("the specification used to create virtual device is error")
-	}
-	if !isCoreNumEnough(vDevInfos.CoreNumUnused, vNPUs) {
-		return fmt.Errorf("create failure, no enough source to create virtual devices")
+		return fmt.Errorf("the specification used to create 910 virtual device is error")
 	}
 	for i := 0; i < len(vNPUs); i++ {
-		coreStr := strings.Replace(strings.Split(vNPUs[i], "-")[1], "c", "", -1)
+		coreStr := strings.Replace(vNPUs[i], "c", "", -1)
 		coreNum, err := strconv.Atoi(coreStr)
 		if err != nil {
 			continue
@@ -408,30 +411,21 @@ func (d *DeviceManager) create910VirDevice(vDevInfos CgoDsmiVDevInfo, logicID ui
 	return nil
 }
 
-// isCoreNumEnough is enough core to create virtual device
-func isCoreNumEnough(freeCore uint32, vNPUs []string) bool {
-	coreCount, err := getCoreCountToCreate(vNPUs)
-	if err != nil {
-		return false
+func (d *DeviceManager) create710VirDevice(vDevInfos CgoDsmiVDevInfo, logicID uint32, vNPUs []string) error {
+	if vDevInfos.CoreNumUnused < 1 || vDevInfos.VDevNum > dcmiMaxVdevNum {
+		return fmt.Errorf("the specification used to create 710 virtual device is error")
 	}
-	return freeCore >= uint32(coreCount)
-}
-
-func getCoreCountToCreate(vNPUs []string) (int, error) {
-	var needCoreCount int
-	for _, vNPU := range vNPUs {
-		coreStr := strings.Replace(strings.Split(vNPU, "-")[1], "c", "", -1)
+	for i := 0; i < len(vNPUs); i++ {
+		coreStr := strings.Replace(vNPUs[i], "c", "", -1)
 		coreNum, err := strconv.Atoi(coreStr)
 		if err != nil {
-			return 0, err
+			continue
 		}
-		needCoreCount += coreNum
+		if _, err = d.driverMgr.CreateVDevice(logicID, uint32(coreNum)); err != nil {
+			hwlog.RunLog.Error(err)
+			return fmt.Errorf("from %d create virtual device info failed, error is: %v", logicID, err)
+		}
 	}
-	return needCoreCount, nil
-}
-
-func (d *DeviceManager) create710VirDevice(vDevInfos CgoDsmiVDevInfo, logicID uint32) error {
-	// todo need spec
 	return nil
 }
 
