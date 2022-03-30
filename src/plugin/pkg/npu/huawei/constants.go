@@ -28,16 +28,11 @@ const (
 	ascendRuntimeOptionsEnv = "ASCEND_RUNTIME_OPTIONS"
 
 	huaweiAscend910  = "huawei.com/Ascend910"
+	huaweiAscend710  = "huawei.com/Ascend710"
 	podPredicateTime = "predicate-time"
 	pod2kl           = "huawei/kltDev"
 	interval         = 1
 	timeout          = 10
-
-	virtualDevicesPattern = "Ascend910-(2|4|8|16)c"
-	pwr2CSuffix           = "Ascend910-2c"
-	pwr4CSuffix           = "Ascend910-4c"
-	pwr8CSuffix           = "Ascend910-8c"
-	pwr16CSuffix          = "Ascend910-16c"
 
 	logicIDIndexInVirtualDevID910  = 3
 	huaweiNetworkUnHealthAscend910 = "huawei.com/Ascend910-NetworkUnhealthy"
@@ -46,6 +41,8 @@ const (
 	huaweiUnHealthAscend910        = "huawei.com/Ascend910-Unhealthy"
 	huaweiUnHealthAscend710        = "huawei.com/Ascend710-Unhealthy"
 	huaweiUnHealthAscend310        = "huawei.com/Ascend310-Unhealthy"
+	huaweiAscend910Spec            = "huawei.com/Ascend910-spec"
+	huaweiAscend710Spec            = "huawei.com/Ascend710-spec"
 	// FunctionNotFound for describe dsmi interface function is exist or not
 	FunctionNotFound = "-99998"
 

@@ -70,6 +70,7 @@ func TestPluginAPIListAndWatch(t *testing.T) {
 	mockV1.EXPECT().Nodes().AnyTimes().Return(mockNode)
 	mockK8s.EXPECT().CoreV1().AnyTimes().Return(mockV1)
 	fakeKubeInteractor := &KubeInteractor{clientset: mockK8s, nodeName: "NODE_NAME"}
+	hdm.allDevs = getTestDevs()
 	for _, devType := range devTypes {
 		mockstream := mock_v1beta1.NewMockDevicePlugin_ListAndWatchServer(ctrl)
 		mockstream.EXPECT().Send(&v1beta1.ListAndWatchResponse{}).Return(nil)
@@ -81,6 +82,17 @@ func TestPluginAPIListAndWatch(t *testing.T) {
 		}
 	}
 	t.Logf("TestPluginAPI_ListAndWatch Run Pass")
+}
+
+func getTestDevs() []common.NpuDevice {
+	return []common.NpuDevice {
+		{
+			DevType: "Ascend710",
+			ID: "Ascend710-0",
+			Health: "Health",
+			NetworkHealth: "Health",
+		},
+	}
 }
 
 func changeBreakFlag(api *pluginAPI) {
@@ -135,13 +147,10 @@ func TestAddAnnotation(t *testing.T) {
 		}
 		fakePluginAPI = createFakePluginAPI(hdm, devType, fakeKubeInteractor)
 	}
-	devices := make(map[string]string, 2)
+	devices := make(map[string]string, 1)
 	devices["0"] = "127.0.0.0"
 	devices["1"] = "127.0.0.1"
 	annonationString := fakePluginAPI.addAnnotation(devices, "pod_name", "127.0.0.0")
-	hwlog.RunLog.Errorf("***********annonationString: %v\n", annonationString)
-	hwlog.RunLog.Errorf("***********annonationString == annonationTest1: %v\n", annonationString == annonationTest1)
-	hwlog.RunLog.Errorf("***********annonationString == annonationTest1: %v\n", annonationString == annonationTest2)
 	if annonationString == annonationTest1 || annonationString == annonationTest2 {
 		t.Logf("TestAddAnnotation Run Pass")
 	} else {

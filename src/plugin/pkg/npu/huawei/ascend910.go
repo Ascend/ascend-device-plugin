@@ -14,7 +14,6 @@ import (
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
-	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 )
 
 const (
@@ -25,6 +24,19 @@ const (
 
 	networkDetectOK   = uint32(0)
 	networkDetectInit = uint32(6)
+)
+
+const (
+	virtualDevicesPattern = "Ascend910-(2|4|8|16)c"
+	pwr2CSuffix           = "Ascend910-2c"
+	pwr4CSuffix           = "Ascend910-4c"
+	pwr8CSuffix           = "Ascend910-8c"
+	pwr16CSuffix          = "Ascend910-16c"
+)
+
+var (
+	// Dev910PhyCoreCount like huawei.com/Ascend910-spec:1-32c,2-30c
+	Dev910PhyCoreCount []string
 )
 
 // HwAscend910Manager manages huawei Ascend910 devices.
@@ -51,7 +63,7 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]common.NpuDevice, allDevice
 		return err
 	}
 	phyDevMapVirtualDev := make(map[uint32]string, devNum)
-	var deviTypes, vDevID []string
+	var deviTypes, vDevID, dev910PhyCoreCount []string
 	for i := int32(0); i < devNum; i++ {
 		phyID, err := hnm.dmgr.GetPhyID(ids[i])
 		if err != nil {
@@ -66,67 +78,21 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]common.NpuDevice, allDevice
 		}
 		var devices []common.NpuDevice
 		if cgoDsmiVDevInfos.VDevNum == 0 {
-			devices, deviTypes = hnm.assemblePhyDevices(phyID)
+			devices, deviTypes = hnm.assemblePhyDevices(phyID, hiAIAscend910Prefix)
 			phyDevMapVirtualDev[phyID] = fmt.Sprintf("%d", phyID)
 		} else {
-			devices, deviTypes, vDevID = hnm.assembleVirtualDevices(phyID, cgoDsmiVDevInfos)
+			devices, deviTypes, vDevID = hnm.assembleVirtualDevices(phyID, cgoDsmiVDevInfos, hiAIAscend910Prefix)
 			phyDevMapVirtualDev[phyID] = strings.Join(vDevID, ",")
 		}
 		*allDevices = append(*allDevices, devices...)
 		*allDeviceTypes = append(*allDeviceTypes, deviTypes...)
+		dev910PhyCoreCount = append(dev910PhyCoreCount, fmt.Sprintf("%d-%dc-%dc",
+			phyID, cgoDsmiVDevInfos.CoreCount, cgoDsmiVDevInfos.CoreNumUnused))
 	}
+	Dev910PhyCoreCount = dev910PhyCoreCount
 	hnm.phyDevMapVirtualDev = phyDevMapVirtualDev
 	*allDeviceTypes = hnm.removeDuplicate(allDeviceTypes)
 	return nil
-}
-
-func (hnm *HwAscend910Manager) removeDuplicate(allDeviceTypes *[]string) []string {
-	deviceTypesMap := make(map[string]string, len(*allDeviceTypes))
-	var rmDupDeviceTypes []string
-	for _, deviType := range *allDeviceTypes {
-		deviceTypesMap[deviType] = deviType
-	}
-	for _, deviType := range deviceTypesMap {
-		rmDupDeviceTypes = append(rmDupDeviceTypes, deviType)
-	}
-	return rmDupDeviceTypes
-}
-
-func (hnm *HwAscend910Manager) assemblePhyDevices(phyID uint32) ([]common.NpuDevice, []string) {
-	var devices []common.NpuDevice
-	var deviTypes []string
-	devID := fmt.Sprintf("%s-%d", hiAIAscend910Prefix, phyID)
-	device := hnm.AssembleNpuDeviceStruct(hiAIAscend910Prefix, devID)
-	devices = append(devices, device)
-	deviTypes = append(deviTypes, hiAIAscend910Prefix)
-	return devices, deviTypes
-}
-
-func (hnm *HwAscend910Manager) assembleVirtualDevices(phyID uint32, cgoDsmiVDevInfos dsmi.CgoDsmiVDevInfo) (
-	[]common.NpuDevice, []string, []string) {
-	var devices []common.NpuDevice
-	var vDeviTypes []string
-	var vDevID []string
-	for _, dsmiSubVDevInfo := range cgoDsmiVDevInfos.CgoDsmiSubVDevInfos {
-		if dsmiSubVDevInfo.Spec.CoreNum == zeroCore {
-			continue
-		}
-		vDeviType := fmt.Sprintf("%s-%sc", hiAIAscend910Prefix, dsmiSubVDevInfo.Spec.CoreNum)
-		devID := fmt.Sprintf("%s-%sc-%d-%d", hiAIAscend910Prefix, dsmiSubVDevInfo.Spec.CoreNum, dsmiSubVDevInfo.VDevID, phyID)
-		device := hnm.AssembleNpuDeviceStruct(vDeviType, devID)
-		devices = append(devices, device)
-		vDeviTypes = append(vDeviTypes, vDeviType)
-		vDevID = append(vDevID, fmt.Sprintf("%d", dsmiSubVDevInfo.VDevID))
-	}
-	return devices, vDeviTypes, vDevID
-}
-
-func (hnm *HwAscend910Manager) getVirtualDevice(logicID uint32) (dsmi.CgoDsmiVDevInfo, error) {
-	cgoDsmiVDevInfos, err := hnm.dmgr.GetVDevicesInfo(logicID)
-	if err != nil {
-		return dsmi.CgoDsmiVDevInfo{}, fmt.Errorf("query virtual device info failure: %s", err)
-	}
-	return cgoDsmiVDevInfos, nil
 }
 
 // DoWithVolcanoListAndWatch ascend910 affinity scheduling
@@ -206,7 +172,7 @@ func filterTagPowerDevice(allocatableDevices sets.String, suffix string) string 
 	var powerAnnotation []string
 	for deviceName := range allocatableDevices {
 		switch suffix {
-		case hiAIAscend910Prefix:
+		case hiAIAscend910Prefix, hiAIAscend710Prefix:
 			if !IsVirtualDev(deviceName) {
 				powerAnnotation = append(powerAnnotation, deviceName)
 			}

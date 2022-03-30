@@ -69,7 +69,7 @@ var (
 	logFlag = true
 
 	// ServeUpdateMap serveUpdateMap
-	ServeUpdateMap = make(map[string]chan int)
+	ServeUpdateMap = make(map[string]chan int, initMapCap)
 )
 
 type devManager interface {
@@ -150,6 +150,12 @@ func (hdm *HwDevManager) Serve(devType string) {
 	restart := true
 	var hps HwPluginServeInterface
 	for !hdm.stopFlag.Load() {
+		select {
+		case _, _ = <-ServeUpdateMap[devType]:
+			hwlog.RunLog.Infof("update go routine %s", devType)
+			preStart(hps)
+		default:
+		}
 		if hdm.stopFlag.Load() {
 			break
 		}
@@ -213,7 +219,7 @@ func preStart(hps HwPluginServeInterface) {
 		}
 		// Use non-default level to avoid log spam.
 		if logFlag {
-			hwlog.RunLog.Warnf("hwPluginServe preStart failed, err: %s", err.Error())
+			hwlog.RunLog.Warnf("hwPluginServe preStart, message: %s", err.Error())
 		}
 		logFlag = false
 		time.Sleep(sleepTime * time.Second)

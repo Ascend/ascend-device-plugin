@@ -128,4 +128,5 @@ func startDiffTypeServe(hdm *huawei.HwDevManager, neverStop chan struct{}) {
 		hwlog.RunLog.Infof("ascend device serve started, devType: %s", devType)
 		go hdm.Serve(devType)
 	}
+	huawei.UpdateVNpuDevice(hdm, neverStop)
 }

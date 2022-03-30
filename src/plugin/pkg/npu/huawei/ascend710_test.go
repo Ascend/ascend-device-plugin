@@ -20,12 +20,14 @@ func TestHwAscend710ManagerGetNPUs(t *testing.T) {
 	for i := 0; i < npuTestNum; i++ {
 		resultDevMap[fmt.Sprintf("Ascend710-%d", i)] = ""
 	}
+	resultDevMap["Ascend710-4c-1-1"] = ""
+	resultDevMap["Ascend710-8c-2-1"] = ""
 	hdm := createFake710HwDevManager("ascend710", false, false, false)
 	err := hdm.manager.GetNPUs(&hdm.allDevs, &hdm.allDevTypes, hdm.manager.GetMatchingDeviType())
 	if err != nil {
 		t.Fatalf("TestHwAscend710Manager_GetNPUs Run Failed")
 	}
-	if hdm.allDevTypes[0] != "Ascend710" {
+	if !strings.Contains(hdm.allDevTypes[0], "Ascend710") {
 		t.Fatalf("TestHwAscend710Manager_GetNPUs Run Failed")
 	}
 	for _, dev := range hdm.allDevs {

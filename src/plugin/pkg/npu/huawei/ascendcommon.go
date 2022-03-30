@@ -179,9 +179,9 @@ func UnhealthyState(healthyState uint32, logicID uint32, healthyType string, dmg
 
 // IsVirtualDev used to judge whether a physical device or a virtual device
 func IsVirtualDev(devType string) bool {
-	pattern := virtualDevicesPattern
-	reg := regexp.MustCompile(pattern)
-	return reg.MatchString(devType)
+	reg910 := regexp.MustCompile(virtualDevicesPattern)
+	reg710 := regexp.MustCompile(virtual710DevsPattern)
+	return reg910.MatchString(devType) || reg710.MatchString(devType)
 }
 
 // VerifyPath used to verify the validity of the path
@@ -269,7 +269,7 @@ func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr dsmi.Device
 	}
 }
 
-// GetNPUs Discovers all HUAWEI Ascend310/Ascend710 devices by call dsmi interface
+// GetNPUs Discovers all HUAWEI Ascend310 devices by call dsmi interface
 func (adc *ascendCommonFunction) GetNPUs(allDevices *[]common.NpuDevice, allDeviceTypes *[]string,
 	deviType string) error {
 	hwlog.RunLog.Infof("--->< deviType: %s", deviType)
@@ -370,4 +370,53 @@ func (adc *ascendCommonFunction) GetAnnotationMap(allocatableDevices sets.String
 	annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, adc.name)
 	antMap[annotationTag] = chipAnnotation
 	return antMap
+}
+
+func (adc *ascendCommonFunction) getVirtualDevice(logicID uint32) (dsmi.CgoDsmiVDevInfo, error) {
+	cgoDsmiVDevInfos, err := adc.dmgr.GetVDevicesInfo(logicID)
+	if err != nil {
+		return dsmi.CgoDsmiVDevInfo{}, fmt.Errorf("query virtual device info failure: %s", err)
+	}
+	return cgoDsmiVDevInfos, nil
+}
+
+func (adc *ascendCommonFunction) removeDuplicate(allDeviceTypes *[]string) []string {
+	deviceTypesMap := make(map[string]string, len(*allDeviceTypes))
+	var rmDupDeviceTypes []string
+	for _, deviType := range *allDeviceTypes {
+		deviceTypesMap[deviType] = deviType
+	}
+	for _, deviType := range deviceTypesMap {
+		rmDupDeviceTypes = append(rmDupDeviceTypes, deviType)
+	}
+	return rmDupDeviceTypes
+}
+
+func (adc *ascendCommonFunction) assemblePhyDevices(phyID uint32, runMode string) ([]common.NpuDevice, []string) {
+	var devices []common.NpuDevice
+	var deviTypes []string
+	devID := fmt.Sprintf("%s-%d", runMode, phyID)
+	device := adc.AssembleNpuDeviceStruct(runMode, devID)
+	devices = append(devices, device)
+	deviTypes = append(deviTypes, runMode)
+	return devices, deviTypes
+}
+
+func (adc *ascendCommonFunction) assembleVirtualDevices(phyID uint32, cgoDsmiVDevInfos dsmi.CgoDsmiVDevInfo,
+	runMode string) ([]common.NpuDevice, []string, []string) {
+	var devices []common.NpuDevice
+	var vDeviTypes []string
+	var vDevID []string
+	for _, dsmiSubVDevInfo := range cgoDsmiVDevInfos.CgoDsmiSubVDevInfos {
+		if dsmiSubVDevInfo.Spec.CoreNum == zeroCore {
+			continue
+		}
+		vDeviType := fmt.Sprintf("%s-%sc", runMode, dsmiSubVDevInfo.Spec.CoreNum)
+		devID := fmt.Sprintf("%s-%sc-%d-%d", runMode, dsmiSubVDevInfo.Spec.CoreNum, dsmiSubVDevInfo.VDevID, phyID)
+		device := adc.AssembleNpuDeviceStruct(vDeviType, devID)
+		devices = append(devices, device)
+		vDeviTypes = append(vDeviTypes, vDeviType)
+		vDevID = append(vDevID, fmt.Sprintf("%d", dsmiSubVDevInfo.VDevID))
+	}
+	return devices, vDeviTypes, vDevID
 }
