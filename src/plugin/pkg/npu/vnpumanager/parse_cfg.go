@@ -115,9 +115,13 @@ func ConvertCMToStruct(mtaObj metav1.Object) []CardVNPUs {
 	if mtaConfigMap.Name != CfgMapName || mtaConfigMap.Namespace != CfgMapNamespace {
 		return nil
 	}
+	if len(mtaConfigMap.Data) == 0 {
+		hwlog.RunLog.Errorf("failed to find vnpu configMap data")
+		return nil
+	}
 	cmData, ok := mtaConfigMap.Data[common.VNpuCfgKey]
 	if !ok {
-		hwlog.RunLog.Errorf("failed to find vnpu configMap")
+		hwlog.RunLog.Errorf("failed to find configMap VNPUCfg")
 		return nil
 	}
 	cardVNPUs, err := GetCfgContent(cmData)
