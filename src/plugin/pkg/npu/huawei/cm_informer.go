@@ -28,7 +28,7 @@ type ConfigMapAgent struct {
 }
 
 // NewConfigMapAgent new ConfigMapAgent
-var NewConfigMapAgent = func(kubeClientSet kubernetes.Interface, hdm *HwDevManager) {
+func NewConfigMapAgent(kubeClientSet kubernetes.Interface, hdm *HwDevManager) {
 	stopCh := make(chan struct{})
 	cmInformerFactory := informers.NewSharedInformerFactoryWithOptions(kubeClientSet, time.Second*initMapCap,
 		informers.WithTweakListOptions(func(options *v1.ListOptions) {}))
@@ -67,7 +67,7 @@ func isCMChange(newCM, oldCM v1.Object) ([]vnpumanager.CardVNPUs, bool) {
 		return nil, false
 	}
 	if len(newCardNPUs) != len(oldCardNPUs) {
-		return  nil, true
+		return nil, true
 	}
 	return newCardNPUs, vnpumanager.IsConfigMapChange(newCardNPUs, oldCardNPUs)
 }

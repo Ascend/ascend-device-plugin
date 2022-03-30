@@ -1,6 +1,6 @@
 // Copyright (c) 2022. Huawei Technologies Co., Ltd. All rights reserved.
 
-// Package vnpumanager, using for create and destroy device
+// Package vnpumanager using for create and destroy device
 package vnpumanager
 
 import (
@@ -229,6 +229,7 @@ func getNeedDestroyDev(dcmiDevices []common.NpuDevice, cardVNPUs []CardVNPUs, ru
 			continue
 		}
 		annotateDevs, err := getAnnotationFromNode(kubeClient, runMode, deviceID)
+		// npuDev.ID format is "Ascend910-8c-101-0"
 		if !isInVNpuCfg(npuDev.ID, cardVNPUs, getSpecCoreDevCount(dcmiDevices, deviceID), deviceID, annotateDevs) {
 			// not found in configMap, means need to be deleted
 			needToBeDel[deviceID] = append(needToBeDel[deviceID], virID)
@@ -252,15 +253,13 @@ func getSpecCoreDevCount(dcmiDevices []common.NpuDevice, deviceID string) int {
 }
 
 func isInVNpuCfg(devName string, cardVNPUs []CardVNPUs, dcmiDevCount int, deviceID string, annotateDevs []string) bool {
-	// deviceName format is "Ascend910-8c-101-0"
-	// cardVNPUs format is "Cards": [{
-	//              "CardName": "huawei.com/Ascend710-0",
-	//              "Req": ["huawei.com/Ascend710-1c"],
-	//              "Alloc": []
-	//            }]
+	// cardVNPUs like "Cards": [{"CardName":"huawei.com/Ascend710-0","Req":["huawei.com/Ascend710-1c"],"Alloc":[]}]
 	for _, cardVPU := range cardVNPUs {
 		if strings.Split(cardVPU.CardName, "-")[1] != deviceID {
 			continue
+		}
+		if len(cardVPU.Req) == 0 {
+			return false
 		}
 		if dcmiDevCount <= len(cardVPU.Req) {
 			return true

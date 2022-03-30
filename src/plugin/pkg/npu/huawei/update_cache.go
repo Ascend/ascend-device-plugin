@@ -1,6 +1,6 @@
 // Copyright (c) 2022. Huawei Technologies Co., Ltd. All rights reserved.
 
-// Package huawei, update cache for hps.devices
+// Package huawei update cache for hps.devices
 package huawei
 
 import (
