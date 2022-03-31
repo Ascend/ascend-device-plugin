@@ -17,7 +17,9 @@ extern "C" {
 
 #define DCMI_VDEV_RES_NAME_LEN 16
 #define DCMI_VDEV_FOR_RESERVE 32
-#define DCMI_VDEV_MAX_NUM 32
+
+// can create max 16 vdev on a device. 32 is to reserve
+#define DCMI_SOC_SPLIT_MAX 32
 struct dcmi_create_vdev_out {
     unsigned int vdev_id;
     unsigned int pcie_bus;
@@ -134,7 +136,7 @@ struct dcmi_soc_free_resource {
 // total
 struct dcmi_soc_total_resource {
     unsigned int vdev_num;
-    unsigned int vdev_id[DCMI_VDEV_MAX_NUM];
+    unsigned int vdev_id[DCMI_SOC_SPLIT_MAX];
     unsigned int vfg_num;
     unsigned int vfg_bitmap;
     struct dcmi_base_resource base;
