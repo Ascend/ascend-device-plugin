@@ -5,6 +5,7 @@ package common
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 
@@ -23,6 +24,11 @@ const (
 
 	// VNpuCfgKey is the key for virtual NPU configMap record
 	VNpuCfgKey = "VNPUCfg"
+)
+
+var (
+	// NodeName is node name variable
+	NodeName string
 )
 
 // NpuDevice npu device description
@@ -68,4 +74,14 @@ func CheckNodeName(nodeName string) error {
 // NewKubeClient get client from KUBECONFIG  or not
 func NewKubeClient(kubeConfig string) (*kubernetes.Clientset, error) {
 	return utils.K8sClientFor(kubeConfig, component)
+}
+
+// GetNodeNameFromEnv get node name from env
+func GetNodeNameFromEnv() error {
+	nodeName := os.Getenv("NODE_NAME")
+	if err := CheckNodeName(nodeName); err != nil {
+		return fmt.Errorf("check node name failed: %v", err)
+	}
+	NodeName = nodeName
+	return nil
 }

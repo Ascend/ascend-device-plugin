@@ -7,7 +7,6 @@ package huawei
 import (
 	"context"
 	"fmt"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -50,14 +49,9 @@ func NewKubeInteractor() (*KubeInteractor, error) {
 		return nil, fmt.Errorf("failed to create kube client: %v", err)
 	}
 
-	nodeName := os.Getenv("NODE_NAME")
-	if err := common.CheckNodeName(nodeName); err != nil {
-		return nil, fmt.Errorf("check node name failed: %v", err)
-	}
-
 	return &KubeInteractor{
 		clientset: client,
-		nodeName:  nodeName,
+		nodeName:  common.NodeName,
 	}, nil
 }
 

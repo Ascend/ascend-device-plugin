@@ -12,6 +12,7 @@ import (
 
 	"huawei.com/npu-exporter/hwlog"
 
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 	"Ascend-device-plugin/src/plugin/pkg/npu/huawei"
 )
 
@@ -119,6 +120,10 @@ func main() {
 		hwlog.RunLog.Errorf("no devices type found. waiting indefinitely")
 		<-neverStop
 	}
+	if err := common.GetNodeNameFromEnv(); err != nil {
+		hwlog.RunLog.Errorf("get node name failed. waiting indefinitely")
+		<-neverStop
+	}
 	startDiffTypeServe(hdm, neverStop)
 	<-neverStop
 }
@@ -128,5 +133,7 @@ func startDiffTypeServe(hdm *huawei.HwDevManager, neverStop chan struct{}) {
 		hwlog.RunLog.Infof("ascend device serve started, devType: %s", devType)
 		go hdm.Serve(devType)
 	}
-	huawei.UpdateVNpuDevice(hdm, neverStop)
+	if *volcanoType {
+		huawei.UpdateVNpuDevice(hdm, neverStop)
+	}
 }

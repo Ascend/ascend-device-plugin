@@ -83,7 +83,7 @@ func parseCMData(newCardNPUs []vnpumanager.CardVNPUs, hdm *HwDevManager, kubeCli
 		hwlog.RunLog.Errorf("get NPU failed, err: %v\n", err)
 		return
 	}
-	vnpumanager.DestroyVirtualDev(hdm.dmgr, dcmiDevices, newCardNPUs, hdm.runMode, kubeClient)
+	vnpumanager.DestroyVirtualDev(hdm.dmgr, dcmiDevices, newCardNPUs)
 	vnpumanager.CreateVirtualDev(hdm.dmgr, newCardNPUs, hdm.runMode, kubeClient)
 	updateHpsCache(hdm)
 }
