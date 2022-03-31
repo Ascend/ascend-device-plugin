@@ -132,7 +132,7 @@ const (
 
 	dcmiVDevResNameLen = 16
 
-	vDeviceCreateTemplateNamePrefix = "vir0"
+	vDeviceCreateTemplateNamePrefix = "vir"
 
 	// MainCmdVDevMng virtual device manager
 	MainCmdVDevMng MainCmd = 52
@@ -145,6 +145,12 @@ const (
 	VmngSubCmdGetFreeResource VDevMngSubCmd = 2
 
 	npuType = 0
+
+	aiCoreNum1  = 1
+	aiCoreNum2  = 2
+	aiCoreNum4  = 4
+	aiCoreNum8  = 8
+	aiCoreNum16 = 16
 )
 
 // CgoDcmiCreateVDevOut create virtual device info
@@ -379,7 +385,13 @@ func convertCreateVDevOut(cCreateVDevOut C.struct_dcmi_create_vdev_out) CgoDcmiC
 // CreateVirtualDevice create virtual device
 func (d *DriverManager) CreateVirtualDevice(cardID, deviceID, vDevID int32, aiCore uint32) (CgoDcmiCreateVDevOut,
 	error) {
-	templateName := fmt.Sprintf("%s%d", vDeviceCreateTemplateNamePrefix, aiCore)
+	switch aiCore {
+	case aiCoreNum1, aiCoreNum2, aiCoreNum4, aiCoreNum8, aiCoreNum16:
+	default:
+		return CgoDcmiCreateVDevOut{}, fmt.Errorf("input invalid aiCore: %d", aiCore)
+	}
+	// templateName like vir01,vir02,vir04,vir08,vir16
+	templateName := fmt.Sprintf("%s%02d", vDeviceCreateTemplateNamePrefix, aiCore)
 	cTemplateName := C.CString(templateName)
 	defer C.free(unsafe.Pointer(cTemplateName))
 
