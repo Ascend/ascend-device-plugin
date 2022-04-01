@@ -122,7 +122,7 @@ func main() {
 	}
 	if *volcanoType {
 		if err := common.GetNodeNameFromEnv(); err != nil {
-			hwlog.RunLog.Errorf("get node name failed. waiting indefinitely")
+			hwlog.RunLog.Errorf("get node name failed. waiting indefinitely, err: %v", err)
 			<-neverStop
 		}
 	}
