@@ -120,9 +120,11 @@ func main() {
 		hwlog.RunLog.Errorf("no devices type found. waiting indefinitely")
 		<-neverStop
 	}
-	if err := common.GetNodeNameFromEnv(); err != nil {
-		hwlog.RunLog.Errorf("get node name failed. waiting indefinitely")
-		<-neverStop
+	if *volcanoType {
+		if err := common.GetNodeNameFromEnv(); err != nil {
+			hwlog.RunLog.Errorf("get node name failed. waiting indefinitely")
+			<-neverStop
+		}
 	}
 	startDiffTypeServe(hdm, neverStop)
 	<-neverStop
@@ -133,7 +135,8 @@ func startDiffTypeServe(hdm *huawei.HwDevManager, neverStop chan struct{}) {
 		hwlog.RunLog.Infof("ascend device serve started, devType: %s", devType)
 		go hdm.Serve(devType)
 	}
-	if *volcanoType {
+	runMode := hdm.GetRunMode()
+	if *volcanoType && (runMode == common.RunMode910 || runMode == common.RunMode710) {
 		huawei.UpdateVNpuDevice(hdm, neverStop)
 	}
 }
