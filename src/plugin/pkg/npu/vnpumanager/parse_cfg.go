@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"sort"
 
 	"huawei.com/npu-exporter/hwlog"
@@ -85,12 +84,8 @@ func GetCfgContent(data string) ([]CardVNPUs, error) {
 		hwlog.RunLog.Errorf("ummarshal configMap data failed, err: %v", err)
 		return nil, err
 	}
-	nodeName := os.Getenv("NODE_NAME")
-	if err := common.CheckNodeName(nodeName); err != nil {
-		return nil, fmt.Errorf("check node name failed: %v", err)
-	}
 	for _, vNpuCtn := range vNpuCfg.Nodes {
-		cardVNPUs, isOk := getCurNodeCfg(vNpuCtn, nodeName)
+		cardVNPUs, isOk := getCurNodeCfg(vNpuCtn, common.NodeName)
 		if isOk {
 			return cardVNPUs, nil
 		}

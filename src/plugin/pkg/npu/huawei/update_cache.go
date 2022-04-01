@@ -56,7 +56,7 @@ func TimingUpdate(hdm *HwDevManager, client *kubernetes.Clientset) error {
 	if err != nil {
 		return err
 	}
-	vnpumanager.DestroyVirtualDev(hdm.dmgr, dcmiDevices, cardVNPUs, hdm.runMode, client)
+	vnpumanager.DestroyVirtualDev(hdm.dmgr, dcmiDevices, cardVNPUs)
 	vnpumanager.CreateVirtualDev(hdm.dmgr, cardVNPUs, hdm.runMode, client)
 	updateHpsCache(hdm)
 	hwlog.RunLog.Infof("configMap timing update task complete")

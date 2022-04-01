@@ -6,7 +6,6 @@ package vnpumanager
 import (
 	"context"
 	"fmt"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -25,6 +24,7 @@ import (
 const (
 	// maxRetryCount try to create or destroy virtual device
 	maxRetryCount      = 2
+	ascendDevNameLen   = 2
 	resourceNamePrefix = "huawei.com/"
 
 	// For 710
@@ -40,10 +40,9 @@ const (
 )
 
 // DestroyVirtualDev destroy virtual devices
-func DestroyVirtualDev(dmgr dsmi.DeviceMgrInterface, dcmiDevices []common.NpuDevice, cardVNPUs []CardVNPUs,
-	runMode string, kubeClient kubernetes.Interface) {
+func DestroyVirtualDev(dmgr dsmi.DeviceMgrInterface, dcmiDevices []common.NpuDevice, cardVNPUs []CardVNPUs) {
 	hwlog.RunLog.Infof("starting get virtual device which need to be destroy")
-	needToBeDel := getNeedDestroyDev(dcmiDevices, cardVNPUs, runMode, kubeClient)
+	needToBeDel := getNeedDestroyDev(dcmiDevices, cardVNPUs)
 	for deviceID, virIDList := range needToBeDel {
 		phyID, err := strconv.Atoi(deviceID)
 		if err != nil {
@@ -182,11 +181,7 @@ func getCoreAndCount(devCoreList []string) map[string]int {
 }
 
 func getAnnotationFromNode(kubeClient kubernetes.Interface, runMode, phyIDStr string) ([]string, error) {
-	nodeName := os.Getenv("NODE_NAME")
-	if err := common.CheckNodeName(nodeName); err != nil {
-		return nil, fmt.Errorf("check node name failed: %v", err)
-	}
-	node, err := kubeClient.CoreV1().Nodes().Get(context.Background(), nodeName, v1.GetOptions{})
+	node, err := kubeClient.CoreV1().Nodes().Get(context.Background(), common.NodeName, v1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("get node failed: %v", err)
 	}
@@ -219,8 +214,7 @@ func convertToSets(devices []string) sets.String {
 	return devSet
 }
 
-func getNeedDestroyDev(dcmiDevices []common.NpuDevice, cardVNPUs []CardVNPUs, runMode string,
-	kubeClient kubernetes.Interface) map[string][]string {
+func getNeedDestroyDev(dcmiDevices []common.NpuDevice, cardVNPUs []CardVNPUs) map[string][]string {
 	var needToBeDel = make(map[string][]string, 1)
 	for _, npuDev := range dcmiDevices {
 		deviceID, virID, err := common.GetDeviceID(npuDev.ID, common.VirtualDev)
@@ -228,12 +222,8 @@ func getNeedDestroyDev(dcmiDevices []common.NpuDevice, cardVNPUs []CardVNPUs, ru
 		if err != nil || virID == "" {
 			continue
 		}
-		annotateDevs, err := getAnnotationFromNode(kubeClient, runMode, deviceID)
-		if err != nil {
-			continue
-		}
 		// npuDev.ID format is "Ascend910-8c-101-0"
-		if !isInVNpuCfg(npuDev.ID, cardVNPUs, getSpecCoreDevCount(dcmiDevices, deviceID), deviceID, annotateDevs) {
+		if !isInVNpuCfg(npuDev.ID, deviceID, cardVNPUs) {
 			// not found in configMap, means need to be deleted
 			needToBeDel[deviceID] = append(needToBeDel[deviceID], virID)
 		}
@@ -241,33 +231,22 @@ func getNeedDestroyDev(dcmiDevices []common.NpuDevice, cardVNPUs []CardVNPUs, ru
 	return needToBeDel
 }
 
-func getSpecCoreDevCount(dcmiDevices []common.NpuDevice, deviceID string) int {
-	var count = 0
-	for _, devName := range dcmiDevices {
-		phyID, _, err := common.GetDeviceID(devName.ID, common.VirtualDev)
-		if err != nil {
+func isInVNpuCfg(devName, deviceID string, cardVNPUs []CardVNPUs) bool {
+	for _, cardVPU := range cardVNPUs {
+		nameList := strings.Split(cardVPU.CardName, "-")
+		if len(nameList) != ascendDevNameLen {
 			continue
 		}
-		if phyID == deviceID {
-			count++
-		}
-	}
-	return count
-}
-
-func isInVNpuCfg(devName string, cardVNPUs []CardVNPUs, dcmiDevCount int, deviceID string, annotateDevs []string) bool {
-	for _, cardVPU := range cardVNPUs {
-		if strings.Split(cardVPU.CardName, "-")[1] != deviceID {
+		if nameList[1] != deviceID {
 			continue
 		}
 		if len(cardVPU.Req) == 0 {
 			return false
 		}
-		if dcmiDevCount <= len(cardVPU.Req) {
+		if len(cardVPU.Alloc) != len(cardVPU.Req) {
 			return true
 		}
-		usingDevs := convertToSets(cardVPU.Alloc).Union(convertToSets(annotateDevs))
-		for usingDev := range usingDevs {
+		for _, usingDev := range cardVPU.Alloc {
 			if strings.Replace(usingDev, resourceNamePrefix, "", -1) == devName {
 				return true
 			}

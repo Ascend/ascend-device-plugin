@@ -93,6 +93,8 @@ spec:
             mountPath: /etc/localtime
           - name: kmckeystore
             mountPath: /etc/mindx-dl
+          - name: tmp
+            mountPath: /tmp
         env:
           - name: NODE_NAME
             valueFrom:
@@ -115,3 +117,6 @@ spec:
         - name: kmckeystore
           hostPath:
             path: /etc/mindx-dl
+        - name: tmp
+          hostPath:
+            path: /tmp
