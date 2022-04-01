@@ -89,7 +89,7 @@ func parseCMData(newCardNPUs []vnpumanager.CardVNPUs, hdm *HwDevManager, kubeCli
 }
 
 func updateHpsCache(hdm *HwDevManager) {
-	hwlog.RunLog.Infof("starting update multi-virtual device cache after create virtual device")
+	hwlog.RunLog.Infof("start update multi-virtual device cache after create virtual device")
 	var newDevices []common.NpuDevice
 	var newDevTypes []string
 	if err := hdm.manager.GetNPUs(&newDevices, &newDevTypes, hdm.runMode); err != nil {

@@ -24,6 +24,7 @@ import (
 const (
 	// maxRetryCount try to create or destroy virtual device
 	maxRetryCount      = 2
+	ascendDevNameLen   = 2
 	resourceNamePrefix = "huawei.com/"
 
 	// For 710
@@ -232,7 +233,11 @@ func getNeedDestroyDev(dcmiDevices []common.NpuDevice, cardVNPUs []CardVNPUs) ma
 
 func isInVNpuCfg(devName, deviceID string, cardVNPUs []CardVNPUs) bool {
 	for _, cardVPU := range cardVNPUs {
-		if strings.Split(cardVPU.CardName, "-")[1] != deviceID {
+		nameList := strings.Split(cardVPU.CardName, "-")
+		if len(nameList) != ascendDevNameLen {
+			continue
+		}
+		if nameList[1] != deviceID {
 			continue
 		}
 		if len(cardVPU.Req) == 0 {

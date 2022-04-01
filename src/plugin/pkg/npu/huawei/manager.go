@@ -312,3 +312,8 @@ func (hdm *HwDevManager) setRunMode() error {
 
 	return fmt.Errorf("failed to get ascend device run mode")
 }
+
+// GetRunMode get run mode
+func (hdm *HwDevManager) GetRunMode() string {
+	return hdm.runMode
+}
