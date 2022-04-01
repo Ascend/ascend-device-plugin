@@ -80,18 +80,18 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 		// variables are defined in advance
 		// the value will be used in subsequent assignment
 		newNetworkRecoverDevSets := sets.String{}
-		// Ascend910
 		if devType == hiAIAscend910Prefix {
 			ki.update910Annotation(node, newNode, groupAllocatableDevs, &newNetworkRecoverDevSets)
 		}
 		if devType == hiAIAscend710Prefix {
 			ki.update710Annotation(node, newNode, groupAllocatableDevs[huaweiAscend710])
 		}
-		_, _, err = nodeutil.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), node, newNode)
+		updatedNode, _, err := nodeutil.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), node, newNode)
 		if err != nil {
 			hwlog.RunLog.Errorf("failed to patch volcano npu resource: %v", err)
 			return false, nil
 		}
+		ki.atomicListenAnnotation(devType, updatedNode.Annotations)
 		// if update success, update the lastTimeNetworkRecoverDevices
 		// Ascend910
 		if devType == hiAIAscend910Prefix {
@@ -100,6 +100,13 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 		return true, nil
 	})
 	return err
+}
+
+func (ki *KubeInteractor) atomicListenAnnotation(devType string, annotation map[string]string) {
+	if devType == hiAIAscend310Prefix {
+		return
+	}
+	ListenAnnotation.WaitUpdateAnnotation = annotation
 }
 
 func (ki *KubeInteractor) addChipCoreToAnnotation(devType string, newNode *v1.Node) {

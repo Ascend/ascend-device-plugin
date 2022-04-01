@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -89,8 +88,6 @@ func CreateVirtualDev(dmgr dsmi.DeviceMgrInterface, cardVNPUs []CardVNPUs, runMo
 	kubeClient kubernetes.Interface) {
 	hwlog.RunLog.Infof("starting create virtual device which is cm adding")
 	for _, cardVNPU := range cardVNPUs {
-		// it's necessary, otherwise frequent calls to create interface may fail
-		time.Sleep(time.Second)
 		phyIDStr, virID, err := common.GetDeviceID(cardVNPU.CardName, "")
 		if err != nil || virID != "" {
 			hwlog.RunLog.Errorf("current card name invalid, err: %v", err)
