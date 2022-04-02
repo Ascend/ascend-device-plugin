@@ -78,7 +78,7 @@ func destroyRetry(dmgr dsmi.DeviceMgrInterface, phyID int, virID string) error {
 		}
 		if err := dmgr.DestroyVirtualDevice(logicID, uint32(virIDCode)); err != nil {
 			retryCount++
-			hwlog.RunLog.Errorf("destroy virtual device %d from %s failed, err: %v\n", virIDCode, phyID, err)
+			hwlog.RunLog.Errorf("destroy virtual device %d from %d failed, err: %v\n", virIDCode, phyID, err)
 			continue
 		}
 		return nil
