@@ -20,8 +20,9 @@ import (
 	"Ascend-device-plugin/src/plugin/pkg/npu/vnpumanager"
 )
 
-// ListenAnnotation ListenAnnotation
-var ListenAnnotation = NewListenAnnotation()
+var (
+	listenAnnotation = NewListenAnnotation()
+)
 
 // ListenAnnotation is ListenAnnotation
 type ListenAnnotations struct {
@@ -40,6 +41,11 @@ func NewListenAnnotation() *ListenAnnotations {
 		IsUpdateComplete:     atomic.NewBool(false),
 		IsTimingComplete:     atomic.NewBool(false),
 	}
+}
+
+// GetAnnotationObj get listen annotation obj
+func GetAnnotationObj() *ListenAnnotations {
+	return listenAnnotation
 }
 
 // UpdateVNpuDevice to create and destroy virtual device
@@ -73,12 +79,12 @@ func UpdateVNpuDevice(hdm *HwDevManager, stopCh <-chan struct{}) {
 
 // TimingUpdate each minute exec update function
 func TimingUpdate(hdm *HwDevManager, client *kubernetes.Clientset) error {
-	if !ListenAnnotation.IsUpdateComplete.Load() {
+	if !GetAnnotationObj().IsUpdateComplete.Load() {
 		return nil
 	}
-	ListenAnnotation.IsUpdateComplete.Store(false)
-	ListenAnnotation.IsTimingComplete.Store(true)
-	defer ListenAnnotation.IsTimingComplete.Store(false)
+	GetAnnotationObj().IsUpdateComplete.Store(false)
+	GetAnnotationObj().IsTimingComplete.Store(true)
+	defer GetAnnotationObj().IsTimingComplete.Store(false)
 	hwlog.RunLog.Infof("starting configMap timing update task")
 	m.Lock()
 	defer m.Unlock()
@@ -109,7 +115,7 @@ func InformerCmUpdate(hdm *HwDevManager) {
 }
 
 func isExecTimingUpdate(client kubernetes.Interface) {
-	for annotationTag, patchAnnotations := range ListenAnnotation.WaitUpdateAnnotation {
+	for annotationTag, patchAnnotations := range GetAnnotationObj().WaitUpdateAnnotation {
 		if isSpecDev(annotationTag) && len(patchAnnotations) != 0 {
 			nodeAnnotations, err := getAnnotationFromNode(client)
 			if err != nil {
@@ -121,17 +127,23 @@ func isExecTimingUpdate(client kubernetes.Interface) {
 			}
 		}
 	}
-	ListenAnnotation.IsUpdateComplete.Store(true)
-	ListenAnnotation.WaitUpdateAnnotation = make(map[string]string, 1)
+	GetAnnotationObj().IsUpdateComplete.Store(true)
+	GetAnnotationObj().WaitUpdateAnnotation = make(map[string]string, 1)
 }
 
 func isSortListEqual(patchAnnotations, nodeAnnotations string) bool {
 	patchAnnotationsList := strings.Split(patchAnnotations, ",")
 	nodeAnnotationsList := strings.Split(nodeAnnotations, ",")
 	sort.SliceStable(patchAnnotationsList, func(i, j int) bool {
+		if i >= len(patchAnnotationsList) || j >= len(patchAnnotationsList) {
+			return false
+		}
 		return patchAnnotationsList[i] < patchAnnotationsList[j]
 	})
 	sort.SliceStable(nodeAnnotationsList, func(i, j int) bool {
+		if i >= len(nodeAnnotationsList) || j >= len(nodeAnnotationsList) {
+			return false
+		}
 		return nodeAnnotationsList[i] < nodeAnnotationsList[j]
 	})
 	return strings.Join(patchAnnotationsList, ",") != strings.Join(nodeAnnotationsList, ",")

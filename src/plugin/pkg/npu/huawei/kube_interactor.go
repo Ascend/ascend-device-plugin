@@ -106,7 +106,10 @@ func (ki *KubeInteractor) atomicListenAnnotation(devType string, annotation map[
 	if devType == hiAIAscend310Prefix {
 		return
 	}
-	ListenAnnotation.WaitUpdateAnnotation = annotation
+	if len(annotation) == 0 {
+		return
+	}
+	GetAnnotationObj().WaitUpdateAnnotation = annotation
 }
 
 func (ki *KubeInteractor) addChipCoreToAnnotation(devType string, newNode *v1.Node) {

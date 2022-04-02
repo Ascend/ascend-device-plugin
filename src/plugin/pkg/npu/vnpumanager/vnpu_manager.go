@@ -27,11 +27,13 @@ const (
 	resourceNamePrefix = "huawei.com/"
 
 	// For 710
+	chip710   = "Ascend710"
 	chip710c1 = resourceNamePrefix + "Ascend710-1c"
 	chip710c2 = resourceNamePrefix + "Ascend710-2c"
 	chip710c4 = resourceNamePrefix + "Ascend710-4c"
 
 	// For 910
+	chip910    = "Ascend910"
 	chip910c2  = resourceNamePrefix + "Ascend910-2c"
 	chip910c4  = resourceNamePrefix + "Ascend910-4c"
 	chip910c8  = resourceNamePrefix + "Ascend910-8c"
@@ -240,14 +242,23 @@ func isInVNpuCfg(devName, deviceID string, cardVNPUs []CardVNPUs) bool {
 		if len(cardVPU.Req) == 0 {
 			return false
 		}
-		if len(cardVPU.Alloc) != len(cardVPU.Req) {
+		if !isReqAndAllocStable(cardVPU) {
 			return true
 		}
 		for _, usingDev := range cardVPU.Alloc {
-			if strings.Replace(usingDev, resourceNamePrefix, "", -1) == devName {
+			if usingDev == devName {
 				return true
 			}
 		}
 	}
 	return false
+}
+
+func isReqAndAllocStable(cardVPU CardVNPUs) bool {
+	for _, vNPU := range cardVPU.Alloc {
+		if !strings.Contains(vNPU, chip710) || !strings.Contains(vNPU, chip910) {
+			return false
+		}
+	}
+	return len(cardVPU.Alloc) == len(cardVPU.Req)
 }
