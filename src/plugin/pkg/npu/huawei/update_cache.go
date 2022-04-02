@@ -24,7 +24,7 @@ var (
 	listenAnnotation = NewListenAnnotation()
 )
 
-// ListenAnnotation is ListenAnnotation
+// ListenAnnotations is listenAnnotations
 type ListenAnnotations struct {
 	// WaitUpdateAnnotation is the annotation from patch result
 	WaitUpdateAnnotation map[string]string
@@ -49,32 +49,27 @@ func GetAnnotationObj() *ListenAnnotations {
 }
 
 // UpdateVNpuDevice to create and destroy virtual device
-func UpdateVNpuDevice(hdm *HwDevManager, stopCh <-chan struct{}) {
+func UpdateVNpuDevice(hdm *HwDevManager, stopCh <-chan struct{}, client *kubernetes.Clientset) {
+	go func() {
+		for {
+			if stopCh == nil {
+				return
+			}
+			isExecTimingUpdate(client)
+		}
+	}()
 	go func(hdm *HwDevManager) {
 		for {
 			if stopCh == nil {
 				return
 			}
-			client, err := common.NewKubeClient(kubeConfig)
-			if err != nil {
-				fmt.Errorf("failed to create kube client: %v", err)
-				return
-			}
-			isExecTimingUpdate(client)
 			if err := TimingUpdate(hdm, client); err != nil {
 				hwlog.RunLog.Errorf("current timing update failed, waiting for next time, err: %v", err)
 			}
 			time.Sleep(time.Minute)
 		}
 	}(hdm)
-	go func() {
-		for {
-			if stopCh == nil {
-				return
-			}
-			InformerCmUpdate(hdm)
-		}
-	}()
+	NewConfigMapAgent(client, hdm)
 }
 
 // TimingUpdate each minute exec update function
@@ -104,17 +99,10 @@ func TimingUpdate(hdm *HwDevManager, client *kubernetes.Clientset) error {
 	return nil
 }
 
-// InformerCmUpdate update vnpu by configMap informer
-func InformerCmUpdate(hdm *HwDevManager) {
-	client, err := common.NewKubeClient(kubeConfig)
-	if err != nil {
-		fmt.Errorf("failed to create kube client: %v", err)
+func isExecTimingUpdate(client kubernetes.Interface) {
+	if GetAnnotationObj().WaitUpdateAnnotation == nil {
 		return
 	}
-	NewConfigMapAgent(client, hdm)
-}
-
-func isExecTimingUpdate(client kubernetes.Interface) {
 	for annotationTag, patchAnnotations := range GetAnnotationObj().WaitUpdateAnnotation {
 		if isSpecDev(annotationTag) && len(patchAnnotations) != 0 {
 			nodeAnnotations, err := getAnnotationFromNode(client)
@@ -128,7 +116,7 @@ func isExecTimingUpdate(client kubernetes.Interface) {
 		}
 	}
 	GetAnnotationObj().IsUpdateComplete.Store(true)
-	GetAnnotationObj().WaitUpdateAnnotation = make(map[string]string, 1)
+	GetAnnotationObj().WaitUpdateAnnotation = nil
 }
 
 func isSortListEqual(patchAnnotations, nodeAnnotations string) bool {

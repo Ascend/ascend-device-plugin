@@ -81,9 +81,10 @@ func parseCMData(newCardNPUs []vnpumanager.CardVNPUs, hdm *HwDevManager, kubeCli
 	m.Lock()
 	defer m.Unlock()
 	hwlog.RunLog.Infof("start sync informer info by update or add func")
-	for GetAnnotationObj().IsTimingComplete.Load() {
+	for GetAnnotationObj().IsTimingComplete.Load() && GetAnnotationObj().IsUpdateComplete.Load() {
 		time.Sleep(time.Second * waitingTimeTask)
 	}
+	GetAnnotationObj().IsUpdateComplete.Store(false)
 	var dcmiDevices []common.NpuDevice
 	var dcmiDeviceTypes []string
 	hwlog.RunLog.Infof("starting get old NPU info")
