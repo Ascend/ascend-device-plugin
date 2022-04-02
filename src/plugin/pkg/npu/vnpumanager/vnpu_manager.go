@@ -78,7 +78,7 @@ func destroyRetry(dmgr dsmi.DeviceMgrInterface, phyID int, virID string) error {
 		}
 		if err := dmgr.DestroyVirtualDevice(logicID, uint32(virIDCode)); err != nil {
 			retryCount++
-			hwlog.RunLog.Errorf("destroy virtual device %d failed, err: %v\n", virIDCode, err)
+			hwlog.RunLog.Errorf("destroy virtual device %d from %s failed, err: %v\n", virIDCode, phyID, err)
 			continue
 		}
 		return nil
@@ -122,8 +122,11 @@ func createRetry(dmgr dsmi.DeviceMgrInterface, phyIDStr, runMode string, cardVNP
 			hwlog.RunLog.Errorf("get logic id failed, err: %v", err)
 			continue
 		}
-		if err := dmgr.CreateVirtualDevice(logicID, runMode, getNeedCreateDev(cardVNPU, kubeClient, runMode,
-			phyIDStr)); err != nil {
+		createList := getNeedCreateDev(cardVNPU, kubeClient, runMode, phyIDStr)
+		if len(createList) == 0 {
+			return nil
+		}
+		if err := dmgr.CreateVirtualDevice(logicID, runMode, createList); err != nil {
 			retryCount++
 			hwlog.RunLog.Errorf("create virtual device failed, err: %v", err)
 			continue

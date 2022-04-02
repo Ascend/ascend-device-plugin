@@ -104,15 +104,16 @@ func isExecTimingUpdate(client kubernetes.Interface) {
 		return
 	}
 	for annotationTag, patchAnnotations := range GetAnnotationObj().WaitUpdateAnnotation {
-		if isSpecDev(annotationTag) && len(patchAnnotations) != 0 {
-			nodeAnnotations, err := getAnnotationFromNode(client)
-			if err != nil {
-				hwlog.RunLog.Errorf("get annotation from node failed, err: %v", err)
-				return
-			}
-			if isSortListEqual(patchAnnotations, nodeAnnotations[annotationTag]) {
-				return
-			}
+		if !isSpecDev(annotationTag) || len(patchAnnotations) == 0 {
+			return
+		}
+		nodeAnnotations, err := getAnnotationFromNode(client)
+		if err != nil {
+			hwlog.RunLog.Errorf("get annotation from node failed, err: %v", err)
+			return
+		}
+		if isSortListEqual(patchAnnotations, nodeAnnotations[annotationTag]) {
+			return
 		}
 	}
 	GetAnnotationObj().IsUpdateComplete.Store(true)

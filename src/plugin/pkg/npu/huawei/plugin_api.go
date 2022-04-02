@@ -423,6 +423,7 @@ func (s *pluginAPI) setEnvFromKubelet(rqt *v1beta1.ContainerAllocateRequest) (ma
 		}
 		var deviceIP string
 		if s.ascendRuntimeOptions == common.VirtualDev {
+			alloDevices = append(alloDevices, id)
 			ascendVisibleDevices[virID] = defaultDeviceIP
 			continue
 		}
