@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 )
 
@@ -38,7 +39,7 @@ func TestHwAscend910ManagerGetNPUs(t *testing.T) {
 	}
 	for _, dev := range hdm.allDevs {
 		_, ok := resultDevMap[dev.ID]
-		if IsVirtualDev(dev.ID) {
+		if common.IsVirtualDev(dev.ID) {
 			continue
 		}
 		if !ok {
@@ -57,7 +58,7 @@ func TestHwAscend910ManagerGetDevState(t *testing.T) {
 	}
 	for _, dev := range hdm.allDevs {
 		state := hdm.manager.GetDevState(dev.ID, hdm.manager.GetDmgr())
-		if IsVirtualDev(dev.ID) {
+		if common.IsVirtualDev(dev.ID) {
 			continue
 		}
 		if strings.Contains(dev.ID, "3") && state != v1beta1.Unhealthy {

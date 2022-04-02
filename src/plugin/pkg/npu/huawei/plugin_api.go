@@ -229,7 +229,7 @@ func (s *pluginAPI) updateKubeletDevInfo(resp *v1beta1.ListAndWatchResponse,
 }
 
 func (s *pluginAPI) isDeviceStatusChange() bool {
-	if IsVirtualDev(s.hps.devType) {
+	if common.IsVirtualDev(s.hps.devType) {
 		return s.listenVirtualDevices()
 	}
 	return s.listenPhysicalDevices()
@@ -317,7 +317,7 @@ func (s *pluginAPI) filterUNHealthDev(state, deviceName string) {
 // only for Ascend910 and Non-virtual device
 func (s *pluginAPI) checkDeviceNetworkHealthStatus(device *common.NpuDevice) bool {
 	// virtual devices do not check network health status.
-	if IsVirtualDev(s.hps.devType) {
+	if common.IsVirtualDev(s.hps.devType) {
 		return false
 	}
 
@@ -395,10 +395,10 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *v1beta1.AllocateRequ
 func (s *pluginAPI) setAscendRuntimeOptions(requests *v1beta1.AllocateRequest) error {
 	for _, rqt := range requests.ContainerRequests {
 		for _, deviceName := range rqt.DevicesIDs {
-			if IsVirtualDev(deviceName) && len(rqt.DevicesIDs) > interval {
+			if common.IsVirtualDev(deviceName) && len(rqt.DevicesIDs) > interval {
 				return fmt.Errorf("request more than one virtual device, current is %d", len(rqt.DevicesIDs))
 			}
-			if IsVirtualDev(deviceName) {
+			if common.IsVirtualDev(deviceName) {
 				s.ascendRuntimeOptions = common.VirtualDev
 				return nil
 			}

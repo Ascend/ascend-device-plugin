@@ -142,7 +142,7 @@ func TestAddAnnotation(t *testing.T) {
 		nodeName:  "NODE_NAME",
 	}
 	for _, devType := range devTypes {
-		if IsVirtualDev(devType) {
+		if common.IsVirtualDev(devType) {
 			continue
 		}
 		fakePluginAPI = createFakePluginAPI(hdm, devType, fakeKubeInteractor)

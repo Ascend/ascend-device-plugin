@@ -27,7 +27,6 @@ const (
 )
 
 const (
-	virtualDevicesPattern = "Ascend910-(2|4|8|16)c"
 	pwr2CSuffix           = "Ascend910-2c"
 	pwr4CSuffix           = "Ascend910-4c"
 	pwr8CSuffix           = "Ascend910-8c"
@@ -145,7 +144,7 @@ func (hnm *HwAscend910Manager) groupDevsByStatus(hps *HwPluginServe, isStateChan
 			totalNetworkUnhealthDevices.Insert(device.ID)
 		}
 
-		if IsVirtualDev(device.ID) || device.Health == v1beta1.Healthy {
+		if  common.IsVirtualDev(device.ID) || device.Health == v1beta1.Healthy {
 			hps.healthDevice.Insert(device.ID)
 			continue
 		}
@@ -173,7 +172,7 @@ func filterTagPowerDevice(allocatableDevices sets.String, suffix string) string 
 	for deviceName := range allocatableDevices {
 		switch suffix {
 		case hiAIAscend910Prefix, hiAIAscend710Prefix:
-			if !IsVirtualDev(deviceName) {
+			if !common.IsVirtualDev(deviceName) {
 				powerAnnotation = append(powerAnnotation, deviceName)
 			}
 		default:

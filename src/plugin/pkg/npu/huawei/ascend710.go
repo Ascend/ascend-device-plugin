@@ -18,7 +18,6 @@ import (
 )
 
 const (
-	virtual710DevsPattern = "Ascend710-(1|2|4)c"
 	chip710Core1C         = "Ascend710-1c"
 	chip710Core2C         = "Ascend710-2c"
 	chip710Core4C         = "Ascend710-4c"
@@ -116,7 +115,7 @@ func (hnm *HwAscend710Manager) groupDevsByStatus(hps *HwPluginServe, isStateChan
 	}
 	hps.healthDevice = sets.String{}
 	for _, device := range hps.devices {
-		if IsVirtualDev(device.ID) || device.Health == v1beta1.Healthy {
+		if common.IsVirtualDev(device.ID) || device.Health == v1beta1.Healthy {
 			hps.healthDevice.Insert(device.ID)
 		}
 		if device.Health != v1beta1.Healthy {

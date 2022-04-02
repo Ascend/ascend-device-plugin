@@ -256,7 +256,7 @@ func isInVNpuCfg(devName, deviceID string, cardVNPUs []CardVNPUs) bool {
 
 func isReqAndAllocStable(cardVPU CardVNPUs) bool {
 	for _, vNPU := range cardVPU.Alloc {
-		if !strings.Contains(vNPU, chip710) || !strings.Contains(vNPU, chip910) {
+		if !common.IsVirtualDev(vNPU) {
 			return false
 		}
 	}
