@@ -27,10 +27,10 @@ const (
 )
 
 const (
-	pwr2CSuffix           = "Ascend910-2c"
-	pwr4CSuffix           = "Ascend910-4c"
-	pwr8CSuffix           = "Ascend910-8c"
-	pwr16CSuffix          = "Ascend910-16c"
+	pwr2CSuffix  = "Ascend910-2c"
+	pwr4CSuffix  = "Ascend910-4c"
+	pwr8CSuffix  = "Ascend910-8c"
+	pwr16CSuffix = "Ascend910-16c"
 )
 
 var (
@@ -144,7 +144,7 @@ func (hnm *HwAscend910Manager) groupDevsByStatus(hps *HwPluginServe, isStateChan
 			totalNetworkUnhealthDevices.Insert(device.ID)
 		}
 
-		if  common.IsVirtualDev(device.ID) || device.Health == v1beta1.Healthy {
+		if common.IsVirtualDev(device.ID) || device.Health == v1beta1.Healthy {
 			hps.healthDevice.Insert(device.ID)
 			continue
 		}

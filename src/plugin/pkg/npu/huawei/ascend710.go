@@ -18,9 +18,9 @@ import (
 )
 
 const (
-	chip710Core1C         = "Ascend710-1c"
-	chip710Core2C         = "Ascend710-2c"
-	chip710Core4C         = "Ascend710-4c"
+	chip710Core1C = "Ascend710-1c"
+	chip710Core2C = "Ascend710-2c"
+	chip710Core4C = "Ascend710-4c"
 )
 
 var (
