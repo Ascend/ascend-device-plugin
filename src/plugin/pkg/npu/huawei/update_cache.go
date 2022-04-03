@@ -28,6 +28,7 @@ var (
 type ListenAnnotations struct {
 	// WaitUpdateAnnotation is the annotation from patch result
 	WaitUpdateAnnotation map[string]string
+	IsPatchSuccess       bool
 	// IsUpdateComplete is annotation update complete
 	IsUpdateComplete *atomic.Bool
 	// IsUpdateComplete is time task update complete or not
@@ -103,16 +104,20 @@ func isExecTimingUpdate(client kubernetes.Interface) {
 	if GetAnnotationObj().WaitUpdateAnnotation == nil {
 		return
 	}
+	if !GetAnnotationObj().IsPatchSuccess {
+		return
+	}
+	GetAnnotationObj().IsPatchSuccess = false
 	for annotationTag, patchAnnotations := range GetAnnotationObj().WaitUpdateAnnotation {
 		if !isSpecDev(annotationTag) || len(patchAnnotations) == 0 {
-			return
+			continue
 		}
 		nodeAnnotations, err := getAnnotationFromNode(client)
 		if err != nil {
 			hwlog.RunLog.Errorf("get annotation from node failed, err: %v", err)
 			return
 		}
-		if isSortListEqual(patchAnnotations, nodeAnnotations[annotationTag]) {
+		if isSortListNotEqual(patchAnnotations, nodeAnnotations[annotationTag]) {
 			return
 		}
 	}
@@ -120,7 +125,7 @@ func isExecTimingUpdate(client kubernetes.Interface) {
 	GetAnnotationObj().WaitUpdateAnnotation = nil
 }
 
-func isSortListEqual(patchAnnotations, nodeAnnotations string) bool {
+func isSortListNotEqual(patchAnnotations, nodeAnnotations string) bool {
 	patchAnnotationsList := strings.Split(patchAnnotations, ",")
 	nodeAnnotationsList := strings.Split(nodeAnnotations, ",")
 	sort.SliceStable(patchAnnotationsList, func(i, j int) bool {

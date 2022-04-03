@@ -438,7 +438,8 @@ func (s *pluginAPI) setEnvFromKubelet(rqt *v1beta1.ContainerAllocateRequest) (ma
 		ascendVisibleDevices[deviceID] = deviceIP
 		alloDevices = append(alloDevices, id)
 	}
-	hwlog.RunLog.Infof("Kubelet found ascendVisibleDevices: %v", ascendVisibleDevices)
+	hwlog.RunLog.Infof("Kubelet found ascendVisibleDevices: %v and alloDevices: %v",
+		ascendVisibleDevices, alloDevices)
 	return ascendVisibleDevices, alloDevices, nil
 }
 

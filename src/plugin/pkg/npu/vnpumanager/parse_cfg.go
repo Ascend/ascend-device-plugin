@@ -66,8 +66,8 @@ func GetVNpuCfg(client *kubernetes.Clientset) ([]CardVNPUs, error) {
 		return nil, fmt.Errorf("configMap not exist")
 	}
 	cardVNPUs, err := GetCfgContent(data)
-	if err != nil {
-		hwlog.RunLog.Errorf("failed to parse vnpu configMap, err: %v\n", err)
+	if err != nil || len(cardVNPUs) == 0 {
+		hwlog.RunLog.Errorf("failed to parse vnpu configMap or cm is nil, err: %v\n", err)
 		return nil, err
 	}
 	return cardVNPUs, nil
@@ -90,7 +90,7 @@ func GetCfgContent(data string) ([]CardVNPUs, error) {
 			return cardVNPUs, nil
 		}
 	}
-	return nil, nil
+	return nil, fmt.Errorf("not found node")
 }
 
 func getCurNodeCfg(vNpuCtn NodeVNPUs, nodeName string) ([]CardVNPUs, bool) {
