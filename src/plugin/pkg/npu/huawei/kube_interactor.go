@@ -110,6 +110,7 @@ func (ki *KubeInteractor) atomicListenAnnotation(devType string, annotation map[
 		return
 	}
 	GetAnnotationObj().WaitUpdateAnnotation = annotation
+	GetAnnotationObj().IsPatchSuccess = true
 }
 
 func (ki *KubeInteractor) addChipCoreToAnnotation(devType string, newNode *v1.Node) {

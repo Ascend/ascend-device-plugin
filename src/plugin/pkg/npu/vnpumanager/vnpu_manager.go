@@ -96,7 +96,7 @@ func CreateVirtualDev(dmgr dsmi.DeviceMgrInterface, cardVNPUs []CardVNPUs, runMo
 			continue
 		}
 		if err := createRetry(dmgr, phyIDStr, runMode, cardVNPU, kubeClient); err != nil {
-			hwlog.RunLog.Errorf("current card name invalid, err: %v", err)
+			hwlog.RunLog.Errorf("phy device %s create virtual dev failed, err: %v", phyIDStr, err)
 			continue
 		}
 	}
@@ -163,6 +163,7 @@ func getNeedCreateDev(cardVNPU CardVNPUs, kubeClient kubernetes.Interface, runMo
 		}
 		createList = append(createList, getData(diff, devCore)...)
 	}
+	hwlog.RunLog.Infof("get create list, need create device %v", createList)
 	return createList
 }
 
@@ -230,10 +231,14 @@ func getNeedDestroyDev(dcmiDevices []common.NpuDevice, cardVNPUs []CardVNPUs) ma
 			needToBeDel[deviceID] = append(needToBeDel[deviceID], virID)
 		}
 	}
+	hwlog.RunLog.Infof("using complete, need remove devices: %v", needToBeDel)
 	return needToBeDel
 }
 
 func isInVNpuCfg(devName, deviceID string, cardVNPUs []CardVNPUs) bool {
+	if len(cardVNPUs) == 0 {
+		return true
+	}
 	for _, cardVPU := range cardVNPUs {
 		nameList := strings.Split(cardVPU.CardName, "-")
 		if len(nameList) != ascendDevNameLen {
@@ -242,12 +247,15 @@ func isInVNpuCfg(devName, deviceID string, cardVNPUs []CardVNPUs) bool {
 		if nameList[1] != deviceID {
 			continue
 		}
+		hwlog.RunLog.Infof("Req: %v + Alloc: %v + devName: %v + !isStable: %v", cardVPU.Req, cardVPU.Alloc,
+			devName, !isReqAndAllocStable(cardVPU))
 		if len(cardVPU.Req) == 0 {
 			return false
 		}
 		if !isReqAndAllocStable(cardVPU) {
 			return true
 		}
+
 		for _, usingDev := range cardVPU.Alloc {
 			if usingDev == devName {
 				return true
