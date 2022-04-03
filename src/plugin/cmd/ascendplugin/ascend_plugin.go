@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"os"
 
+	"k8s.io/client-go/kubernetes"
+
 	"huawei.com/npu-exporter/hwlog"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
@@ -126,17 +128,22 @@ func main() {
 			<-neverStop
 		}
 	}
-	startDiffTypeServe(hdm, neverStop)
+	client, err := common.NewKubeClient(*kubeconfig)
+	if err != nil {
+		hwlog.RunLog.Errorf("failed to create kube client: %v", err)
+		<-neverStop
+	}
+	startDiffTypeServe(hdm, neverStop, client)
 	<-neverStop
 }
 
-func startDiffTypeServe(hdm *huawei.HwDevManager, neverStop chan struct{}) {
+func startDiffTypeServe(hdm *huawei.HwDevManager, neverStop chan struct{}, client *kubernetes.Clientset) {
 	for _, devType := range hdm.GetDevType() {
 		hwlog.RunLog.Infof("ascend device serve started, devType: %s", devType)
 		go hdm.Serve(devType)
 	}
 	runMode := hdm.GetRunMode()
 	if *volcanoType && (runMode == common.RunMode910 || runMode == common.RunMode710) {
-		huawei.UpdateVNpuDevice(hdm, neverStop)
+		huawei.UpdateVNpuDevice(hdm, neverStop, client)
 	}
 }

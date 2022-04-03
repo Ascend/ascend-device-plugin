@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -28,11 +27,13 @@ const (
 	resourceNamePrefix = "huawei.com/"
 
 	// For 710
+	chip710   = "Ascend710"
 	chip710c1 = resourceNamePrefix + "Ascend710-1c"
 	chip710c2 = resourceNamePrefix + "Ascend710-2c"
 	chip710c4 = resourceNamePrefix + "Ascend710-4c"
 
 	// For 910
+	chip910    = "Ascend910"
 	chip910c2  = resourceNamePrefix + "Ascend910-2c"
 	chip910c4  = resourceNamePrefix + "Ascend910-4c"
 	chip910c8  = resourceNamePrefix + "Ascend910-8c"
@@ -77,7 +78,7 @@ func destroyRetry(dmgr dsmi.DeviceMgrInterface, phyID int, virID string) error {
 		}
 		if err := dmgr.DestroyVirtualDevice(logicID, uint32(virIDCode)); err != nil {
 			retryCount++
-			hwlog.RunLog.Errorf("destroy virtual device %d failed, err: %v\n", virIDCode, err)
+			hwlog.RunLog.Errorf("destroy virtual device %d from %d failed, err: %v\n", virIDCode, phyID, err)
 			continue
 		}
 		return nil
@@ -89,8 +90,6 @@ func CreateVirtualDev(dmgr dsmi.DeviceMgrInterface, cardVNPUs []CardVNPUs, runMo
 	kubeClient kubernetes.Interface) {
 	hwlog.RunLog.Infof("starting create virtual device which is cm adding")
 	for _, cardVNPU := range cardVNPUs {
-		// it's necessary, otherwise frequent calls to create interface may fail
-		time.Sleep(time.Second)
 		phyIDStr, virID, err := common.GetDeviceID(cardVNPU.CardName, "")
 		if err != nil || virID != "" {
 			hwlog.RunLog.Errorf("current card name invalid, err: %v", err)
@@ -123,8 +122,11 @@ func createRetry(dmgr dsmi.DeviceMgrInterface, phyIDStr, runMode string, cardVNP
 			hwlog.RunLog.Errorf("get logic id failed, err: %v", err)
 			continue
 		}
-		if err := dmgr.CreateVirtualDevice(logicID, runMode, getNeedCreateDev(cardVNPU, kubeClient, runMode,
-			phyIDStr)); err != nil {
+		createList := getNeedCreateDev(cardVNPU, kubeClient, runMode, phyIDStr)
+		if len(createList) == 0 {
+			return nil
+		}
+		if err := dmgr.CreateVirtualDevice(logicID, runMode, createList); err != nil {
 			retryCount++
 			hwlog.RunLog.Errorf("create virtual device failed, err: %v", err)
 			continue
@@ -243,14 +245,23 @@ func isInVNpuCfg(devName, deviceID string, cardVNPUs []CardVNPUs) bool {
 		if len(cardVPU.Req) == 0 {
 			return false
 		}
-		if len(cardVPU.Alloc) != len(cardVPU.Req) {
+		if !isReqAndAllocStable(cardVPU) {
 			return true
 		}
 		for _, usingDev := range cardVPU.Alloc {
-			if strings.Replace(usingDev, resourceNamePrefix, "", -1) == devName {
+			if usingDev == devName {
 				return true
 			}
 		}
 	}
 	return false
+}
+
+func isReqAndAllocStable(cardVPU CardVNPUs) bool {
+	for _, vNPU := range cardVPU.Alloc {
+		if !common.IsVirtualDev(vNPU) {
+			return false
+		}
+	}
+	return len(cardVPU.Alloc) == len(cardVPU.Req)
 }

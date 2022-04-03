@@ -18,12 +18,14 @@ const (
 	component        = "device-plugin"
 	idSplitNum       = 2
 	// VirDeviceLen is the length of virtual device
-	VirDeviceLen     = 4
+	VirDeviceLen = 4
 	// VirtualDev represent virtual device
 	VirtualDev = "VIRTUAL"
 
 	// VNpuCfgKey is the key for virtual NPU configMap record
-	VNpuCfgKey = "VNPUCfg"
+	VNpuCfgKey            = "VNPUCfg"
+	virtualDevicesPattern = "Ascend910-(2|4|8|16)c"
+	virtual710DevsPattern = "Ascend710-(1|2|4)c"
 )
 
 var (
@@ -84,4 +86,11 @@ func GetNodeNameFromEnv() error {
 	}
 	NodeName = nodeName
 	return nil
+}
+
+// IsVirtualDev used to judge whether a physical device or a virtual device
+func IsVirtualDev(devType string) bool {
+	reg910 := regexp.MustCompile(virtualDevicesPattern)
+	reg710 := regexp.MustCompile(virtual710DevsPattern)
+	return reg910.MatchString(devType) || reg710.MatchString(devType)
 }

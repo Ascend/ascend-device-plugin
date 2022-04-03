@@ -21,6 +21,11 @@ import (
 	"Ascend-device-plugin/src/plugin/pkg/npu/vnpumanager"
 )
 
+const (
+	// waitingTimeTask wait timing task update 10s
+	waitingTimeTask = 10
+)
+
 // ConfigMapAgent Agent for configMap Workers
 type ConfigMapAgent struct {
 	cmInformer        cache.SharedInformer
@@ -76,6 +81,10 @@ func parseCMData(newCardNPUs []vnpumanager.CardVNPUs, hdm *HwDevManager, kubeCli
 	m.Lock()
 	defer m.Unlock()
 	hwlog.RunLog.Infof("start sync informer info by update or add func")
+	for GetAnnotationObj().IsTimingComplete.Load() && GetAnnotationObj().IsUpdateComplete.Load() {
+		time.Sleep(time.Second * waitingTimeTask)
+	}
+	GetAnnotationObj().IsUpdateComplete.Store(false)
 	var dcmiDevices []common.NpuDevice
 	var dcmiDeviceTypes []string
 	hwlog.RunLog.Infof("starting get old NPU info")

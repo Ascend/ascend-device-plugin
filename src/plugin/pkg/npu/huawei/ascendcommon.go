@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -175,13 +174,6 @@ func UnhealthyState(healthyState uint32, logicID uint32, healthyType string, dmg
 			"logicID: %d, phyID: %d, %s: %d", logicID, phyID, healthyType, healthyState)
 	}
 	return nil
-}
-
-// IsVirtualDev used to judge whether a physical device or a virtual device
-func IsVirtualDev(devType string) bool {
-	reg910 := regexp.MustCompile(virtualDevicesPattern)
-	reg710 := regexp.MustCompile(virtual710DevsPattern)
-	return reg910.MatchString(devType) || reg710.MatchString(devType)
 }
 
 // VerifyPath used to verify the validity of the path
