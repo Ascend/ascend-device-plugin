@@ -89,11 +89,16 @@ func TimingUpdate(hdm *HwDevManager, client *kubernetes.Clientset) error {
 	if err := hdm.manager.GetNPUs(&dcmiDevices, &dcmiDeviceTypes, hdm.manager.GetMatchingDeviType()); err != nil {
 		return err
 	}
-	cardVNPUs, err := vnpumanager.GetVNpuCfg(client)
+	nodeName, cardVNPUs, err := vnpumanager.GetVNpuCfg(client)
 	if err != nil {
-		return err
+		if strings.Contains(err.Error(), vnpumanager.CheckCodeZeroError) {
+			return nil
+		}
+		if !strings.Contains(err.Error(), vnpumanager.NodeNameNotFoundError) {
+			return err
+		}
 	}
-	vnpumanager.DestroyVirtualDev(hdm.dmgr, dcmiDevices, cardVNPUs)
+	vnpumanager.DestroyVirtualDev(hdm.dmgr, dcmiDevices, cardVNPUs, nodeName)
 	vnpumanager.CreateVirtualDev(hdm.dmgr, cardVNPUs, hdm.runMode, client)
 	updateHpsCache(hdm)
 	hwlog.RunLog.Infof("configMap timing update task complete")

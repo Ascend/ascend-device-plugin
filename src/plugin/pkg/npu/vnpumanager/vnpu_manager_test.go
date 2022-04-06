@@ -49,7 +49,7 @@ func TestDestroyVirtualDev(t *testing.T) {
 	k8sMock := gomonkey.ApplyFunc(getAnnotationFromNode, func(_ kubernetes.Interface, _, _ string) ([]string, error) {
 		return []string{"Ascend910-2c-100-0", "Ascend910-16c-130-0"}, nil
 	})
-	DestroyVirtualDev(dsmi.NewFakeDeviceManager(), dcmiDevices, cardVNPUs)
+	DestroyVirtualDev(dsmi.NewFakeDeviceManager(), dcmiDevices, cardVNPUs, common.NodeName)
 	k8sMock.Reset()
 	t.Logf("UT TestDestroyVirtualDev Success")
 }

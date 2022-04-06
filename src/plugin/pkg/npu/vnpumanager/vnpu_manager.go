@@ -41,9 +41,10 @@ const (
 )
 
 // DestroyVirtualDev destroy virtual devices
-func DestroyVirtualDev(dmgr dsmi.DeviceMgrInterface, dcmiDevices []common.NpuDevice, cardVNPUs []CardVNPUs) {
+func DestroyVirtualDev(dmgr dsmi.DeviceMgrInterface, dcmiDevices []common.NpuDevice, cardVNPUs []CardVNPUs,
+	nodeName string) {
 	hwlog.RunLog.Infof("starting get virtual device which need to be destroy")
-	needToBeDel := getNeedDestroyDev(dcmiDevices, cardVNPUs)
+	needToBeDel := getNeedDestroyDev(dcmiDevices, cardVNPUs, nodeName)
 	for deviceID, virIDList := range needToBeDel {
 		phyID, err := strconv.Atoi(deviceID)
 		if err != nil {
@@ -217,7 +218,7 @@ func convertToSets(devices []string) sets.String {
 	return devSet
 }
 
-func getNeedDestroyDev(dcmiDevices []common.NpuDevice, cardVNPUs []CardVNPUs) map[string][]string {
+func getNeedDestroyDev(dcmiDevices []common.NpuDevice, cardVNPUs []CardVNPUs, nodeName string) map[string][]string {
 	var needToBeDel = make(map[string][]string, 1)
 	for _, npuDev := range dcmiDevices {
 		deviceID, virID, err := common.GetDeviceID(npuDev.ID, common.VirtualDev)
@@ -226,7 +227,7 @@ func getNeedDestroyDev(dcmiDevices []common.NpuDevice, cardVNPUs []CardVNPUs) ma
 			continue
 		}
 		// npuDev.ID format is "Ascend910-8c-101-0"
-		if !isInVNpuCfg(npuDev.ID, deviceID, cardVNPUs) {
+		if nodeName == "" || !isInVNpuCfg(npuDev.ID, deviceID, cardVNPUs) {
 			// not found in configMap, means need to be deleted
 			needToBeDel[deviceID] = append(needToBeDel[deviceID], virID)
 		}
@@ -236,9 +237,6 @@ func getNeedDestroyDev(dcmiDevices []common.NpuDevice, cardVNPUs []CardVNPUs) ma
 }
 
 func isInVNpuCfg(devName, deviceID string, cardVNPUs []CardVNPUs) bool {
-	if len(cardVNPUs) == 0 {
-		return true
-	}
 	for _, cardVPU := range cardVNPUs {
 		nameList := strings.Split(cardVPU.CardName, "-")
 		if len(nameList) != ascendDevNameLen {
