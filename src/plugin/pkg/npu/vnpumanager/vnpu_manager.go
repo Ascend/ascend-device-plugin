@@ -163,7 +163,7 @@ func getNeedCreateDev(cardVNPU CardVNPUs, kubeClient kubernetes.Interface, runMo
 		}
 		createList = append(createList, getData(diff, devCore)...)
 	}
-	hwlog.RunLog.Infof("get create list, need create device %v", createList)
+	hwlog.RunLog.Infof("get create list on %s, need create device %v", phyIDStr, createList)
 	return createList
 }
 

@@ -167,13 +167,11 @@ func (s *pluginAPI) ListAndWatch(emtpy *v1beta1.Empty, stream v1beta1.DevicePlug
 			// close log print
 			logFlag = false
 		}
-		if isStateChange {
-			// turn on log print
-			logFlag, firstTimeList = true, false
-			listenDevCountIsChange[s.hps.devType] = false
-			resp.Devices = resp.Devices[:0]
-			s.updateKubeletDevInfo(resp, stream)
-		}
+		// turn on log print
+		logFlag, firstTimeList = true, false
+		listenDevCountIsChange[s.hps.devType] = false
+		resp.Devices = resp.Devices[:0]
+		s.updateKubeletDevInfo(resp, stream)
 	}
 	return nil
 }
@@ -205,14 +203,17 @@ func (s *pluginAPI) updateKubeletDevInfo(resp *v1beta1.ListAndWatchResponse,
 		}
 		klDev.Insert(d)
 	}
-	notInKlDev := allDev.Difference(klDev)
-	index := 0
-	for d := range notInKlDev {
-		vol := notInVolDev[index]
-		s.hps.vol2KlDevMap[vol] = d
-		index++
+	if len(klDev) < len(allDev) && len(notInVolDev) != 0 {
+		notInKlDev := allDev.Difference(klDev).List()
+		for index, d := range notInKlDev {
+			if index >= len(notInVolDev) {
+				hwlog.RunLog.Warnf("found volcano not using device %s in notInVolDev on local %d failed", d, index)
+				continue
+			}
+			vol := notInVolDev[index]
+			s.hps.vol2KlDevMap[vol] = d
+		}
 	}
-
 	for _, dev := range s.hps.devices {
 		d, exist := s.hps.vol2KlDevMap[dev.ID]
 		if !exist {

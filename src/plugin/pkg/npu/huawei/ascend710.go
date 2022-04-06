@@ -107,9 +107,6 @@ func (hnm *HwAscend710Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe, isS
 }
 
 func (hnm *HwAscend710Manager) groupDevsByStatus(hps *HwPluginServe, isStateChange bool) {
-	if !isStateChange {
-		return
-	}
 	if hps.devType == hiAIAscend710Prefix {
 		totalUHDevices = sets.String{}
 	}

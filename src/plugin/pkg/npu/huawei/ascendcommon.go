@@ -341,9 +341,6 @@ func (adc *ascendCommonFunction) GetDeviceNetworkState(_ int32, _ *common.NpuDev
 }
 
 func (adc *ascendCommonFunction) reloadHealthDevice(isStateChange bool, hps *HwPluginServe) {
-	if !isStateChange {
-		return
-	}
 	hps.healthDevice = sets.String{}
 	hps.unHealthDevice = sets.String{}
 	for _, device := range hps.devices {

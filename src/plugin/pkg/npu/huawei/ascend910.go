@@ -131,9 +131,6 @@ func (hnm *HwAscend910Manager) GetDeviceNetworkState(logicID int32, device *comm
 }
 
 func (hnm *HwAscend910Manager) groupDevsByStatus(hps *HwPluginServe, isStateChange bool) {
-	if !isStateChange {
-		return
-	}
 	if hps.devType == hiAIAscend910Prefix {
 		totalUHDevices = sets.String{}
 		totalNetworkUnhealthDevices = sets.String{}
