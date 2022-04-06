@@ -46,7 +46,7 @@ func TestGetVNpuCfg(t *testing.T) {
 	if err := os.Setenv("NODE_NAME", "centos-6543"); err != nil {
 		t.Logf("UT TestGetVNpuCfg Failed, err: %v\n", err)
 	}
-	if _, err := GetVNpuCfg(nil); err != nil {
+	if _, _, err := GetVNpuCfg(nil); err != nil {
 		t.Logf("UT TestGetVNpuCfg Failed, err: %v\n", err)
 	}
 	mockCM.Reset()

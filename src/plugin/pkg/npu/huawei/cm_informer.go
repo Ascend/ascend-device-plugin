@@ -53,9 +53,9 @@ func NewConfigMapAgent(kubeClientSet kubernetes.Interface, hdm *HwDevManager) {
 			if !ok {
 				return
 			}
-			newCardNPUs, isChange := isCMChange(newCM, oldCM)
+			nodeName, newCardNPUs, isChange := isCMChange(newCM, oldCM)
 			if isChange {
-				parseCMData(newCardNPUs, hdm, kubeClientSet)
+				parseCMData(newCardNPUs, hdm, kubeClientSet, nodeName)
 			}
 		},
 	})
@@ -65,19 +65,20 @@ func NewConfigMapAgent(kubeClientSet kubernetes.Interface, hdm *HwDevManager) {
 	cmAgent.cmInformer.Run(stopCh)
 }
 
-func isCMChange(newCM, oldCM v1.Object) ([]vnpumanager.CardVNPUs, bool) {
-	newCardNPUs := vnpumanager.ConvertCMToStruct(newCM)
-	oldCardNPUs := vnpumanager.ConvertCMToStruct(oldCM)
+func isCMChange(newCM, oldCM v1.Object) (string, []vnpumanager.CardVNPUs, bool) {
+	_, newCardNPUs := vnpumanager.ConvertCMToStruct(newCM)
+	nodeName, oldCardNPUs := vnpumanager.ConvertCMToStruct(oldCM)
 	if newCardNPUs == nil || oldCardNPUs == nil {
-		return nil, false
+		return "", nil, false
 	}
 	if len(newCardNPUs) != len(oldCardNPUs) {
-		return nil, true
+		return "", nil, true
 	}
-	return newCardNPUs, vnpumanager.IsConfigMapChange(newCardNPUs, oldCardNPUs)
+	return nodeName, newCardNPUs, vnpumanager.IsConfigMapChange(newCardNPUs, oldCardNPUs)
 }
 
-func parseCMData(newCardNPUs []vnpumanager.CardVNPUs, hdm *HwDevManager, kubeClient kubernetes.Interface) {
+func parseCMData(newCardNPUs []vnpumanager.CardVNPUs, hdm *HwDevManager,
+	kubeClient kubernetes.Interface, nodeName string) {
 	m.Lock()
 	defer m.Unlock()
 	hwlog.RunLog.Infof("start sync informer info by update or add func")
@@ -92,7 +93,7 @@ func parseCMData(newCardNPUs []vnpumanager.CardVNPUs, hdm *HwDevManager, kubeCli
 		hwlog.RunLog.Errorf("get NPU failed, err: %v\n", err)
 		return
 	}
-	vnpumanager.DestroyVirtualDev(hdm.dmgr, dcmiDevices, newCardNPUs)
+	vnpumanager.DestroyVirtualDev(hdm.dmgr, dcmiDevices, newCardNPUs, nodeName)
 	vnpumanager.CreateVirtualDev(hdm.dmgr, newCardNPUs, hdm.runMode, kubeClient)
 	updateHpsCache(hdm)
 }

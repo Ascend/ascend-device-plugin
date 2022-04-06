@@ -52,25 +52,31 @@ const (
 
 	// CfgMapNamespace is VNPU configMap namespace
 	CfgMapNamespace = "volcano-system"
+
+	// CheckCodeZeroError is the error of VNPU configMap check code is zero
+	CheckCodeZeroError = "check code is 0, do nothing"
+
+	// NodeNameNotFoundError is the error when not found node name
+	NodeNameNotFoundError = "not found node"
 )
 
 // GetVNpuCfg get vnpu info, for create virtual device
-func GetVNpuCfg(client *kubernetes.Clientset) ([]CardVNPUs, error) {
+func GetVNpuCfg(client *kubernetes.Clientset) (string, []CardVNPUs, error) {
 	cm, err := getVNpuCMFromK8s(client, CfgMapNamespace, CfgMapName)
 	if err != nil {
 		hwlog.RunLog.Errorf("failed to get vnpu configMap, err: %v\n", err)
-		return nil, err
+		return "", nil, err
 	}
 	data, ok := cm.Data[common.VNpuCfgKey]
 	if !ok {
-		return nil, fmt.Errorf("configMap not exist")
+		return "", nil, fmt.Errorf("configMap not exist")
 	}
-	cardVNPUs, err := GetCfgContent(data)
+	nodeName, cardVNPUs, err := GetCfgContent(data)
 	if err != nil || len(cardVNPUs) == 0 {
 		hwlog.RunLog.Errorf("failed to parse vnpu configMap or cm is nil, err: %v\n", err)
-		return nil, err
+		return nodeName, nil, err
 	}
-	return cardVNPUs, nil
+	return nodeName, cardVNPUs, nil
 }
 
 func getVNpuCMFromK8s(client kubernetes.Interface, namespace, cmName string) (*v1.ConfigMap, error) {
@@ -78,19 +84,22 @@ func getVNpuCMFromK8s(client kubernetes.Interface, namespace, cmName string) (*v
 }
 
 // GetCfgContent get configMap
-func GetCfgContent(data string) ([]CardVNPUs, error) {
+func GetCfgContent(data string) (string, []CardVNPUs, error) {
 	var vNpuCfg VNPUCM
 	if err := json.Unmarshal([]byte(data), &vNpuCfg); err != nil {
 		hwlog.RunLog.Errorf("ummarshal configMap data failed, err: %v", err)
-		return nil, err
+		return "", nil, err
+	}
+	if vNpuCfg.CheckCode == 0 {
+		return "", nil, fmt.Errorf("%s", CheckCodeZeroError)
 	}
 	for _, vNpuCtn := range vNpuCfg.Nodes {
 		cardVNPUs, isOk := getCurNodeCfg(vNpuCtn, common.NodeName)
 		if isOk {
-			return cardVNPUs, nil
+			return vNpuCtn.NodeName, cardVNPUs, nil
 		}
 	}
-	return nil, fmt.Errorf("not found node")
+	return "", nil, fmt.Errorf("%s", NodeNameNotFoundError)
 }
 
 func getCurNodeCfg(vNpuCtn NodeVNPUs, nodeName string) ([]CardVNPUs, bool) {
@@ -101,30 +110,30 @@ func getCurNodeCfg(vNpuCtn NodeVNPUs, nodeName string) ([]CardVNPUs, bool) {
 }
 
 // ConvertCMToStruct convert configMap to struct
-func ConvertCMToStruct(mtaObj metav1.Object) []CardVNPUs {
+func ConvertCMToStruct(mtaObj metav1.Object) (string, []CardVNPUs) {
 	mtaConfigMap, ok := mtaObj.(*v1.ConfigMap)
 	if !ok {
 		hwlog.RunLog.Errorf("convert meta data to configMap failed")
-		return nil
+		return "", nil
 	}
 	if mtaConfigMap.Name != CfgMapName || mtaConfigMap.Namespace != CfgMapNamespace {
-		return nil
+		return "", nil
 	}
 	if len(mtaConfigMap.Data) == 0 {
 		hwlog.RunLog.Errorf("failed to find vnpu configMap data")
-		return nil
+		return "", nil
 	}
 	cmData, ok := mtaConfigMap.Data[common.VNpuCfgKey]
 	if !ok {
 		hwlog.RunLog.Errorf("failed to find configMap VNPUCfg")
-		return nil
+		return "", nil
 	}
-	cardVNPUs, err := GetCfgContent(cmData)
+	nodeName, cardVNPUs, err := GetCfgContent(cmData)
 	if err != nil {
 		hwlog.RunLog.Errorf("failed to parse vnpu configMap, err: %v\n", err)
-		return nil
+		return nodeName, nil
 	}
-	return cardVNPUs
+	return nodeName, cardVNPUs
 }
 
 // IsConfigMapChange is configMap change
