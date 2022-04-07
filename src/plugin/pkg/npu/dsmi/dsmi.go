@@ -134,6 +134,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 
 	"huawei.com/npu-exporter/hwlog"
 
@@ -159,6 +160,8 @@ const (
 	// MaxErrorCodeCount is the max number of error code
 	MaxErrorCodeCount = 128
 )
+
+var driverShutdownOnce sync.Once
 
 // CgoDsmiSubVDevInfo single VDevInfo info
 type CgoDsmiSubVDevInfo struct {
@@ -344,8 +347,10 @@ func (d *DeviceManager) GetDeviceIP(logicID int32) (string, error) {
 
 // ShutDown clean the dynamically loaded resource
 func (d *DeviceManager) ShutDown() {
-	C.dsmiShutDown()
-	d.driverMgr.ShutDown()
+	driverShutdownOnce.Do(func() {
+		C.dsmiShutDown()
+		d.driverMgr.ShutDown()
+	})
 }
 
 // GetVDevicesInfo get the virtual device info by logicid
