@@ -28,11 +28,10 @@ var (
 type ListenAnnotations struct {
 	// WaitUpdateAnnotation is the annotation from patch result
 	WaitUpdateAnnotation map[string]string
-	IsPatchSuccess       bool
 	// IsUpdateComplete is annotation update complete
 	IsUpdateComplete *atomic.Bool
-	// IsUpdateComplete is time task update complete or not
-	IsTimingComplete *atomic.Bool
+	// IsPatchSuccess is node annotation patch complete or not
+	IsPatchSuccess *atomic.Bool
 }
 
 // NewListenAnnotation NewListenAnnotation
@@ -40,7 +39,7 @@ func NewListenAnnotation() *ListenAnnotations {
 	return &ListenAnnotations{
 		WaitUpdateAnnotation: make(map[string]string, 1),
 		IsUpdateComplete:     atomic.NewBool(false),
-		IsTimingComplete:     atomic.NewBool(false),
+		IsPatchSuccess:       atomic.NewBool(false),
 	}
 }
 
@@ -67,10 +66,9 @@ func UpdateVNpuDevice(hdm *HwDevManager, stopCh <-chan struct{}, client *kuberne
 			if err := TimingUpdate(hdm, client); err != nil {
 				hwlog.RunLog.Errorf("current timing update failed, waiting for next time, err: %v", err)
 			}
-			time.Sleep(time.Minute)
+			time.Sleep(time.Second * waitingTimeTask)
 		}
 	}(hdm)
-	NewConfigMapAgent(client, hdm)
 }
 
 // TimingUpdate each minute exec update function
@@ -79,8 +77,6 @@ func TimingUpdate(hdm *HwDevManager, client *kubernetes.Clientset) error {
 		return nil
 	}
 	GetAnnotationObj().IsUpdateComplete.Store(false)
-	GetAnnotationObj().IsTimingComplete.Store(true)
-	defer GetAnnotationObj().IsTimingComplete.Store(false)
 	hwlog.RunLog.Infof("starting configMap timing update task")
 	m.Lock()
 	defer m.Unlock()
@@ -99,20 +95,17 @@ func TimingUpdate(hdm *HwDevManager, client *kubernetes.Clientset) error {
 		}
 	}
 	vnpumanager.DestroyVirtualDev(hdm.dmgr, dcmiDevices, cardVNPUs, nodeName)
-	vnpumanager.CreateVirtualDev(hdm.dmgr, cardVNPUs, hdm.runMode, client)
+	vnpumanager.CreateVirtualDev(hdm.dmgr, cardVNPUs, hdm.runMode)
 	updateHpsCache(hdm)
 	hwlog.RunLog.Infof("configMap timing update task complete")
 	return nil
 }
 
 func isExecTimingUpdate(client kubernetes.Interface) {
-	if GetAnnotationObj().WaitUpdateAnnotation == nil {
+	if !GetAnnotationObj().IsPatchSuccess.Load() {
 		return
 	}
-	if !GetAnnotationObj().IsPatchSuccess {
-		return
-	}
-	GetAnnotationObj().IsPatchSuccess = false
+	GetAnnotationObj().IsPatchSuccess.Store(false)
 	for annotationTag, patchAnnotations := range GetAnnotationObj().WaitUpdateAnnotation {
 		if !isSpecDev(annotationTag) || len(patchAnnotations) == 0 {
 			continue
@@ -127,7 +120,6 @@ func isExecTimingUpdate(client kubernetes.Interface) {
 		}
 	}
 	GetAnnotationObj().IsUpdateComplete.Store(true)
-	GetAnnotationObj().WaitUpdateAnnotation = nil
 }
 
 func isSortListNotEqual(patchAnnotations, nodeAnnotations string) bool {

@@ -7,8 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"sort"
-
 	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -73,7 +71,7 @@ func GetVNpuCfg(client *kubernetes.Clientset) (string, []CardVNPUs, error) {
 	}
 	nodeName, cardVNPUs, err := GetCfgContent(data)
 	if err != nil || len(cardVNPUs) == 0 {
-		hwlog.RunLog.Errorf("failed to parse vnpu configMap or cm is nil, err: %v\n", err)
+		hwlog.RunLog.Warnf("failed to parse vnpu configMap or cm is nil, err: %v\n", err)
 		return nodeName, nil, err
 	}
 	return nodeName, cardVNPUs, nil
@@ -107,71 +105,4 @@ func getCurNodeCfg(vNpuCtn NodeVNPUs, nodeName string) ([]CardVNPUs, bool) {
 		return vNpuCtn.Cards, true
 	}
 	return nil, false
-}
-
-// ConvertCMToStruct convert configMap to struct
-func ConvertCMToStruct(mtaObj metav1.Object) (string, []CardVNPUs) {
-	mtaConfigMap, ok := mtaObj.(*v1.ConfigMap)
-	if !ok {
-		hwlog.RunLog.Errorf("convert meta data to configMap failed")
-		return "", nil
-	}
-	if mtaConfigMap.Name != CfgMapName || mtaConfigMap.Namespace != CfgMapNamespace {
-		return "", nil
-	}
-	if len(mtaConfigMap.Data) == 0 {
-		hwlog.RunLog.Errorf("failed to find vnpu configMap data")
-		return "", nil
-	}
-	cmData, ok := mtaConfigMap.Data[common.VNpuCfgKey]
-	if !ok {
-		hwlog.RunLog.Errorf("failed to find configMap VNPUCfg")
-		return "", nil
-	}
-	nodeName, cardVNPUs, err := GetCfgContent(cmData)
-	if err != nil {
-		hwlog.RunLog.Errorf("failed to parse vnpu configMap, err: %v\n", err)
-		return nodeName, nil
-	}
-	return nodeName, cardVNPUs
-}
-
-// IsConfigMapChange is configMap change
-func IsConfigMapChange(newCardNPUs, oldCardNPUs []CardVNPUs) bool {
-	sort.SliceStable(newCardNPUs, func(i, j int) bool {
-		return newCardNPUs[i].CardName < newCardNPUs[j].CardName
-	})
-	sort.SliceStable(oldCardNPUs, func(i, j int) bool {
-		return oldCardNPUs[i].CardName < oldCardNPUs[j].CardName
-	})
-	for i := 0; i < len(newCardNPUs); i++ {
-		if newCardNPUs[i].CardName != oldCardNPUs[i].CardName {
-			return true
-		}
-		if isStringListEqual(newCardNPUs[i].Req, oldCardNPUs[i].Req) {
-			return true
-		}
-		if isStringListEqual(newCardNPUs[i].Alloc, oldCardNPUs[i].Alloc) {
-			return true
-		}
-	}
-	return false
-}
-
-func isStringListEqual(newCard, oldCard []string) bool {
-	if len(newCard) != len(oldCard) {
-		return true
-	}
-	sort.SliceStable(newCard, func(i, j int) bool {
-		return newCard[i] < newCard[j]
-	})
-	sort.SliceStable(oldCard, func(i, j int) bool {
-		return oldCard[i] < oldCard[j]
-	})
-	for i := 0; i < len(newCard); i++ {
-		if newCard[i] != oldCard[i] {
-			return true
-		}
-	}
-	return false
 }
