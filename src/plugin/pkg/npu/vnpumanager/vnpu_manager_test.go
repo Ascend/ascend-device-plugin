@@ -26,7 +26,7 @@ func TestCreateVirtualDev(t *testing.T) {
 	k8sMock := gomonkey.ApplyFunc(getAnnotationFromNode, func(_ kubernetes.Interface, _, _ string) ([]string, error) {
 		return []string{"Ascend910-2c-100-0", "Ascend910-16c-130-0"}, nil
 	})
-	CreateVirtualDev(dsmi.NewFakeDeviceManager(), cardVNPUs, common.RunMode710, nil)
+	CreateVirtualDev(dsmi.NewFakeDeviceManager(), cardVNPUs, common.RunMode710)
 	k8sMock.Reset()
 	t.Logf("UT TestCreateVirtualDev Success")
 }

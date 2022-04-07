@@ -81,14 +81,15 @@ func destroyRetry(dmgr dsmi.DeviceMgrInterface, phyID int, virID string) error {
 			retryCount++
 			hwlog.RunLog.Errorf("destroy virtual device %d from %d failed, err: %v\n", virIDCode, phyID, err)
 			continue
+		} else {
+			hwlog.RunLog.Infof("destroy virtual device %d from %d success", virIDCode, phyID)
 		}
 		return nil
 	}
 }
 
 // CreateVirtualDev create virtual devices
-func CreateVirtualDev(dmgr dsmi.DeviceMgrInterface, cardVNPUs []CardVNPUs, runMode string,
-	kubeClient kubernetes.Interface) {
+func CreateVirtualDev(dmgr dsmi.DeviceMgrInterface, cardVNPUs []CardVNPUs, runMode string) {
 	hwlog.RunLog.Infof("starting create virtual device which is cm adding")
 	for _, cardVNPU := range cardVNPUs {
 		phyIDStr, virID, err := common.GetDeviceID(cardVNPU.CardName, "")
@@ -96,7 +97,7 @@ func CreateVirtualDev(dmgr dsmi.DeviceMgrInterface, cardVNPUs []CardVNPUs, runMo
 			hwlog.RunLog.Errorf("current card name invalid, err: %v", err)
 			continue
 		}
-		if err := createRetry(dmgr, phyIDStr, runMode, cardVNPU, kubeClient); err != nil {
+		if err := createRetry(dmgr, phyIDStr, runMode, cardVNPU); err != nil {
 			hwlog.RunLog.Errorf("phy device %s create virtual dev failed, err: %v", phyIDStr, err)
 			continue
 		}
@@ -104,9 +105,9 @@ func CreateVirtualDev(dmgr dsmi.DeviceMgrInterface, cardVNPUs []CardVNPUs, runMo
 	hwlog.RunLog.Infof("create virtual device which is cm added success")
 }
 
-func createRetry(dmgr dsmi.DeviceMgrInterface, phyIDStr, runMode string, cardVNPU CardVNPUs,
-	kubeClient kubernetes.Interface) error {
+func createRetry(dmgr dsmi.DeviceMgrInterface, phyIDStr, runMode string, cardVNPU CardVNPUs) error {
 	retryCount := 0
+	hwlog.RunLog.Infof("create Req: %v + Alloc: %v on phyIDStr: %v", cardVNPU.Req, cardVNPU.Alloc, phyIDStr)
 	for {
 		if retryCount > maxRetryCount {
 			return fmt.Errorf("exceeded maximum number of retries")
@@ -123,7 +124,7 @@ func createRetry(dmgr dsmi.DeviceMgrInterface, phyIDStr, runMode string, cardVNP
 			hwlog.RunLog.Errorf("get logic id failed, err: %v", err)
 			continue
 		}
-		createList := getNeedCreateDev(cardVNPU, kubeClient, runMode, phyIDStr)
+		createList := getNeedCreateDev(cardVNPU, dmgr, logicID)
 		if len(createList) == 0 {
 			return nil
 		}
@@ -136,23 +137,23 @@ func createRetry(dmgr dsmi.DeviceMgrInterface, phyIDStr, runMode string, cardVNP
 	}
 }
 
-func getNeedCreateDev(cardVNPU CardVNPUs, kubeClient kubernetes.Interface, runMode, phyIDStr string) []string {
+func getNeedCreateDev(cardVNPU CardVNPUs, dmgr dsmi.DeviceMgrInterface, logicID uint32) []string {
+	var reqDevs, dcmiDevs, createList []string
+	vDevInfo, err := dmgr.GetVDevicesInfo(logicID)
+	if err != nil {
+		hwlog.RunLog.Errorf("get vDev list on %d failed", logicID)
+		return nil
+	}
+	for _, vDev := range vDevInfo.CgoDsmiSubVDevInfos {
+		dcmiDevs = append(dcmiDevs, fmt.Sprintf("%sc", vDev.Spec.CoreNum))
+	}
 	pattern := `\d+c`
 	reg := regexp.MustCompile(pattern)
-	var reqDevs, allocDevs, createList []string
 	for _, reqDev := range cardVNPU.Req {
 		reqDevs = append(reqDevs, reg.FindString(reqDev))
 	}
-	annotateDevs, err := getAnnotationFromNode(kubeClient, runMode, phyIDStr)
-	cutDevs := convertToSets(cardVNPU.Alloc).Union(convertToSets(annotateDevs))
-	if err != nil {
-		hwlog.RunLog.Warnf("query node annotation info failed, err: %v\n", err)
-	}
-	for allocDev := range cutDevs {
-		allocDevs = append(allocDevs, reg.FindString(allocDev))
-	}
 	reqMap := getCoreAndCount(reqDevs)
-	allocMap := getCoreAndCount(allocDevs)
+	allocMap := getCoreAndCount(dcmiDevs)
 	for devCore, count := range reqMap {
 		allocCount, ok := allocMap[devCore]
 		if !ok {
@@ -164,7 +165,7 @@ func getNeedCreateDev(cardVNPU CardVNPUs, kubeClient kubernetes.Interface, runMo
 		}
 		createList = append(createList, getData(diff, devCore)...)
 	}
-	hwlog.RunLog.Infof("get create list on %s, need create device %v", phyIDStr, createList)
+	hwlog.RunLog.Infof("get create list on %d, need create device %v", logicID, createList)
 	return createList
 }
 
@@ -245,7 +246,7 @@ func isInVNpuCfg(devName, deviceID string, cardVNPUs []CardVNPUs) bool {
 		if nameList[1] != deviceID {
 			continue
 		}
-		hwlog.RunLog.Infof("Req: %v + Alloc: %v + devName: %v + !isStable: %v", cardVPU.Req, cardVPU.Alloc,
+		hwlog.RunLog.Infof("destroy Req: %v + Alloc: %v + devName: %v + !isStable: %v", cardVPU.Req, cardVPU.Alloc,
 			devName, !isReqAndAllocStable(cardVPU))
 		if len(cardVPU.Req) == 0 {
 			return false

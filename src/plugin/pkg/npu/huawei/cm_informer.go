@@ -6,97 +6,18 @@ package huawei
 import (
 	"os"
 	"path"
-	"time"
 
 	"huawei.com/npu-exporter/hwlog"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/cache"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
-	"Ascend-device-plugin/src/plugin/pkg/npu/vnpumanager"
 )
 
 const (
 	// waitingTimeTask wait timing task update 10s
 	waitingTimeTask = 10
 )
-
-// ConfigMapAgent Agent for configMap Workers
-type ConfigMapAgent struct {
-	cmInformer        cache.SharedInformer
-	cmInformerFactory informers.SharedInformerFactory
-}
-
-// NewConfigMapAgent new ConfigMapAgent
-func NewConfigMapAgent(kubeClientSet kubernetes.Interface, hdm *HwDevManager) {
-	stopCh := make(chan struct{})
-	cmInformerFactory := informers.NewSharedInformerFactoryWithOptions(kubeClientSet, time.Second*sleep2ListW,
-		informers.WithTweakListOptions(func(options *v1.ListOptions) {}))
-
-	cmAgent := &ConfigMapAgent{
-		cmInformerFactory: cmInformerFactory,
-		cmInformer:        cmInformerFactory.Core().V1().ConfigMaps().Informer(),
-	}
-	defer runtime.HandleCrash()
-	cmAgent.cmInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		UpdateFunc: func(oldObj, newObj interface{}) {
-			newCM, ok := newObj.(v1.Object)
-			if !ok {
-				return
-			}
-			oldCM, ok := oldObj.(v1.Object)
-			if !ok {
-				return
-			}
-			nodeName, newCardNPUs, isChange := isCMChange(newCM, oldCM)
-			if isChange {
-				parseCMData(newCardNPUs, hdm, kubeClientSet, nodeName)
-			}
-		},
-	})
-	hwlog.RunLog.Infof("start configMap informer factory")
-	go cmInformerFactory.Start(stopCh)
-	hwlog.RunLog.Info("start running configMap informer")
-	cmAgent.cmInformer.Run(stopCh)
-}
-
-func isCMChange(newCM, oldCM v1.Object) (string, []vnpumanager.CardVNPUs, bool) {
-	_, newCardNPUs := vnpumanager.ConvertCMToStruct(newCM)
-	nodeName, oldCardNPUs := vnpumanager.ConvertCMToStruct(oldCM)
-	if newCardNPUs == nil || oldCardNPUs == nil {
-		return "", nil, false
-	}
-	if len(newCardNPUs) != len(oldCardNPUs) {
-		return "", nil, true
-	}
-	return nodeName, newCardNPUs, vnpumanager.IsConfigMapChange(newCardNPUs, oldCardNPUs)
-}
-
-func parseCMData(newCardNPUs []vnpumanager.CardVNPUs, hdm *HwDevManager,
-	kubeClient kubernetes.Interface, nodeName string) {
-	m.Lock()
-	defer m.Unlock()
-	hwlog.RunLog.Infof("start sync informer info by update or add func")
-	for GetAnnotationObj().IsTimingComplete.Load() && GetAnnotationObj().IsUpdateComplete.Load() {
-		time.Sleep(time.Second * waitingTimeTask)
-	}
-	GetAnnotationObj().IsUpdateComplete.Store(false)
-	var dcmiDevices []common.NpuDevice
-	var dcmiDeviceTypes []string
-	hwlog.RunLog.Infof("starting get old NPU info")
-	if err := hdm.manager.GetNPUs(&dcmiDevices, &dcmiDeviceTypes, hdm.runMode); err != nil {
-		hwlog.RunLog.Errorf("get NPU failed, err: %v\n", err)
-		return
-	}
-	vnpumanager.DestroyVirtualDev(hdm.dmgr, dcmiDevices, newCardNPUs, nodeName)
-	vnpumanager.CreateVirtualDev(hdm.dmgr, newCardNPUs, hdm.runMode, kubeClient)
-	updateHpsCache(hdm)
-}
 
 func updateHpsCache(hdm *HwDevManager) {
 	hwlog.RunLog.Infof("start update multi-virtual device cache after create virtual device")

@@ -52,24 +52,3 @@ func TestGetVNpuCfg(t *testing.T) {
 	mockCM.Reset()
 	t.Logf("UT TestGetVNpuCfg Success")
 }
-
-// TestIsConfigMapChange test is configMap change
-func TestIsConfigMapChange(t *testing.T) {
-	t.Logf("Start UT TestIsConfigMapChange")
-	var newCardNPUs = []CardVNPUs{
-		{
-			CardName: "Ascend910-0",
-			Req:      []string{"Ascend910-2c", "Ascend910-8c"},
-			Alloc:    []string{},
-		},
-	}
-	var oldCardNPUs = []CardVNPUs{
-		{
-			CardName: "Ascend910-0",
-			Req:      []string{"Ascend910-4c", "Ascend910-2c"},
-			Alloc:    []string{},
-		},
-	}
-	IsConfigMapChange(newCardNPUs, oldCardNPUs)
-	t.Logf("UT TestIsConfigMapChange Success")
-}
