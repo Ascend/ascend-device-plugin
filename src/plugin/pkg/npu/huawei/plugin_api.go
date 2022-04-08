@@ -872,7 +872,7 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int, kltDevices []string) 
 	getNodeNpuUsed(&usedDevices, s.hps)
 	freeDevices := s.hps.healthDevice.Difference(usedDevices)
 	groupAllocatableDevs := s.hps.hdm.manager.GetAnnotationMap(freeDevices, s.hps.devType)
-	errs := s.hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs)
+	errs := s.hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, true, s.hps.devType)
 	if errs != nil {
 		hwlog.RunLog.Errorf("patch Annotations failed, err: %v", err)
 		return nil, err

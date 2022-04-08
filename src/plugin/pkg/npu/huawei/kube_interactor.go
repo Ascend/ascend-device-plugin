@@ -55,7 +55,8 @@ func NewKubeInteractor() (*KubeInteractor, error) {
 	}, nil
 }
 
-func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]string) error {
+func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]string,
+	isAlloc bool, devType string) error {
 	var err error
 	err = wait.PollImmediate(interval*time.Second, timeout*time.Second, func() (bool, error) {
 		var node *v1.Node
@@ -69,8 +70,7 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 			ki.resetNodeAnnotations(node)
 		}
 		newNode := node.DeepCopy()
-		devType, isSingleRoutine := ki.isSingleDevType(groupAllocatableDevs)
-		if isSingleRoutine {
+		if isAlloc {
 			annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, devType)
 			ki.singleDevAnnotationUpdate(annotationTag, groupAllocatableDevs, node, newNode)
 		} else {
@@ -80,10 +80,10 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 		// variables are defined in advance
 		// the value will be used in subsequent assignment
 		newNetworkRecoverDevSets := sets.String{}
-		if devType == hiAIAscend910Prefix {
+		if strings.Contains(devType, hiAIAscend910Prefix) {
 			ki.update910Annotation(node, newNode, groupAllocatableDevs, &newNetworkRecoverDevSets)
 		}
-		if devType == hiAIAscend710Prefix {
+		if strings.Contains(devType, hiAIAscend710Prefix) {
 			ki.update710Annotation(node, newNode, groupAllocatableDevs[huaweiAscend710])
 		}
 		updatedNode, _, err := nodeutil.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), node, newNode)
@@ -91,10 +91,10 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 			hwlog.RunLog.Errorf("failed to patch volcano npu resource: %v", err)
 			return false, nil
 		}
-		ki.atomicListenAnnotation(devType, updatedNode.Annotations)
+		ki.atomicListenAnnotation(updatedNode.Annotations)
 		// if update success, update the lastTimeNetworkRecoverDevices
 		// Ascend910
-		if devType == hiAIAscend910Prefix {
+		if strings.Contains(devType, hiAIAscend910Prefix) {
 			lastTimeNetworkRecoverDevices = newNetworkRecoverDevSets
 		}
 		return true, nil
@@ -102,13 +102,7 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 	return err
 }
 
-func (ki *KubeInteractor) atomicListenAnnotation(devType string, annotation map[string]string) {
-	if devType == hiAIAscend310Prefix {
-		return
-	}
-	if len(annotation) == 0 {
-		return
-	}
+func (ki *KubeInteractor) atomicListenAnnotation(annotation map[string]string) {
 	GetAnnotationObj().WaitUpdateAnnotation = annotation
 	GetAnnotationObj().IsPatchSuccess.Store(true)
 }
@@ -272,23 +266,6 @@ func (ki *KubeInteractor) singleDevAnnotationUpdate(annotationTag string, groupA
 		}
 	}
 	newNode.Annotations[annotationTag] = groupAllocatableDevs[annotationTag]
-}
-
-func (ki *KubeInteractor) isSingleDevType(groupAllocatableDevs map[string]string) (string, bool) {
-	devType := hiAIAscend310Prefix
-	// For Ascend310
-	if len(groupAllocatableDevs) == 1 {
-		return devType, true
-	}
-	// For Ascend910/Ascend710
-	devTypeNum := 0
-	for devPrefix, deviceNames := range groupAllocatableDevs {
-		if len(deviceNames) != 0 {
-			devType = strings.Replace(devPrefix, resourceNamePrefix, "", -1)
-			devTypeNum++
-		}
-	}
-	return devType, devTypeNum == 1
 }
 
 func (ki *KubeInteractor) resetNodeAnnotations(node *v1.Node) {
