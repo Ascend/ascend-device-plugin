@@ -412,3 +412,10 @@ func (adc *ascendCommonFunction) assembleVirtualDevices(phyID uint32, cgoDsmiVDe
 	}
 	return devices, vDeviTypes, vDevID
 }
+
+func (adc *ascendCommonFunction) isVirExist(hps *HwPluginServe) bool {
+	if len(hps.hdm.allDevTypes) > 1 {
+		return true
+	}
+	return common.IsVirtualDev(hps.hdm.allDevTypes[0])
+}

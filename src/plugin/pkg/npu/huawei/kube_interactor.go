@@ -56,7 +56,7 @@ func NewKubeInteractor() (*KubeInteractor, error) {
 }
 
 func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]string,
-	isAlloc bool, devType string) error {
+	isAlloc, isVir bool, devType string) error {
 	var err error
 	err = wait.PollImmediate(interval*time.Second, timeout*time.Second, func() (bool, error) {
 		var node *v1.Node
@@ -77,14 +77,14 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 			ki.multiDevAnnotationUpdate(groupAllocatableDevs, node, newNode)
 		}
 		ki.addChipCoreToAnnotation(devType, newNode)
-		// variables are defined in advance
-		// the value will be used in subsequent assignment
+		// variables are defined in advance, the value will be used in subsequent assignment
 		newNetworkRecoverDevSets := sets.String{}
-		if devType == hiAIAscend910Prefix {
+		// for 910 failure rescheduling
+		if devType == hiAIAscend910Prefix && !isVir {
 			ki.update910Annotation(node, newNode, groupAllocatableDevs, &newNetworkRecoverDevSets)
 		}
-		if devType == hiAIAscend710Prefix {
-			ki.update710Annotation(node, newNode, groupAllocatableDevs[huaweiAscend710])
+		if devType == hiAIAscend710Prefix && !isVir {
+			ki.updateUnHealthAnnotation(node, newNode, groupAllocatableDevs[devType], devType)
 		}
 		updatedNode, _, err := nodeutil.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), node, newNode)
 		if err != nil {
@@ -94,7 +94,7 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 		ki.atomicListenAnnotation(updatedNode.Annotations)
 		// if update success, update the lastTimeNetworkRecoverDevices
 		// Ascend910
-		if devType == hiAIAscend910Prefix {
+		if (devType == hiAIAscend910Prefix) && !isVir {
 			lastTimeNetworkRecoverDevices = newNetworkRecoverDevSets
 		}
 		return true, nil
@@ -151,7 +151,7 @@ func (ki *KubeInteractor) update910Annotation(node, newNode *v1.Node, groupAlloc
 	*newNetworkRecoverDevSets = newRecoverDevSets
 }
 
-func (ki *KubeInteractor) update710Annotation(node, newNode *v1.Node, newAscend710 string) {
+func (ki *KubeInteractor) updateUnHealthAnnotation(node, newNode *v1.Node, newAscend710, devType string) {
 	_, ascend710 := getUnHealthDev(totalUHDevices,
 		ki.convertDevListToSets(node.Annotations[huaweiUnHealthAscend710],
 			nodeAnnotationsDeviceSep, common.RunMode710), nil,
