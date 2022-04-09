@@ -80,10 +80,10 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 		// variables are defined in advance
 		// the value will be used in subsequent assignment
 		newNetworkRecoverDevSets := sets.String{}
-		if strings.Contains(devType, hiAIAscend910Prefix) {
+		if devType == hiAIAscend910Prefix {
 			ki.update910Annotation(node, newNode, groupAllocatableDevs, &newNetworkRecoverDevSets)
 		}
-		if strings.Contains(devType, hiAIAscend710Prefix) {
+		if devType == hiAIAscend710Prefix {
 			ki.update710Annotation(node, newNode, groupAllocatableDevs[huaweiAscend710])
 		}
 		updatedNode, _, err := nodeutil.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), node, newNode)
@@ -94,7 +94,7 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 		ki.atomicListenAnnotation(updatedNode.Annotations)
 		// if update success, update the lastTimeNetworkRecoverDevices
 		// Ascend910
-		if strings.Contains(devType, hiAIAscend910Prefix) {
+		if devType == hiAIAscend910Prefix {
 			lastTimeNetworkRecoverDevices = newNetworkRecoverDevSets
 		}
 		return true, nil
