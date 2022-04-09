@@ -84,7 +84,7 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 			ki.update910Annotation(node, newNode, groupAllocatableDevs, &newNetworkRecoverDevSets)
 		}
 		if devType == hiAIAscend710Prefix && !isVir {
-			ki.update710Annotation(node, newNode, groupAllocatableDevs[devType])
+			ki.update710Annotation(node, newNode, groupAllocatableDevs[huaweiAscend710])
 		}
 		updatedNode, _, err := nodeutil.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), node, newNode)
 		if err != nil {
