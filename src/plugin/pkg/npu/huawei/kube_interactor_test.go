@@ -45,7 +45,7 @@ func TestPatchAnnotationOnNode(t *testing.T) {
 		nodeName:  "NODE_NAME",
 	}
 
-	groupAllocatableDevs := NewHwAscend910Manager().GetAnnotationMap(freeDevices, "Ascend910")
+	groupAllocatableDevs := NewHwAscend910Manager().GetAnnotationMap(freeDevices, []string{"Ascend910"})
 	err := fakeKubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, true, false, "Ascend910")
 	if err != nil {
 		t.Fatal(err)

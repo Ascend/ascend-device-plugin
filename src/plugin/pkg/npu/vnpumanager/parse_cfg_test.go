@@ -29,13 +29,9 @@ func init() {
 func TestGetVNpuCfg(t *testing.T) {
 	t.Logf("Start UT TestGetVNpuCfg")
 	var data = map[string]string{
-		common.VNpuCfgKey: `{\n  \"CheckCode\": 10086,\n" +
-			"  \"Nodes\": [\n        {\n         " +
-			" \"NodeName\": \"centos-6543\",\n       " +
-			"   \"Cards\": [\n  {\n  " +
-			" \"CardName\": \"Ascend710-2\",\n  " +
-			" \"Req\": [\"Ascend710-4c\"],\n   " +
-			"\"Alloc\": []\n }]\n}\n]\n}`,
+		common.VNpuCfgKey: `{"CheckCode": 10086,
+		"Nodes": [{"NodeName": "centos-6543","Cards": [{"CardName": 
+		"Ascend710-2","Req": ["Ascend710-4c"],"Alloc": []}]}]}`,
 	}
 	var cm = v1.ConfigMap{
 		Data: data,

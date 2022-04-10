@@ -82,7 +82,7 @@ type devManager interface {
 	GetPhyDevMapVirtualDev() map[uint32]string
 	DoWithVolcanoListAndWatch(*HwPluginServe, bool)
 	GetDeviceNetworkState(int32, *common.NpuDevice) (string, error)
-	GetAnnotationMap(sets.String, string) map[string]string
+	GetAnnotationMap(sets.String, []string) map[string]string
 }
 
 // NewHwDevManager function is used to new a dev manager.

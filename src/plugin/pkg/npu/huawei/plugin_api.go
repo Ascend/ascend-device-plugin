@@ -59,7 +59,6 @@ var (
 	totalDevices                  sets.String
 	stateThreadNum                int
 	m                             sync.Mutex
-	virLock                       sync.Mutex
 	firstTimeList                 = true
 	totalUHDevices                sets.String
 	totalNetworkUnhealthDevices   sets.String
@@ -135,7 +134,7 @@ func (s *pluginAPI) GetDevByType(devices map[string]*common.NpuDevice) bool {
 	if ok {
 		return isCountChange
 	}
-	return !s.convertToSets(devices).Equal(s.convertToSets(s.hps.devices))
+	return !common.ConvertToSets(devices).Equal(common.ConvertToSets(s.hps.devices))
 }
 
 // ListAndWatch: if the server get stop signal ,the ListAndWatch should  stop,to be fix
@@ -236,14 +235,6 @@ func (s *pluginAPI) isDeviceStatusChange() bool {
 		return s.listenVirtualDevices()
 	}
 	return s.listenPhysicalDevices()
-}
-
-func (s *pluginAPI) convertToSets(devList map[string]*common.NpuDevice) sets.String {
-	devSet := sets.String{}
-	for devID := range devList {
-		devSet.Insert(devID)
-	}
-	return devSet
 }
 
 func (s *pluginAPI) listenVirtualDevices() bool {
@@ -458,11 +449,7 @@ func (s *pluginAPI) mountDefaultDevice(resp *v1beta1.ContainerAllocateResponse) 
 }
 
 func getNodeNpuUsed(usedDevices *sets.String, hps *HwPluginServe) {
-	var (
-		err    error
-		useNpu []string
-	)
-
+	var useNpu []string
 	kubeClient := hps.kubeInteractor.clientset
 	node, err := kubeClient.CoreV1().Nodes().Get(context.Background(), hps.kubeInteractor.nodeName, metav1.GetOptions{})
 	if err != nil {
@@ -599,10 +586,9 @@ func (s *pluginAPI) PreStartContainer(ctx context.Context,
 func (s *pluginAPI) mountfile(resp *v1beta1.ContainerAllocateResponse) {
 	timeStr := time.Now().Format("20060102150405")
 	rankID := "" + timeStr + "-0"
-	slogConfigPath := GetSlogConfigFilePath()
 	resp.Mounts = append(resp.Mounts, &v1beta1.Mount{
-		ContainerPath: slogConfigPath,
-		HostPath:      slogConfigPath,
+		ContainerPath: hiAISlogdConfig,
+		HostPath:      hiAISlogdConfig,
 		ReadOnly:      true,
 	})
 
@@ -642,11 +628,6 @@ func sendDevToKubelet(resp *v1beta1.ListAndWatchResponse, stream v1beta1.DeviceP
 		return err
 	}
 	return nil
-}
-
-// GetSlogConfigFilePath is used to get slog path
-func GetSlogConfigFilePath() string {
-	return hiAISlogdConfig
 }
 
 func (s *pluginAPI) updatePodAnnotations(pod *v1.Pod, ascendVisibleDevices map[string]string,
@@ -871,7 +852,7 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int, kltDevices []string) 
 	usedDevices := sets.NewString()
 	getNodeNpuUsed(&usedDevices, s.hps)
 	freeDevices := s.hps.healthDevice.Difference(usedDevices)
-	groupAllocatableDevs := s.hps.hdm.manager.GetAnnotationMap(freeDevices, s.hps.devType)
+	groupAllocatableDevs := s.hps.hdm.manager.GetAnnotationMap(freeDevices, []string{s.hps.devType})
 	var isVir bool
 	if s.ascendRuntimeOptions == common.VirtualDev {
 		isVir = true
