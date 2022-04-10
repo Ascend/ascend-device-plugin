@@ -104,7 +104,7 @@ func (hnm *HwAscend910Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe, isS
 	totalDevices = totalDevices.Union(freeDevices)
 	stateThreadNum += interval
 	if stateThreadNum == len(hps.hdm.allDevTypes) {
-		groupAllocatableDevs := hnm.GetAnnotationMap(totalDevices, hps.devType)
+		groupAllocatableDevs := hnm.GetAnnotationMap(totalDevices, hps.hdm.allDevTypes)
 		if err := hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, false, hnm.isVirExist(hps),
 			hps.devType); err != nil {
 			hwlog.RunLog.Errorf("patch Annotation failed, err: %v", err)
@@ -157,10 +157,9 @@ func (hnm *HwAscend910Manager) groupDevsByStatus(hps *HwPluginServe, isStateChan
 }
 
 // GetAnnotationMap Get Annonation
-func (hnm *HwAscend910Manager) GetAnnotationMap(allocatableDevices sets.String, _ string) map[string]string {
-	var pwrSuffix = []string{hiAIAscend910Prefix, pwr2CSuffix, pwr4CSuffix, pwr8CSuffix, pwr16CSuffix}
-	var annoMap = make(map[string]string, len(pwrSuffix))
-	for _, suffix := range pwrSuffix {
+func (hnm *HwAscend910Manager) GetAnnotationMap(allocatableDevices sets.String, devTypes []string) map[string]string {
+	var annoMap = make(map[string]string, len(devTypes))
+	for _, suffix := range devTypes {
 		powerAnnotation := filterTagPowerDevice(allocatableDevices, suffix)
 		annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, suffix)
 		annoMap[annotationTag] = powerAnnotation

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"huawei.com/npu-exporter/utils"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -94,3 +95,13 @@ func IsVirtualDev(devType string) bool {
 	reg710 := regexp.MustCompile(virtual710DevsPattern)
 	return reg910.MatchString(devType) || reg710.MatchString(devType)
 }
+
+// ConvertToSets convert npu device to set
+func ConvertToSets(devList map[string]*NpuDevice) sets.String {
+	devSet := sets.String{}
+	for devID := range devList {
+		devSet.Insert(devID)
+	}
+	return devSet
+}
+

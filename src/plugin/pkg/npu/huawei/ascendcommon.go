@@ -311,7 +311,7 @@ func (adc *ascendCommonFunction) DoWithVolcanoListAndWatch(hps *HwPluginServe, i
 	usedDevices := sets.NewString()
 	getNodeNpuUsed(&usedDevices, hps)
 	freeDevices := hps.healthDevice.Difference(usedDevices)
-	annoMap := adc.GetAnnotationMap(freeDevices, hps.devType)
+	annoMap := adc.GetAnnotationMap(freeDevices, nil)
 	annoMap[adc.unHealthyKey] = filterTagPowerDevice(hps.unHealthDevice, adc.name)
 	if err := hps.kubeInteractor.patchNode(func(_ *v1.Node) []byte {
 		as := adc.getAntStu(annoMap)
@@ -356,7 +356,7 @@ func (adc *ascendCommonFunction) reloadHealthDevice(isStateChange bool, hps *HwP
 }
 
 // GetAnnotationMap Get AnnotationMap
-func (adc *ascendCommonFunction) GetAnnotationMap(allocatableDevices sets.String, _ string) map[string]string {
+func (adc *ascendCommonFunction) GetAnnotationMap(allocatableDevices sets.String, _ []string) map[string]string {
 	var antMap = make(map[string]string, initMapCap)
 	chipAnnotation := filterTagPowerDevice(allocatableDevices, adc.name)
 	annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, adc.name)
