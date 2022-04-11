@@ -429,9 +429,6 @@ func (adc *ascendCommonFunction) updateAiCore() string {
 	}
 	var phyCoreCount []string
 	for i := int32(0); i < devNum; i++ {
-		if int(i) >= len(deviceIDs) {
-			hwlog.RunLog.Errorf("DoWithVolcanoListAndWatch dev idx error")
-		}
 		healthState, err := adc.dmgr.GetDeviceHealth(int32(deviceIDs[i]))
 		if err != nil || (healthState != 0 && healthState != 1) {
 			hwlog.RunLog.Errorf("get chip state from logicID: %v, healthState: %v", deviceIDs[i], healthState)
