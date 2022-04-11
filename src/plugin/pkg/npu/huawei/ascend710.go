@@ -23,11 +23,6 @@ const (
 	chip710Core4C = "Ascend710-4c"
 )
 
-var (
-	// Dev710PhyCoreCount like huawei.com/Ascend710-spec:1-8c,2-8c
-	Dev710PhyCoreCount []string
-)
-
 // HwAscend710Manager manages huawei Ascend710 devices.
 type HwAscend710Manager struct {
 	ascendCommonFunction
@@ -54,7 +49,7 @@ func (hnm *HwAscend710Manager) GetNPUs(allDevices *[]common.NpuDevice, allDevice
 		return err
 	}
 	phyDevMapVirtualDev := make(map[uint32]string, devNum)
-	var deviTypes, vDevID, dev710PhyCoreCount []string
+	var deviTypes, vDevID []string
 	for i := int32(0); i < devNum; i++ {
 		phyID, err := hnm.dmgr.GetPhyID(ids[i])
 		if err != nil {
@@ -77,10 +72,7 @@ func (hnm *HwAscend710Manager) GetNPUs(allDevices *[]common.NpuDevice, allDevice
 		}
 		*allDevices = append(*allDevices, devices...)
 		*allDeviceTypes = append(*allDeviceTypes, deviTypes...)
-		dev710PhyCoreCount = append(dev710PhyCoreCount, fmt.Sprintf("%d-%dc-%dc",
-			phyID, cgoDsmiVDevInfos.CoreCount, cgoDsmiVDevInfos.CoreNumUnused))
 	}
-	Dev710PhyCoreCount = dev710PhyCoreCount
 	hnm.phyDevMapVirtualDev = phyDevMapVirtualDev
 	*allDeviceTypes = hnm.removeDuplicate(allDeviceTypes)
 	return nil
@@ -88,7 +80,7 @@ func (hnm *HwAscend710Manager) GetNPUs(allDevices *[]common.NpuDevice, allDevice
 
 // DoWithVolcanoListAndWatch ascend710 affinity scheduling
 func (hnm *HwAscend710Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe, isStateChange bool) {
-	hnm.groupDevsByStatus(hps, isStateChange)
+	hnm.groupDevsByStatus(hps)
 	m.Lock()
 	usedDevices := sets.NewString()
 	getNodeNpuUsed(&usedDevices, hps)
@@ -98,7 +90,7 @@ func (hnm *HwAscend710Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe, isS
 	if stateThreadNum == len(hps.hdm.allDevTypes) {
 		groupAllocatableDevs := hnm.GetAnnotationMap(totalDevices, hps.hdm.allDevTypes)
 		if err := hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, false, hnm.isVirExist(hps),
-			hps.devType); err != nil {
+			hps.devType, hnm.updateAiCore()); err != nil {
 			hwlog.RunLog.Errorf("patch Annotation failed, err: %v", err)
 		}
 		totalDevices = totalDevices.Intersection(sets.String{})
@@ -107,10 +99,7 @@ func (hnm *HwAscend710Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe, isS
 	m.Unlock()
 }
 
-func (hnm *HwAscend710Manager) groupDevsByStatus(hps *HwPluginServe, isStateChange bool) {
-	if !isStateChange {
-		return
-	}
+func (hnm *HwAscend710Manager) groupDevsByStatus(hps *HwPluginServe) {
 	if hps.devType == hiAIAscend710Prefix {
 		totalUHDevices = sets.String{}
 	}

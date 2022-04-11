@@ -56,7 +56,7 @@ func NewKubeInteractor() (*KubeInteractor, error) {
 }
 
 func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]string,
-	isAlloc, isVir bool, devType string) error {
+	isAlloc, isVir bool, devType, phyCoreCount string) error {
 	var err error
 	err = wait.PollImmediate(interval*time.Second, timeout*time.Second, func() (bool, error) {
 		var node *v1.Node
@@ -76,7 +76,7 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 		} else {
 			ki.multiDevAnnotationUpdate(groupAllocatableDevs, node, newNode)
 		}
-		ki.addChipCoreToAnnotation(devType, newNode)
+		ki.addChipCoreToAnnotation(devType, phyCoreCount, newNode)
 		// variables are defined in advance, the value will be used in subsequent assignment
 		newNetworkRecoverDevSets := sets.String{}
 		// for 910 failure rescheduling
@@ -107,12 +107,15 @@ func (ki *KubeInteractor) atomicListenAnnotation(annotation map[string]string) {
 	GetAnnotationObj().IsPatchSuccess.Store(true)
 }
 
-func (ki *KubeInteractor) addChipCoreToAnnotation(devType string, newNode *v1.Node) {
+func (ki *KubeInteractor) addChipCoreToAnnotation(devType, phyCoreCount string, newNode *v1.Node) {
+	if phyCoreCount == "alloc" {
+		return
+	}
 	if strings.Contains(devType, hiAIAscend910Prefix) {
-		newNode.Annotations[huaweiAscend910Spec] = strings.Join(Dev910PhyCoreCount, ",")
+		newNode.Annotations[huaweiAscend910Spec] = phyCoreCount
 	}
 	if strings.Contains(devType, hiAIAscend710Prefix) {
-		newNode.Annotations[huaweiAscend710Spec] = strings.Join(Dev710PhyCoreCount, ",")
+		newNode.Annotations[huaweiAscend710Spec] = phyCoreCount
 	}
 }
 

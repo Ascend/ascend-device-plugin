@@ -33,11 +33,6 @@ const (
 	pwr16CSuffix = "Ascend910-16c"
 )
 
-var (
-	// Dev910PhyCoreCount like huawei.com/Ascend910-spec:1-32c,2-30c
-	Dev910PhyCoreCount []string
-)
-
 // HwAscend910Manager manages huawei Ascend910 devices.
 type HwAscend910Manager struct {
 	ascendCommonFunction
@@ -62,7 +57,7 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]common.NpuDevice, allDevice
 		return err
 	}
 	phyDevMapVirtualDev := make(map[uint32]string, devNum)
-	var deviTypes, vDevID, dev910PhyCoreCount []string
+	var deviTypes, vDevID []string
 	for i := int32(0); i < devNum; i++ {
 		phyID, err := hnm.dmgr.GetPhyID(ids[i])
 		if err != nil {
@@ -85,10 +80,7 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]common.NpuDevice, allDevice
 		}
 		*allDevices = append(*allDevices, devices...)
 		*allDeviceTypes = append(*allDeviceTypes, deviTypes...)
-		dev910PhyCoreCount = append(dev910PhyCoreCount, fmt.Sprintf("%d-%dc-%dc",
-			phyID, cgoDsmiVDevInfos.CoreCount, cgoDsmiVDevInfos.CoreNumUnused))
 	}
-	Dev910PhyCoreCount = dev910PhyCoreCount
 	hnm.phyDevMapVirtualDev = phyDevMapVirtualDev
 	*allDeviceTypes = hnm.removeDuplicate(allDeviceTypes)
 	return nil
@@ -96,7 +88,7 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]common.NpuDevice, allDevice
 
 // DoWithVolcanoListAndWatch ascend910 affinity scheduling
 func (hnm *HwAscend910Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe, isStateChange bool) {
-	hnm.groupDevsByStatus(hps, isStateChange)
+	hnm.groupDevsByStatus(hps)
 	m.Lock()
 	usedDevices := sets.NewString()
 	getNodeNpuUsed(&usedDevices, hps)
@@ -106,7 +98,7 @@ func (hnm *HwAscend910Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe, isS
 	if stateThreadNum == len(hps.hdm.allDevTypes) {
 		groupAllocatableDevs := hnm.GetAnnotationMap(totalDevices, hps.hdm.allDevTypes)
 		if err := hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, false, hnm.isVirExist(hps),
-			hps.devType); err != nil {
+			hps.devType, hnm.updateAiCore()); err != nil {
 			hwlog.RunLog.Errorf("patch Annotation failed, err: %v", err)
 		}
 		totalDevices = totalDevices.Intersection(sets.String{})
@@ -131,10 +123,7 @@ func (hnm *HwAscend910Manager) GetDeviceNetworkState(logicID int32, device *comm
 	}
 }
 
-func (hnm *HwAscend910Manager) groupDevsByStatus(hps *HwPluginServe, isStateChange bool) {
-	if !isStateChange {
-		return
-	}
+func (hnm *HwAscend910Manager) groupDevsByStatus(hps *HwPluginServe) {
 	if hps.devType == hiAIAscend910Prefix {
 		totalUHDevices = sets.String{}
 		totalNetworkUnhealthDevices = sets.String{}

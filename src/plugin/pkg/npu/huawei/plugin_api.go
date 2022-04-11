@@ -280,31 +280,8 @@ func (s *pluginAPI) listenPhysicalDevices() bool {
 		if s.hps.devType == hiAIAscend910Prefix {
 			isStateChange = s.checkDeviceNetworkHealthStatus(dev) || isStateChange
 		}
-		s.filterUNHealthDev(state, dev.ID)
 	}
 	return isStateChange
-}
-
-func (s *pluginAPI) filterUNHealthDev(state, deviceName string) {
-	if state != v1beta1.Unhealthy {
-		return
-	}
-	phyID, _, err := common.GetDeviceID(deviceName, "")
-	if err != nil {
-		return
-	}
-	for idx, dev := range Dev910PhyCoreCount {
-		if phyID == strings.Split(dev, "-")[0] {
-			Dev910PhyCoreCount = append(Dev910PhyCoreCount[:idx], Dev910PhyCoreCount[idx+1:]...)
-			return
-		}
-	}
-	for idx, dev := range Dev710PhyCoreCount {
-		if phyID == strings.Split(dev, "-")[0] {
-			Dev710PhyCoreCount = append(Dev710PhyCoreCount[:idx], Dev710PhyCoreCount[idx+1:]...)
-			return
-		}
-	}
 }
 
 // check device network health status
@@ -857,7 +834,8 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int, kltDevices []string) 
 	if s.ascendRuntimeOptions == common.VirtualDev {
 		isVir = true
 	}
-	errs := s.hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, true, isVir, s.hps.devType)
+	errs := s.hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, true, isVir,
+		s.hps.devType, "alloc")
 	if errs != nil {
 		hwlog.RunLog.Errorf("patch Annotations failed, err: %v", err)
 		return nil, err
