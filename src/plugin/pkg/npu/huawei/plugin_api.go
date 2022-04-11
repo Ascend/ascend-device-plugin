@@ -835,7 +835,7 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int, kltDevices []string) 
 		isVir = true
 	}
 	errs := s.hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, true, isVir,
-		s.hps.devType, "alloc")
+		s.hps.devType, patchSpec)
 	if errs != nil {
 		hwlog.RunLog.Errorf("patch Annotations failed, err: %v", err)
 		return nil, err

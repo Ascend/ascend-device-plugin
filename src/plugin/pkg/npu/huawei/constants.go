@@ -57,4 +57,6 @@ const (
 	baseDec   = 10
 	bitSize   = 64
 	bitSize32 = 32
+
+	patchSpec = "alloc"
 )

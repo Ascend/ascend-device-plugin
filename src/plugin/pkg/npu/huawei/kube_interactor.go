@@ -108,7 +108,7 @@ func (ki *KubeInteractor) atomicListenAnnotation(annotation map[string]string) {
 }
 
 func (ki *KubeInteractor) addChipCoreToAnnotation(devType, phyCoreCount string, newNode *v1.Node) {
-	if phyCoreCount == "alloc" {
+	if phyCoreCount == patchSpec {
 		return
 	}
 	if strings.Contains(devType, hiAIAscend910Prefix) {
