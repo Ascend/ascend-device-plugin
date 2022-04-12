@@ -73,13 +73,13 @@ func UpdateVNpuDevice(hdm *HwDevManager, stopCh <-chan struct{}, client *kuberne
 
 // TimingUpdate each minute exec update function
 func TimingUpdate(hdm *HwDevManager, client *kubernetes.Clientset) error {
-	if !GetAnnotationObj().IsUpdateComplete.Load() {
+	m.Lock()
+	defer m.Unlock()
+	if !GetAnnotationObj().IsUpdateComplete.Load() && stateThreadNum != 0 {
 		return nil
 	}
 	GetAnnotationObj().IsUpdateComplete.Store(false)
 	hwlog.RunLog.Infof("starting configMap timing update task")
-	m.Lock()
-	defer m.Unlock()
 	var dcmiDevices []common.NpuDevice
 	var dcmiDeviceTypes []string
 	if err := hdm.manager.GetNPUs(&dcmiDevices, &dcmiDeviceTypes, hdm.manager.GetMatchingDeviType()); err != nil {
