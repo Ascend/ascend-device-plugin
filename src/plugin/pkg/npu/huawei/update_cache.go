@@ -75,7 +75,7 @@ func UpdateVNpuDevice(hdm *HwDevManager, stopCh <-chan struct{}, client *kuberne
 func TimingUpdate(hdm *HwDevManager, client *kubernetes.Clientset) error {
 	m.Lock()
 	defer m.Unlock()
-	if !GetAnnotationObj().IsUpdateComplete.Load() && stateThreadNum != 0 {
+	if !GetAnnotationObj().IsUpdateComplete.Load() || stateThreadNum != 0 {
 		return nil
 	}
 	GetAnnotationObj().IsUpdateComplete.Store(false)
