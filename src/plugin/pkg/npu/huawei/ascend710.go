@@ -81,12 +81,10 @@ func (hnm *HwAscend710Manager) GetNPUs(allDevices *[]common.NpuDevice, allDevice
 // DoWithVolcanoListAndWatch ascend710 affinity scheduling
 func (hnm *HwAscend710Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe, isStateChange bool) {
 	hnm.groupDevsByStatus(hps)
-	m.Lock()
 	usedDevices := sets.NewString()
 	getNodeNpuUsed(&usedDevices, hps)
 	freeDevices := hps.healthDevice.Difference(usedDevices)
 	totalDevices = totalDevices.Union(freeDevices)
-	stateThreadNum += interval
 	if stateThreadNum == len(hps.hdm.allDevTypes) {
 		groupAllocatableDevs := hnm.GetAnnotationMap(totalDevices, hps.hdm.allDevTypes)
 		if err := hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, false, hnm.isVirExist(hps),
@@ -96,7 +94,6 @@ func (hnm *HwAscend710Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe, isS
 		totalDevices = totalDevices.Intersection(sets.String{})
 		stateThreadNum = 0
 	}
-	m.Unlock()
 }
 
 func (hnm *HwAscend710Manager) groupDevsByStatus(hps *HwPluginServe) {

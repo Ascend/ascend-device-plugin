@@ -154,14 +154,15 @@ func (s *pluginAPI) ListAndWatch(emtpy *v1beta1.Empty, stream v1beta1.DevicePlug
 		time.Sleep(time.Duration(sleepTime) * time.Second)
 		var devices = make(map[string]*common.NpuDevice)
 		m.Lock()
+		stateThreadNum += interval
 		isStateChange := s.GetDevByType(devices)
 		s.hps.devices = devices
-		m.Unlock()
 		isStateChange = isStateChange || s.isDeviceStatusChange()
 		if useVolcanoType {
 			s.hps.vol2KlDevMap = make(map[string]string, maxTrainDevicesNum)
 			s.hps.hdm.manager.DoWithVolcanoListAndWatch(s.hps, isStateChange)
 		}
+		m.Unlock()
 		if !isStateChange {
 			// close log print
 			logFlag = false
