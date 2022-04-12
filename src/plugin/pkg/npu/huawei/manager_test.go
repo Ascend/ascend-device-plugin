@@ -13,6 +13,7 @@ import (
 
 	"go.uber.org/atomic"
 	"huawei.com/npu-exporter/hwlog"
+	"huawei.com/npu-exporter/utils"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
@@ -66,6 +67,9 @@ func deleteServerSocketByDevManager(serverSocket string, manager *HwDevManager) 
 
 // TestSignalWatch for testSingalWatch
 func TestSignalWatch(t *testing.T) {
+	if err := utils.MakeSureDir(serverSockFd); err != nil {
+		t.Fatal("TestSignalWatch Run FAiled, reason is failed to create sock file dir")
+	}
 	f, err := os.Create(serverSockFd)
 	defer f.Close()
 	if err != nil {
