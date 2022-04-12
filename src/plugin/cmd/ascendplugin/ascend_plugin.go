@@ -13,6 +13,7 @@ import (
 	"huawei.com/npu-exporter/hwlog"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
+	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 	"Ascend-device-plugin/src/plugin/pkg/npu/huawei"
 )
 
@@ -110,6 +111,7 @@ func main() {
 	o := huawei.Option{GetFdFlag: *fdFlag, UseAscendDocker: *useAscendDocker, UseVolcanoType: *volcanoType,
 		AutoStowingDevs: *autoStowing, ListAndWatchPeriod: *listWatchPeriod, KubeConfig: *kubeconfig}
 	hdm.SetParameters(o)
+	dsmi.DriverInit()
 	if err := hdm.GetNPUs(); err != nil {
 		hwlog.RunLog.Errorf("no devices found. waiting indefinitely, err: %s", err.Error())
 		<-neverStop

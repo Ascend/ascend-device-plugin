@@ -86,11 +86,13 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 		if devType == hiAIAscend710Prefix && !isVir {
 			ki.update710Annotation(node, newNode, groupAllocatableDevs[huaweiAscend710])
 		}
+		hwlog.RunLog.Infof("newNode.Annotations: %v", newNode.Annotations)
 		updatedNode, _, err := nodeutil.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), node, newNode)
 		if err != nil {
 			hwlog.RunLog.Errorf("failed to patch volcano npu resource: %v", err)
 			return false, nil
 		}
+		hwlog.RunLog.Infof("updatedNode.Annotations: %v", updatedNode.Annotations)
 		ki.atomicListenAnnotation(updatedNode.Annotations)
 		// if update success, update the lastTimeNetworkRecoverDevices
 		// Ascend910

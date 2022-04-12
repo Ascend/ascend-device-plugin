@@ -161,7 +161,10 @@ const (
 	MaxErrorCodeCount = 128
 )
 
-var driverShutdownOnce sync.Once
+var (
+	driverInitOnce     sync.Once
+	driverShutdownOnce sync.Once
+)
 
 // CgoDsmiSubVDevInfo single VDevInfo info
 type CgoDsmiSubVDevInfo struct {
@@ -208,9 +211,12 @@ type DeviceManager struct {
 	driverMgr *dcmi.DriverManager
 }
 
-func init() {
-	C.dsmiInit_dl()
-	dcmi.Init()
+// DriverInit initialize driver
+func DriverInit() {
+	driverInitOnce.Do(func() {
+		C.dsmiInit_dl()
+		dcmi.Init()
+	})
 }
 
 // NewDeviceManager new DeviceManager instance
