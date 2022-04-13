@@ -54,6 +54,8 @@ spec:
             mountPath: /usr/local/Ascend/driver
           - name: log-path
             mountPath: /var/log/mindx-dl/devicePlugin
+          - name: tmp
+            mountPath: /tmp
       volumes:
         - name: device-plugin
           hostPath:
@@ -65,3 +67,6 @@ spec:
           hostPath:
             path: /var/log/mindx-dl/devicePlugin
             type: Directory
+        - name: tmp
+          hostPath:
+            path: /tmp
