@@ -38,7 +38,7 @@ const (
 // TestPluginAPIListAndWatch for listAndWatch
 func TestPluginAPIListAndWatch(t *testing.T) {
 	hdm := createFakeDevManager("ascend910")
-	o := Option{GetFdFlag: false, UseAscendDocker: false, UseVolcanoType: true, ListAndWatchPeriod: sleepTime,
+	o := Option{GetFdFlag: false, UseAscendDocker: false, UseVolcanoType: false, ListAndWatchPeriod: sleepTime,
 		AutoStowingDevs: true, KubeConfig: ""}
 	hdm.SetParameters(o)
 	if err := hdm.GetNPUs(); err != nil {
@@ -73,7 +73,7 @@ func TestPluginAPIListAndWatch(t *testing.T) {
 	hdm.allDevs = getTestDevs()
 	for _, devType := range devTypes {
 		mockstream := mock_v1beta1.NewMockDevicePlugin_ListAndWatchServer(ctrl)
-		mockstream.EXPECT().Send(&v1beta1.ListAndWatchResponse{}).Return(nil)
+		mockstream.EXPECT().Send(&v1beta1.ListAndWatchResponse{}).AnyTimes().Return(nil)
 		fakePluginAPI = createFakePluginAPI(hdm, devType, fakeKubeInteractor)
 		go changeBreakFlag(fakePluginAPI)
 		err := fakePluginAPI.ListAndWatch(&v1beta1.Empty{}, mockstream)

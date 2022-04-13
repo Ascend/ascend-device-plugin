@@ -93,6 +93,11 @@ func (hnm *HwAscend710Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe, isS
 		}
 		totalDevices = totalDevices.Intersection(sets.String{})
 		stateThreadNum = 0
+		if callTiming == nil || callListAndWatch == nil {
+			return
+		}
+		callTiming <- struct{}{}
+		<-callListAndWatch
 	}
 }
 

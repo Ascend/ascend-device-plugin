@@ -64,6 +64,9 @@ var (
 	totalNetworkUnhealthDevices   sets.String
 	lastTimeNetworkRecoverDevices sets.String
 	listenDevCountIsChange        = make(map[string]bool, initMapCap)
+	callTiming                    chan struct{}
+	callListAndWatch              chan struct{}
+	makeCallChanOnce              sync.Once
 )
 
 const (
@@ -168,12 +171,10 @@ func (s *pluginAPI) ListAndWatch(emtpy *v1beta1.Empty, stream v1beta1.DevicePlug
 			logFlag = false
 		}
 		// turn on log print
-		if isStateChange {
-			logFlag, firstTimeList = true, false
-			listenDevCountIsChange[s.hps.devType] = false
-			resp.Devices = resp.Devices[:0]
-			s.updateKubeletDevInfo(resp, stream)
-		}
+		logFlag, firstTimeList = true, false
+		listenDevCountIsChange[s.hps.devType] = false
+		resp.Devices = resp.Devices[:0]
+		s.updateKubeletDevInfo(resp, stream)
 	}
 	return nil
 }
