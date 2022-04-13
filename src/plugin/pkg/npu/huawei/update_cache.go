@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"time"
 
 	"go.uber.org/atomic"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -66,16 +65,20 @@ func UpdateVNpuDevice(hdm *HwDevManager, stopCh <-chan struct{}, client *kuberne
 			if err := TimingUpdate(hdm, client); err != nil {
 				hwlog.RunLog.Errorf("current timing update failed, waiting for next time, err: %v", err)
 			}
-			time.Sleep(time.Second * waitingTimeTask)
 		}
 	}(hdm)
 }
 
 // TimingUpdate each minute exec update function
 func TimingUpdate(hdm *HwDevManager, client *kubernetes.Clientset) error {
-	m.Lock()
-	defer m.Unlock()
-	if !GetAnnotationObj().IsUpdateComplete.Load() || stateThreadNum != 0 {
+	if callTiming == nil || callListAndWatch == nil {
+		return nil
+	}
+	<-callTiming
+	defer func() {
+		callListAndWatch <- struct{}{}
+	}()
+	if !GetAnnotationObj().IsUpdateComplete.Load() {
 		return nil
 	}
 	GetAnnotationObj().IsUpdateComplete.Store(false)

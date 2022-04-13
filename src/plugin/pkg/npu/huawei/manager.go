@@ -87,6 +87,10 @@ type devManager interface {
 
 // NewHwDevManager function is used to new a dev manager.
 func NewHwDevManager(mode string) *HwDevManager {
+	makeCallChanOnce.Do(func() {
+		callTiming = make(chan struct{})
+		callListAndWatch = make(chan struct{})
+	})
 	return &HwDevManager{
 		runMode:  mode,
 		dmgr:     dsmi.NewDeviceManager(),
