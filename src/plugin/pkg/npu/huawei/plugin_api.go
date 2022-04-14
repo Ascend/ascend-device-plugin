@@ -165,7 +165,6 @@ func (s *pluginAPI) ListAndWatch(emtpy *v1beta1.Empty, stream v1beta1.DevicePlug
 			s.hps.vol2KlDevMap = make(map[string]string, maxTrainDevicesNum)
 			s.hps.hdm.manager.DoWithVolcanoListAndWatch(s.hps, isStateChange)
 		}
-		m.Unlock()
 		if !isStateChange {
 			// close log print
 			logFlag = false
@@ -175,6 +174,7 @@ func (s *pluginAPI) ListAndWatch(emtpy *v1beta1.Empty, stream v1beta1.DevicePlug
 		listenDevCountIsChange[s.hps.devType] = false
 		resp.Devices = resp.Devices[:0]
 		s.updateKubeletDevInfo(resp, stream)
+		m.Unlock()
 	}
 	return nil
 }
@@ -192,8 +192,6 @@ func (s *pluginAPI) updateKubeletDevInfo(resp *v1beta1.ListAndWatchResponse,
 		}
 		return
 	}
-	m.Lock()
-	defer m.Unlock()
 	var notInVolDev []string
 	allDev := sets.String{}
 	klDev := sets.String{}
