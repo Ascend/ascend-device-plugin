@@ -49,6 +49,8 @@ type Option struct {
 	AutoStowingDevs bool
 
 	KubeConfig string
+
+	DynamicVDevice bool
 }
 
 var (
@@ -68,6 +70,8 @@ var (
 	// switch error log
 	logFlag = true
 
+	dynamicVDevice bool
+
 	// ServeUpdateMap serveUpdateMap
 	ServeUpdateMap = make(map[string]chan int, initMapCap)
 )
@@ -80,7 +84,7 @@ type devManager interface {
 	GetDmgr() dsmi.DeviceMgrInterface
 	GetMatchingDeviType() string
 	GetPhyDevMapVirtualDev() map[uint32]string
-	DoWithVolcanoListAndWatch(*HwPluginServe, bool)
+	DoWithVolcanoListAndWatch(*HwPluginServe)
 	GetDeviceNetworkState(int32, *common.NpuDevice) (string, error)
 	GetAnnotationMap(sets.String, []string) map[string]string
 }
@@ -156,8 +160,10 @@ func (hdm *HwDevManager) Serve(devType string) {
 	for !hdm.stopFlag.Load() {
 		select {
 		case _, _ = <-ServeUpdateMap[devType]:
-			hwlog.RunLog.Infof("update go routine %s", devType)
-			preStart(hps)
+			if dynamicVDevice {
+				hwlog.RunLog.Infof("update go routine %s", devType)
+				preStart(hps)
+			}
 		default:
 		}
 		if hdm.stopFlag.Load() {
@@ -279,6 +285,7 @@ func (hdm *HwDevManager) SetParameters(option Option) {
 	listAndWatchPeriod = option.ListAndWatchPeriod
 	autoStowingDevs = option.AutoStowingDevs
 	kubeConfig = option.KubeConfig
+	dynamicVDevice = option.DynamicVDevice
 }
 
 func (hdm *HwDevManager) setRunMode() error {

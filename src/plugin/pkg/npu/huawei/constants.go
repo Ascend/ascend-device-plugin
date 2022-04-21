@@ -21,7 +21,8 @@ const (
 	// MaxAge the log file last time
 	MaxAge = 7
 	// config map name
-	podDeviceKey = "ascend.kubectl.kubernetes.io/ascend-910-configuration"
+	podDeviceKey    = "ascend.kubectl.kubernetes.io/ascend-910-configuration"
+	pod710DeviceKey = "ascend.kubectl.kubernetes.io/ascend-710-configuration"
 	// visible env
 	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"
 	// virtual runtime option env

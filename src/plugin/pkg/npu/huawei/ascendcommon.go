@@ -306,8 +306,8 @@ func (adc *ascendCommonFunction) GetPhyDevMapVirtualDev() map[uint32]string {
 }
 
 // DoWithVolcanoListAndWatch ascend710 do nothing
-func (adc *ascendCommonFunction) DoWithVolcanoListAndWatch(hps *HwPluginServe, isStateChange bool) {
-	adc.reloadHealthDevice(isStateChange, hps)
+func (adc *ascendCommonFunction) DoWithVolcanoListAndWatch(hps *HwPluginServe) {
+	adc.reloadHealthDevice(hps)
 	usedDevices := sets.NewString()
 	getNodeNpuUsed(&usedDevices, hps)
 	freeDevices := hps.healthDevice.Difference(usedDevices)
@@ -340,10 +340,7 @@ func (adc *ascendCommonFunction) GetDeviceNetworkState(_ int32, _ *common.NpuDev
 	return "", nil
 }
 
-func (adc *ascendCommonFunction) reloadHealthDevice(isStateChange bool, hps *HwPluginServe) {
-	if !isStateChange {
-		return
-	}
+func (adc *ascendCommonFunction) reloadHealthDevice(hps *HwPluginServe) {
 	hps.healthDevice = sets.String{}
 	hps.unHealthDevice = sets.String{}
 	for _, device := range hps.devices {

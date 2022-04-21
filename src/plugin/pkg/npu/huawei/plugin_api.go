@@ -2,6 +2,7 @@
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
  */
 
+// Package huawei the device-plugin frame interface
 package huawei
 
 import (
@@ -16,6 +17,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"go.uber.org/atomic"
@@ -32,8 +34,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
-
-	"sync"
 )
 
 type pluginAPI struct {
@@ -125,7 +125,7 @@ func (s *pluginAPI) GetDevicePluginOptions(ctx context.Context, e *v1beta1.Empty
 	return &v1beta1.DevicePluginOptions{}, nil
 }
 
-func (s *pluginAPI) GetDevByType(devices map[string]*common.NpuDevice) bool {
+func (s *pluginAPI) GetDevByType(devices map[string]*common.NpuDevice) {
 	allDevs := s.hps.hdm.allDevs
 	for npuIdx := range allDevs {
 		npuDev := &allDevs[npuIdx]
@@ -133,11 +133,6 @@ func (s *pluginAPI) GetDevByType(devices map[string]*common.NpuDevice) bool {
 			devices[npuDev.ID] = npuDev
 		}
 	}
-	isCountChange, ok := listenDevCountIsChange[s.hps.devType]
-	if ok {
-		return isCountChange
-	}
-	return !common.ConvertToSets(devices).Equal(common.ConvertToSets(s.hps.devices))
 }
 
 // ListAndWatch: if the server get stop signal ,the ListAndWatch should  stop,to be fix
@@ -155,23 +150,20 @@ func (s *pluginAPI) ListAndWatch(emtpy *v1beta1.Empty, stream v1beta1.DevicePlug
 			sleepTime = 0
 		}
 		time.Sleep(time.Duration(sleepTime) * time.Second)
-		var devices = make(map[string]*common.NpuDevice)
 		m.Lock()
 		stateThreadNum += interval
-		isStateChange := s.GetDevByType(devices)
-		s.hps.devices = devices
-		isStateChange = isStateChange || s.isDeviceStatusChange()
+		if dynamicVDevice {
+			var devices = make(map[string]*common.NpuDevice, 1)
+			s.GetDevByType(devices)
+			s.hps.devices = devices
+		}
+		s.isDeviceStatusChange()
 		if useVolcanoType {
 			s.hps.vol2KlDevMap = make(map[string]string, maxTrainDevicesNum)
-			s.hps.hdm.manager.DoWithVolcanoListAndWatch(s.hps, isStateChange)
-		}
-		if !isStateChange {
-			// close log print
-			logFlag = false
+			s.hps.hdm.manager.DoWithVolcanoListAndWatch(s.hps)
 		}
 		// turn on log print
 		logFlag, firstTimeList = true, false
-		listenDevCountIsChange[s.hps.devType] = false
 		resp.Devices = resp.Devices[:0]
 		s.updateKubeletDevInfo(resp, stream)
 		m.Unlock()
@@ -348,7 +340,7 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *v1beta1.AllocateRequ
 				return nil, errs
 			}
 		}
-		if s.hps.runMode == common.RunMode910 {
+		if s.hps.runMode == common.RunMode910 || s.hps.runMode == common.RunMode710 {
 			s.mountfile(resp)
 			s.responseAnonation(resp, ascendVisibleDevicesMap)
 		}
@@ -801,7 +793,11 @@ func (s *pluginAPI) responseAnonation(resp *v1beta1.ContainerAllocateResponse, d
 		return
 	}
 	instanceInfo := string(instanceByte)
-	annotation[podDeviceKey] = instanceInfo
+	if s.hps.runMode == common.RunMode910 {
+		annotation[podDeviceKey] = instanceInfo
+	} else {
+		annotation[pod710DeviceKey] = instanceInfo
+	}
 	resp.Annotations = annotation
 }
 
@@ -818,8 +814,7 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int, kltDevices []string) 
 		return nil, err
 	}
 	allocateDevice := sets.NewString()
-	err = s.getNPUAnnotationOfPod(oldPod, &allocateDevice, allocateNum)
-	if err != nil {
+	if err = s.getNPUAnnotationOfPod(oldPod, &allocateDevice, allocateNum); err != nil {
 		hwlog.RunLog.Errorf("get NPU Annotation failed, err: %v", err)
 		return nil, err
 	}
@@ -834,14 +829,12 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int, kltDevices []string) 
 	if s.ascendRuntimeOptions == common.VirtualDev {
 		isVir = true
 	}
-	errs := s.hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, true, isVir,
-		s.hps.devType, patchSpec)
-	if errs != nil {
+	if errs := s.hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, true, isVir,
+		s.hps.devType, patchSpec); errs != nil {
 		hwlog.RunLog.Errorf("patch Annotations failed, err: %v", err)
 		return nil, err
 	}
-	err = s.updatePodAnnotations(oldPod, ascendVisibleDevices, kltDevices)
-	if err != nil {
+	if err = s.updatePodAnnotations(oldPod, ascendVisibleDevices, kltDevices); err != nil {
 		return nil, err
 	}
 	hwlog.RunLog.Infof("Volcano found ascendVisibleDevices: %v", ascendVisibleDevices)
