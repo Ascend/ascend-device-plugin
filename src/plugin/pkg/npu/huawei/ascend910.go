@@ -87,7 +87,7 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]common.NpuDevice, allDevice
 }
 
 // DoWithVolcanoListAndWatch ascend910 affinity scheduling
-func (hnm *HwAscend910Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe, isStateChange bool) {
+func (hnm *HwAscend910Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe) {
 	hnm.groupDevsByStatus(hps)
 	usedDevices := sets.NewString()
 	getNodeNpuUsed(&usedDevices, hps)
@@ -101,6 +101,9 @@ func (hnm *HwAscend910Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe, isS
 		}
 		totalDevices = totalDevices.Intersection(sets.String{})
 		stateThreadNum = 0
+		if !dynamicVDevice {
+			return
+		}
 		if callTiming == nil || callListAndWatch == nil {
 			return
 		}

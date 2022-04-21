@@ -52,6 +52,8 @@ var (
 		"Maximum number of backup log files, range is (0, 30]")
 	kubeconfig = flag.String("kubeConfig", "", "Path to a kubeconfig. "+
 		"Only required if out-of-cluster.")
+	dynamicVirtualDevice = flag.Bool("dynamicVirtualDevice", false, "Open the dynamic of "+
+		"computing power splitting function, only support Ascend910 and Ascend710")
 )
 
 var (
@@ -88,6 +90,11 @@ func main() {
 		os.Exit(0)
 	}
 
+	// if close dynamic vir devices, means not using volcano
+	if !*dynamicVirtualDevice {
+		*volcanoType = false
+	}
+
 	if *listWatchPeriod < minListWatchPeriod || *listWatchPeriod > maxListWatchPeriod {
 		fmt.Printf("list and watch period %d out of range\n", *listWatchPeriod)
 		os.Exit(1)
@@ -100,7 +107,7 @@ func main() {
 
 	neverStop := make(chan struct{})
 	switch *mode {
-	case "ascend310", "ascend910", "ascend710", "":
+	case common.RunMode310, common.RunMode910, common.RunMode710, "":
 		hwlog.RunLog.Infof("ascend device plugin running mode: %s", *mode)
 	default:
 		hwlog.RunLog.Infof("unSupport mode: %s, waiting indefinitely", *mode)
@@ -109,7 +116,8 @@ func main() {
 
 	hdm := huawei.NewHwDevManager(*mode)
 	o := huawei.Option{GetFdFlag: *fdFlag, UseAscendDocker: *useAscendDocker, UseVolcanoType: *volcanoType,
-		AutoStowingDevs: *autoStowing, ListAndWatchPeriod: *listWatchPeriod, KubeConfig: *kubeconfig}
+		AutoStowingDevs: *autoStowing, ListAndWatchPeriod: *listWatchPeriod, KubeConfig: *kubeconfig,
+		DynamicVDevice: *dynamicVirtualDevice}
 	hdm.SetParameters(o)
 	dsmi.DriverInit()
 	if err := hdm.GetNPUs(); err != nil {
