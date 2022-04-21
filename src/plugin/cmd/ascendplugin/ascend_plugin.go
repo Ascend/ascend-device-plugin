@@ -52,7 +52,7 @@ var (
 		"Maximum number of backup log files, range is (0, 30]")
 	kubeconfig = flag.String("kubeConfig", "", "Path to a kubeconfig. "+
 		"Only required if out-of-cluster.")
-	dynamicVirtualDevice = flag.Bool("dynamicVirtualDevice", false, "Open the dynamic of " +
+	dynamicVirtualDevice = flag.Bool("dynamicVirtualDevice", false, "Open the dynamic of "+
 		"computing power splitting function, only support Ascend910 and Ascend710")
 )
 
