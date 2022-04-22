@@ -134,13 +134,13 @@ func main() {
 
 func getParams() huawei.Option {
 	return huawei.Option{
-		GetFdFlag: *fdFlag,
-		UseAscendDocker: *useAscendDocker,
-		UseVolcanoType: *volcanoType,
-		AutoStowingDevs: *autoStowing,
+		GetFdFlag:          *fdFlag,
+		UseAscendDocker:    *useAscendDocker,
+		UseVolcanoType:     *volcanoType,
+		AutoStowingDevs:    *autoStowing,
 		ListAndWatchPeriod: *listWatchPeriod,
-		KubeConfig: *kubeconfig,
-		DynamicVDevice: *dynamicVirtualDevice,
+		KubeConfig:         *kubeconfig,
+		DynamicVDevice:     *dynamicVirtualDevice,
 	}
 }
 
