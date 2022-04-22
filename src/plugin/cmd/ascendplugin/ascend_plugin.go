@@ -90,11 +90,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	// if close dynamic vir devices, means not using volcano
-	if !*dynamicVirtualDevice {
-		*volcanoType = false
-	}
-
 	if *listWatchPeriod < minListWatchPeriod || *listWatchPeriod > maxListWatchPeriod {
 		fmt.Printf("list and watch period %d out of range\n", *listWatchPeriod)
 		os.Exit(1)
@@ -113,13 +108,20 @@ func main() {
 		hwlog.RunLog.Infof("unSupport mode: %s, waiting indefinitely", *mode)
 		<-neverStop
 	}
-
+	dsmi.DriverInit()
 	hdm := huawei.NewHwDevManager(*mode)
+	if err := hdm.SetRunMode(); err != nil {
+		hwlog.RunLog.Errorf("err to set Run mode, err: %v ", err)
+		<-neverStop
+	}
+	// if close dynamic vir devices, means not using volcano
+	if !*dynamicVirtualDevice && hdm.GetRunMode() != common.RunMode310 {
+		*volcanoType = false
+	}
 	o := huawei.Option{GetFdFlag: *fdFlag, UseAscendDocker: *useAscendDocker, UseVolcanoType: *volcanoType,
 		AutoStowingDevs: *autoStowing, ListAndWatchPeriod: *listWatchPeriod, KubeConfig: *kubeconfig,
 		DynamicVDevice: *dynamicVirtualDevice}
 	hdm.SetParameters(o)
-	dsmi.DriverInit()
 	if err := hdm.GetNPUs(); err != nil {
 		hwlog.RunLog.Errorf("no devices found. waiting indefinitely, err: %s", err.Error())
 		<-neverStop
