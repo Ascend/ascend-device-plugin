@@ -74,6 +74,7 @@ func TestStop(t *testing.T) {
 // TestGetDevByType for test GetDevByType
 func TestGetDevByType(t *testing.T) {
 	fakeHwDevManager := createFakeDevManager("")
+	fakeHwDevManager.runMode = common.RunMode310
 	err := fakeHwDevManager.GetNPUs()
 	if err != nil {
 		t.Fatal(err)

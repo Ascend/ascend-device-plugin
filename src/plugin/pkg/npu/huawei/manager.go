@@ -104,12 +104,6 @@ func NewHwDevManager(mode string) *HwDevManager {
 
 // GetNPUs get npu types
 func (hdm *HwDevManager) GetNPUs() error {
-
-	if err := hdm.setRunMode(); err != nil {
-		hwlog.RunLog.Errorf("err to set Run mode, err: %v ", err)
-		return err
-	}
-
 	switch hdm.runMode {
 	case common.RunMode310:
 		hdm.manager = NewHwAscend310Manager()
@@ -288,7 +282,8 @@ func (hdm *HwDevManager) SetParameters(option Option) {
 	dynamicVDevice = option.DynamicVDevice
 }
 
-func (hdm *HwDevManager) setRunMode() error {
+// SetRunMode set run mode
+func (hdm *HwDevManager) SetRunMode() error {
 	if hdm.runMode != "" {
 		return nil
 	}

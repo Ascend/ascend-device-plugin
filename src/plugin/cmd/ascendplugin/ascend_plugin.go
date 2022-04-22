@@ -82,29 +82,19 @@ func initLogModule(stopCh <-chan struct{}) {
 }
 
 func main() {
-
 	flag.Parse()
-
 	if *version {
 		fmt.Printf("%s version: %s\n", BuildName, BuildVersion)
 		os.Exit(0)
 	}
-
-	// if close dynamic vir devices, means not using volcano
-	if !*dynamicVirtualDevice {
-		*volcanoType = false
-	}
-
 	if *listWatchPeriod < minListWatchPeriod || *listWatchPeriod > maxListWatchPeriod {
 		fmt.Printf("list and watch period %d out of range\n", *listWatchPeriod)
 		os.Exit(1)
 	}
-
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 	initLogModule(stopCh)
 	hwlog.RunLog.Infof("ascend device plugin starting and the version is %s", BuildVersion)
-
 	neverStop := make(chan struct{})
 	switch *mode {
 	case common.RunMode310, common.RunMode910, common.RunMode710, "":
@@ -113,20 +103,22 @@ func main() {
 		hwlog.RunLog.Infof("unSupport mode: %s, waiting indefinitely", *mode)
 		<-neverStop
 	}
-
-	hdm := huawei.NewHwDevManager(*mode)
-	o := huawei.Option{GetFdFlag: *fdFlag, UseAscendDocker: *useAscendDocker, UseVolcanoType: *volcanoType,
-		AutoStowingDevs: *autoStowing, ListAndWatchPeriod: *listWatchPeriod, KubeConfig: *kubeconfig,
-		DynamicVDevice: *dynamicVirtualDevice}
-	hdm.SetParameters(o)
 	dsmi.DriverInit()
+	hdm := huawei.NewHwDevManager(*mode)
+	if err := hdm.SetRunMode(); err != nil {
+		hwlog.RunLog.Errorf("err to set Run mode, err: %v ", err)
+		<-neverStop
+	}
+	// if close dynamic vir devices, means not using volcano
+	if !*dynamicVirtualDevice && hdm.GetRunMode() != common.RunMode310 {
+		*volcanoType = false
+	}
+	hdm.SetParameters(getParams())
 	if err := hdm.GetNPUs(); err != nil {
 		hwlog.RunLog.Errorf("no devices found. waiting indefinitely, err: %s", err.Error())
 		<-neverStop
 	}
-
-	devTypes := hdm.GetDevType()
-	if len(devTypes) == 0 {
+	if len(hdm.GetDevType()) == 0 {
 		hwlog.RunLog.Errorf("no devices type found. waiting indefinitely")
 		<-neverStop
 	}
@@ -138,6 +130,18 @@ func main() {
 	}
 	startDiffTypeServe(hdm, neverStop)
 	<-neverStop
+}
+
+func getParams() huawei.Option {
+	return huawei.Option{
+		GetFdFlag:          *fdFlag,
+		UseAscendDocker:    *useAscendDocker,
+		UseVolcanoType:     *volcanoType,
+		AutoStowingDevs:    *autoStowing,
+		ListAndWatchPeriod: *listWatchPeriod,
+		KubeConfig:         *kubeconfig,
+		DynamicVDevice:     *dynamicVirtualDevice,
+	}
 }
 
 func startDiffTypeServe(hdm *huawei.HwDevManager, neverStop chan struct{}) {

@@ -29,16 +29,19 @@ const (
 // TestHwDevManagerGetNPUs for getNpus
 func TestHwDevManagerGetNPUs(t *testing.T) {
 	fakeHwDevManager := createFakeDevManager("")
+	fakeHwDevManager.runMode = common.RunMode310
 	err := fakeHwDevManager.GetNPUs()
 	if err != nil {
 		t.Fatal(err)
 	}
 	fakeHwDevManager = createFakeDevManager("ascend910")
+	fakeHwDevManager.runMode = common.RunMode910
 	err = fakeHwDevManager.GetNPUs()
 	if err != nil {
 		t.Fatal(err)
 	}
 	fakeHwDevManager = createFakeDevManager("ascend710")
+	fakeHwDevManager.runMode = common.RunMode710
 	err = fakeHwDevManager.GetNPUs()
 	if err != nil {
 		t.Fatal(err)
