@@ -152,7 +152,7 @@ func (s *pluginAPI) ListAndWatch(emtpy *v1beta1.Empty, stream v1beta1.DevicePlug
 		time.Sleep(time.Duration(sleepTime) * time.Second)
 		m.Lock()
 		stateThreadNum += interval
-		if dynamicVDevice {
+		if !presetVDevice {
 			var devices = make(map[string]*common.NpuDevice, 1)
 			s.GetDevByType(devices)
 			s.hps.devices = devices

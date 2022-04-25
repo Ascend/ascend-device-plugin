@@ -50,7 +50,7 @@ type Option struct {
 
 	KubeConfig string
 
-	DynamicVDevice bool
+	PresetVDevice bool
 }
 
 var (
@@ -70,7 +70,7 @@ var (
 	// switch error log
 	logFlag = true
 
-	dynamicVDevice bool
+	presetVDevice bool
 
 	// ServeUpdateMap serveUpdateMap
 	ServeUpdateMap = make(map[string]chan int, initMapCap)
@@ -154,7 +154,7 @@ func (hdm *HwDevManager) Serve(devType string) {
 	for !hdm.stopFlag.Load() {
 		select {
 		case _, _ = <-ServeUpdateMap[devType]:
-			if dynamicVDevice {
+			if !presetVDevice {
 				hwlog.RunLog.Infof("update go routine %s", devType)
 				preStart(hps)
 			}
@@ -279,7 +279,7 @@ func (hdm *HwDevManager) SetParameters(option Option) {
 	listAndWatchPeriod = option.ListAndWatchPeriod
 	autoStowingDevs = option.AutoStowingDevs
 	kubeConfig = option.KubeConfig
-	dynamicVDevice = option.DynamicVDevice
+	presetVDevice = option.PresetVDevice
 }
 
 // SetRunMode set run mode

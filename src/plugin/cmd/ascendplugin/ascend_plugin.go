@@ -52,7 +52,7 @@ var (
 		"Maximum number of backup log files, range is (0, 30]")
 	kubeconfig = flag.String("kubeConfig", "", "Path to a kubeconfig. "+
 		"Only required if out-of-cluster.")
-	dynamicVirtualDevice = flag.Bool("dynamicVirtualDevice", false, "Open the dynamic of "+
+	presetVirtualDevice = flag.Bool("presetVirtualDevice", true, "Open the static of "+
 		"computing power splitting function, only support Ascend910 and Ascend710")
 )
 
@@ -109,10 +109,6 @@ func main() {
 		hwlog.RunLog.Errorf("err to set Run mode, err: %v ", err)
 		<-neverStop
 	}
-	// if close dynamic vir devices, means not using volcano
-	if !*dynamicVirtualDevice && hdm.GetRunMode() != common.RunMode310 {
-		*volcanoType = false
-	}
 	hdm.SetParameters(getParams())
 	if err := hdm.GetNPUs(); err != nil {
 		hwlog.RunLog.Errorf("no devices found. waiting indefinitely, err: %s", err.Error())
@@ -140,7 +136,7 @@ func getParams() huawei.Option {
 		AutoStowingDevs:    *autoStowing,
 		ListAndWatchPeriod: *listWatchPeriod,
 		KubeConfig:         *kubeconfig,
-		DynamicVDevice:     *dynamicVirtualDevice,
+		PresetVDevice:     *presetVirtualDevice,
 	}
 }
 

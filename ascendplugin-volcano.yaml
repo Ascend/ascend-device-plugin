@@ -79,7 +79,7 @@ spec:
             memory: 500Mi
             cpu: 500m
         command: [ "/bin/bash", "-c", "--"]
-        args: [ "device-plugin  -useAscendDocker=true -volcanoType=true -dynamicVirtualDevice=true
+        args: [ "device-plugin  -useAscendDocker=true -volcanoType=true -presetVirtualDevice=false
                  -logFile=/var/log/mindx-dl/devicePlugin/devicePlugin.log -logLevel=0" ]
         securityContext:
           privileged: true
