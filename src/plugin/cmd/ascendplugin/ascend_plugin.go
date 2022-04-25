@@ -136,7 +136,7 @@ func getParams() huawei.Option {
 		AutoStowingDevs:    *autoStowing,
 		ListAndWatchPeriod: *listWatchPeriod,
 		KubeConfig:         *kubeconfig,
-		PresetVDevice:     *presetVirtualDevice,
+		PresetVDevice:      *presetVirtualDevice,
 	}
 }
 
