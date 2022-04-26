@@ -4,10 +4,12 @@
 package vnpumanager
 
 import (
-	"os"
+	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/agiledragon/gomonkey/v2"
+	"github.com/smartystreets/goconvey/convey"
 	"k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -27,24 +29,107 @@ func init() {
 
 // TestGetVNpuCfg get vnpu info, for create virtual device
 func TestGetVNpuCfg(t *testing.T) {
-	t.Logf("Start UT TestGetVNpuCfg")
-	var data = map[string]string{
-		common.VNpuCfgKey: `{"CheckCode": 10086,
-		"Nodes": [{"NodeName": "centos-6543","Cards": [{"CardName": 
-		"Ascend710-2","Req": ["Ascend710-4c"],"Alloc": []}]}]}`,
-	}
-	var cm = v1.ConfigMap{
-		Data: data,
-	}
-	mockCM := gomonkey.ApplyFunc(getVNpuCMFromK8s, func(_ kubernetes.Interface, _, _ string) (*v1.ConfigMap, error) {
-		return &cm, nil
+	convey.Convey("GetVNpuCfg", t, func() {
+		convey.Convey("getVNpuCMFromK8s failed", func() {
+			mock := gomonkey.ApplyFunc(getVNpuCMFromK8s, func(_ kubernetes.Interface, _, _ string) (*v1.ConfigMap,
+				error) {
+				return nil, fmt.Errorf("err")
+			})
+			defer mock.Reset()
+			_, _, err := GetVNpuCfg(nil)
+			convey.So(err, convey.ShouldNotBeNil)
+		})
+		convey.Convey("vnpu config key not exist", func() {
+			mock := gomonkey.ApplyFunc(getVNpuCMFromK8s, func(_ kubernetes.Interface, _, _ string) (*v1.ConfigMap,
+				error) {
+				return &v1.ConfigMap{}, nil
+			})
+			defer mock.Reset()
+			_, _, err := GetVNpuCfg(nil)
+			convey.So(err, convey.ShouldNotBeNil)
+		})
+		convey.Convey("GetCfgContent failed", func() {
+			mockCfg := gomonkey.ApplyFunc(getVNpuCMFromK8s, func(_ kubernetes.Interface, _, _ string) (*v1.ConfigMap,
+				error) {
+				var data = map[string]string{common.VNpuCfgKey: `{"CheckCode": 10086}`}
+				return &v1.ConfigMap{Data: data}, nil
+			})
+			defer mockCfg.Reset()
+
+			mockGetCfgContent := gomonkey.ApplyFunc(GetCfgContent, func(data string) (string, []CardVNPUs, error) {
+				return "", nil, fmt.Errorf("err")
+			})
+			defer mockGetCfgContent.Reset()
+			_, _, err := GetVNpuCfg(nil)
+			convey.So(err, convey.ShouldNotBeNil)
+		})
+		convey.Convey("GetCfgContent ok", func() {
+			mockCfg := gomonkey.ApplyFunc(getVNpuCMFromK8s, func(_ kubernetes.Interface, _, _ string) (*v1.ConfigMap,
+				error) {
+				var data = map[string]string{common.VNpuCfgKey: `{"CheckCode": 10086}`}
+				return &v1.ConfigMap{Data: data}, nil
+			})
+			defer mockCfg.Reset()
+
+			mockGetCfgContent := gomonkey.ApplyFunc(GetCfgContent, func(data string) (string, []CardVNPUs, error) {
+				return "", []CardVNPUs{{CardName: "Ascend710"}}, nil
+			})
+			defer mockGetCfgContent.Reset()
+			_, _, err := GetVNpuCfg(nil)
+			convey.So(err, convey.ShouldBeNil)
+		})
 	})
-	if err := os.Setenv("NODE_NAME", "centos-6543"); err != nil {
-		t.Logf("UT TestGetVNpuCfg Failed, err: %v\n", err)
+}
+
+// TestGetCfgContent test GetCfgContent
+func TestGetCfgContent(t *testing.T) {
+	convey.Convey("GetVNpuCfg", t, func() {
+		convey.Convey("Unmarshal failed", func() {
+			mock := gomonkey.ApplyFunc(json.Unmarshal, func(data []byte, v interface{}) error {
+				return fmt.Errorf("err")
+			})
+			defer mock.Reset()
+			_, _, err := GetCfgContent("")
+			convey.So(err, convey.ShouldNotBeNil)
+		})
+		convey.Convey("CheckCode is 0", func() {
+			data := map[string]string{
+				common.VNpuCfgKey: `{"CheckCode": 0, "Nodes": [{"NodeName": "centos-6543","Cards": [{"CardName": 
+				"Ascend710-2","Req": ["Ascend710-4c"],"Alloc": []}]}]}`,
+			}
+			_, _, err := GetCfgContent(data[common.VNpuCfgKey])
+			convey.So(err, convey.ShouldNotBeNil)
+		})
+		convey.Convey("getCurNodeCfg no ok", func() {
+			data := map[string]string{
+				common.VNpuCfgKey: `{"CheckCode": 10086, "Nodes": [{"NodeName": "centos-6543","Cards": [{"CardName": 
+				"Ascend710-2","Req": ["Ascend710-4c"],"Alloc": []}]}]}`,
+			}
+			_, _, err := GetCfgContent(data[common.VNpuCfgKey])
+			convey.So(err, convey.ShouldNotBeNil)
+		})
+		convey.Convey("getCurNodeCfg ok", func() {
+			data := map[string]string{
+				common.VNpuCfgKey: `{"CheckCode": 10086, "Nodes": [{"NodeName": "","Cards": [{"CardName": 
+			"Ascend710-2","Req": ["Ascend710-4c"],"Alloc": []}]}]}`,
+			}
+			_, _, err := GetCfgContent(data[common.VNpuCfgKey])
+			convey.So(err, convey.ShouldBeNil)
+		})
+	})
+}
+
+// TestGetCurNodeCfg test getCurNodeCfg
+func TestGetCurNodeCfg(t *testing.T) {
+	vNpuCtn := NodeVNPUs{NodeName: "centos-6543"}
+	nodeName := ""
+	if _, ret := getCurNodeCfg(vNpuCtn, nodeName); ret {
+		t.Fatalf("TestGetCurNodeCfg Run Failed, expect false, but true")
 	}
-	if _, _, err := GetVNpuCfg(nil); err != nil {
-		t.Logf("UT TestGetVNpuCfg Failed, err: %v\n", err)
+
+	vNpuCtn = NodeVNPUs{NodeName: "centos-6543"}
+	nodeName = "centos-6543"
+	if _, ret := getCurNodeCfg(vNpuCtn, nodeName); !ret {
+		t.Fatalf("TestGetCurNodeCfg Run Failed, expect true, but false")
 	}
-	mockCM.Reset()
-	t.Logf("UT TestGetVNpuCfg Success")
 }

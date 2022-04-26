@@ -7,10 +7,13 @@ package huawei
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"syscall"
 	"testing"
 	"time"
 
+	"github.com/agiledragon/gomonkey/v2"
+	"github.com/smartystreets/goconvey/convey"
 	"go.uber.org/atomic"
 	"huawei.com/npu-exporter/hwlog"
 	"huawei.com/npu-exporter/utils"
@@ -103,4 +106,56 @@ func deleteServerSocket(serverSocket string) {
 	if err := os.Remove(serverSocket); err != nil {
 		fmt.Println(err)
 	}
+}
+
+// TestSetRunMode for SetRunMode
+func TestSetRunMode(t *testing.T) {
+	convey.Convey("TestSetRunMode", t, func() {
+		convey.Convey("runMode is not empty", func() {
+			hdm := &HwDevManager{runMode: common.RunMode310, dmgr: dsmi.NewFakeDeviceManager()}
+			convey.So(hdm.SetRunMode(), convey.ShouldBeNil)
+		})
+		convey.Convey("GetDeviceCount failed", func() {
+			hdm := &HwDevManager{dmgr: dsmi.NewFakeDeviceManager()}
+			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(dsmi.FakeDeviceManager)), "GetDeviceCount",
+				func(_ *dsmi.FakeDeviceManager) (int32, error) { return 0, fmt.Errorf("err") })
+			defer mock.Reset()
+			convey.So(hdm.SetRunMode(), convey.ShouldNotBeNil)
+		})
+		convey.Convey("GetChipInfo failed", func() {
+			hdm := &HwDevManager{dmgr: dsmi.NewFakeDeviceManager()}
+			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(dsmi.FakeDeviceManager)), "GetChipInfo",
+				func(_ *dsmi.FakeDeviceManager, _ int32) (string, error) { return "", fmt.Errorf("err") })
+			defer mock.Reset()
+			convey.So(hdm.SetRunMode(), convey.ShouldNotBeNil)
+		})
+		convey.Convey("310", func() {
+			hdm := &HwDevManager{dmgr: dsmi.NewFakeDeviceManager()}
+			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(dsmi.FakeDeviceManager)), "GetChipInfo",
+				func(_ *dsmi.FakeDeviceManager, _ int32) (string, error) { return "310", nil })
+			defer mock.Reset()
+			convey.So(hdm.SetRunMode(), convey.ShouldBeNil)
+		})
+		convey.Convey("710", func() {
+			hdm := &HwDevManager{dmgr: dsmi.NewFakeDeviceManager()}
+			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(dsmi.FakeDeviceManager)), "GetChipInfo",
+				func(_ *dsmi.FakeDeviceManager, _ int32) (string, error) { return "710", nil })
+			defer mock.Reset()
+			convey.So(hdm.SetRunMode(), convey.ShouldBeNil)
+		})
+		convey.Convey("910", func() {
+			hdm := &HwDevManager{dmgr: dsmi.NewFakeDeviceManager()}
+			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(dsmi.FakeDeviceManager)), "GetChipInfo",
+				func(_ *dsmi.FakeDeviceManager, _ int32) (string, error) { return "910", nil })
+			defer mock.Reset()
+			convey.So(hdm.SetRunMode(), convey.ShouldBeNil)
+		})
+		convey.Convey("invalid mode", func() {
+			hdm := &HwDevManager{dmgr: dsmi.NewFakeDeviceManager()}
+			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(dsmi.FakeDeviceManager)), "GetChipInfo",
+				func(_ *dsmi.FakeDeviceManager, _ int32) (string, error) { return "110", nil })
+			defer mock.Reset()
+			convey.So(hdm.SetRunMode(), convey.ShouldNotBeNil)
+		})
+	})
 }

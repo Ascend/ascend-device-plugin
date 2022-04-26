@@ -28,11 +28,11 @@ import (
 )
 
 const (
-	device1 = `"devices":[{"device_id":"0","device_ip":"127.0.0.0"},{"device_id":"1","device_ip":"127.0.0.1"}]`
-	device2 = `"devices":[{"device_id":"1","device_ip":"127.0.0.1"},{"device_id":"0","device_ip":"127.0.0.0"}]`
-	annonationTest1 = `{"pod_name":"pod_name","server_id":"127.0.0.0",`+device1+`}`
-	annonationTest2 = `{"pod_name":"pod_name","server_id":"127.0.0.0",`+device2+`}`
-	sleepTestFour = 4
+	device1         = `"devices":[{"device_id":"0","device_ip":"127.0.0.0"},{"device_id":"1","device_ip":"127.0.0.1"}]`
+	device2         = `"devices":[{"device_id":"1","device_ip":"127.0.0.1"},{"device_id":"0","device_ip":"127.0.0.0"}]`
+	annonationTest1 = `{"pod_name":"pod_name","server_id":"127.0.0.0",` + device1 + `}`
+	annonationTest2 = `{"pod_name":"pod_name","server_id":"127.0.0.0",` + device2 + `}`
+	sleepTestFour   = 4
 )
 
 // TestPluginAPIListAndWatch for listAndWatch
@@ -85,11 +85,11 @@ func TestPluginAPIListAndWatch(t *testing.T) {
 }
 
 func getTestDevs() []common.NpuDevice {
-	return []common.NpuDevice {
+	return []common.NpuDevice{
 		{
-			DevType: "Ascend710",
-			ID: "Ascend710-0",
-			Health: "Health",
+			DevType:       "Ascend710",
+			ID:            "Ascend710-0",
+			Health:        "Health",
 			NetworkHealth: "Health",
 		},
 	}
@@ -379,4 +379,30 @@ func TestDonotCheckNetworkStatus(t *testing.T) {
 			convey.So(ret, convey.ShouldBeFalse)
 		})
 	})
+}
+
+// TestGetAscendVisiDevsWithVolcano for getAscendVisiDevsWithVolcano
+func TestGetAscendVisiDevsWithVolcano(t *testing.T) {
+	hdm := createFake910HwDevManager("ascend910", false, false, false)
+	fakeKubeInteractor := &KubeInteractor{}
+	fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", fakeKubeInteractor)
+	allocateDevice := sets.NewString()
+	ascendVisibleDevices := make(map[string]string, MaxVirtualDevNum)
+
+	convey.Convey("isExecTimingUpdate", t, func() {
+		convey.Convey("IsPatchSuccess is false", func() {
+			fakePluginAPI.getAscendVisiDevsWithVolcano(allocateDevice, &ascendVisibleDevices)
+			convey.So(GetAnnotationObj().IsUpdateComplete.Load(), convey.ShouldBeFalse)
+		})
+	})
+}
+
+// TestGetPreferredAllocation for GetPreferredAllocation
+func TestGetPreferredAllocation(t *testing.T) {
+	hdm := createFake910HwDevManager("ascend910", false, false, false)
+	fakeKubeInteractor := &KubeInteractor{}
+	fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", fakeKubeInteractor)
+	var ctx context.Context
+	req := &v1beta1.PreferredAllocationRequest{}
+	fakePluginAPI.GetPreferredAllocation(ctx, req)
 }
