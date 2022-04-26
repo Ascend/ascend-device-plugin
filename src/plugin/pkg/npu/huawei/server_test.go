@@ -68,22 +68,37 @@ func TestStop(t *testing.T) {
 	}
 	hps := NewHwPluginServe(fakeHwDevManager, "Ascend910")
 	hps.Stop()
+
+	hps.setSocket()
+	hps.Stop()
 	t.Logf("TestStop Run Pass")
 }
 
 // TestGetDevByType for test GetDevByType
 func TestGetDevByType(t *testing.T) {
-	fakeHwDevManager := createFakeDevManager("")
-	fakeHwDevManager.runMode = common.RunMode310
-	err := fakeHwDevManager.GetNPUs()
-	if err != nil {
-		t.Fatal(err)
+	fakeHwDevManager := &HwDevManager{
+		runMode:  "Ascend310",
+		dmgr:     dsmi.NewFakeDeviceManager(),
+		stopFlag: atomic.NewBool(false),
+		allDevs:  []common.NpuDevice{},
 	}
 	hps := NewHwPluginServe(fakeHwDevManager, "Ascend310")
-	err = hps.GetDevByType()
-	if err != nil {
-		t.Fatal("TestGetDevByType Run Failed")
+	if err := hps.GetDevByType(); err == nil {
+		t.Fatalf("TestGetDevByType Run Failed, expect err, but nil")
 	}
+
+	fakeHwDevManager.allDevs = []common.NpuDevice{{ID: "0"}}
+	hps = NewHwPluginServe(fakeHwDevManager, "Ascend310")
+	if err := hps.GetDevByType(); err == nil {
+		t.Fatalf("TestGetDevByType Run Failed, expect err, but nil")
+	}
+
+	fakeHwDevManager.allDevs = []common.NpuDevice{{ID: "0", DevType: "Ascend310"}}
+	hps = NewHwPluginServe(fakeHwDevManager, "Ascend310")
+	if err := hps.GetDevByType(); err != nil {
+		t.Fatalf("TestGetDevByType Run Failed, err is %v", err)
+	}
+
 	t.Logf("TestGetDevByType Run Pass")
 }
 

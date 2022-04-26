@@ -4,17 +4,13 @@
 package vnpumanager
 
 import (
-	"context"
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/kubernetes"
-
 	"huawei.com/npu-exporter/hwlog"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
@@ -183,14 +179,6 @@ func getCoreAndCount(devCoreList []string) map[string]int {
 		coreAndCount[devCore]++
 	}
 	return coreAndCount
-}
-
-func getAnnotationFromNode(kubeClient kubernetes.Interface, runMode, phyIDStr string) ([]string, error) {
-	node, err := kubeClient.CoreV1().Nodes().Get(context.Background(), common.NodeName, v1.GetOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("get node failed: %v", err)
-	}
-	return getAnnotation(node.Annotations, runMode, phyIDStr), nil
 }
 
 func getAnnotation(annotation map[string]string, runMode, phyIDStr string) []string {
