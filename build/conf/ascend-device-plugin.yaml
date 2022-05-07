@@ -99,10 +99,9 @@ compile:
               - "{{ systemEnv.workspace }}/{{ component}}/output/device-plugin"
             mode: 500
         - commands:
-            - command: "unzip -n -d {{ systemEnv.workspace }}/{{ component}}/npu-exporter/ {{ systemEnv.workspace }}/{{ component}}/npu-exporter/Ascend-mindxdl-npu-exporter_*_linux-{{systemEnv.processor}}.zip"
-            - command: "if [ -d '{{systemEnv.workspace }}/ascend-device-plugin/npu-exporter' ];
-        then cp -rf {{ systemEnv.workspace }}/ascend-device-plugin/npu-exporter/lib {{ systemEnv.workspace }}/ascend-device-plugin/output;
-        cp -rf {{ systemEnv.workspace }}/ascend-device-plugin/npu-exporter/cert-importer {{ systemEnv.workspace }}/ascend-device-plugin/output;
+            - command: "if [ -d '{{systemEnv.workspace }}/npu-exporter' ];
+        then cp -rf {{ systemEnv.workspace }}/npu-exporter/lib {{ systemEnv.workspace }}/ascend-device-plugin/output;
+        cp -rf {{ systemEnv.workspace }}/npu-exporter/cert-importer {{ systemEnv.workspace }}/ascend-device-plugin/output;
         chmod 550 {{ systemEnv.workspace }}/ascend-device-plugin/output/lib;
         chmod 500 {{ systemEnv.workspace }}/ascend-device-plugin/output/lib/*;
         chmod 500 {{ systemEnv.workspace }}/ascend-device-plugin/output/cert-importer;fi"
