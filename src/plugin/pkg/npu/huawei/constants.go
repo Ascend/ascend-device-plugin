@@ -21,7 +21,7 @@ const (
 	// MaxAge the log file last time
 	MaxAge = 7
 	// config map name
-	podDeviceKey    = "ascend.kubectl.kubernetes.io/ascend-910-configuration"
+	pod910DeviceKey = "ascend.kubectl.kubernetes.io/ascend-910-configuration"
 	pod710DeviceKey = "ascend.kubectl.kubernetes.io/ascend-710-configuration"
 	// visible env
 	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"
@@ -31,7 +31,8 @@ const (
 	huaweiAscend910  = "huawei.com/Ascend910"
 	huaweiAscend710  = "huawei.com/Ascend710"
 	podPredicateTime = "predicate-time"
-	pod2kl           = "huawei/kltDev"
+	pod2kl           = "huawei.com/kltDev"
+	podRealAlloc     = "huawei.com/AscendReal"
 	interval         = 1
 	timeout          = 10
 

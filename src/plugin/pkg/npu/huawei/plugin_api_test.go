@@ -225,12 +225,17 @@ func TestGetDevicePluginOptions(t *testing.T) {
 
 // TestGetNPUAnnotationOfPod for test getNPUAnnotationOfPod
 func TestGetNPUAnnotationOfPod(t *testing.T) {
+	mock := ApplyFunc(tryUpdatePodAnnotation, func(hps *HwPluginServe, pod *v1.Pod,
+		annotation map[string]string) error {
+		return nil
+	})
+	defer mock.Reset()
 	pods := mockPodList()
 	var res []v1.Pod
-	ascendVisibleDevices := make(map[string]string, MaxVirtualDevNum)
 	hdm := createFakeDevManager("ascend910")
 	fakeKubeInteractor := &KubeInteractor{}
 	fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", fakeKubeInteractor)
+	fakePluginAPI.hps.devices["Ascend910-0"] = &common.NpuDevice{}
 	for _, pod := range pods {
 		if err := fakePluginAPI.checkPodNameAndSpace(pod.Name, podNameMaxLength); err != nil {
 			t.Fatal("TestGetNPUAnnotationOfPod Run Failed")
@@ -243,18 +248,18 @@ func TestGetNPUAnnotationOfPod(t *testing.T) {
 			res = append(res, pod)
 		}
 	}
-	oldPod := getOldestPod(pods)
+	oldPod := getOldestPod(pods, fakePluginAPI.hps)
 	if oldPod == nil {
 		t.Fatal("TestGetNPUAnnotationOfPod Run Failed")
 	}
-	allocateDevice := sets.NewString()
-	err := fakePluginAPI.getNPUAnnotationOfPod(oldPod, &allocateDevice, 1)
+
+	allocateDevice, err := fakePluginAPI.getVolAllocateDevice(oldPod)
 	if err != nil {
-		t.Fatal("TestGetNPUAnnotationOfPod Run Failed")
+		t.Fatalf("TestGetNPUAnnotationOfPod Run Failed, error is %v", err)
 	}
-	err = fakePluginAPI.getAscendVisiDevsWithVolcano(allocateDevice, &ascendVisibleDevices)
+	_, err = fakePluginAPI.getDeviceListIP(allocateDevice)
 	if err != nil {
-		t.Fatal("TestGetNPUAnnotationOfPod Run Failed")
+		t.Fatalf("TestGetNPUAnnotationOfPod Run Failed, error is %v", err)
 	}
 	t.Logf("TestGetNPUAnnotationOfPod Run Pass")
 }
@@ -386,12 +391,11 @@ func TestGetAscendVisiDevsWithVolcano(t *testing.T) {
 	hdm := createFake910HwDevManager("ascend910", false, false, false)
 	fakeKubeInteractor := &KubeInteractor{}
 	fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", fakeKubeInteractor)
-	allocateDevice := sets.NewString()
-	ascendVisibleDevices := make(map[string]string, MaxVirtualDevNum)
+	var allocateDevice []string
 
 	convey.Convey("isExecTimingUpdate", t, func() {
 		convey.Convey("IsPatchSuccess is false", func() {
-			fakePluginAPI.getAscendVisiDevsWithVolcano(allocateDevice, &ascendVisibleDevices)
+			fakePluginAPI.getDeviceListIP(allocateDevice)
 			convey.So(GetAnnotationObj().IsUpdateComplete.Load(), convey.ShouldBeFalse)
 		})
 	})
