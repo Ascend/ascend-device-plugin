@@ -16,7 +16,8 @@ import (
 const (
 	kubeEnvMaxLength = 253
 	component        = "device-plugin"
-	idSplitNum       = 2
+	// PhyDeviceLen is the length of physical device
+	PhyDeviceLen = 2
 	// VirDeviceLen is the length of virtual device
 	VirDeviceLen = 4
 	// VirtualDev represent virtual device
@@ -49,13 +50,14 @@ func GetDeviceID(deviceName string, ascendRuntimeOptions string) (string, string
 	// ascend310:  davinci-mini0
 	idSplit := strings.Split(deviceName, "-")
 
-	if len(idSplit) < idSplitNum {
+	if len(idSplit) < PhyDeviceLen {
 		return "", "", fmt.Errorf("id: %s is invalid", deviceName)
 	}
 	var virID string
 	deviceID := idSplit[len(idSplit)-1]
+	// for virtual device, index 2 data means it's id
 	if ascendRuntimeOptions == VirtualDev && len(idSplit) == VirDeviceLen {
-		virID = idSplit[idSplitNum]
+		virID = idSplit[PhyDeviceLen]
 	}
 	return deviceID, virID, nil
 }
@@ -94,5 +96,3 @@ func IsVirtualDev(devType string) bool {
 	reg710 := regexp.MustCompile(virtual710DevsPattern)
 	return reg910.MatchString(devType) || reg710.MatchString(devType)
 }
-
-

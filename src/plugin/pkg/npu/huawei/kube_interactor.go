@@ -66,10 +66,10 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 			hwlog.RunLog.Errorf("failed to get node, nodeName: %s, err: %v", ki.nodeName, err)
 			return false, nil
 		}
-		if firstTimeList {
-			ki.resetNodeAnnotations(node)
-		}
 		newNode := node.DeepCopy()
+		if firstTimeList {
+			ki.resetNodeAnnotations(newNode)
+		}
 		if isAlloc {
 			annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, devType)
 			ki.singleDevAnnotationUpdate(annotationTag, groupAllocatableDevs, newNode)
@@ -268,19 +268,18 @@ func (ki *KubeInteractor) singleDevAnnotationUpdate(annotationTag string, groupA
 }
 
 func (ki *KubeInteractor) resetNodeAnnotations(node *v1.Node) {
-	delete(node.Annotations, huaweiUnHealthAscend910)
-	delete(node.Annotations, huaweiNetworkUnHealthAscend910)
-	delete(node.Annotations, huaweiAscend910)
-	delete(node.Annotations, resourceNamePrefix+hiAIAscend710Prefix)
-	delete(node.Annotations, resourceNamePrefix+pwr2CSuffix)
-	delete(node.Annotations, resourceNamePrefix+pwr4CSuffix)
-	delete(node.Annotations, resourceNamePrefix+pwr8CSuffix)
-	delete(node.Annotations, resourceNamePrefix+pwr16CSuffix)
-	delete(node.Annotations, resourceNamePrefix+chip710Core1C)
-	delete(node.Annotations, resourceNamePrefix+chip710Core2C)
-	delete(node.Annotations, resourceNamePrefix+chip710Core4C)
-	delete(node.Labels, huaweiRecoverAscend910)
-	delete(node.Labels, huaweiNetworkRecoverAscend910)
+	annotationList := []string{huaweiUnHealthAscend910, huaweiNetworkUnHealthAscend910, huaweiAscend910,
+		huaweiAscend710, resourceNamePrefix + pwr2CSuffix, resourceNamePrefix + pwr4CSuffix,
+		resourceNamePrefix + pwr8CSuffix, resourceNamePrefix + pwr16CSuffix, resourceNamePrefix + chip710Core1C,
+		resourceNamePrefix + chip710Core2C, resourceNamePrefix + chip710Core4C, huaweiRecoverAscend910,
+		huaweiNetworkRecoverAscend910}
+	for _, k := range annotationList {
+		if _, exist := node.Status.Allocatable[v1.ResourceName(k)]; !exist {
+			delete(node.Annotations, k)
+			continue
+		}
+		node.Annotations[k] = ""
+	}
 	firstTimeList = false
 }
 
