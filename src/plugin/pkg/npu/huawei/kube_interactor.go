@@ -55,6 +55,23 @@ func NewKubeInteractor() (*KubeInteractor, error) {
 	}, nil
 }
 
+func (ki *KubeInteractor) annotationReset() {
+	node, err := ki.clientset.CoreV1().Nodes().Get(context.Background(), ki.nodeName, metav1.GetOptions{})
+	if err != nil {
+		hwlog.RunLog.Errorf("failed to get node, nodeName: %s, err: %v", ki.nodeName, err)
+		return
+	}
+	newNode := node.DeepCopy()
+	ki.resetNodeAnnotations(newNode)
+	hwlog.RunLog.Infof("newNode.Annotations: %v", newNode.Annotations)
+	updatedNode, _, err := nodeutil.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), node, newNode)
+	if err != nil {
+		hwlog.RunLog.Errorf("failed to patch volcano npu resource: %v", err)
+		return
+	}
+	hwlog.RunLog.Infof("updatedNode.Annotations: %v", updatedNode.Annotations)
+}
+
 func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]string,
 	isAlloc, isVir bool, devType, phyCoreCount string) error {
 	var err error
@@ -67,9 +84,6 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 			return false, nil
 		}
 		newNode := node.DeepCopy()
-		if firstTimeList {
-			ki.resetNodeAnnotations(newNode)
-		}
 		if isAlloc {
 			annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, devType)
 			ki.singleDevAnnotationUpdate(annotationTag, groupAllocatableDevs, newNode)
@@ -280,7 +294,6 @@ func (ki *KubeInteractor) resetNodeAnnotations(node *v1.Node) {
 		}
 		node.Annotations[k] = ""
 	}
-	firstTimeList = false
 }
 
 func (ki *KubeInteractor) convertStringToSet(deviceNames string) sets.String {
