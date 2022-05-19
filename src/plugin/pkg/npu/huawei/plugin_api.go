@@ -57,6 +57,7 @@ var (
 	stateThreadNum                int
 	m                             sync.Mutex
 	firstTimeList                 = true
+	dpStartReset                  sync.Once
 	totalUHDevices                sets.String
 	totalNetworkUnhealthDevices   sets.String
 	lastTimeNetworkRecoverDevices sets.String
@@ -159,12 +160,13 @@ func (s *pluginAPI) ListAndWatch(emtpy *v1beta1.Empty, stream v1beta1.DevicePlug
 			s.hps.devices = devices
 		}
 		s.isDeviceStatusChange()
+		dpStartReset.Do(func() {
+			s.hps.kubeInteractor.annotationReset()
+		})
 		if useVolcanoType {
 			s.updatePodRealAllocate(podPhaseBlackList)
 			s.hps.hdm.manager.DoWithVolcanoListAndWatch(s.hps)
 		}
-		// turn on log print
-		logFlag, firstTimeList = true, false
 		resp.Devices = resp.Devices[:0]
 		s.updateKubeletDevInfo(resp, stream)
 		m.Unlock()
@@ -183,6 +185,7 @@ func (s *pluginAPI) updateKubeletDevInfo(resp *v1beta1.ListAndWatchResponse,
 			hwlog.RunLog.Errorf("listAndWatch: send device info failed, please "+
 				"check kubelet status, err: %s", err.Error())
 		}
+		firstTimeList = false
 		return
 	}
 	var notInVolDev []string
@@ -701,7 +704,7 @@ func (s *pluginAPI) isAscendAssignedPod(pod *v1.Pod) bool {
 	annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, s.hps.devType)
 	_, ok := pod.ObjectMeta.Annotations[annotationTag]
 	if !ok {
-		hwlog.RunLog.Infof("no assigned flag, pod Name: %s, pod NameSpace: %s", pod.Name, pod.Namespace)
+		hwlog.RunLog.Debugf("no assigned flag, pod Name: %s, pod NameSpace: %s", pod.Name, pod.Namespace)
 		return false
 	}
 	return true

@@ -117,6 +117,8 @@ func (hnm *HwAscend710Manager) groupDevsByStatus(hps *HwPluginServe) {
 			totalUHDevices.Insert(device.ID)
 		}
 	}
+	hwlog.RunLog.Debugf("healthy device %v", hps.healthDevice)
+	hwlog.RunLog.Debugf("total unhealthy devices %v", totalUHDevices)
 }
 
 // GetAnnotationMap Get Annonation
