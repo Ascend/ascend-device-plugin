@@ -160,10 +160,10 @@ func (s *pluginAPI) ListAndWatch(emtpy *v1beta1.Empty, stream v1beta1.DevicePlug
 			s.hps.devices = devices
 		}
 		s.isDeviceStatusChange()
-		dpStartReset.Do(func() {
-			s.hps.kubeInteractor.annotationReset()
-		})
 		if useVolcanoType {
+			dpStartReset.Do(func() {
+				s.hps.kubeInteractor.annotationReset()
+			})
 			s.updatePodRealAllocate(podPhaseBlackList)
 			s.hps.hdm.manager.DoWithVolcanoListAndWatch(s.hps)
 		}
