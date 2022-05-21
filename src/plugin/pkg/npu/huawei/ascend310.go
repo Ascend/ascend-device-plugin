@@ -5,8 +5,6 @@
 // Package huawei implements the query and allocation of the device and the function of the log.
 package huawei
 
-import "C"
-
 // HwAscend310Manager manages huawei Ascend310 devices.
 type HwAscend310Manager struct {
 	ascendCommonFunction
@@ -14,11 +12,13 @@ type HwAscend310Manager struct {
 
 // NewHwAscend310Manager used to create ascend 310 manager
 func NewHwAscend310Manager() *HwAscend310Manager {
-	var nam string
-	nam = hiAIAscend310Prefix
+	name := hiAIAscend310Prefix
 	if GetFdFlag {
-		nam = hiAIAscendfdPrefix
+		name = hiAIAscendfdPrefix
 	}
-	return &HwAscend310Manager{ascendCommonFunction{name: nam,
-		unHealthyKey: huaweiUnHealthAscend310}}
+	return &HwAscend310Manager{
+		ascendCommonFunction: ascendCommonFunction{
+			name:         name,
+			unHealthyKey: huaweiUnHealthAscend310},
+	}
 }

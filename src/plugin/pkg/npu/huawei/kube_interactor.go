@@ -20,7 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
-	nodeutil "k8s.io/kubernetes/pkg/util/node"
+	"k8s.io/kubernetes/pkg/util/node"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 )
@@ -56,15 +56,15 @@ func NewKubeInteractor() (*KubeInteractor, error) {
 }
 
 func (ki *KubeInteractor) annotationReset() {
-	node, err := ki.clientset.CoreV1().Nodes().Get(context.Background(), ki.nodeName, metav1.GetOptions{})
+	curNode, err := ki.clientset.CoreV1().Nodes().Get(context.Background(), ki.nodeName, metav1.GetOptions{})
 	if err != nil {
 		hwlog.RunLog.Errorf("failed to get node, nodeName: %s, err: %v", ki.nodeName, err)
 		return
 	}
-	newNode := node.DeepCopy()
+	newNode := curNode.DeepCopy()
 	ki.resetNodeAnnotations(newNode)
 	hwlog.RunLog.Infof("newNode.Annotations: %v", newNode.Annotations)
-	updatedNode, _, err := nodeutil.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), node, newNode)
+	updatedNode, _, err := node.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), curNode, newNode)
 	if err != nil {
 		hwlog.RunLog.Errorf("failed to patch volcano npu resource: %v", err)
 		return
@@ -76,32 +76,31 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 	isAlloc, isVir bool, devType, phyCoreCount string) error {
 	var err error
 	err = wait.PollImmediate(interval*time.Second, timeout*time.Second, func() (bool, error) {
-		var node *v1.Node
-		node, err = ki.clientset.CoreV1().Nodes().Get(context.Background(), ki.nodeName, metav1.GetOptions{})
-
+		curNode, err := ki.clientset.CoreV1().Nodes().Get(context.Background(), ki.nodeName, metav1.GetOptions{})
 		if err != nil {
 			hwlog.RunLog.Errorf("failed to get node, nodeName: %s, err: %v", ki.nodeName, err)
 			return false, nil
 		}
-		newNode := node.DeepCopy()
+		newNode := curNode.DeepCopy()
 		if isAlloc {
 			annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, devType)
 			ki.singleDevAnnotationUpdate(annotationTag, groupAllocatableDevs, newNode)
 		} else {
-			ki.multiDevAnnotationUpdate(groupAllocatableDevs, node, newNode)
+			ki.multiDevAnnotationUpdate(groupAllocatableDevs, curNode, newNode)
 		}
 		ki.addChipCoreToAnnotation(devType, phyCoreCount, newNode)
 		// variables are defined in advance, the value will be used in subsequent assignment
 		newNetworkRecoverDevSets := sets.String{}
 		// for 910 failure rescheduling
 		if devType == hiAIAscend910Prefix && !isVir {
-			ki.update910Annotation(node, newNode, groupAllocatableDevs, &newNetworkRecoverDevSets)
+			ki.update910Annotation(curNode, newNode, groupAllocatableDevs, &newNetworkRecoverDevSets)
 		}
 		if devType == hiAIAscend710Prefix && !isVir {
-			ki.update710Annotation(node, newNode, groupAllocatableDevs[huaweiAscend710])
+			ki.update710Annotation(curNode, newNode, groupAllocatableDevs[huaweiAscend710])
 		}
 		hwlog.RunLog.Infof("newNode.Annotations: %v", newNode.Annotations)
-		updatedNode, _, err := nodeutil.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), node, newNode)
+		updatedNode, _, err := node.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), curNode,
+			newNode)
 		if err != nil {
 			hwlog.RunLog.Errorf("failed to patch volcano npu resource: %v", err)
 			return false, nil

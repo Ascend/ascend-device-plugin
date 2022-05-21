@@ -25,13 +25,14 @@ import (
 
 // HwDevManager manages huawei device devices.
 type HwDevManager struct {
-	manager     devManager
-	runMode     string
-	allDevTypes []string
-	allDevs     []common.NpuDevice
-	defaultDevs []string
-	stopFlag    *atomic.Bool
-	dmgr        dsmi.DeviceMgrInterface
+	manager        devManager
+	runMode        string
+	allDevTypes    []string
+	allDevs        []common.NpuDevice
+	defaultDevs    []string
+	stopFlag       *atomic.Bool
+	dmgr           dsmi.DeviceMgrInterface
+	serveUpdateMap map[string]chan int
 }
 
 // Option option
@@ -71,9 +72,6 @@ var (
 	logFlag = true
 
 	presetVDevice bool
-
-	// ServeUpdateMap serveUpdateMap
-	ServeUpdateMap = make(map[string]chan int, initMapCap)
 )
 
 type devManager interface {
@@ -96,9 +94,10 @@ func NewHwDevManager(mode string) *HwDevManager {
 		callListAndWatch = make(chan struct{})
 	})
 	return &HwDevManager{
-		runMode:  mode,
-		dmgr:     dsmi.NewDeviceManager(),
-		stopFlag: atomic.NewBool(false),
+		runMode:        mode,
+		dmgr:           dsmi.NewDeviceManager(),
+		stopFlag:       atomic.NewBool(false),
+		serveUpdateMap: make(map[string]chan int, initMapCap),
 	}
 }
 
@@ -153,7 +152,7 @@ func (hdm *HwDevManager) Serve(devType string) {
 	var hps HwPluginServeInterface
 	for !hdm.stopFlag.Load() {
 		select {
-		case _, _ = <-ServeUpdateMap[devType]:
+		case _, _ = <-hdm.serveUpdateMap[devType]:
 			if !presetVDevice {
 				hwlog.RunLog.Infof("update go routine %s", devType)
 				preStart(hps)

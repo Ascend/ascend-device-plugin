@@ -8,8 +8,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
-
 	"huawei.com/npu-exporter/hwlog"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
@@ -63,7 +61,7 @@ var (
 	BuildVersion string
 )
 
-func initLogModule(stopCh <-chan struct{}) {
+func initLogModule(stopCh <-chan struct{}) error {
 	var loggerPath string
 	loggerPath = *logFile
 	if *fdFlag {
@@ -76,24 +74,27 @@ func initLogModule(stopCh <-chan struct{}) {
 		MaxAge:      *logMaxAge,
 	}
 	if err := hwlog.InitRunLogger(&hwLogConfig, stopCh); err != nil {
-		fmt.Printf("init hwlog error %v", err.Error())
-		os.Exit(1)
+		fmt.Printf("hwlog init failed, error is %v", err)
+		return err
 	}
+	return nil
 }
 
 func main() {
 	flag.Parse()
 	if *version {
 		fmt.Printf("%s version: %s\n", BuildName, BuildVersion)
-		os.Exit(0)
+		return
 	}
 	if *listWatchPeriod < minListWatchPeriod || *listWatchPeriod > maxListWatchPeriod {
 		fmt.Printf("list and watch period %d out of range\n", *listWatchPeriod)
-		os.Exit(1)
+		return
 	}
 	stopCh := make(chan struct{})
 	defer close(stopCh)
-	initLogModule(stopCh)
+	if err := initLogModule(stopCh); err != nil {
+		return
+	}
 	hwlog.RunLog.Infof("ascend device plugin starting and the version is %s", BuildVersion)
 	neverStop := make(chan struct{})
 	switch *mode {

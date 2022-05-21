@@ -31,7 +31,7 @@ type HwAscend710Manager struct {
 // NewHwAscend710Manager used to create ascend 710 manager
 func NewHwAscend710Manager() *HwAscend710Manager {
 	return &HwAscend710Manager{
-		ascendCommonFunction{
+		ascendCommonFunction: ascendCommonFunction{
 			name:         hiAIAscend710Prefix,
 			unHealthyKey: huaweiUnHealthAscend710,
 		},
@@ -48,7 +48,10 @@ func (hnm *HwAscend710Manager) GetNPUs(allDevices *[]common.NpuDevice, allDevice
 	if err != nil {
 		return err
 	}
-	phyDevMapVirtualDev := make(map[uint32]string, devNum)
+	if devNum > hiAIMaxDeviceNum {
+		return fmt.Errorf("invalid device num: %d", devNum)
+	}
+	phyDevMapVirtualDev := make(map[uint32]string, maxTrainDevicesNum)
 	var deviTypes, vDevID []string
 	for i := int32(0); i < devNum; i++ {
 		phyID, err := hnm.dmgr.GetPhyID(ids[i])
