@@ -271,6 +271,9 @@ func (adc *ascendCommonFunction) GetNPUs(allDevices *[]common.NpuDevice, allDevi
 	if getDevListErrInfo != nil {
 		return getDevListErrInfo
 	}
+	if devNum > hiAIMaxDeviceNum {
+		return fmt.Errorf("invalid device num: %d", devNum)
+	}
 	for i := int32(0); i < devNum; i++ {
 		phyID, err := adc.dmgr.GetPhyID(ids[i])
 		if err != nil {
@@ -329,7 +332,7 @@ func (adc *ascendCommonFunction) DoWithVolcanoListAndWatch(hps *HwPluginServe) {
 
 func (adc *ascendCommonFunction) getAntStu(annoMap map[string]string) antStu {
 	return antStu{
-		Metadata{
+		Metadata: Metadata{
 			Annotation: annoMap,
 		},
 	}
@@ -421,7 +424,11 @@ func (adc *ascendCommonFunction) updateAiCore() string {
 	var deviceIDs [hiAIMaxDeviceNum]uint32
 	devNum, err := adc.dmgr.GetDeviceList(&deviceIDs)
 	if err != nil {
-		hwlog.RunLog.Errorf("DoWithVolcanoListAndWatch get device list fail")
+		hwlog.RunLog.Errorf("Get device list fail, error is %v", err)
+		return ""
+	}
+	if devNum > hiAIMaxDeviceNum {
+		hwlog.RunLog.Errorf("invalid device num: %d", devNum)
 		return ""
 	}
 	var phyCoreCount []string

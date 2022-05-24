@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/agiledragon/gomonkey/v2"
+	"github.com/agiledragon/gomonkey/v2"
 	"github.com/golang/mock/gomock"
 	"github.com/smartystreets/goconvey/convey"
 	"go.uber.org/atomic"
@@ -22,7 +22,7 @@ import (
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
-	mock_v1beta1 "Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_kubelet_v1beta1"
+	mockV1Beta1 "Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_kubelet_v1beta1"
 	"Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_kubernetes"
 	"Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_v1"
 )
@@ -72,7 +72,7 @@ func TestPluginAPIListAndWatch(t *testing.T) {
 	fakeKubeInteractor := &KubeInteractor{clientset: mockK8s, nodeName: "NODE_NAME"}
 	hdm.allDevs = getTestDevs()
 	for _, devType := range devTypes {
-		mockstream := mock_v1beta1.NewMockDevicePlugin_ListAndWatchServer(ctrl)
+		mockstream := mockV1Beta1.NewMockDevicePlugin_ListAndWatchServer(ctrl)
 		mockstream.EXPECT().Send(&v1beta1.ListAndWatchResponse{}).AnyTimes().Return(nil)
 		fakePluginAPI = createFakePluginAPI(hdm, devType, fakeKubeInteractor)
 		go changeBreakFlag(fakePluginAPI)
@@ -131,7 +131,7 @@ func TestAddAnnotation(t *testing.T) {
 	}
 	devTypes := hdm.GetDevType()
 	if len(devTypes) == 0 {
-		t.Fatal("TestPluginAPI_ListAndWatch Run Failed")
+		t.Fatal("TestAddAnnotation Run Failed")
 	}
 	var fakePluginAPI *pluginAPI
 	ctrl := gomock.NewController(t)
@@ -150,6 +150,9 @@ func TestAddAnnotation(t *testing.T) {
 	devices := make(map[string]string, 1)
 	devices["0"] = "127.0.0.0"
 	devices["1"] = "127.0.0.1"
+	if fakePluginAPI == nil {
+		t.Fatal("TestAddAnnotation Run Failed: create fake plugin api failed")
+	}
 	annonationString := fakePluginAPI.addAnnotation(devices, "pod_name", "127.0.0.0")
 	if annonationString == annonationTest1 || annonationString == annonationTest2 {
 		t.Logf("TestAddAnnotation Run Pass")
@@ -225,7 +228,7 @@ func TestGetDevicePluginOptions(t *testing.T) {
 
 // TestGetNPUAnnotationOfPod for test getNPUAnnotationOfPod
 func TestGetNPUAnnotationOfPod(t *testing.T) {
-	mock := ApplyFunc(tryUpdatePodAnnotation, func(hps *HwPluginServe, pod *v1.Pod,
+	mock := gomonkey.ApplyFunc(tryUpdatePodAnnotation, func(hps *HwPluginServe, pod *v1.Pod,
 		annotation map[string]string) error {
 		return nil
 	})
@@ -300,7 +303,7 @@ func mockPodList() []v1.Pod {
 func TestCheckDeviceNetworkHealthStatus(t *testing.T) {
 	convey.Convey("checkDeviceNetworkHealthStatus", t, func() {
 		convey.Convey("network status unchanged", func() {
-			patches := ApplyFunc(hwlog.RunLog.Error, func(args ...interface{}) {
+			patches := gomonkey.ApplyFunc(hwlog.RunLog.Error, func(args ...interface{}) {
 				return
 			})
 			defer patches.Reset()
@@ -324,7 +327,7 @@ func TestCheckDeviceNetworkHealthStatus(t *testing.T) {
 func TestCheckDeviceNetworkStatusChange(t *testing.T) {
 	convey.Convey("network health status", t, func() {
 		convey.Convey("network status changed to unhealthy", func() {
-			patches := ApplyFunc(hwlog.RunLog.Error, func(args ...interface{}) {
+			patches := gomonkey.ApplyFunc(hwlog.RunLog.Error, func(args ...interface{}) {
 				return
 			})
 			defer patches.Reset()
@@ -362,10 +365,10 @@ func TestDonotCheckNetworkStatus(t *testing.T) {
 			convey.So(ret, convey.ShouldBeFalse)
 		})
 		convey.Convey("device id error", func() {
-			patches := ApplyFunc(hwlog.RunLog.Errorf, func(format string, args ...interface{}) {
+			patches := gomonkey.ApplyFunc(hwlog.RunLog.Errorf, func(format string, args ...interface{}) {
 				return
 			})
-			patches2 := ApplyFunc(hwlog.RunLog.Error, func(args ...interface{}) {
+			patches2 := gomonkey.ApplyFunc(hwlog.RunLog.Error, func(args ...interface{}) {
 				return
 			})
 			defer patches.Reset()

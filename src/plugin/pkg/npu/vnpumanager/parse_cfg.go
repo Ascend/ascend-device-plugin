@@ -47,7 +47,6 @@ const (
 	// CfgMapName is configMap name
 	CfgMapName = "mindx-dl-vnpu-manager"
 
-
 	// CfgMapNamespace is VNPU configMap namespace
 	CfgMapNamespace = "volcano-system"
 

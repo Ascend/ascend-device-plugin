@@ -20,10 +20,11 @@ import (
 // TestUpdateHpsCache for test updateHpsCache
 func TestUpdateHpsCache(t *testing.T) {
 	fakeHwDevManager := &HwDevManager{
-		runMode:     "ascend910",
-		dmgr:        dsmi.NewFakeDeviceManager(),
-		stopFlag:    atomic.NewBool(false),
-		allDevTypes: []string{"Ascend910"},
+		runMode:        "ascend910",
+		dmgr:           dsmi.NewFakeDeviceManager(),
+		stopFlag:       atomic.NewBool(false),
+		allDevTypes:    []string{"Ascend910"},
+		serveUpdateMap: make(map[string]chan int, initMapCap),
 	}
 	fakeHwDevManager.manager = NewFakeHwAscend910Manager()
 	fakeHwDevManager.manager.SetDmgr(dsmi.NewFakeDeviceManager())
@@ -42,10 +43,11 @@ func TestUpdateHpsCache(t *testing.T) {
 // TestGetDiffDevCount for test getDiffDevCount
 func TestGetDiffDevCount(t *testing.T) {
 	fakeHwDevManager := &HwDevManager{
-		runMode:     common.RunMode710,
-		dmgr:        dsmi.NewFakeDeviceManager(),
-		stopFlag:    atomic.NewBool(false),
-		allDevTypes: []string{"Ascend710"},
+		runMode:        common.RunMode710,
+		dmgr:           dsmi.NewFakeDeviceManager(),
+		stopFlag:       atomic.NewBool(false),
+		allDevTypes:    []string{"Ascend710"},
+		serveUpdateMap: make(map[string]chan int, initMapCap),
 	}
 	newDevTypes := []common.NpuDevice{{DevType: "Ascend710"}}
 	getDiffDevCount(fakeHwDevManager, newDevTypes)
@@ -54,10 +56,11 @@ func TestGetDiffDevCount(t *testing.T) {
 // TestRegisterNewServer for test registerNewServer
 func TestRegisterNewServer(t *testing.T) {
 	fakeHwDevManager := &HwDevManager{
-		runMode:     "ascend910",
-		dmgr:        dsmi.NewFakeDeviceManager(),
-		stopFlag:    atomic.NewBool(false),
-		allDevTypes: []string{"Ascend910"},
+		runMode:        "ascend910",
+		dmgr:           dsmi.NewFakeDeviceManager(),
+		stopFlag:       atomic.NewBool(false),
+		allDevTypes:    []string{"Ascend910"},
+		serveUpdateMap: make(map[string]chan int, initMapCap),
 	}
 
 	newDevTypes := []string{"Ascend910"}

@@ -127,7 +127,8 @@ func (s *pluginAPI) GetDevicePluginOptions(ctx context.Context, e *v1beta1.Empty
 	return &v1beta1.DevicePluginOptions{}, nil
 }
 
-func (s *pluginAPI) GetDevByType(devices map[string]*common.NpuDevice) {
+func (s *pluginAPI) getDevByType() map[string]*common.NpuDevice {
+	devices := make(map[string]*common.NpuDevice, 1)
 	allDevs := s.hps.hdm.allDevs
 	for npuIdx := range allDevs {
 		npuDev := &allDevs[npuIdx]
@@ -135,6 +136,7 @@ func (s *pluginAPI) GetDevByType(devices map[string]*common.NpuDevice) {
 			devices[npuDev.ID] = npuDev
 		}
 	}
+	return devices
 }
 
 // ListAndWatch: if the server get stop signal ,the ListAndWatch should  stop,to be fix
@@ -155,9 +157,7 @@ func (s *pluginAPI) ListAndWatch(emtpy *v1beta1.Empty, stream v1beta1.DevicePlug
 		m.Lock()
 		stateThreadNum += interval
 		if !presetVDevice {
-			var devices = make(map[string]*common.NpuDevice, 1)
-			s.GetDevByType(devices)
-			s.hps.devices = devices
+			s.hps.devices = s.getDevByType()
 		}
 		s.isDeviceStatusChange()
 		if useVolcanoType {
@@ -238,7 +238,11 @@ func (s *pluginAPI) listenVirtualDevices() bool {
 	var deviceIDs [hiAIMaxDeviceNum]uint32
 	devNum, err := s.hps.hdm.dmgr.GetDeviceList(&deviceIDs)
 	if err != nil {
-		hwlog.RunLog.Errorf("Get device list fail")
+		hwlog.RunLog.Errorf("Get device list fail, error is %v", err)
+		return isStateChange
+	}
+	if devNum > hiAIMaxDeviceNum {
+		hwlog.RunLog.Error("Get device list fail")
 		return isStateChange
 	}
 	for idx := int32(0); idx < devNum; idx++ {
@@ -591,10 +595,8 @@ func sendDevToKubelet(resp *v1beta1.ListAndWatchResponse, stream v1beta1.DeviceP
 }
 
 func tryUpdatePodAnnotation(hps *HwPluginServe, pod *v1.Pod, annotation map[string]string) error {
-	var err error
 	for i := 0; i < retryPodUpdateCount; i++ {
-		var podNew *v1.Pod
-		podNew, err = hps.kubeInteractor.clientset.CoreV1().Pods(pod.Namespace).Get(context.Background(), pod.Name,
+		podNew, err := hps.kubeInteractor.clientset.CoreV1().Pods(pod.Namespace).Get(context.Background(), pod.Name,
 			metav1.GetOptions{})
 		if err != nil {
 			hwlog.RunLog.Errorf("query pod info failed, error is: %v", err)
@@ -612,8 +614,9 @@ func tryUpdatePodAnnotation(hps *HwPluginServe, pod *v1.Pod, annotation map[stri
 			metav1.UpdateOptions{}); err == nil {
 			return nil
 		}
+		hwlog.RunLog.Errorf("update pod annotation failed, error is %v", err)
 	}
-	return err
+	return fmt.Errorf("exceeded maximum number of retries")
 }
 
 func (s *pluginAPI) getPodConfigurationAnnotation(podName string, ascendVisibleDevices map[string]string) (string,
