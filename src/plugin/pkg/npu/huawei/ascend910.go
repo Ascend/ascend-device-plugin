@@ -99,19 +99,11 @@ func (hnm *HwAscend910Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe) {
 	if stateThreadNum == len(hps.hdm.allDevTypes) {
 		groupAllocatableDevs := hnm.GetAnnotationMap(totalDevices, hps.hdm.allDevTypes)
 		if err := hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, false, hnm.isVirExist(hps),
-			hps.devType, hnm.updateAiCore()); err != nil {
+			hps.devType); err != nil {
 			hwlog.RunLog.Errorf("patch Annotation failed, err: %v", err)
 		}
 		totalDevices = totalDevices.Intersection(sets.String{})
 		stateThreadNum = 0
-		if presetVDevice {
-			return
-		}
-		if callTiming == nil || callListAndWatch == nil {
-			return
-		}
-		callTiming <- struct{}{}
-		<-callListAndWatch
 	}
 }
 

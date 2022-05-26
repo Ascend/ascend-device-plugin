@@ -62,9 +62,6 @@ var (
 	totalNetworkUnhealthDevices   sets.String
 	lastTimeNetworkRecoverDevices sets.String
 	listenDevCountIsChange        = make(map[string]bool, initMapCap)
-	callTiming                    chan struct{}
-	callListAndWatch              chan struct{}
-	makeCallChanOnce              sync.Once
 	podPhaseBlackList             = map[v1.PodPhase]int{v1.PodFailed: 0, v1.PodSucceeded: 0}
 )
 
@@ -127,18 +124,6 @@ func (s *pluginAPI) GetDevicePluginOptions(ctx context.Context, e *v1beta1.Empty
 	return &v1beta1.DevicePluginOptions{}, nil
 }
 
-func (s *pluginAPI) getDevByType() map[string]*common.NpuDevice {
-	devices := make(map[string]*common.NpuDevice, 1)
-	allDevs := s.hps.hdm.allDevs
-	for npuIdx := range allDevs {
-		npuDev := &allDevs[npuIdx]
-		if npuDev.DevType == s.hps.devType {
-			devices[npuDev.ID] = npuDev
-		}
-	}
-	return devices
-}
-
 // ListAndWatch: if the server get stop signal ,the ListAndWatch should  stop,to be fix
 func (s *pluginAPI) ListAndWatch(emtpy *v1beta1.Empty, stream v1beta1.DevicePlugin_ListAndWatchServer) error {
 
@@ -156,9 +141,6 @@ func (s *pluginAPI) ListAndWatch(emtpy *v1beta1.Empty, stream v1beta1.DevicePlug
 		time.Sleep(time.Duration(sleepTime) * time.Second)
 		m.Lock()
 		stateThreadNum += interval
-		if !presetVDevice {
-			s.hps.devices = s.getDevByType()
-		}
 		s.isDeviceStatusChange()
 		if useVolcanoType {
 			dpStartReset.Do(func() {
@@ -328,7 +310,7 @@ func (s *pluginAPI) patchUnusedDevice() error {
 		isVir = true
 	}
 	if err := s.hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, true, isVir,
-		s.hps.devType, patchSpec); err != nil {
+		s.hps.devType); err != nil {
 		return fmt.Errorf("patch Annotations failed, error is: %v", err)
 	}
 	return nil

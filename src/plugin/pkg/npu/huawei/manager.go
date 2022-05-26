@@ -32,7 +32,6 @@ type HwDevManager struct {
 	defaultDevs    []string
 	stopFlag       *atomic.Bool
 	dmgr           dsmi.DeviceMgrInterface
-	serveUpdateMap map[string]chan int
 }
 
 // Option option
@@ -89,15 +88,10 @@ type devManager interface {
 
 // NewHwDevManager function is used to new a dev manager.
 func NewHwDevManager(mode string) *HwDevManager {
-	makeCallChanOnce.Do(func() {
-		callTiming = make(chan struct{})
-		callListAndWatch = make(chan struct{})
-	})
 	return &HwDevManager{
 		runMode:        mode,
 		dmgr:           dsmi.NewDeviceManager(),
 		stopFlag:       atomic.NewBool(false),
-		serveUpdateMap: make(map[string]chan int, initMapCap),
 	}
 }
 
@@ -151,14 +145,6 @@ func (hdm *HwDevManager) Serve(devType string) {
 	restart := true
 	var hps HwPluginServeInterface
 	for !hdm.stopFlag.Load() {
-		select {
-		case _, _ = <-hdm.serveUpdateMap[devType]:
-			if !presetVDevice {
-				hwlog.RunLog.Infof("update go routine %s", devType)
-				preStart(hps)
-			}
-		default:
-		}
 		if hdm.stopFlag.Load() {
 			break
 		}

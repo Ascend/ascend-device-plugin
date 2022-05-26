@@ -419,38 +419,3 @@ func (adc *ascendCommonFunction) isVirExist(hps *HwPluginServe) bool {
 	}
 	return common.IsVirtualDev(hps.hdm.allDevTypes[0])
 }
-
-func (adc *ascendCommonFunction) updateAiCore() string {
-	var deviceIDs [hiAIMaxDeviceNum]uint32
-	devNum, err := adc.dmgr.GetDeviceList(&deviceIDs)
-	if err != nil {
-		hwlog.RunLog.Errorf("Get device list fail, error is %v", err)
-		return ""
-	}
-	if devNum > hiAIMaxDeviceNum {
-		hwlog.RunLog.Errorf("invalid device num: %d", devNum)
-		return ""
-	}
-	var phyCoreCount []string
-	for i := int32(0); i < devNum; i++ {
-		healthState, err := adc.dmgr.GetDeviceHealth(int32(deviceIDs[i]))
-		if err != nil || (healthState != 0 && healthState != 1) {
-			hwlog.RunLog.Errorf("get chip state from logicID: %v, healthState: %v", deviceIDs[i], healthState)
-			continue
-		}
-		phyID, err := adc.dmgr.GetPhyID(deviceIDs[i])
-		if err != nil {
-			hwlog.RunLog.Errorf("updateAiCore get phyId failed from logicID: %v", deviceIDs[i])
-			continue
-		}
-		cgoDsmiVDevInfos, err := adc.dmgr.GetVDevicesInfo(deviceIDs[i])
-		if err != nil {
-			phyCoreCount = append(phyCoreCount, fmt.Sprintf("%d-%dc-%dc",
-				phyID, cgoDsmiVDevInfos.CoreCount, cgoDsmiVDevInfos.CoreCount))
-			continue
-		}
-		phyCoreCount = append(phyCoreCount, fmt.Sprintf("%d-%dc-%dc",
-			phyID, cgoDsmiVDevInfos.CoreCount, cgoDsmiVDevInfos.CoreNumUnused))
-	}
-	return strings.Join(phyCoreCount, ",")
-}
