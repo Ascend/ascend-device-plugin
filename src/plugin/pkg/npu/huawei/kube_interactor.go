@@ -20,7 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
-	nodeutil "k8s.io/kubernetes/pkg/util/node"
+	"k8s.io/kubernetes/pkg/util/node"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 )
@@ -55,39 +55,52 @@ func NewKubeInteractor() (*KubeInteractor, error) {
 	}, nil
 }
 
+func (ki *KubeInteractor) annotationReset() {
+	curNode, err := ki.clientset.CoreV1().Nodes().Get(context.Background(), ki.nodeName, metav1.GetOptions{})
+	if err != nil {
+		hwlog.RunLog.Errorf("failed to get node, nodeName: %s, err: %v", ki.nodeName, err)
+		return
+	}
+	newNode := curNode.DeepCopy()
+	ki.resetNodeAnnotations(newNode)
+	hwlog.RunLog.Infof("newNode.Annotations: %v", newNode.Annotations)
+	updatedNode, _, err := node.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), curNode, newNode)
+	if err != nil {
+		hwlog.RunLog.Errorf("failed to patch volcano npu resource: %v", err)
+		return
+	}
+	hwlog.RunLog.Infof("updatedNode.Annotations: %v", updatedNode.Annotations)
+}
+
 func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]string,
 	isAlloc, isVir bool, devType, phyCoreCount string) error {
 	var err error
 	err = wait.PollImmediate(interval*time.Second, timeout*time.Second, func() (bool, error) {
-		var node *v1.Node
-		node, err = ki.clientset.CoreV1().Nodes().Get(context.Background(), ki.nodeName, metav1.GetOptions{})
-
+		curNode, err := ki.clientset.CoreV1().Nodes().Get(context.Background(), ki.nodeName, metav1.GetOptions{})
 		if err != nil {
 			hwlog.RunLog.Errorf("failed to get node, nodeName: %s, err: %v", ki.nodeName, err)
 			return false, nil
 		}
-		if firstTimeList {
-			ki.resetNodeAnnotations(node)
-		}
-		newNode := node.DeepCopy()
+		newNode := curNode.DeepCopy()
 		if isAlloc {
 			annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, devType)
 			ki.singleDevAnnotationUpdate(annotationTag, groupAllocatableDevs, newNode)
 		} else {
-			ki.multiDevAnnotationUpdate(groupAllocatableDevs, node, newNode)
+			ki.multiDevAnnotationUpdate(groupAllocatableDevs, curNode, newNode)
 		}
 		ki.addChipCoreToAnnotation(devType, phyCoreCount, newNode)
 		// variables are defined in advance, the value will be used in subsequent assignment
 		newNetworkRecoverDevSets := sets.String{}
 		// for 910 failure rescheduling
 		if devType == hiAIAscend910Prefix && !isVir {
-			ki.update910Annotation(node, newNode, groupAllocatableDevs, &newNetworkRecoverDevSets)
+			ki.update910Annotation(curNode, newNode, groupAllocatableDevs, &newNetworkRecoverDevSets)
 		}
 		if devType == hiAIAscend710Prefix && !isVir {
-			ki.update710Annotation(node, newNode, groupAllocatableDevs[huaweiAscend710])
+			ki.update710Annotation(curNode, newNode, groupAllocatableDevs[huaweiAscend710])
 		}
 		hwlog.RunLog.Infof("newNode.Annotations: %v", newNode.Annotations)
-		updatedNode, _, err := nodeutil.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), node, newNode)
+		updatedNode, _, err := node.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), curNode,
+			newNode)
 		if err != nil {
 			hwlog.RunLog.Errorf("failed to patch volcano npu resource: %v", err)
 			return false, nil
@@ -268,20 +281,18 @@ func (ki *KubeInteractor) singleDevAnnotationUpdate(annotationTag string, groupA
 }
 
 func (ki *KubeInteractor) resetNodeAnnotations(node *v1.Node) {
-	delete(node.Annotations, huaweiUnHealthAscend910)
-	delete(node.Annotations, huaweiNetworkUnHealthAscend910)
-	delete(node.Annotations, huaweiAscend910)
-	delete(node.Annotations, resourceNamePrefix+hiAIAscend710Prefix)
-	delete(node.Annotations, resourceNamePrefix+pwr2CSuffix)
-	delete(node.Annotations, resourceNamePrefix+pwr4CSuffix)
-	delete(node.Annotations, resourceNamePrefix+pwr8CSuffix)
-	delete(node.Annotations, resourceNamePrefix+pwr16CSuffix)
-	delete(node.Annotations, resourceNamePrefix+chip710Core1C)
-	delete(node.Annotations, resourceNamePrefix+chip710Core2C)
-	delete(node.Annotations, resourceNamePrefix+chip710Core4C)
-	delete(node.Labels, huaweiRecoverAscend910)
-	delete(node.Labels, huaweiNetworkRecoverAscend910)
-	firstTimeList = false
+	annotationList := []string{huaweiUnHealthAscend910, huaweiNetworkUnHealthAscend910, huaweiAscend910,
+		huaweiAscend710, resourceNamePrefix + pwr2CSuffix, resourceNamePrefix + pwr4CSuffix,
+		resourceNamePrefix + pwr8CSuffix, resourceNamePrefix + pwr16CSuffix, resourceNamePrefix + chip710Core1C,
+		resourceNamePrefix + chip710Core2C, resourceNamePrefix + chip710Core4C, huaweiRecoverAscend910,
+		huaweiNetworkRecoverAscend910}
+	for _, k := range annotationList {
+		if _, exist := node.Status.Allocatable[v1.ResourceName(k)]; !exist {
+			delete(node.Annotations, k)
+			continue
+		}
+		node.Annotations[k] = ""
+	}
 }
 
 func (ki *KubeInteractor) convertStringToSet(deviceNames string) sets.String {

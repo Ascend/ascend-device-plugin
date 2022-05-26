@@ -59,8 +59,8 @@ func registerNewServer(hdm *HwDevManager, newDevTypes []string) {
 		hdm.allDevTypes = append(hdm.allDevTypes, devType)
 	}
 	for devType := range interDevTypes {
-		ServeUpdateMap[devType] = make(chan int, len(interDevTypes))
-		ServeUpdateMap[devType] <- 1
+		hdm.serveUpdateMap[devType] = make(chan int, len(interDevTypes))
+		hdm.serveUpdateMap[devType] <- 1
 	}
 	hwlog.RunLog.Infof("reRegister new type virtual device server complete")
 }

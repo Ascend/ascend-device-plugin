@@ -253,6 +253,9 @@ func (d *DeviceManager) GetDeviceList(devices *[hiAIMaxDeviceNum]uint32) (int32,
 	if err := C.dsmi_list_device(&ids[0], C.int(devNum)); err != 0 {
 		return retError, fmt.Errorf("unable to get device list, return error: %d", int32(err))
 	}
+	if devNum > hiAIMaxDeviceNum {
+		return retError, fmt.Errorf("invalid device num: %d", devNum)
+	}
 	// transfer device list
 	var i int32
 	for i = 0; i < devNum; i++ {
