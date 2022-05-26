@@ -113,6 +113,7 @@ compile:
 
 test:
   input:
+    files:
   process:
     type: ut
     testTool: shell
