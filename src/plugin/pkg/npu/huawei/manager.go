@@ -25,13 +25,13 @@ import (
 
 // HwDevManager manages huawei device devices.
 type HwDevManager struct {
-	manager        devManager
-	runMode        string
-	allDevTypes    []string
-	allDevs        []common.NpuDevice
-	defaultDevs    []string
-	stopFlag       *atomic.Bool
-	dmgr           dsmi.DeviceMgrInterface
+	manager     devManager
+	runMode     string
+	allDevTypes []string
+	allDevs     []common.NpuDevice
+	defaultDevs []string
+	stopFlag    *atomic.Bool
+	dmgr        dsmi.DeviceMgrInterface
 }
 
 // Option option
@@ -89,9 +89,9 @@ type devManager interface {
 // NewHwDevManager function is used to new a dev manager.
 func NewHwDevManager(mode string) *HwDevManager {
 	return &HwDevManager{
-		runMode:        mode,
-		dmgr:           dsmi.NewDeviceManager(),
-		stopFlag:       atomic.NewBool(false),
+		runMode:  mode,
+		dmgr:     dsmi.NewDeviceManager(),
+		stopFlag: atomic.NewBool(false),
 	}
 }
 

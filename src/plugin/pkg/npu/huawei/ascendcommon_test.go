@@ -158,49 +158,6 @@ func TestReloadHealthDevice(t *testing.T) {
 	}
 }
 
-// TestUpdateAiCore for updateAiCore
-func TestUpdateAiCore(t *testing.T) {
-	convey.Convey("TestUpdateAiCore", t, func() {
-		convey.Convey("GetDeviceList failed", func() {
-			adc := ascendCommonFunction{dmgr: dsmi.NewFakeDeviceManager()}
-			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(dsmi.FakeDeviceManager)), "GetDeviceList",
-				func(_ *dsmi.FakeDeviceManager, _ *[hiAIMaxDeviceNum]uint32) (int32, error) {
-					return 0,
-						fmt.Errorf("err")
-				})
-			defer mock.Reset()
-			convey.So(adc.updateAiCore(), convey.ShouldBeEmpty)
-		})
-		convey.Convey("GetDeviceHealth failed", func() {
-			adc := ascendCommonFunction{dmgr: dsmi.NewFakeDeviceManager()}
-			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(dsmi.FakeDeviceManager)), "GetDeviceHealth",
-				func(_ *dsmi.FakeDeviceManager, _ int32) (uint32, error) { return 0, fmt.Errorf("err") })
-			defer mock.Reset()
-			convey.So(adc.updateAiCore(), convey.ShouldBeEmpty)
-		})
-		convey.Convey("GetPhyID failed", func() {
-			adc := ascendCommonFunction{dmgr: dsmi.NewFakeDeviceManager()}
-			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(dsmi.FakeDeviceManager)), "GetPhyID",
-				func(_ *dsmi.FakeDeviceManager, _ uint32) (uint32, error) { return 0, fmt.Errorf("err") })
-			defer mock.Reset()
-			convey.So(adc.updateAiCore(), convey.ShouldBeEmpty)
-		})
-		convey.Convey("GetVDevicesInfo failed", func() {
-			adc := ascendCommonFunction{dmgr: dsmi.NewFakeDeviceManager()}
-			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(dsmi.FakeDeviceManager)), "GetVDevicesInfo",
-				func(_ *dsmi.FakeDeviceManager, _ uint32) (dsmi.CgoDsmiVDevInfo, error) {
-					return dsmi.CgoDsmiVDevInfo{}, fmt.Errorf("err")
-				})
-			defer mock.Reset()
-			convey.So(adc.updateAiCore(), convey.ShouldNotBeEmpty)
-		})
-		convey.Convey("return not empty", func() {
-			adc := ascendCommonFunction{dmgr: dsmi.NewFakeDeviceManager()}
-			convey.So(adc.updateAiCore(), convey.ShouldNotBeEmpty)
-		})
-	})
-}
-
 // TestVerifyPath for VerifyPath
 func TestVerifyPath(t *testing.T) {
 	convey.Convey("TestVerifyPath", t, func() {
