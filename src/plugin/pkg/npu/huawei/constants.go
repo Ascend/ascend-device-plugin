@@ -6,13 +6,13 @@ package huawei
 
 const (
 	// resource Name
-	resourceNamePrefix  = "huawei.com/"
-	hiAIAscend310Prefix = "Ascend310"
-	hiAIAscend910Prefix = "Ascend910"
-	hiAIAscend710Prefix = "Ascend710"
-	hiAIAscendfdPrefix  = "davinci-mini"
-	hiAISlogdConfig     = "/etc/slog.conf"
-	hiAIMaxDeviceNum    = 64
+	resourceNamePrefix   = "huawei.com/"
+	hiAIAscend310Prefix  = "Ascend310"
+	hiAIAscend910Prefix  = "Ascend910"
+	hiAIAscend310PPrefix = "Ascend310P"
+	hiAIAscendfdPrefix   = "davinci-mini"
+	hiAISlogdConfig      = "/etc/slog.conf"
+	hiAIMaxDeviceNum     = 64
 	// The unit is seconds
 	sleepTime = 5
 
@@ -21,15 +21,15 @@ const (
 	// MaxAge the log file last time
 	MaxAge = 7
 	// config map name
-	pod910DeviceKey = "ascend.kubectl.kubernetes.io/ascend-910-configuration"
-	pod710DeviceKey = "ascend.kubectl.kubernetes.io/ascend-710-configuration"
+	pod910DeviceKey  = "ascend.kubectl.kubernetes.io/ascend-910-configuration"
+	pod310PDeviceKey = "ascend.kubectl.kubernetes.io/ascend-310P-configuration"
 	// visible env
 	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"
 	// virtual runtime option env
 	ascendRuntimeOptionsEnv = "ASCEND_RUNTIME_OPTIONS"
 
 	huaweiAscend910  = "huawei.com/Ascend910"
-	huaweiAscend710  = "huawei.com/Ascend710"
+	huaweiAscend310P = "huawei.com/Ascend310P"
 	podPredicateTime = "predicate-time"
 	pod2kl           = "huawei.com/kltDev"
 	podRealAlloc     = "huawei.com/AscendReal"
@@ -41,7 +41,7 @@ const (
 	huaweiNetworkRecoverAscend910  = "huawei.com/Ascend910-NetworkRecover"
 	huaweiRecoverAscend910         = "huawei.com/Ascend910-Recover"
 	huaweiUnHealthAscend910        = "huawei.com/Ascend910-Unhealthy"
-	huaweiUnHealthAscend710        = "huawei.com/Ascend710-Unhealthy"
+	huaweiUnHealthAscend310P       = "huawei.com/Ascend310P-Unhealthy"
 	huaweiUnHealthAscend310        = "huawei.com/Ascend310-Unhealthy"
 	// FunctionNotFound for describe dsmi interface function is exist or not
 	FunctionNotFound = "-99998"

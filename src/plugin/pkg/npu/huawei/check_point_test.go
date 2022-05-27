@@ -5,9 +5,10 @@ package huawei
 
 import (
 	"fmt"
-	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"reflect"
 	"testing"
+
+	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/smartystreets/goconvey/convey"
@@ -153,8 +154,8 @@ func TestCheckDevType(t *testing.T) {
 			ret := checkDevType("xxx", hiAIAscend910Prefix)
 			convey.So(ret, convey.ShouldBeFalse)
 		})
-		convey.Convey("check 710 failed", func() {
-			ret := checkDevType("xxx", hiAIAscend710Prefix)
+		convey.Convey("check 310P failed", func() {
+			ret := checkDevType("xxx", hiAIAscend310PPrefix)
 			convey.So(ret, convey.ShouldBeFalse)
 		})
 		convey.Convey("check 310 failed", func() {

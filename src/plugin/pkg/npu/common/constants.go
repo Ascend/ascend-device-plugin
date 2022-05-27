@@ -33,6 +33,6 @@ const (
 	RunMode310 = "ascend310"
 	// RunMode910 for 910 chip
 	RunMode910 = "ascend910"
-	// RunMode710 for 710 chip
-	RunMode710 = "ascend710"
+	// RunMode310P for 310P chip
+	RunMode310P = "ascend310P"
 )

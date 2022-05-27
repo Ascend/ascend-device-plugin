@@ -18,28 +18,28 @@ import (
 )
 
 const (
-	chip710Core1C = "Ascend710-1c"
-	chip710Core2C = "Ascend710-2c"
-	chip710Core4C = "Ascend710-4c"
+	chip310PCore1C = "Ascend310P-1c"
+	chip310PCore2C = "Ascend310P-2c"
+	chip310PCore4C = "Ascend310P-4c"
 )
 
-// HwAscend710Manager manages huawei Ascend710 devices.
-type HwAscend710Manager struct {
+// HwAscend310PManager manages huawei Ascend310P devices.
+type HwAscend310PManager struct {
 	ascendCommonFunction
 }
 
-// NewHwAscend710Manager used to create ascend 710 manager
-func NewHwAscend710Manager() *HwAscend710Manager {
-	return &HwAscend710Manager{
-		ascendCommonFunction: ascendCommonFunction{
-			name:         hiAIAscend710Prefix,
-			unHealthyKey: huaweiUnHealthAscend710,
+// NewHwAscend310PManager used to create ascend 310P manager
+func NewHwAscend310PManager() *HwAscend310PManager {
+	return &HwAscend310PManager{
+		ascendCommonFunction{
+			name:         hiAIAscend310PPrefix,
+			unHealthyKey: huaweiUnHealthAscend310P,
 		},
 	}
 }
 
-// GetNPUs Discovers all HUAWEI Ascend710 devices by call dsmi interface
-func (hnm *HwAscend710Manager) GetNPUs(allDevices *[]common.NpuDevice, allDeviceTypes *[]string,
+// GetNPUs Discovers all HUAWEI Ascend310P devices by call dsmi interface
+func (hnm *HwAscend310PManager) GetNPUs(allDevices *[]common.NpuDevice, allDeviceTypes *[]string,
 	deviType string) error {
 	hwlog.RunLog.Infof("--->< deviType: %s", deviType)
 	var ids [hiAIMaxDeviceNum]uint32
@@ -51,7 +51,7 @@ func (hnm *HwAscend710Manager) GetNPUs(allDevices *[]common.NpuDevice, allDevice
 	if devNum > hiAIMaxDeviceNum {
 		return fmt.Errorf("invalid device num: %d", devNum)
 	}
-	phyDevMapVirtualDev := make(map[uint32]string, maxTrainDevicesNum)
+	phyDevMapVirtualDev := make(map[uint32]string, devNum)
 	var deviTypes, vDevID []string
 	for i := int32(0); i < devNum; i++ {
 		phyID, err := hnm.dmgr.GetPhyID(ids[i])
@@ -67,10 +67,10 @@ func (hnm *HwAscend710Manager) GetNPUs(allDevices *[]common.NpuDevice, allDevice
 		}
 		var devices []common.NpuDevice
 		if cgoDsmiVDevInfos.VDevNum == 0 {
-			devices, deviTypes = hnm.assemblePhyDevices(phyID, hiAIAscend710Prefix)
+			devices, deviTypes = hnm.assemblePhyDevices(phyID, hiAIAscend310PPrefix)
 			phyDevMapVirtualDev[phyID] = fmt.Sprintf("%d", phyID)
 		} else {
-			devices, deviTypes, vDevID = hnm.assembleVirtualDevices(phyID, cgoDsmiVDevInfos, hiAIAscend710Prefix)
+			devices, deviTypes, vDevID = hnm.assembleVirtualDevices(phyID, cgoDsmiVDevInfos, hiAIAscend310PPrefix)
 			phyDevMapVirtualDev[phyID] = strings.Join(vDevID, ",")
 		}
 		*allDevices = append(*allDevices, devices...)
@@ -81,8 +81,8 @@ func (hnm *HwAscend710Manager) GetNPUs(allDevices *[]common.NpuDevice, allDevice
 	return nil
 }
 
-// DoWithVolcanoListAndWatch ascend710 affinity scheduling
-func (hnm *HwAscend710Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe) {
+// DoWithVolcanoListAndWatch ascend310P affinity scheduling
+func (hnm *HwAscend310PManager) DoWithVolcanoListAndWatch(hps *HwPluginServe) {
 	hnm.groupDevsByStatus(hps)
 	usedDevices := sets.NewString()
 	getNodeNpuUsed(&usedDevices, hps)
@@ -99,8 +99,8 @@ func (hnm *HwAscend710Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe) {
 	}
 }
 
-func (hnm *HwAscend710Manager) groupDevsByStatus(hps *HwPluginServe) {
-	if hps.devType == hiAIAscend710Prefix {
+func (hnm *HwAscend310PManager) groupDevsByStatus(hps *HwPluginServe) {
+	if hps.devType == hiAIAscend310PPrefix {
 		totalUHDevices = sets.String{}
 	}
 	hps.healthDevice = sets.String{}
@@ -117,7 +117,7 @@ func (hnm *HwAscend710Manager) groupDevsByStatus(hps *HwPluginServe) {
 }
 
 // GetAnnotationMap Get Annonation
-func (hnm *HwAscend710Manager) GetAnnotationMap(allocatableDevices sets.String, devTypes []string) map[string]string {
+func (hnm *HwAscend310PManager) GetAnnotationMap(allocatableDevices sets.String, devTypes []string) map[string]string {
 	var annoMap = make(map[string]string, len(devTypes))
 	for _, suffix := range devTypes {
 		powerAnnotation := filterTagPowerDevice(allocatableDevices, suffix)

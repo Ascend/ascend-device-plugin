@@ -145,8 +145,8 @@ func TestGetDeviceID(t *testing.T) {
 
 // TestReloadHealthDevice for reloadHealthDevice
 func TestReloadHealthDevice(t *testing.T) {
-	devices := map[string]*common.NpuDevice{"Ascend710": &common.NpuDevice{ID: "0", Health: "Healthy"},
-		"Ascend710-1c": &common.NpuDevice{ID: "1", Health: "Unhealthy"}}
+	devices := map[string]*common.NpuDevice{"Ascend310P": &common.NpuDevice{ID: "0", Health: "Healthy"},
+		"Ascend310P-1c": &common.NpuDevice{ID: "1", Health: "Unhealthy"}}
 	hps := HwPluginServe{devices: devices}
 	adc := ascendCommonFunction{}
 	adc.reloadHealthDevice(&hps)

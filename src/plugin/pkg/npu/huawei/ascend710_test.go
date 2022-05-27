@@ -14,34 +14,34 @@ import (
 	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 )
 
-// TestHwAscend710ManagerGetNPUs for GetNPUs
-func TestHwAscend710ManagerGetNPUs(t *testing.T) {
+// TestHwAscend310PManagerGetNPUs for GetNPUs
+func TestHwAscend310PManagerGetNPUs(t *testing.T) {
 	resultDevMap := make(map[string]string)
 	for i := 0; i < npuTestNum; i++ {
-		resultDevMap[fmt.Sprintf("Ascend710-%d", i)] = ""
+		resultDevMap[fmt.Sprintf("Ascend310P-%d", i)] = ""
 	}
-	resultDevMap["Ascend710-4c-1-1"] = ""
-	resultDevMap["Ascend710-8c-2-1"] = ""
-	hdm := createFake710HwDevManager("ascend710", false, false, false)
+	resultDevMap["Ascend310P-4c-1-1"] = ""
+	resultDevMap["Ascend310P-8c-2-1"] = ""
+	hdm := createFake310PHwDevManager("ascend310P", false, false, false)
 	err := hdm.manager.GetNPUs(&hdm.allDevs, &hdm.allDevTypes, hdm.manager.GetMatchingDeviType())
 	if err != nil {
-		t.Fatalf("TestHwAscend710Manager_GetNPUs Run Failed")
+		t.Fatalf("TestHwAscend310PManager_GetNPUs Run Failed")
 	}
-	if !strings.Contains(hdm.allDevTypes[0], "Ascend710") {
-		t.Fatalf("TestHwAscend710Manager_GetNPUs Run Failed")
+	if !strings.Contains(hdm.allDevTypes[0], "Ascend310P") {
+		t.Fatalf("TestHwAscend310PManager_GetNPUs Run Failed")
 	}
 	for _, dev := range hdm.allDevs {
 		_, ok := resultDevMap[dev.ID]
 		if !ok {
-			t.Fatalf("TestHwAscend710Manager_GetNPUs Run Failed")
+			t.Fatalf("TestHwAscend310PManager_GetNPUs Run Failed")
 		}
 	}
-	t.Logf("TestHwAscend710Manager_GetNPUs Run Pass")
+	t.Logf("TestHwAscend310PManager_GetNPUs Run Pass")
 }
 
-// TestHwAscend710ManagerGetDevState for GetDevState
-func TestHwAscend710ManagerGetDevState(t *testing.T) {
-	hdm := createFake710HwDevManager("ascend710", false, false, false)
+// TestHwAscend310PManagerGetDevState for GetDevState
+func TestHwAscend310PManagerGetDevState(t *testing.T) {
+	hdm := createFake310PHwDevManager("ascend310P", false, false, false)
 	err := hdm.manager.GetNPUs(&hdm.allDevs, &hdm.allDevTypes, hdm.manager.GetMatchingDeviType())
 	if err != nil {
 		t.Fatal(err)
@@ -49,26 +49,26 @@ func TestHwAscend710ManagerGetDevState(t *testing.T) {
 	for _, dev := range hdm.allDevs {
 		state := hdm.manager.GetDevState(dev.ID, hdm.manager.GetDmgr())
 		if strings.Contains(dev.ID, "3") && state != v1beta1.Unhealthy {
-			t.Fatalf("TestHwAscend710Manager_GetDevState Run Failed %v", dev)
+			t.Fatalf("TestHwAscend310PManager_GetDevState Run Failed %v", dev)
 
 		} else if !strings.Contains(dev.ID, "3") && state == v1beta1.Unhealthy {
-			t.Fatalf("TestHwAscend710Manager_GetDevState Run Failed %v", dev)
+			t.Fatalf("TestHwAscend310PManager_GetDevState Run Failed %v", dev)
 		}
 	}
-	t.Logf("TestHwAscend710Manager_GetDevState Run Pass")
+	t.Logf("TestHwAscend310PManager_GetDevState Run Pass")
 }
 
-// TestHwAscend710ManagerGetDevPath for GetDevPath
-func TestHwAscend710ManagerGetDevPath(t *testing.T) {
-	hdm := createFake710HwDevManager("ascend710", false, false, false)
+// TestHwAscend310PManagerGetDevPath for GetDevPath
+func TestHwAscend310PManagerGetDevPath(t *testing.T) {
+	hdm := createFake310PHwDevManager("ascend310P", false, false, false)
 	containerPath, hostPath := hdm.manager.GetDevPath("0", physicalDev)
 	if hostPath != containerPath && hostPath != "/dev/davinci0" {
-		t.Fatal("TestHwAscend710Manager_GetDevPath Run Failed")
+		t.Fatal("TestHwAscend310PManager_GetDevPath Run Failed")
 	}
-	t.Logf("TestHwAscend710Manager_GetDevPath Run Pass")
+	t.Logf("TestHwAscend310PManager_GetDevPath Run Pass")
 }
 
-func createFake710HwDevManager(mode string, fdFlag, useAscendDocker, volcanoType bool) *HwDevManager {
+func createFake310PHwDevManager(mode string, fdFlag, useAscendDocker, volcanoType bool) *HwDevManager {
 	hdm := NewHwDevManager(mode)
 	o := Option{
 		GetFdFlag:          fdFlag,
@@ -79,7 +79,7 @@ func createFake710HwDevManager(mode string, fdFlag, useAscendDocker, volcanoType
 		KubeConfig:         "",
 	}
 	hdm.SetParameters(o)
-	hdm.manager = NewHwAscend710Manager()
+	hdm.manager = NewHwAscend310PManager()
 	hdm.manager.SetDmgr(dsmi.NewFakeDeviceManager())
 	return hdm
 }

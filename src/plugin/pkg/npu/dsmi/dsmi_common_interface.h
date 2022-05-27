@@ -271,7 +271,7 @@ int dsmi_get_vdevice_info(unsigned int devid, struct dsmi_vdev_info *info);
 * @param [out] *errorcount The number of error code
 * @param [out] *perrorcode The error code
 * @return 0 for success, others for fail
-* @note Support:Ascend310,Ascend710,Ascend910
+* @note Support:Ascend310,Ascend310P,Ascend910
 */
 int dsmi_get_device_errorcode(int device_id, int *errorcount, unsigned int *perrorcode);
 
@@ -282,7 +282,7 @@ int dsmi_get_device_errorcode(int device_id, int *errorcount, unsigned int *perr
 * @param [in] devid The device id
 * @param [out] *info The virtual device info
 * @return 0 for success, others for fail
-* @note Support:Ascend710,Ascend910
+* @note Support:Ascend310P,Ascend910
 */
 int dsmi_create_vdevice(unsigned int devid, unsigned int vdev_id, struct dsmi_create_vdev_res_stru *vdev_res,
     struct dsmi_create_vdev_result *vdev_result);
@@ -294,7 +294,7 @@ int dsmi_create_vdevice(unsigned int devid, unsigned int vdev_id, struct dsmi_cr
 * @param [in] devid The device id
 * @param [in] vdevid The virtual id, will be destroy
 * @return 0 for success, others for fail
-* @note Support:Ascend710,Ascend910
+* @note Support:Ascend310P,Ascend910
 */
 int dsmi_destroy_vdevice(unsigned int devid, unsigned int vdevid);
 

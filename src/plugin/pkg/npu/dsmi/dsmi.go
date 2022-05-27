@@ -154,7 +154,7 @@ const (
 	// dsmiMaxVdevNum is max number of vdevice, value is from driver specification
 	dsmiMaxVdevNum = 16
 
-	// dcmiMaxVdevNum is max number of 710 vdevice
+	// dcmiMaxVdevNum is max number of 310P vdevice
 	dcmiMaxVdevNum = 8
 
 	// MaxErrorCodeCount is the max number of error code
@@ -398,8 +398,8 @@ func (d *DeviceManager) CreateVirtualDevice(logicID uint32, runMode string, vNPU
 		return err
 	}
 	switch runMode {
-	case common.RunMode710:
-		return d.create710VirDevice(cgoDsmiVDevInfos, logicID, vNPUs)
+	case common.RunMode310P:
+		return d.create310PVirDevice(cgoDsmiVDevInfos, logicID, vNPUs)
 	case common.RunMode910:
 		return d.create910VirDevice(cgoDsmiVDevInfos, logicID, vNPUs)
 	default:
@@ -425,9 +425,9 @@ func (d *DeviceManager) create910VirDevice(vDevInfos CgoDsmiVDevInfo, logicID ui
 	return nil
 }
 
-func (d *DeviceManager) create710VirDevice(vDevInfos CgoDsmiVDevInfo, logicID uint32, vNPUs []string) error {
+func (d *DeviceManager) create310PVirDevice(vDevInfos CgoDsmiVDevInfo, logicID uint32, vNPUs []string) error {
 	if vDevInfos.CoreNumUnused < 1 || vDevInfos.VDevNum > dcmiMaxVdevNum {
-		return fmt.Errorf("the specification used to create 710 virtual device is error")
+		return fmt.Errorf("the specification used to create 310P virtual device is error")
 	}
 	for i := 0; i < len(vNPUs); i++ {
 		coreStr := strings.Replace(vNPUs[i], "c", "", -1)

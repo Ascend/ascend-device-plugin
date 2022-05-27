@@ -43,8 +43,8 @@ func TestHwDevManagerGetNPUs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fakeHwDevManager = createFakeDevManager("ascend710")
-	fakeHwDevManager.runMode = common.RunMode710
+	fakeHwDevManager = createFakeDevManager("ascend310P")
+	fakeHwDevManager.runMode = common.RunMode310P
 	err = fakeHwDevManager.GetNPUs()
 	if err != nil {
 		t.Fatal(err)
@@ -136,10 +136,10 @@ func TestSetRunMode(t *testing.T) {
 			defer mock.Reset()
 			convey.So(hdm.SetRunMode(), convey.ShouldBeNil)
 		})
-		convey.Convey("710", func() {
+		convey.Convey("310P", func() {
 			hdm := &HwDevManager{dmgr: dsmi.NewFakeDeviceManager()}
 			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(dsmi.FakeDeviceManager)), "GetChipInfo",
-				func(_ *dsmi.FakeDeviceManager, _ int32) (string, error) { return "710", nil })
+				func(_ *dsmi.FakeDeviceManager, _ int32) (string, error) { return "310P", nil })
 			defer mock.Reset()
 			convey.So(hdm.SetRunMode(), convey.ShouldBeNil)
 		})

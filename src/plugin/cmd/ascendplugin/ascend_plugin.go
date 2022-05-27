@@ -29,7 +29,7 @@ const (
 )
 
 var (
-	mode            = flag.String("mode", "", "Device plugin running mode: ascend310, ascend710, ascend910")
+	mode            = flag.String("mode", "", "Device plugin running mode: ascend310, ascend310P, ascend910")
 	fdFlag          = flag.Bool("fdFlag", false, "Whether to use fd system to manage device (default false)")
 	useAscendDocker = flag.Bool("useAscendDocker", true, "Whether to use ascend docker")
 	volcanoType     = flag.Bool("volcanoType", false,
@@ -51,7 +51,7 @@ var (
 	kubeconfig = flag.String("kubeConfig", "", "Path to a kubeconfig. "+
 		"Only required if out-of-cluster.")
 	presetVirtualDevice = flag.Bool("presetVirtualDevice", true, "Open the static of "+
-		"computing power splitting function, only support Ascend910 and Ascend710")
+		"computing power splitting function, only support Ascend910 and Ascend310P")
 )
 
 var (
@@ -97,8 +97,9 @@ func main() {
 	}
 	hwlog.RunLog.Infof("ascend device plugin starting and the version is %s", BuildVersion)
 	neverStop := make(chan struct{})
+
 	switch *mode {
-	case common.RunMode310, common.RunMode910, common.RunMode710, "":
+	case common.RunMode310, common.RunMode910, common.RunMode310P, "":
 		hwlog.RunLog.Infof("ascend device plugin running mode: %s", *mode)
 	default:
 		hwlog.RunLog.Infof("unSupport mode: %s, waiting indefinitely", *mode)
@@ -147,3 +148,4 @@ func startDiffTypeServe(hdm *huawei.HwDevManager) {
 		go hdm.Serve(devType)
 	}
 }
+

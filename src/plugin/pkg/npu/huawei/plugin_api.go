@@ -362,7 +362,7 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *v1beta1.AllocateRequ
 				return nil, err
 			}
 		}
-		if s.hps.runMode == common.RunMode910 || s.hps.runMode == common.RunMode710 {
+		if s.hps.runMode == common.RunMode910 || s.hps.runMode == common.RunMode310P {
 			s.mountfile(resp)
 			s.responseAnnotation(resp, ascendVisibleDevicesMap)
 		}
@@ -771,7 +771,7 @@ func (s *pluginAPI) responseAnnotation(resp *v1beta1.ContainerAllocateResponse, 
 	if s.hps.runMode == common.RunMode910 {
 		annotation[pod910DeviceKey] = instanceInfo
 	} else {
-		annotation[pod710DeviceKey] = instanceInfo
+		annotation[pod310PDeviceKey] = instanceInfo
 	}
 	resp.Annotations = annotation
 }
@@ -790,8 +790,8 @@ func (s *pluginAPI) updatePodAnnotation(pod *v1.Pod, kltRequestDevices, dpRespon
 		podRealAlloc: strings.Join(dpResponseDevices, ",")}
 	if s.hps.runMode == common.RunMode910 {
 		annotation[pod910DeviceKey] = configuration
-	} else if s.hps.runMode == common.RunMode710 {
-		annotation[pod710DeviceKey] = configuration
+	} else if s.hps.runMode == common.RunMode310P {
+		annotation[pod310PDeviceKey] = configuration
 	}
 	return tryUpdatePodAnnotation(s.hps, pod, annotation)
 }

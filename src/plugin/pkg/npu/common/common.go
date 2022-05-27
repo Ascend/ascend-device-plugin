@@ -24,9 +24,9 @@ const (
 	VirtualDev = "VIRTUAL"
 
 	// VNpuCfgKey is the key for virtual NPU configMap record
-	VNpuCfgKey            = "VNPUCfg"
-	virtualDevicesPattern = "Ascend910-(2|4|8|16)c"
-	virtual710DevsPattern = "Ascend710-(1|2|4)c"
+	VNpuCfgKey             = "VNPUCfg"
+	virtualDevicesPattern  = "Ascend910-(2|4|8|16)c"
+	virtual310PDevsPattern = "Ascend310P-(1|2|4)c"
 )
 
 var (
@@ -93,6 +93,6 @@ func GetNodeNameFromEnv() error {
 // IsVirtualDev used to judge whether a physical device or a virtual device
 func IsVirtualDev(devType string) bool {
 	reg910 := regexp.MustCompile(virtualDevicesPattern)
-	reg710 := regexp.MustCompile(virtual710DevsPattern)
-	return reg910.MatchString(devType) || reg710.MatchString(devType)
+	reg310P := regexp.MustCompile(virtual310PDevsPattern)
+	return reg910.MatchString(devType) || reg310P.MatchString(devType)
 }
