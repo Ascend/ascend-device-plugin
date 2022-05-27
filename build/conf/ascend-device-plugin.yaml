@@ -69,7 +69,7 @@ compile:
             rename: True
         - copy:
             src:
-              - '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-310.yaml'
+              - '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-310-volcano.yaml'
             des: "{{ systemEnv.workspace }}/{{ component}}/output/device-plugin-310-volcano-{{version}}.yaml"
             rename: True
         - copy:
@@ -79,7 +79,7 @@ compile:
             rename: True
         - copy:
             src:
-              - '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-310.yaml'
+              - '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-710-volcano.yaml'
             des: "{{ systemEnv.workspace }}/{{ component}}/output/device-plugin-710-volcano-{{version}}.yaml"
             rename: True
         - copy:
