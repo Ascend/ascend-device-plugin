@@ -89,7 +89,7 @@ compile:
         - sed:
             option: "-i"
             srcstr: "s#output/device-plugin#device-plugin#"
-            curfile: "{{ systemEnv.workspace }}/ascend-device-plugin/Dockerfile"
+            curfile: "{{ systemEnv.workspace }}/ascend-device-plugin/output/Dockerfile"
         - mode:
             src:
               - "{{ systemEnv.workspace }}/{{ component}}/output/*"
