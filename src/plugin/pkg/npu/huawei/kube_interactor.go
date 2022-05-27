@@ -73,7 +73,7 @@ func (ki *KubeInteractor) annotationReset() {
 }
 
 func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]string,
-	isAlloc, isVir bool, devType, phyCoreCount string) error {
+	isAlloc, isVir bool, devType string) error {
 	var err error
 	err = wait.PollImmediate(interval*time.Second, timeout*time.Second, func() (bool, error) {
 		curNode, err := ki.clientset.CoreV1().Nodes().Get(context.Background(), ki.nodeName, metav1.GetOptions{})
@@ -88,7 +88,6 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 		} else {
 			ki.multiDevAnnotationUpdate(groupAllocatableDevs, curNode, newNode)
 		}
-		ki.addChipCoreToAnnotation(devType, phyCoreCount, newNode)
 		// variables are defined in advance, the value will be used in subsequent assignment
 		newNetworkRecoverDevSets := sets.String{}
 		// for 910 failure rescheduling
@@ -106,32 +105,13 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 			return false, nil
 		}
 		hwlog.RunLog.Infof("updatedNode.Annotations: %v", updatedNode.Annotations)
-		ki.atomicListenAnnotation(updatedNode.Annotations)
-		// if update success, update the lastTimeNetworkRecoverDevices
-		// Ascend910
+		// Ascend910, if update success, update the lastTimeNetworkRecoverDevices
 		if (devType == hiAIAscend910Prefix) && !isVir {
 			lastTimeNetworkRecoverDevices = newNetworkRecoverDevSets
 		}
 		return true, nil
 	})
 	return err
-}
-
-func (ki *KubeInteractor) atomicListenAnnotation(annotation map[string]string) {
-	GetAnnotationObj().WaitUpdateAnnotation = annotation
-	GetAnnotationObj().IsPatchSuccess.Store(true)
-}
-
-func (ki *KubeInteractor) addChipCoreToAnnotation(devType, phyCoreCount string, newNode *v1.Node) {
-	if phyCoreCount == patchSpec {
-		return
-	}
-	if strings.Contains(devType, hiAIAscend910Prefix) {
-		newNode.Annotations[huaweiAscend910Spec] = phyCoreCount
-	}
-	if strings.Contains(devType, hiAIAscend710Prefix) {
-		newNode.Annotations[huaweiAscend710Spec] = phyCoreCount
-	}
 }
 
 func (ki *KubeInteractor) update910Annotation(node, newNode *v1.Node, groupAllocatableDevs map[string]string,

@@ -399,7 +399,6 @@ func TestGetAscendVisiDevsWithVolcano(t *testing.T) {
 	convey.Convey("isExecTimingUpdate", t, func() {
 		convey.Convey("IsPatchSuccess is false", func() {
 			fakePluginAPI.getDeviceListIP(allocateDevice)
-			convey.So(GetAnnotationObj().IsUpdateComplete.Load(), convey.ShouldBeFalse)
 		})
 	})
 }

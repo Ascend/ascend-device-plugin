@@ -43,8 +43,6 @@ const (
 	huaweiUnHealthAscend910        = "huawei.com/Ascend910-Unhealthy"
 	huaweiUnHealthAscend710        = "huawei.com/Ascend710-Unhealthy"
 	huaweiUnHealthAscend310        = "huawei.com/Ascend310-Unhealthy"
-	huaweiAscend910Spec            = "huawei.com/Ascend910-spec"
-	huaweiAscend710Spec            = "huawei.com/Ascend710-spec"
 	// FunctionNotFound for describe dsmi interface function is exist or not
 	FunctionNotFound = "-99998"
 
@@ -59,6 +57,4 @@ const (
 	baseDec   = 10
 	bitSize   = 64
 	bitSize32 = 32
-
-	patchSpec = "alloc"
 )
