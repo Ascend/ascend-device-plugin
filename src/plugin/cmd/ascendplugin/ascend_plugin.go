@@ -8,6 +8,7 @@ package main
 import (
 	"flag"
 	"fmt"
+
 	"huawei.com/npu-exporter/hwlog"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
@@ -148,4 +149,3 @@ func startDiffTypeServe(hdm *huawei.HwDevManager) {
 		go hdm.Serve(devType)
 	}
 }
-

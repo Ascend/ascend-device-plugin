@@ -31,7 +31,7 @@ type HwAscend310PManager struct {
 // NewHwAscend310PManager used to create ascend 310P manager
 func NewHwAscend310PManager() *HwAscend310PManager {
 	return &HwAscend310PManager{
-		ascendCommonFunction{
+		ascendCommonFunction: ascendCommonFunction{
 			name:         hiAIAscend310PPrefix,
 			unHealthyKey: huaweiUnHealthAscend310P,
 		},
