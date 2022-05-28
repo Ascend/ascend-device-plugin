@@ -163,7 +163,7 @@ func filterTagPowerDevice(allocatableDevices sets.String, suffix string) string 
 	var powerAnnotation []string
 	for deviceName := range allocatableDevices {
 		switch suffix {
-		case hiAIAscend910Prefix, hiAIAscend710Prefix:
+		case hiAIAscend910Prefix, hiAIAscend310PPrefix:
 			if !common.IsVirtualDev(deviceName) {
 				powerAnnotation = append(powerAnnotation, deviceName)
 			}

@@ -104,8 +104,8 @@ func (hdm *HwDevManager) GetNPUs() error {
 		hdm.manager = NewHwAscend310Manager()
 	case common.RunMode910:
 		hdm.manager = NewHwAscend910Manager()
-	case common.RunMode710:
-		hdm.manager = NewHwAscend710Manager()
+	case common.RunMode310P:
+		hdm.manager = NewHwAscend310PManager()
 	default:
 		hwlog.RunLog.Errorf("found an unsupported device type")
 		return errors.New("an unsupported device type")
@@ -296,13 +296,14 @@ func (hdm *HwDevManager) SetRunMode() error {
 			return err
 		}
 	}
-	if strings.Contains(chipName, "310") {
-		hdm.runMode = common.RunMode310
+
+	if strings.Contains(chipName, "310P") || strings.Contains(chipName, "710") {
+		hdm.runMode = common.RunMode310P
 		return nil
 	}
 
-	if strings.Contains(chipName, "710") {
-		hdm.runMode = common.RunMode710
+	if strings.Contains(chipName, "310") {
+		hdm.runMode = common.RunMode310
 		return nil
 	}
 

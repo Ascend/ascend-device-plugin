@@ -87,8 +87,8 @@ func TestPluginAPIListAndWatch(t *testing.T) {
 func getTestDevs() []common.NpuDevice {
 	return []common.NpuDevice{
 		{
-			DevType:       "Ascend710",
-			ID:            "Ascend710-0",
+			DevType:       "Ascend310P",
+			ID:            "Ascend310P-0",
 			Health:        "Health",
 			NetworkHealth: "Health",
 		},

@@ -241,7 +241,6 @@ func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr dsmi.Device
 		}
 		return v1beta1.Unhealthy
 	}
-
 	healthState, err := dmgr.GetDeviceHealth(int32(logicID))
 	if err != nil {
 		if logFlag {
@@ -308,7 +307,7 @@ func (adc *ascendCommonFunction) GetPhyDevMapVirtualDev() map[uint32]string {
 	return adc.phyDevMapVirtualDev
 }
 
-// DoWithVolcanoListAndWatch ascend710 do nothing
+// DoWithVolcanoListAndWatch ascend310P do nothing
 func (adc *ascendCommonFunction) DoWithVolcanoListAndWatch(hps *HwPluginServe) {
 	adc.reloadHealthDevice(hps)
 	usedDevices := sets.NewString()

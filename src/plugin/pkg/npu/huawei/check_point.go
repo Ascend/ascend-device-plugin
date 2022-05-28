@@ -109,8 +109,9 @@ func GetKubeletCheckPoint(filePath string) (map[string]CheckpointData, error) {
 func checkDevType(devType, runMode string) bool {
 	pwrSuffix := map[string]string{hiAIAscend910Prefix: "", pwr2CSuffix: "", pwr4CSuffix: "", pwr8CSuffix: "",
 		pwr16CSuffix: ""}
-	if runMode == hiAIAscend710Prefix {
-		pwrSuffix = map[string]string{hiAIAscend710Prefix: "", chip710Core1C: "", chip710Core2C: "", chip710Core4C: ""}
+	if runMode == hiAIAscend310PPrefix {
+		pwrSuffix = map[string]string{hiAIAscend310PPrefix: "", chip310PCore1C: "",
+			chip310PCore2C: "", chip310PCore4C: ""}
 	} else if runMode == hiAIAscend310Prefix {
 		pwrSuffix = map[string]string{hiAIAscend310Prefix: ""}
 	}
