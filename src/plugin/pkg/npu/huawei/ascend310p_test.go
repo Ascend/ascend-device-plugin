@@ -49,7 +49,10 @@ func TestHwAscend310PManagerGetDevState(t *testing.T) {
 	}
 	for _, dev := range hdm.allDevs {
 		state := hdm.manager.GetDevState(dev.ID, hdm.manager.GetDmgr())
-		if state != v1beta1.Healthy {
+		if strings.Contains(dev.ID, "-3") && state != v1beta1.Unhealthy {
+			t.Fatalf("TestHwAscend310PManager_GetDevState Run Failed %v", dev)
+
+		} else if !strings.Contains(dev.ID, "-3") && state == v1beta1.Unhealthy {
 			t.Fatalf("TestHwAscend310PManager_GetDevState Run Failed %v", dev)
 		}
 	}
