@@ -1,6 +1,6 @@
 #!/bin/bash
 # Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
-set -e
+set -x
 CUR_DIR=$(dirname "$(readlink -f $0)")
 TOP_DIR=$(realpath "${CUR_DIR}"/..)
 export GO111MODULE="on"
