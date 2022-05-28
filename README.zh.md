@@ -147,7 +147,7 @@
     drwxr-xr-x 9 root root     4096 Jun  8 17:12 ../ 
     -r-x------. 1 root root 31927176 Jul 26 14:12 device-plugin 
     -r--------. 1 root root     2081 Jul 26 14:12 device-plugin-310-v2.0.2.yaml 
-    -r--------. 1 root root     2202 Jul 26 14:12 device-plugin-710-v2.0.2.yaml 
+    -r--------. 1 root root     2202 Jul 26 14:12 device-plugin-310P-v2.0.2.yaml 
     -r--------. 1 root root     1935 Jul 26 14:12 device-plugin-910-v2.0.2.yaml 
     -r--------. 1 root root     3070 Jul 26 14:12 device-plugin-volcano-v2.0.2.yaml 
     -r--------. 1 root root      469 Jul 26 14:12 Dockerfile
@@ -239,13 +239,13 @@
         ```
 
 
-7.  执行如下命令，给带有Ascend 910（或含有Ascend 310、Ascend 710）的节点打标签。
+7.  执行如下命令，给带有Ascend 910（或含有Ascend 310、Ascend 310P）的节点打标签。
 
     ```
     kubectl label nodes localhost.localdomain accelerator=huawei-Ascend910
     ```
 
-    localhost.localdomain为有Ascend 910（或含有Ascend 310、Ascend 710）的节点名称，可通过**kubectl get node**命令查看。
+    localhost.localdomain为有Ascend 910（或含有Ascend 310、Ascend 310P）的节点名称，可通过**kubectl get node**命令查看。
 
     标签名称需要和软件包中yaml文件里的nodeSelector标签名称保持一致。
 
@@ -271,10 +271,10 @@
         kubectl apply -f device-plugin-volcano-v2.0.2.yaml
         ```
 
-    -   昇腾710 AI处理器节点。
+    -   昇腾310P AI处理器节点。
 
         ```
-        kubectl apply -f device-plugin-710-v2.0.2.yaml
+        kubectl apply -f device-plugin-310P-v2.0.2.yaml
         ```
     
     - 昇腾910 AI处理器节点，Ascend Device Plugin独立工作，不协同Volcano。
@@ -306,7 +306,7 @@
     <td class="cellrowborder" valign="top" width="15%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0000001125023832_p686645671212"><a name="zh-cn_topic_0000001125023832_p686645671212"></a><a name="zh-cn_topic_0000001125023832_p686645671212"></a>无</p>
     </td>
     <td class="cellrowborder" valign="top" width="45%" headers="mcps1.2.5.1.4 "><p id="zh-cn_topic_0000001125023832_p10866156121215"><a name="zh-cn_topic_0000001125023832_p10866156121215"></a><a name="zh-cn_topic_0000001125023832_p10866156121215"></a>指定Ascend Device Plugin运行模式，不指定该参数会根据NPU芯片类型自动指定。</p>
-    <a name="zh-cn_topic_0000001125023832_ul14191351239"></a><a name="zh-cn_topic_0000001125023832_ul14191351239"></a><ul id="zh-cn_topic_0000001125023832_ul14191351239"><li>ascend310：以<span id="zh-cn_topic_0000001125023832_ph9702132613260"><a name="zh-cn_topic_0000001125023832_ph9702132613260"></a><a name="zh-cn_topic_0000001125023832_ph9702132613260"></a>昇腾310 AI处理器</span>的模式运行</li><li>ascend710：以昇腾710 AI处理器的模式运行</li><li>ascend910：以<span id="zh-cn_topic_0000001125023832_ph10107162619264"><a name="zh-cn_topic_0000001125023832_ph10107162619264"></a><a name="zh-cn_topic_0000001125023832_ph10107162619264"></a>昇腾910 AI处理器</span>的模式运行</li></ul>
+    <a name="zh-cn_topic_0000001125023832_ul14191351239"></a><a name="zh-cn_topic_0000001125023832_ul14191351239"></a><ul id="zh-cn_topic_0000001125023832_ul14191351239"><li>ascend310：以<span id="zh-cn_topic_0000001125023832_ph9702132613260"><a name="zh-cn_topic_0000001125023832_ph9702132613260"></a><a name="zh-cn_topic_0000001125023832_ph9702132613260"></a>昇腾310 AI处理器</span>的模式运行</li><li>ascend310P：以昇腾310P AI处理器的模式运行</li><li>ascend910：以<span id="zh-cn_topic_0000001125023832_ph10107162619264"><a name="zh-cn_topic_0000001125023832_ph10107162619264"></a><a name="zh-cn_topic_0000001125023832_ph10107162619264"></a>昇腾910 AI处理器</span>的模式运行</li></ul>
     </td>
     </tr>
     <tr id="zh-cn_topic_0000001125023832_row48671256151214"><td class="cellrowborder" valign="top" width="25%" headers="mcps1.2.5.1.1 "><p id="zh-cn_topic_0000001125023832_p12867145618121"><a name="zh-cn_topic_0000001125023832_p12867145618121"></a><a name="zh-cn_topic_0000001125023832_p12867145618121"></a>-fdFlag</p>
@@ -505,9 +505,9 @@
     支持的资源类型：
 
     -   huawei.com/Ascend310: 2，表示分配2颗昇腾310 AI处理器。
-    -   huawei.com/Ascend710: 1，表示分配1颗昇腾710 AI处理器。
-    -   huawei.com/Ascend910: 4，表示分配4颗昇腾910 AI处理器。
-    -   huawei.com/Ascend910-16c: 1，表示分配1颗算力为16核的虚拟设备，只支持单卡单容器任务（即数值只能填1）。支持调度2c、4c、8c、16c四种AI core数量的虚拟设备。
+    -   huawei.com/Ascend310P: 1，表示分配1颗昇腾310P AI处理器。
+    -   huawei.com/Ascend310P: 4，表示分配4颗昇腾310P AI处理器。
+    -   huawei.com/Ascend310P-16c: 1，表示分配1颗算力为16核的虚拟设备，只支持单卡单容器任务（即数值只能填1）。支持调度2c、4c、8c、16c四种AI core数量的虚拟设备。
 
 2.  执行如下命令，创建Pod。
 
@@ -557,7 +557,7 @@
 ├── README.md
 ├── ascend.yaml                                      # sample运行任务yaml
 ├── ascendplugin-310.yaml                            # 310推理卡部署yaml
-├── ascendplugin-710.yaml                            # 710推理卡部署yaml
+├── ascendplugin-310P.yaml                            # 310P推理卡部署yaml
 ├── ascendplugin-volcano.yaml                        # 910搭配volcano实现亲和性调度部署yaml
 ├── ascendplugin-910.yaml                            # 910未使用volcano部署yaml
 ├── go.mod                                           
@@ -586,7 +586,7 @@
 </td>
 <td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.2 "><p id="p1445019582013"><a name="p1445019582013"></a><a name="p1445019582013"></a>2021-04-20</p>
 </td>
-<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.3 "><a name="ul194113318201"></a><a name="ul194113318201"></a><ul id="ul194113318201"><li>适配昇腾710 AI处理器。</li><li>处理器信息上报由逻辑ID修改为物理ID。</li><li>处理器一般告警修改为不主动隔离。</li></ul>
+<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.3 "><a name="ul194113318201"></a><a name="ul194113318201"></a><ul id="ul194113318201"><li>适配昇腾310P AI处理器。</li><li>处理器信息上报由逻辑ID修改为物理ID。</li><li>处理器一般告警修改为不主动隔离。</li></ul>
 </td>
 </tr>
 <tr id="row137501013384"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="p137501613585"><a name="p137501613585"></a><a name="p137501613585"></a>v20.2.0</p>

@@ -147,7 +147,7 @@ The device management plugin provides the following functions:
     drwxr-xr-x 9 root root     4096 Jun  8 17:12 ../ 
     -r-x------. 1 root root 31927176 Jul 26 14:12 device-plugin 
     -r--------. 1 root root     2081 Jul 26 14:12 device-plugin-310-v2.0.2.yaml 
-    -r--------. 1 root root     2202 Jul 26 14:12 device-plugin-710-v2.0.2.yaml 
+    -r--------. 1 root root     2202 Jul 26 14:12 device-plugin-310P-v2.0.2.yaml 
     -r--------. 1 root root     1935 Jul 26 14:12 device-plugin-910-v2.0.2.yaml 
     -r--------. 1 root root     3070 Jul 26 14:12 device-plugin-volcano-v2.0.2.yaml 
     -r--------. 1 root root      469 Jul 26 14:12 Dockerfile
@@ -239,13 +239,13 @@ The device management plugin provides the following functions:
         ```
 
 
-7.  Run the following command to label the node with Ascend 910, Ascend 310, or Ascend 710:
+7.  Run the following command to label the node with Ascend 910, Ascend 310, or Ascend 310P:
 
     ```
     kubectl label nodes localhost.localdomain accelerator=huawei-Ascend910
     ```
 
-    **localhost.localdomain**  is the name of the node with Ascend 910, Ascend 310, or Ascend 710. You can run the  **kubectl get node**  command to view the node name.
+    **localhost.localdomain**  is the name of the node with Ascend 910, Ascend 310, or Ascend 310P. You can run the  **kubectl get node**  command to view the node name.
 
     The label name must be the same as the  **nodeSelector**  label name in the YAML file in the software package.
 
@@ -271,10 +271,10 @@ The device management plugin provides the following functions:
         kubectl apply -f device-plugin-volcano-v2.0.2.yaml
         ```
 
-    -   On the  Ascend 710 AI Processor  node:
+    -   On the  Ascend 310P AI Processor  node:
 
         ```
-        kubectl apply -f device-plugin-710-v2.0.2.yaml
+        kubectl apply -f device-plugin-310P-v2.0.2.yaml
         ```
     
     - On the  Ascend 910 AI Processor  node, where Ascend Device Plugin works independently and does not collaborate with Volcano:
@@ -306,7 +306,7 @@ The device management plugin provides the following functions:
     <td class="cellrowborder" valign="top" width="15%" headers="mcps1.2.5.1.3 "><p id="en-us_topic_0000001125023832_p686645671212"><a name="en-us_topic_0000001125023832_p686645671212"></a><a name="en-us_topic_0000001125023832_p686645671212"></a>None</p>
     </td>
     <td class="cellrowborder" valign="top" width="45%" headers="mcps1.2.5.1.4 "><p id="en-us_topic_0000001125023832_p10866156121215"><a name="en-us_topic_0000001125023832_p10866156121215"></a><a name="en-us_topic_0000001125023832_p10866156121215"></a>Running mode of Ascend Device Plugin. If this parameter is not specified, the running mode is automatically specified based on the NPU type.</p>
-    <a name="en-us_topic_0000001125023832_ul14191351239"></a><a name="en-us_topic_0000001125023832_ul14191351239"></a><ul id="en-us_topic_0000001125023832_ul14191351239"><li><strong id="en-us_topic_0000001125023832_b985785715363"><a name="en-us_topic_0000001125023832_b985785715363"></a><a name="en-us_topic_0000001125023832_b985785715363"></a>ascend310</strong>: running in <span id="en-us_topic_0000001125023832_ph9702132613260"><a name="en-us_topic_0000001125023832_ph9702132613260"></a><a name="en-us_topic_0000001125023832_ph9702132613260"></a>Ascend 310 AI Processor</span> mode</li><li><strong id="en-us_topic_0000001125023832_b1067543353717"><a name="en-us_topic_0000001125023832_b1067543353717"></a><a name="en-us_topic_0000001125023832_b1067543353717"></a>ascend710</strong>: running in Ascend 710 AI Processor mode</li><li><strong id="en-us_topic_0000001125023832_b18167337103710"><a name="en-us_topic_0000001125023832_b18167337103710"></a><a name="en-us_topic_0000001125023832_b18167337103710"></a>ascend910</strong>: running in <span id="en-us_topic_0000001125023832_ph10107162619264"><a name="en-us_topic_0000001125023832_ph10107162619264"></a><a name="en-us_topic_0000001125023832_ph10107162619264"></a>Ascend 910 AI Processor</span> mode</li></ul>
+    <a name="en-us_topic_0000001125023832_ul14191351239"></a><a name="en-us_topic_0000001125023832_ul14191351239"></a><ul id="en-us_topic_0000001125023832_ul14191351239"><li><strong id="en-us_topic_0000001125023832_b985785715363"><a name="en-us_topic_0000001125023832_b985785715363"></a><a name="en-us_topic_0000001125023832_b985785715363"></a>ascend310</strong>: running in <span id="en-us_topic_0000001125023832_ph9702132613260"><a name="en-us_topic_0000001125023832_ph9702132613260"></a><a name="en-us_topic_0000001125023832_ph9702132613260"></a>Ascend 310 AI Processor</span> mode</li><li><strong id="en-us_topic_0000001125023832_b1067543353717"><a name="en-us_topic_0000001125023832_b1067543353717"></a><a name="en-us_topic_0000001125023832_b1067543353717"></a>ascend310P</strong>: running in Ascend 310P AI Processor mode</li><li><strong id="en-us_topic_0000001125023832_b18167337103710"><a name="en-us_topic_0000001125023832_b18167337103710"></a><a name="en-us_topic_0000001125023832_b18167337103710"></a>ascend910</strong>: running in <span id="en-us_topic_0000001125023832_ph10107162619264"><a name="en-us_topic_0000001125023832_ph10107162619264"></a><a name="en-us_topic_0000001125023832_ph10107162619264"></a>Ascend 910 AI Processor</span> mode</li></ul>
     </td>
     </tr>
     <tr id="en-us_topic_0000001125023832_row48671256151214"><td class="cellrowborder" valign="top" width="25%" headers="mcps1.2.5.1.1 "><p id="en-us_topic_0000001125023832_p12867145618121"><a name="en-us_topic_0000001125023832_p12867145618121"></a><a name="en-us_topic_0000001125023832_p12867145618121"></a>-fdFlag</p>
@@ -505,7 +505,7 @@ The device management plugin provides the following functions:
     Supported resource types:
 
     -   **huawei.com/Ascend310: 2**, indicating that two  Ascend 310 AI Processors are allocated
-    -   **huawei.com/Ascend710: 1**, indicating that one Ascend 710 AI Processor is allocated
+    -   **huawei.com/Ascend310P: 1**, indicating that one Ascend 310P AI Processor is allocated
     -   **huawei.com/Ascend910: 4**, indicating that four  Ascend 910 AI Processors are allocated
     -   **huawei.com/Ascend910-16c: 1**, indicating that a virtual device with 16 cores is allocated. Only single-card single-container tasks are supported. That is, the value must be  **1**. Virtual devices with  **2c**,  **4c**,  **8c**, or  **16c**  AI cores can be scheduled.
 
@@ -557,7 +557,7 @@ The device management plugin provides the following functions:
 ├── README.md
 ├── ascend.yaml                                      # YAML file of the sample running task 
 ├── ascendplugin-310.yaml                            # YAML file for deploying the plugin on the inference card with Ascend 310
-├── ascendplugin-710.yaml                            # YAML file for deploying the plugin on the inference card with Ascend 710
+├── ascendplugin-310P.yaml                            # YAML file for deploying the plugin on the inference card with Ascend 310P
 ├── ascendplugin-volcano.yaml                        # YAML file for implementing affinity scheduling and deployment with Ascend 910 and Volcano
 ├── ascendplugin-910.yaml                            # YAML file for deploying the plugin with Ascend 910 but without Volcano
 ├── go.mod                                           
@@ -586,7 +586,7 @@ The device management plugin provides the following functions:
 </td>
 <td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.2 "><p id="p1445019582013"><a name="p1445019582013"></a><a name="p1445019582013"></a>2021-04-20</p>
 </td>
-<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.3 "><a name="ul194113318201"></a><a name="ul194113318201"></a><ul id="ul194113318201"><li>Adapted to Ascend 710 AI Processors.</li><li>Changed the processor ID in the reported information from the logical ID to the physical ID.</li><li>Changed the policy to ensure that processors are not isolated due to minor alarms.</li></ul>
+<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.3 "><a name="ul194113318201"></a><a name="ul194113318201"></a><ul id="ul194113318201"><li>Adapted to Ascend 310P AI Processors.</li><li>Changed the processor ID in the reported information from the logical ID to the physical ID.</li><li>Changed the policy to ensure that processors are not isolated due to minor alarms.</li></ul>
 </td>
 </tr>
 <tr id="row137501013384"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="p137501613585"><a name="p137501613585"></a><a name="p137501613585"></a>v20.2.0</p>
