@@ -66,7 +66,7 @@ func TestStop(t *testing.T) {
 		runMode:  "ascend910",
 		stopFlag: atomic.NewBool(false),
 	}
-	hps := NewHwPluginServe(fakeHwDevManager, "Ascend910")
+	hps := NewFakeHwPluginServe(fakeHwDevManager, "Ascend910")
 	hps.Stop()
 
 	hps.setSocket()

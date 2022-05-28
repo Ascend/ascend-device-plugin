@@ -28,6 +28,7 @@ type HwPluginServe struct {
 	unHealthDevice sets.String
 	devType        string
 	runMode        string
+	stopCh         chan struct{}
 }
 
 // HwPluginServeInterface the interface of PluginServer
@@ -58,6 +59,7 @@ func NewHwPluginServe(hdm *HwDevManager, devType string) HwPluginServeInterface 
 		kubeInteractor: ki,
 		healthDevice:   sets.String{},
 		unHealthDevice: sets.String{},
+		stopCh:         make(chan struct{}),
 	}
 }
 
@@ -120,6 +122,7 @@ func (hps *HwPluginServe) Stop() {
 	if hps.grpcServer == nil {
 		return
 	}
+	<-hps.stopCh
 	hps.grpcServer.Stop()
 	hps.grpcServer = nil
 

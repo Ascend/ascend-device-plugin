@@ -71,6 +71,8 @@ var (
 	logFlag = true
 
 	presetVDevice bool
+
+	stopCount atomic.Int32
 )
 
 type devManager interface {
@@ -127,7 +129,11 @@ func (hdm *HwDevManager) GetDevType() []string {
 }
 
 // Serve start grpc server
-func (hdm *HwDevManager) Serve(devType string) {
+func (hdm *HwDevManager) Serve(devType string, stop chan struct{}) {
+	if stop == nil {
+		hwlog.RunLog.Errorf("stop channel is nil")
+		return
+	}
 	// start sockPath monitor
 	hwlog.RunLog.Infof("starting the inspection of register devType %v", devType)
 	pluginSockPath, watcher, err := hdm.createSignWatchServe(devType)
@@ -158,6 +164,10 @@ func (hdm *HwDevManager) Serve(devType string) {
 		// Monitor file signals and system signals
 		osSignChan := newSignWatcher(syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGKILL)
 		restart = hdm.signalWatch(watcher.fileWatcher, osSignChan, restart, hps, pluginSockPath)
+	}
+	stopCount.Add(1)
+	if int(stopCount.Load()) == len(hdm.GetDevType()) {
+		stop <- struct{}{}
 	}
 }
 
@@ -248,9 +258,9 @@ func (hdm *HwDevManager) signalWatch(watcher *fsnotify.Watcher, sigs chan os.Sig
 			return true
 		default:
 			hwlog.RunLog.Infof("Received signal: %s, shutting down.", s.String())
+			hdm.stopFlag.Store(true)
 			hps.Stop()
 			hdm.dmgr.ShutDown()
-			os.Exit(0)
 		}
 	}
 	return restart
