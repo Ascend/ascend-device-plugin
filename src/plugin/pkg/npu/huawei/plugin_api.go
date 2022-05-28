@@ -131,7 +131,7 @@ func (s *pluginAPI) ListAndWatch(emtpy *v1beta1.Empty, stream v1beta1.DevicePlug
 	resp := new(v1beta1.ListAndWatchResponse)
 	s.updateKubeletDevInfo(resp, stream)
 	for {
-		if s.outbreak.Load() {
+		if s.hps.hdm.stopFlag.Load() {
 			break
 		}
 		sleepTime := listAndWatchPeriod - sleep2ListW
@@ -153,6 +153,7 @@ func (s *pluginAPI) ListAndWatch(emtpy *v1beta1.Empty, stream v1beta1.DevicePlug
 		s.updateKubeletDevInfo(resp, stream)
 		m.Unlock()
 	}
+	s.hps.stopCh <- struct{}{}
 	return nil
 }
 

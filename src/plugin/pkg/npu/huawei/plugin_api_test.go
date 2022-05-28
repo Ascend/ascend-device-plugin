@@ -35,7 +35,7 @@ const (
 	sleepTestFour   = 4
 )
 
-// TestPluginAPIListAndWatch for listAndWatch
+//TestPluginAPIListAndWatch for listAndWatch
 func TestPluginAPIListAndWatch(t *testing.T) {
 	hdm := createFakeDevManager("ascend910")
 	o := Option{GetFdFlag: false, UseAscendDocker: false, UseVolcanoType: false, ListAndWatchPeriod: sleepTime,
@@ -97,7 +97,11 @@ func getTestDevs() []common.NpuDevice {
 
 func changeBreakFlag(api *pluginAPI) {
 	time.Sleep(sleepTestFour * time.Second)
-	api.outbreak.Store(true)
+	api.hps.hdm.stopFlag.Store(true)
+	if api.hps.stopCh == nil {
+		return
+	}
+	<-api.hps.stopCh
 }
 
 func createFakePluginAPI(hdm *HwDevManager, devType string, ki *KubeInteractor) *pluginAPI {
@@ -109,6 +113,7 @@ func createFakePluginAPI(hdm *HwDevManager, devType string, ki *KubeInteractor) 
 		kubeInteractor: ki,
 		healthDevice:   sets.String{},
 		unHealthDevice: sets.String{},
+		stopCh:         make(chan struct{}),
 	},
 		outbreak: atomic.NewBool(false),
 	}

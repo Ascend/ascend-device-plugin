@@ -125,7 +125,7 @@ func main() {
 			<-neverStop
 		}
 	}
-	startDiffTypeServe(hdm)
+	startDiffTypeServe(hdm, neverStop)
 	<-neverStop
 }
 
@@ -141,9 +141,9 @@ func getParams() huawei.Option {
 	}
 }
 
-func startDiffTypeServe(hdm *huawei.HwDevManager) {
+func startDiffTypeServe(hdm *huawei.HwDevManager, stop chan struct{}) {
 	for _, devType := range hdm.GetDevType() {
 		hwlog.RunLog.Infof("ascend device serve started, devType: %s", devType)
-		go hdm.Serve(devType)
+		go hdm.Serve(devType, stop)
 	}
 }
