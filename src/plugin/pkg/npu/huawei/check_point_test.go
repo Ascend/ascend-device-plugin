@@ -8,11 +8,10 @@ import (
 	"reflect"
 	"testing"
 
-	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
-
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/smartystreets/goconvey/convey"
 	"huawei.com/npu-exporter/utils"
+	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"k8s.io/kubernetes/pkg/kubelet/cm/devicemanager/checkpoint"
 )
 
