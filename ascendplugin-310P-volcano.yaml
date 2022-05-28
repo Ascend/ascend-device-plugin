@@ -71,11 +71,6 @@ spec:
       containers:
       - image: ascend-k8sdeviceplugin:v2.0.3
         name: device-plugin-01
-        ports:
-          - name: http
-            containerPort: 6060
-            hostPort: 6060
-            protocol: TCP
         resources:
           requests:
             memory: 500Mi
@@ -85,7 +80,7 @@ spec:
             cpu: 500m
         command: [ "/bin/bash", "-c", "--"]
         args: [ "device-plugin  -useAscendDocker=true -volcanoType=true -presetVirtualDevice=true
-                 -logFile=/var/log/mindx-dl/devicePlugin/devicePlugin.log  " ]
+                 -logFile=/var/log/mindx-dl/devicePlugin/devicePlugin.log -logLevel=0" ]
         securityContext:
           privileged: true
           readOnlyRootFilesystem: true
