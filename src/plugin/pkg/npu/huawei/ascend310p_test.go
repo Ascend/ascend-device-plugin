@@ -2,6 +2,7 @@
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
  */
 
+// Package huawei for 310p ut.
 package huawei
 
 import (
@@ -48,10 +49,7 @@ func TestHwAscend310PManagerGetDevState(t *testing.T) {
 	}
 	for _, dev := range hdm.allDevs {
 		state := hdm.manager.GetDevState(dev.ID, hdm.manager.GetDmgr())
-		if strings.Contains(dev.ID, "3") && state != v1beta1.Unhealthy {
-			t.Fatalf("TestHwAscend310PManager_GetDevState Run Failed %v", dev)
-
-		} else if !strings.Contains(dev.ID, "3") && state == v1beta1.Unhealthy {
+		if state != v1beta1.Healthy {
 			t.Fatalf("TestHwAscend310PManager_GetDevState Run Failed %v", dev)
 		}
 	}
