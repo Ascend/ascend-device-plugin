@@ -1,0 +1,123 @@
+component: ascend-device-plugin
+systemEnv:
+  - workspace
+  - processor
+compile:
+  input:
+    envVariables:
+      GO111MODULE: "on"
+      GONOSUMDB: "*"
+      GOPROXY: "http://mirrors.tools.huawei.com/goproxy,direct"
+      CGO_ENABLED: "1"
+      CGO_CFLAGS: "-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
+      CGO_CPPFLAGS: "-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
+    files:
+      exclude:
+        - remove: ["{{ systemEnv.workspace }}/{{ component}}/output/"]
+  process:
+    language: go
+    compilePath: "{{ systemEnv.workspace }}/ascend-device-plugin/src/plugin/cmd/ascendplugin"
+    parameters: [['buildmode', "pie"],
+                 ["mod", "mod"],
+                 ['ldflags', '-X "main.BuildName=device-plugin" -X "main.BuildVersion={{version}}_linux-{{systemEnv.processor}}" -buildid none -s -extldflags=-Wl,-z,relro,-z,now,-z,noexecstack'],
+                 ["o", "device-plugin"],
+                 ['trimpath',""],]
+  output:
+    files:
+      include:
+        - move:
+            src: ["{{ systemEnv.workspace }}/ascend-device-plugin/src/plugin/cmd/ascendplugin/device-plugin"]
+            des: "{{ systemEnv.workspace }}/{{component}}/output"
+        - sed:
+            option: "-i"
+            srcstr: 's/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:{{version}}/'
+            curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-910.yaml'
+        - sed:
+            option: "-i"
+            srcstr: "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:{{version}}/"
+            curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-volcano.yaml'
+        - sed:
+            option: "-i"
+            srcstr: 's/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:{{version}}/'
+            curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-310.yaml'
+        - sed:
+            option: "-i"
+            srcstr: 's/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:{{version}}/'
+            curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-310-volcano.yaml'
+        - sed:
+            option: "-i"
+            srcstr: "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:{{version}}}/"
+            curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-710.yaml'
+        - sed:
+            option: "-i"
+            srcstr: 's/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:{{version}}/'
+            curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-710-volcano.yaml'
+        - copy:
+            src:
+              - '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-910.yaml'
+            des: "{{ systemEnv.workspace }}/{{ component}}/output/device-plugin-910-{{version}}.yaml"
+            rename: True
+        - copy:
+            src:
+              - '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-volcano.yaml'
+            des: "{{ systemEnv.workspace }}/{{ component}}/output/device-plugin-volcano-{{version}}.yaml"
+            rename: True
+        - copy:
+            src:
+              - '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-310.yaml'
+            des: "{{ systemEnv.workspace }}/{{ component}}/output/device-plugin-310-{{version}}.yaml"
+            rename: True
+        - copy:
+            src:
+              - '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-310-volcano.yaml'
+            des: "{{ systemEnv.workspace }}/{{ component}}/output/device-plugin-310-volcano-{{version}}.yaml"
+            rename: True
+        - copy:
+            src:
+              - '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-710.yaml'
+            des: "{{ systemEnv.workspace }}/{{ component}}/output/device-plugin-710-{{version}}.yaml"
+            rename: True
+        - copy:
+            src:
+              - '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-710-volcano.yaml'
+            des: "{{ systemEnv.workspace }}/{{ component}}/output/device-plugin-710-volcano-{{version}}.yaml"
+            rename: True
+        - copy:
+            src:
+              - "{{ systemEnv.workspace }}/ascend-device-plugin/Dockerfile"
+            des: "{{ systemEnv.workspace }}/{{ component}}/output/"
+        - sed:
+            option: "-i"
+            srcstr: "s#output/device-plugin#device-plugin#"
+            curfile: "{{ systemEnv.workspace }}/ascend-device-plugin/output/Dockerfile"
+        - mode:
+            src:
+              - "{{ systemEnv.workspace }}/{{ component}}/output/*"
+            mode: 400
+        - mode:
+            src:
+              - "{{ systemEnv.workspace }}/{{ component}}/output/device-plugin"
+            mode: 500
+        - commands:
+            - command: "if [ -d '{{systemEnv.workspace }}/npu-exporter' ];
+        then cp -rf {{ systemEnv.workspace }}/npu-exporter/lib {{ systemEnv.workspace }}/ascend-device-plugin/output;
+        cp -rf {{ systemEnv.workspace }}/npu-exporter/cert-importer {{ systemEnv.workspace }}/ascend-device-plugin/output;
+        chmod 550 {{ systemEnv.workspace }}/ascend-device-plugin/output/lib;
+        chmod 500 {{ systemEnv.workspace }}/ascend-device-plugin/output/lib/*;
+        chmod 500 {{ systemEnv.workspace }}/ascend-device-plugin/output/cert-importer;fi"
+        - makeArchive:
+            - src: "{{ systemEnv.workspace }}/{{ component}}/output/"
+              des: "{{ systemEnv.workspace }}/{{ component}}/output/Ascend-mindxdl-device-plugin_{{pkgversion}}_linux-{{ systemEnv.processor }}"
+              prefix: zip
+              arch: "{{ systemEnv.processor }}"
+
+test:
+  input:
+    files:
+  process:
+    type: ut
+    testTool: shell
+    execdir: "{{systemEnv.workspace}}/{{component}}/build"
+    parameters: ""
+    script: "test.sh"
+  output:
