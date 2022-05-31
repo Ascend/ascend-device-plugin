@@ -45,7 +45,7 @@ compile:
             curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-310-volcano.yaml'
         - sed:
             option: "-i"
-            srcstr: "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:{{version}}}/"
+            srcstr: "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:{{version}}/"
             curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-310P.yaml'
         - sed:
             option: "-i"
