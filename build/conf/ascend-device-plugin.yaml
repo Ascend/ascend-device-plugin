@@ -7,7 +7,7 @@ compile:
     envVariables:
       GO111MODULE: "on"
       GONOSUMDB: "*"
-      GOPROXY: "http://mirrors.tools.huawei.com/goproxy,direct"
+      GOPROXY:
       CGO_ENABLED: "1"
       CGO_CFLAGS: "-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
       CGO_CPPFLAGS: "-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
@@ -74,13 +74,13 @@ compile:
             rename: True
         - copy:
             src:
-              - '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-710.yaml'
-            des: "{{ systemEnv.workspace }}/{{ component}}/output/device-plugin-710-{{version}}.yaml"
+              - '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-310P.yaml'
+            des: "{{ systemEnv.workspace }}/{{ component}}/output/device-plugin-310P-{{version}}.yaml"
             rename: True
         - copy:
             src:
-              - '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-710-volcano.yaml'
-            des: "{{ systemEnv.workspace }}/{{ component}}/output/device-plugin-710-volcano-{{version}}.yaml"
+              - '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-310P-volcano.yaml'
+            des: "{{ systemEnv.workspace }}/{{ component}}/output/device-plugin-310P-volcano-{{version}}.yaml"
             rename: True
         - copy:
             src:
