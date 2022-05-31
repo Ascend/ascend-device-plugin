@@ -46,11 +46,11 @@ compile:
         - sed:
             option: "-i"
             srcstr: "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:{{version}}}/"
-            curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-710.yaml'
+            curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-310P.yaml'
         - sed:
             option: "-i"
             srcstr: 's/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:{{version}}/'
-            curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-710-volcano.yaml'
+            curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-310P-volcano.yaml'
         - copy:
             src:
               - '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-910.yaml'
