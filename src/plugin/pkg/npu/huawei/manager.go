@@ -15,14 +15,13 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"go.uber.org/atomic"
+	"huawei.com/npu-exporter/devmanager"
+	npuCommon "huawei.com/npu-exporter/devmanager/common"
+	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
-
-	"huawei.com/npu-exporter/devmanager"
-	npuCommon "huawei.com/npu-exporter/devmanager/common"
-	"huawei.com/npu-exporter/hwlog"
 )
 
 // HwDevManager manages huawei device devices.

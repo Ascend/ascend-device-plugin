@@ -10,9 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
-
 	"huawei.com/npu-exporter/devmanager"
+	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
 // TestHwAscend310PManagerGetNPUs for GetNPUs
