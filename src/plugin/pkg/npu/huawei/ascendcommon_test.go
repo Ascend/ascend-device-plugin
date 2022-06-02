@@ -13,18 +13,20 @@ import (
 
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/smartystreets/goconvey/convey"
+	"huawei.com/npu-exporter/devmanager"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
-	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 )
 
-const testLogicID = 3
+const (
+	testLogicID = 3
+)
 
 // TestUnhealthyState for UnhealthyState
 func TestUnhealthyState(t *testing.T) {
-	if err := UnhealthyState(1, uint32(testLogicID), "healthState", dsmi.NewFakeDeviceManager()); err != nil {
+	if err := UnhealthyState(1, testLogicID, "healthState", &devmanager.DeviceManagerMock{}); err != nil {
 		t.Errorf("TestUnhealthyState Run Failed")
 	}
 	t.Logf("TestUnhealthyState Run Pass")
@@ -32,7 +34,7 @@ func TestUnhealthyState(t *testing.T) {
 
 // TestGetPhyIDByName for PhyIDByName
 func TestGetPhyIDByName(t *testing.T) {
-	if phyID, err := GetPhyIDByName("Ascend310-3"); err != nil || dsmi.UnHealthyTestLogicID != phyID {
+	if phyID, err := GetPhyIDByName("Ascend310-3"); err != nil || testLogicID != phyID {
 		t.Errorf("TestGetLogicIDByName Run Failed")
 	}
 
@@ -197,29 +199,31 @@ func TestGetDevState(t *testing.T) {
 			})
 			defer mock.Reset()
 			adc := ascendCommonFunction{}
-			convey.So(adc.GetDevState("", dsmi.NewFakeDeviceManager()), convey.ShouldEqual, v1beta1.Unhealthy)
+
+			convey.So(adc.GetDevState("", &devmanager.DeviceManagerMock{}), convey.ShouldEqual, v1beta1.Unhealthy)
 		})
 		convey.Convey("GetLogicID failed", func() {
-			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(dsmi.FakeDeviceManager)), "GetLogicID",
-				func(_ *dsmi.FakeDeviceManager, _ uint32) (uint32, error) { return 0, fmt.Errorf("err") })
+			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(devmanager.DeviceManagerMock)), "GetLogicIDFromPhysicID",
+				func(_ *devmanager.DeviceManagerMock, _ int32) (int32, error) { return 0, fmt.Errorf("err") })
 			defer mock.Reset()
 			adc := ascendCommonFunction{}
-			convey.So(adc.GetDevState("", dsmi.NewFakeDeviceManager()), convey.ShouldEqual, v1beta1.Unhealthy)
+			convey.So(adc.GetDevState("", &devmanager.DeviceManagerMock{}), convey.ShouldEqual, v1beta1.Unhealthy)
 		})
 		convey.Convey("GetDeviceHealth failed", func() {
-			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(dsmi.FakeDeviceManager)), "GetDeviceHealth",
-				func(_ *dsmi.FakeDeviceManager, _ int32) (uint32, error) { return 0, fmt.Errorf("err") })
+			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(devmanager.DeviceManagerMock)), "GetDeviceHealth",
+				func(_ *devmanager.DeviceManagerMock, _ int32) (uint32, error) { return 0, fmt.Errorf("err") })
 			defer mock.Reset()
 			adc := ascendCommonFunction{}
-			convey.So(adc.GetDevState("", dsmi.NewFakeDeviceManager()), convey.ShouldEqual, v1beta1.Unhealthy)
+			convey.So(adc.GetDevState("", &devmanager.DeviceManagerMock{}), convey.ShouldEqual, v1beta1.Unhealthy)
 		})
 		convey.Convey("GetDeviceHealth return unhealth, UnhealthyState failed", func() {
-			mock := gomonkey.ApplyFunc(UnhealthyState, func(_, _ uint32, _ string, _ dsmi.DeviceMgrInterface) error {
+			mock := gomonkey.ApplyFunc(UnhealthyState, func(_ uint32, _ int32, _ string,
+				_ devmanager.DeviceInterface) error {
 				return fmt.Errorf("err")
 			})
 			defer mock.Reset()
 			adc := ascendCommonFunction{}
-			convey.So(adc.GetDevState("", dsmi.NewFakeDeviceManager()), convey.ShouldEqual, v1beta1.Unhealthy)
+			convey.So(adc.GetDevState("", &devmanager.DeviceManagerMock{}), convey.ShouldEqual, v1beta1.Unhealthy)
 		})
 	})
 }

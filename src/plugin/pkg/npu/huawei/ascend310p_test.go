@@ -10,9 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	"huawei.com/npu-exporter/devmanager"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
-
-	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 )
 
 // TestHwAscend310PManagerGetNPUs for GetNPUs
@@ -23,7 +22,7 @@ func TestHwAscend310PManagerGetNPUs(t *testing.T) {
 	}
 	resultDevMap["Ascend310P-4c-1-1"] = ""
 	resultDevMap["Ascend310P-8c-2-1"] = ""
-	hdm := createFake310PHwDevManager("ascend310P", false, false, false)
+	hdm := createFake310PHwDevManager("", true, false, false)
 	err := hdm.manager.GetNPUs(&hdm.allDevs, &hdm.allDevTypes, hdm.manager.GetMatchingDeviType())
 	if err != nil {
 		t.Fatalf("TestHwAscend310PManager_GetNPUs Run Failed")
@@ -70,7 +69,7 @@ func TestHwAscend310PManagerGetDevPath(t *testing.T) {
 }
 
 func createFake310PHwDevManager(mode string, fdFlag, useAscendDocker, volcanoType bool) *HwDevManager {
-	hdm := NewHwDevManager(mode)
+	hdm := &HwDevManager{}
 	o := Option{
 		GetFdFlag:          fdFlag,
 		UseAscendDocker:    useAscendDocker,
@@ -81,6 +80,6 @@ func createFake310PHwDevManager(mode string, fdFlag, useAscendDocker, volcanoTyp
 	}
 	hdm.SetParameters(o)
 	hdm.manager = NewHwAscend310PManager()
-	hdm.manager.SetDmgr(dsmi.NewFakeDeviceManager())
+	hdm.manager.SetDmgr(&devmanager.DeviceManagerMock{})
 	return hdm
 }

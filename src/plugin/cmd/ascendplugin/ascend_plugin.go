@@ -12,7 +12,6 @@ import (
 	"huawei.com/npu-exporter/hwlog"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
-	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 	"Ascend-device-plugin/src/plugin/pkg/npu/huawei"
 )
 
@@ -106,8 +105,11 @@ func main() {
 		hwlog.RunLog.Infof("unSupport mode: %s, waiting indefinitely", *mode)
 		<-neverStop
 	}
-	dsmi.DriverInit()
 	hdm := huawei.NewHwDevManager(*mode)
+	if hdm == nil {
+		hwlog.RunLog.Errorf("init device manager failed")
+		return
+	}
 	if err := hdm.SetRunMode(); err != nil {
 		hwlog.RunLog.Errorf("err to set Run mode, err: %v ", err)
 		<-neverStop

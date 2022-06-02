@@ -30,7 +30,6 @@ import (
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
-	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 )
 
 type pluginAPI struct {
@@ -218,8 +217,7 @@ func (s *pluginAPI) isDeviceStatusChange() bool {
 
 func (s *pluginAPI) listenVirtualDevices() bool {
 	isStateChange := false
-	var deviceIDs [hiAIMaxDeviceNum]uint32
-	devNum, err := s.hps.hdm.dmgr.GetDeviceList(&deviceIDs)
+	devNum, devList, err := s.hps.hdm.dmgr.GetDeviceList()
 	if err != nil {
 		hwlog.RunLog.Errorf("Get device list fail, error is %v", err)
 		return isStateChange
@@ -229,7 +227,7 @@ func (s *pluginAPI) listenVirtualDevices() bool {
 		return isStateChange
 	}
 	for idx := int32(0); idx < devNum; idx++ {
-		phyID, err := s.hps.hdm.dmgr.GetPhyID(deviceIDs[idx])
+		phyID, err := s.hps.hdm.dmgr.GetPhysicIDFromLogicID(devList[idx])
 		if err != nil {
 			hwlog.RunLog.Errorf("Get PhyID fail")
 			return isStateChange
@@ -246,7 +244,7 @@ func (s *pluginAPI) listenVirtualDevices() bool {
 	return isStateChange
 }
 
-func (s *pluginAPI) isPhyDevOwnThisVirtualDevice(device *common.NpuDevice, phyID uint32) bool {
+func (s *pluginAPI) isPhyDevOwnThisVirtualDevice(device *common.NpuDevice, phyID int32) bool {
 	return strings.Split(device.ID, "-")[logicIDIndexInVirtualDevID910] == fmt.Sprintf("%d", phyID)
 }
 
@@ -281,7 +279,7 @@ func (s *pluginAPI) checkDeviceNetworkHealthStatus(device *common.NpuDevice) boo
 		return false
 	}
 
-	logicID, err := s.hps.hdm.dmgr.GetLogicID(phyID)
+	logicID, err := s.hps.hdm.dmgr.GetLogicIDFromPhysicID(int32(phyID))
 	if err != nil {
 		hwlog.RunLog.Error(err)
 		return false
@@ -516,11 +514,11 @@ func (s *pluginAPI) getDeviceIP(phyID string) (string, error) {
 		return "", err
 	}
 
-	logicID, err := s.hps.hdm.dmgr.GetLogicID(uint32(transPhyID))
+	logicID, err := s.hps.hdm.dmgr.GetLogicIDFromPhysicID(int32(transPhyID))
 	if err != nil {
-		return dsmi.ERROR, fmt.Errorf("transfor phyID %s to logicID failed, error code : %v", phyID, err)
+		return "error", fmt.Errorf("transfor phyID %s to logicID failed, error code : %v", phyID, err)
 	}
-	return s.hps.hdm.dmgr.GetDeviceIP(int32(logicID))
+	return s.hps.hdm.dmgr.GetDeviceIPAddress(logicID)
 }
 
 // PreStartContainer is Standard interface to kubelet with empty implement.

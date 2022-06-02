@@ -10,11 +10,11 @@ import (
 	"strings"
 	"testing"
 
+	"huawei.com/npu-exporter/devmanager"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
-	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 )
 
 // NewFakeHwAscend910Manager for newFakeHwAscend910
@@ -81,7 +81,7 @@ func TestHwAscend910ManagerGetDevPath(t *testing.T) {
 }
 
 func createFake910HwDevManager(mode string, fdFlag, useAscendDocker, volcanoType bool) *HwDevManager {
-	hdm := NewHwDevManager(mode)
+	hdm := &HwDevManager{}
 	o := Option{
 		GetFdFlag:          fdFlag,
 		UseAscendDocker:    useAscendDocker,
@@ -92,7 +92,7 @@ func createFake910HwDevManager(mode string, fdFlag, useAscendDocker, volcanoType
 	}
 	hdm.SetParameters(o)
 	hdm.manager = NewFakeHwAscend910Manager()
-	hdm.manager.SetDmgr(dsmi.NewFakeDeviceManager())
+	hdm.manager.SetDmgr(&devmanager.DeviceManagerMock{})
 	return hdm
 }
 

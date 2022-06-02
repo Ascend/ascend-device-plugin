@@ -10,11 +10,11 @@ import (
 
 	"go.uber.org/atomic"
 	"google.golang.org/grpc"
+	"huawei.com/npu-exporter/devmanager"
 	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
-	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 )
 
 type fakeHwPluginServe struct {
@@ -45,7 +45,7 @@ func NewFakeHwPluginServe(hdm *HwDevManager, devType string) HwPluginServeInterf
 func TestStart(t *testing.T) {
 	fakeHwDevManager := &HwDevManager{
 		runMode:  "ascend910",
-		dmgr:     dsmi.NewFakeDeviceManager(),
+		dmgr:     &devmanager.DeviceManagerMock{},
 		stopFlag: atomic.NewBool(false),
 	}
 	pluginSocket := "Ascend910.sock"
@@ -78,7 +78,7 @@ func TestStop(t *testing.T) {
 func TestGetDevByType(t *testing.T) {
 	fakeHwDevManager := &HwDevManager{
 		runMode:  "Ascend310",
-		dmgr:     dsmi.NewFakeDeviceManager(),
+		dmgr:     &devmanager.DeviceManagerMock{},
 		stopFlag: atomic.NewBool(false),
 		allDevs:  []common.NpuDevice{},
 	}

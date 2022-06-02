@@ -15,12 +15,13 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"go.uber.org/atomic"
+	"huawei.com/npu-exporter/devmanager"
+	npuCommon "huawei.com/npu-exporter/devmanager/common"
 	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
-	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 )
 
 // HwDevManager manages huawei device devices.
@@ -31,7 +32,7 @@ type HwDevManager struct {
 	allDevs     []common.NpuDevice
 	defaultDevs []string
 	stopFlag    *atomic.Bool
-	dmgr        dsmi.DeviceMgrInterface
+	dmgr        devmanager.DeviceInterface
 }
 
 // Option option
@@ -78,11 +79,11 @@ var (
 type devManager interface {
 	GetNPUs(*[]common.NpuDevice, *[]string, string) error
 	GetDevPath(string, string) (string, string)
-	GetDevState(string, dsmi.DeviceMgrInterface) string
-	SetDmgr(dsmi.DeviceMgrInterface)
-	GetDmgr() dsmi.DeviceMgrInterface
+	GetDevState(string, devmanager.DeviceInterface) string
+	SetDmgr(devmanager.DeviceInterface)
+	GetDmgr() devmanager.DeviceInterface
 	GetMatchingDeviType() string
-	GetPhyDevMapVirtualDev() map[uint32]string
+	GetPhyDevMapVirtualDev() map[int32]string
 	DoWithVolcanoListAndWatch(*HwPluginServe)
 	GetDeviceNetworkState(int32, *common.NpuDevice) (string, error)
 	GetAnnotationMap(sets.String, []string) map[string]string
@@ -90,9 +91,23 @@ type devManager interface {
 
 // NewHwDevManager function is used to new a dev manager.
 func NewHwDevManager(mode string) *HwDevManager {
+	devM, err := devmanager.AutoInit("")
+	if err != nil {
+		hwlog.RunLog.Errorf("init hw dev manager failed, err: %v", err)
+		return nil
+	}
+	switch devM.DevType {
+	case npuCommon.Ascend310:
+		mode = common.RunMode310
+	case npuCommon.Ascend310P:
+		mode = common.RunMode310P
+	case npuCommon.Ascend910:
+		mode = common.RunMode910
+	default:
+	}
 	return &HwDevManager{
 		runMode:  mode,
-		dmgr:     dsmi.NewDeviceManager(),
+		dmgr:     devM,
 		stopFlag: atomic.NewBool(false),
 	}
 }
@@ -288,8 +303,9 @@ func (hdm *HwDevManager) SetRunMode() error {
 	}
 	chipName := ""
 	for i := int32(0); i < devNum; i++ {
-		chipName, err = hdm.dmgr.GetChipInfo(i)
+		chipInfo, err := hdm.dmgr.GetChipInfo(i)
 		if err == nil {
+			chipName = chipInfo.Name
 			break
 		}
 		if i == devNum-1 {

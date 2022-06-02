@@ -13,6 +13,8 @@ const (
 	hiAIAscendfdPrefix   = "davinci-mini"
 	hiAISlogdConfig      = "/etc/slog.conf"
 	hiAIMaxDeviceNum     = 64
+	hiAIMaxCardNum       = 64
+	hiAIMaxDevNumInCard  = 4
 	// The unit is seconds
 	sleepTime = 5
 
@@ -43,7 +45,7 @@ const (
 	huaweiUnHealthAscend910        = "huawei.com/Ascend910-Unhealthy"
 	huaweiUnHealthAscend310P       = "huawei.com/Ascend310P-Unhealthy"
 	huaweiUnHealthAscend310        = "huawei.com/Ascend310-Unhealthy"
-	// FunctionNotFound for describe dsmi interface function is exist or not
+	// FunctionNotFound for describe devmanager interface function is exist or not
 	FunctionNotFound = "-99998"
 
 	// MaxVirtualDevNum is the max virtual devices number

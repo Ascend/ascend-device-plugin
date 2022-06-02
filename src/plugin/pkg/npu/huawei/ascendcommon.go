@@ -14,13 +14,14 @@ import (
 	"strings"
 	"syscall"
 
+	"huawei.com/npu-exporter/devmanager"
+	npuCommon "huawei.com/npu-exporter/devmanager/common"
 	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
-	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 )
 
 const (
@@ -54,8 +55,8 @@ type Metadata struct {
 
 // ascendCommonFunction struct definition
 type ascendCommonFunction struct {
-	dmgr                dsmi.DeviceMgrInterface
-	phyDevMapVirtualDev map[uint32]string
+	dmgr                devmanager.DeviceInterface
+	phyDevMapVirtualDev map[int32]string
 	name                string
 	unHealthyKey        string
 }
@@ -160,12 +161,12 @@ func getNewNetworkRecoverDev(nnu, nnr sets.String) (sets.String, sets.String) {
 }
 
 // UnhealthyState state unhealth info
-func UnhealthyState(healthyState uint32, logicID uint32, healthyType string, dmgr dsmi.DeviceMgrInterface) error {
-	phyID, err := dmgr.GetPhyID(logicID)
+func UnhealthyState(healthyState uint32, logicID int32, healthyType string, dmgr devmanager.DeviceInterface) error {
+	phyID, err := dmgr.GetPhysicIDFromLogicID(logicID)
 	if err != nil {
 		return fmt.Errorf("get phyID failed %v", err)
 	}
-	if errs := dmgr.GetDeviceErrorCode(logicID); errs != nil {
+	if _, _, errs := dmgr.GetDeviceErrorCode(logicID); errs != nil {
 		return errs
 	}
 	// if logFlag is true,print device error message
@@ -225,7 +226,7 @@ func (adc *ascendCommonFunction) GetDevPath(id, ascendRuntimeOptions string) (st
 }
 
 // GetDevState get device state
-func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr dsmi.DeviceMgrInterface) string {
+func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr devmanager.DeviceInterface) string {
 	phyID, err := GetPhyIDByName(DeviceName)
 	if err != nil {
 		if logFlag {
@@ -234,14 +235,14 @@ func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr dsmi.Device
 		return v1beta1.Unhealthy
 	}
 
-	logicID, err := dmgr.GetLogicID(phyID)
+	logicID, err := dmgr.GetLogicIDFromPhysicID(int32(phyID))
 	if err != nil {
 		if logFlag {
 			hwlog.RunLog.Errorf("get device logicID failed, deviceId: %s, err: %s", DeviceName, err.Error())
 		}
 		return v1beta1.Unhealthy
 	}
-	healthState, err := dmgr.GetDeviceHealth(int32(logicID))
+	healthState, err := dmgr.GetDeviceHealth(logicID)
 	if err != nil {
 		if logFlag {
 			hwlog.RunLog.Errorf("get device healthy state failed, deviceId: %d, err: %s", int32(logicID), err.Error())
@@ -260,21 +261,20 @@ func (adc *ascendCommonFunction) GetDevState(DeviceName string, dmgr dsmi.Device
 	}
 }
 
-// GetNPUs Discovers all HUAWEI Ascend310 devices by call dsmi interface
+// GetNPUs Discovers all HUAWEI Ascend310 devices by call devmanager interface
 func (adc *ascendCommonFunction) GetNPUs(allDevices *[]common.NpuDevice, allDeviceTypes *[]string,
 	deviType string) error {
 	hwlog.RunLog.Infof("--->< deviType: %s", deviType)
 
-	var ids [hiAIMaxDeviceNum]uint32
-	devNum, getDevListErrInfo := adc.dmgr.GetDeviceList(&ids)
-	if getDevListErrInfo != nil {
-		return getDevListErrInfo
+	devNum, devList, err := adc.dmgr.GetDeviceList()
+	if err != nil {
+		return err
 	}
-	if devNum > hiAIMaxDeviceNum {
+	if devNum > hiAIMaxCardNum*hiAIMaxDevNumInCard {
 		return fmt.Errorf("invalid device num: %d", devNum)
 	}
 	for i := int32(0); i < devNum; i++ {
-		phyID, err := adc.dmgr.GetPhyID(ids[i])
+		phyID, err := adc.dmgr.GetPhysicIDFromLogicID(devList[i])
 		if err != nil {
 			return err
 		}
@@ -293,17 +293,17 @@ func (adc *ascendCommonFunction) GetMatchingDeviType() string {
 }
 
 // SetDmgr to set dmgr
-func (adc *ascendCommonFunction) SetDmgr(dmgr dsmi.DeviceMgrInterface) {
+func (adc *ascendCommonFunction) SetDmgr(dmgr devmanager.DeviceInterface) {
 	adc.dmgr = dmgr
 }
 
 // GetDmgr to get dmgr
-func (adc *ascendCommonFunction) GetDmgr() dsmi.DeviceMgrInterface {
+func (adc *ascendCommonFunction) GetDmgr() devmanager.DeviceInterface {
 	return adc.dmgr
 }
 
 // GetPhyDevMapVirtualDev get phy devices and virtual devices mapping
-func (adc *ascendCommonFunction) GetPhyDevMapVirtualDev() map[uint32]string {
+func (adc *ascendCommonFunction) GetPhyDevMapVirtualDev() map[int32]string {
 	return adc.phyDevMapVirtualDev
 }
 
@@ -363,10 +363,10 @@ func (adc *ascendCommonFunction) GetAnnotationMap(allocatableDevices sets.String
 	return antMap
 }
 
-func (adc *ascendCommonFunction) getVirtualDevice(logicID uint32) (dsmi.CgoDsmiVDevInfo, error) {
-	cgoDsmiVDevInfos, err := adc.dmgr.GetVDevicesInfo(logicID)
+func (adc *ascendCommonFunction) getVirtualDevice(logicID int32) (npuCommon.VirtualDevInfo, error) {
+	cgoDsmiVDevInfos, err := adc.dmgr.GetVirtualDeviceInfo(logicID)
 	if err != nil {
-		return dsmi.CgoDsmiVDevInfo{}, fmt.Errorf("query virtual device info failure: %s", err)
+		return npuCommon.VirtualDevInfo{}, fmt.Errorf("query virtual device info failure: %s", err)
 	}
 	return cgoDsmiVDevInfos, nil
 }
@@ -383,7 +383,7 @@ func (adc *ascendCommonFunction) removeDuplicate(allDeviceTypes *[]string) []str
 	return rmDupDeviceTypes
 }
 
-func (adc *ascendCommonFunction) assemblePhyDevices(phyID uint32, runMode string) ([]common.NpuDevice, []string) {
+func (adc *ascendCommonFunction) assemblePhyDevices(phyID int32, runMode string) ([]common.NpuDevice, []string) {
 	var devices []common.NpuDevice
 	var deviTypes []string
 	devID := fmt.Sprintf("%s-%d", runMode, phyID)
@@ -393,12 +393,12 @@ func (adc *ascendCommonFunction) assemblePhyDevices(phyID uint32, runMode string
 	return devices, deviTypes
 }
 
-func (adc *ascendCommonFunction) assembleVirtualDevices(phyID uint32, cgoDsmiVDevInfos dsmi.CgoDsmiVDevInfo,
+func (adc *ascendCommonFunction) assembleVirtualDevices(phyID int32, VDevInfos npuCommon.VirtualDevInfo,
 	runMode string) ([]common.NpuDevice, []string, []string) {
 	var devices []common.NpuDevice
 	var vDeviTypes []string
 	var vDevID []string
-	for _, dsmiSubVDevInfo := range cgoDsmiVDevInfos.CgoDsmiSubVDevInfos {
+	for _, dsmiSubVDevInfo := range VDevInfos.CgoDsmiSubVDevInfos {
 		if dsmiSubVDevInfo.Spec.CoreNum == zeroCore {
 			continue
 		}

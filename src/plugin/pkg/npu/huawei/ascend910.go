@@ -43,30 +43,28 @@ func NewHwAscend910Manager() *HwAscend910Manager {
 	return &HwAscend910Manager{}
 }
 
-// GetNPUs Discovers all HUAWEI Ascend910 devices by call dsmi interface
+// GetNPUs Discovers all HUAWEI Ascend910 devices by call devmanager interface
 // a physical npu can be split into multiple vnpu
 // vnpu is classification by computing power, like Ascend910-4c, Ascend910-8c, Ascend910-16c
 // physical npu sets corresponding to the deviTypes, and vnpu is vDeviTypes
 // vDeviTypes may is: [Ascend910-4c, Ascend910-4c, Ascend910-8c], also deviTypes may is: [Ascend910, Ascend910]
 // one class deviType will generate a socket file, like ascend910-4c.sock or Ascend910.sock, so we deduplicate
 func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]common.NpuDevice, allDeviceTypes *[]string, _ string) error {
-	var ids [hiAIMaxDeviceNum]uint32
-
-	devNum, err := hnm.dmgr.GetDeviceList(&ids)
+	devNum, devList, err := hnm.dmgr.GetDeviceList()
 	if err != nil {
 		return err
 	}
 	if devNum > hiAIMaxDeviceNum {
 		return fmt.Errorf("invalid device num: %d", devNum)
 	}
-	phyDevMapVirtualDev := make(map[uint32]string, maxTrainDevicesNum)
+	phyDevMapVirtualDev := make(map[int32]string, maxTrainDevicesNum)
 	var deviTypes, vDevID []string
 	for i := int32(0); i < devNum; i++ {
-		phyID, err := hnm.dmgr.GetPhyID(ids[i])
+		phyID, err := hnm.dmgr.GetPhysicIDFromLogicID(devList[i])
 		if err != nil {
 			return err
 		}
-		cgoDsmiVDevInfos, err := hnm.getVirtualDevice(ids[i])
+		cgoDsmiVDevInfos, err := hnm.getVirtualDevice(devList[i])
 		if err != nil && !strings.Contains(err.Error(), FunctionNotFound) {
 			if !strings.Contains(err.Error(), noVDevFound) {
 				hwlog.RunLog.Errorf("Query virtual device info failure!, err: %s", err.Error())
@@ -109,7 +107,7 @@ func (hnm *HwAscend910Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe) {
 
 // GetDeviceNetworkState check NPU network health
 func (hnm *HwAscend910Manager) GetDeviceNetworkState(logicID int32, device *common.NpuDevice) (string, error) {
-	healthCode, err := hnm.dmgr.GetDeviceNetworkHealth(logicID)
+	healthCode, err := hnm.dmgr.GetDeviceNetWorkHealth(logicID)
 	if err != nil {
 		return "", err
 	}
