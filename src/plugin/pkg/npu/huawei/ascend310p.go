@@ -9,10 +9,9 @@ import (
 	"fmt"
 	"strings"
 
+	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
-
-	"huawei.com/npu-exporter/hwlog"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 )
@@ -38,27 +37,26 @@ func NewHwAscend310PManager() *HwAscend310PManager {
 	}
 }
 
-// GetNPUs Discovers all HUAWEI Ascend310P devices by call dsmi interface
+// GetNPUs Discovers all HUAWEI Ascend310P devices by call devmanager interface
 func (hnm *HwAscend310PManager) GetNPUs(allDevices *[]common.NpuDevice, allDeviceTypes *[]string,
 	deviType string) error {
 	hwlog.RunLog.Infof("--->< deviType: %s", deviType)
-	var ids [hiAIMaxDeviceNum]uint32
 
-	devNum, err := hnm.dmgr.GetDeviceList(&ids)
+	devNum, devList, err := hnm.dmgr.GetDeviceList()
 	if err != nil {
 		return err
 	}
 	if devNum > hiAIMaxDeviceNum {
 		return fmt.Errorf("invalid device num: %d", devNum)
 	}
-	phyDevMapVirtualDev := make(map[uint32]string, devNum)
+	phyDevMapVirtualDev := make(map[int32]string, devNum)
 	var deviTypes, vDevID []string
 	for i := int32(0); i < devNum; i++ {
-		phyID, err := hnm.dmgr.GetPhyID(ids[i])
+		phyID, err := hnm.dmgr.GetPhysicIDFromLogicID(devList[i])
 		if err != nil {
 			return err
 		}
-		cgoDsmiVDevInfos, err := hnm.getVirtualDevice(ids[i])
+		cgoDsmiVDevInfos, err := hnm.getVirtualDevice(devList[i])
 		if err != nil && !strings.Contains(err.Error(), FunctionNotFound) {
 			if !strings.Contains(err.Error(), noVDevFound) {
 				hwlog.RunLog.Errorf("Query virtual device info failure!, err: %s", err.Error())

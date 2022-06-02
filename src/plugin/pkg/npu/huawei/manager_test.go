@@ -15,12 +15,13 @@ import (
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/smartystreets/goconvey/convey"
 	"go.uber.org/atomic"
+	"huawei.com/npu-exporter/devmanager"
+	npuCommon "huawei.com/npu-exporter/devmanager/common"
 	"huawei.com/npu-exporter/hwlog"
 	"huawei.com/npu-exporter/utils"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
-	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 )
 
 const (
@@ -55,7 +56,7 @@ func TestHwDevManagerGetNPUs(t *testing.T) {
 func createFakeDevManager(runMode string) *HwDevManager {
 	fakeHwDevManager := &HwDevManager{
 		runMode:  runMode,
-		dmgr:     dsmi.NewFakeDeviceManager(),
+		dmgr:     &devmanager.DeviceManagerMock{},
 		stopFlag: atomic.NewBool(false),
 	}
 	return fakeHwDevManager
@@ -108,54 +109,86 @@ func deleteServerSocket(serverSocket string) {
 	}
 }
 
-// TestSetRunMode for SetRunMode
-func TestSetRunMode(t *testing.T) {
+// TestSetRunModeFailed for SetRunMode
+func TestSetRunModeFailed(t *testing.T) {
 	convey.Convey("TestSetRunMode", t, func() {
-		convey.Convey("runMode is not empty", func() {
-			hdm := &HwDevManager{runMode: common.RunMode310, dmgr: dsmi.NewFakeDeviceManager()}
-			convey.So(hdm.SetRunMode(), convey.ShouldBeNil)
-		})
 		convey.Convey("GetDeviceCount failed", func() {
-			hdm := &HwDevManager{dmgr: dsmi.NewFakeDeviceManager()}
-			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(dsmi.FakeDeviceManager)), "GetDeviceCount",
-				func(_ *dsmi.FakeDeviceManager) (int32, error) { return 0, fmt.Errorf("err") })
+			hdm := &HwDevManager{dmgr: &devmanager.DeviceManagerMock{}}
+			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(devmanager.DeviceManagerMock)), "GetDeviceCount",
+				func(_ *devmanager.DeviceManagerMock) (int32, error) { return 0, fmt.Errorf("err") })
 			defer mock.Reset()
 			convey.So(hdm.SetRunMode(), convey.ShouldNotBeNil)
 		})
 		convey.Convey("GetChipInfo failed", func() {
-			hdm := &HwDevManager{dmgr: dsmi.NewFakeDeviceManager()}
-			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(dsmi.FakeDeviceManager)), "GetChipInfo",
-				func(_ *dsmi.FakeDeviceManager, _ int32) (string, error) { return "", fmt.Errorf("err") })
+			hdm := &HwDevManager{dmgr: &devmanager.DeviceManagerMock{}}
+			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(devmanager.DeviceManagerMock)), "GetChipInfo",
+				func(_ *devmanager.DeviceManagerMock, _ int32) (*npuCommon.ChipInfo, error) {
+					return &npuCommon.ChipInfo{
+						Type:    "ascend",
+						Name:    "910",
+						Version: "v1",
+					}, fmt.Errorf("err")
+				})
 			defer mock.Reset()
 			convey.So(hdm.SetRunMode(), convey.ShouldNotBeNil)
 		})
+		convey.Convey("invalid mode", func() {
+			hdm := &HwDevManager{dmgr: &devmanager.DeviceManagerMock{}}
+			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(devmanager.DeviceManagerMock)), "GetChipInfo",
+				func(_ *devmanager.DeviceManagerMock, _ int32) (*npuCommon.ChipInfo, error) {
+					return &npuCommon.ChipInfo{}, nil
+				})
+			defer mock.Reset()
+			convey.So(hdm.SetRunMode(), convey.ShouldNotBeNil)
+		})
+	})
+}
+
+// TestSetRunModeFailed for SetRunMode
+func TestSetRunModeSuccess(t *testing.T) {
+	convey.Convey("TestSetRunMode", t, func() {
+		convey.Convey("runMode is not empty", func() {
+			hdm := &HwDevManager{runMode: common.RunMode310, dmgr: &devmanager.DeviceManagerMock{}}
+			convey.So(hdm.SetRunMode(), convey.ShouldBeNil)
+		})
 		convey.Convey("310", func() {
-			hdm := &HwDevManager{dmgr: dsmi.NewFakeDeviceManager()}
-			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(dsmi.FakeDeviceManager)), "GetChipInfo",
-				func(_ *dsmi.FakeDeviceManager, _ int32) (string, error) { return "310", nil })
+			hdm := &HwDevManager{dmgr: &devmanager.DeviceManagerMock{}}
+			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(devmanager.DeviceManagerMock)), "GetChipInfo",
+				func(_ *devmanager.DeviceManagerMock, _ int32) (*npuCommon.ChipInfo, error) {
+					return &npuCommon.ChipInfo{
+						Type:    "ascend",
+						Name:    "910",
+						Version: "v1",
+					}, nil
+				})
 			defer mock.Reset()
 			convey.So(hdm.SetRunMode(), convey.ShouldBeNil)
 		})
 		convey.Convey("310P", func() {
-			hdm := &HwDevManager{dmgr: dsmi.NewFakeDeviceManager()}
-			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(dsmi.FakeDeviceManager)), "GetChipInfo",
-				func(_ *dsmi.FakeDeviceManager, _ int32) (string, error) { return "310P", nil })
+			hdm := &HwDevManager{dmgr: &devmanager.DeviceManagerMock{}}
+			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(devmanager.DeviceManagerMock)), "GetChipInfo",
+				func(_ *devmanager.DeviceManagerMock, _ int32) (*npuCommon.ChipInfo, error) {
+					return &npuCommon.ChipInfo{
+						Type:    "ascend",
+						Name:    "910",
+						Version: "v1",
+					}, nil
+				})
 			defer mock.Reset()
 			convey.So(hdm.SetRunMode(), convey.ShouldBeNil)
 		})
 		convey.Convey("910", func() {
-			hdm := &HwDevManager{dmgr: dsmi.NewFakeDeviceManager()}
-			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(dsmi.FakeDeviceManager)), "GetChipInfo",
-				func(_ *dsmi.FakeDeviceManager, _ int32) (string, error) { return "910", nil })
+			hdm := &HwDevManager{dmgr: &devmanager.DeviceManagerMock{}}
+			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(devmanager.DeviceManagerMock)), "GetChipInfo",
+				func(_ *devmanager.DeviceManagerMock, _ int32) (*npuCommon.ChipInfo, error) {
+					return &npuCommon.ChipInfo{
+						Type:    "ascend",
+						Name:    "910",
+						Version: "v1",
+					}, nil
+				})
 			defer mock.Reset()
 			convey.So(hdm.SetRunMode(), convey.ShouldBeNil)
-		})
-		convey.Convey("invalid mode", func() {
-			hdm := &HwDevManager{dmgr: dsmi.NewFakeDeviceManager()}
-			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(dsmi.FakeDeviceManager)), "GetChipInfo",
-				func(_ *dsmi.FakeDeviceManager, _ int32) (string, error) { return "110", nil })
-			defer mock.Reset()
-			convey.So(hdm.SetRunMode(), convey.ShouldNotBeNil)
 		})
 	})
 }

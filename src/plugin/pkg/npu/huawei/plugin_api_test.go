@@ -5,6 +5,7 @@
 package huawei
 
 import (
+	"reflect"
 	"testing"
 	"time"
 
@@ -13,15 +14,15 @@ import (
 	"github.com/smartystreets/goconvey/convey"
 	"go.uber.org/atomic"
 	"golang.org/x/net/context"
+	"huawei.com/npu-exporter/devmanager"
 	"huawei.com/npu-exporter/hwlog"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
-	"Ascend-device-plugin/src/plugin/pkg/npu/dsmi"
 	mockV1Beta1 "Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_kubelet_v1beta1"
 	"Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_kubernetes"
 	"Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_v1"
@@ -33,6 +34,7 @@ const (
 	annonationTest1 = `{"pod_name":"pod_name","server_id":"127.0.0.0",` + device1 + `}`
 	annonationTest2 = `{"pod_name":"pod_name","server_id":"127.0.0.0",` + device2 + `}`
 	sleepTestFour   = 4
+	unHealthyCode   = 2
 )
 
 //TestPluginAPIListAndWatch for listAndWatch
@@ -105,16 +107,17 @@ func changeBreakFlag(api *pluginAPI) {
 }
 
 func createFakePluginAPI(hdm *HwDevManager, devType string, ki *KubeInteractor) *pluginAPI {
-	return &pluginAPI{hps: &HwPluginServe{
-		devType:        devType,
-		hdm:            hdm,
-		runMode:        hdm.runMode,
-		devices:        make(map[string]*common.NpuDevice),
-		kubeInteractor: ki,
-		healthDevice:   sets.String{},
-		unHealthDevice: sets.String{},
-		stopCh:         make(chan struct{}),
-	},
+	return &pluginAPI{
+		hps: &HwPluginServe{
+			devType:        devType,
+			hdm:            hdm,
+			runMode:        hdm.runMode,
+			devices:        make(map[string]*common.NpuDevice),
+			kubeInteractor: ki,
+			healthDevice:   sets.String{},
+			unHealthDevice: sets.String{},
+			stopCh:         make(chan struct{}),
+		},
 		outbreak: atomic.NewBool(false),
 	}
 }
@@ -313,7 +316,7 @@ func TestCheckDeviceNetworkHealthStatus(t *testing.T) {
 			})
 			defer patches.Reset()
 			hdm := createFake910HwDevManager("ascend910", false, false, false)
-			hdm.dmgr = dsmi.NewFakeDeviceManager()
+			hdm.dmgr = &devmanager.DeviceManagerMock{}
 			fakeKubeInteractor := &KubeInteractor{}
 			device := &common.NpuDevice{
 				DevType:       "Ascend910",
@@ -336,8 +339,11 @@ func TestCheckDeviceNetworkStatusChange(t *testing.T) {
 				return
 			})
 			defer patches.Reset()
+			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(devmanager.DeviceManagerMock)), "GetDeviceNetWorkHealth",
+				func(_ *devmanager.DeviceManagerMock, _ int32) (uint32, error) { return unHealthyCode, nil })
+			defer mock.Reset()
 			hdm := createFake910HwDevManager("ascend910", false, false, false)
-			hdm.dmgr = dsmi.NewFakeDeviceManager()
+			hdm.dmgr = &devmanager.DeviceManagerMock{}
 			fakeKubeInteractor := &KubeInteractor{}
 			device := &common.NpuDevice{
 				DevType:       "Ascend910",

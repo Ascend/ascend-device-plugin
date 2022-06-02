@@ -11,8 +11,8 @@ cloud.google.com/go/bigquery v1.0.1/go.mod h1:i/xbL2UlR5RvWAURpBYZTtm/cXjCha9lbf
 cloud.google.com/go/datastore v1.0.0/go.mod h1:LXYbyblFSglQ5pkeyhO+Qmw7ukd3C+pD7TKLgZqpHYE=
 cloud.google.com/go/pubsub v1.0.1/go.mod h1:R0Gpsv3s54REJCy4fxDixWD93lHJMoZTyQ2kNxGRt3I=
 cloud.google.com/go/storage v1.0.0/go.mod h1:IhtSnM/ZTZV8YYJWCY8RULGVqBDmpoyjwiyrjsg+URw=
-codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.2.5 h1:u5LyprijYrAqFzFv7okIJ7FSyiU2ubY50tWWKMkiiUY=
-codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.2.5/go.mod h1:sUdarWqC4+C7fr0rpGUNvx1n1JixILyKOlS1gDfpi/w=
+codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.2.7 h1:yKnqOCGmdknfWhfDBqSKYWuioQzdiXz7VeKh56EGhjw=
+codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.2.7/go.mod h1:sUdarWqC4+C7fr0rpGUNvx1n1JixILyKOlS1gDfpi/w=
 codehub-dg-y.huawei.com/OpenSourceCenter/kubernetes.git v1.19.4-h4 h1:X05D0Oi6fzBYyqXgnndyilTzhnsSqTQsPT0ezxewu3Q=
 codehub-dg-y.huawei.com/OpenSourceCenter/kubernetes.git v1.19.4-h4/go.mod h1:yhT1/ltQajQsha3tnYc9QPFYSumGM45nlZdjf7WqE1A=
 codehub-dg-y.huawei.com/OpenSourceCenter/kubernetes.git/staging/src/k8s.io/api v1.19.4-h4 h1:lVQ8yCZOb7UM2OMwIW0DDWc5242hFIM3n18Ri02IFR0=
