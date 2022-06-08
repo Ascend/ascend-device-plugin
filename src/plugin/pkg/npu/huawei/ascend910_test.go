@@ -10,7 +10,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/agiledragon/gomonkey/v2"
+
 	"huawei.com/npu-exporter/devmanager"
+	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
@@ -100,4 +103,31 @@ func TestGroupDevByPower(t *testing.T) {
 	hdm := createFake910HwDevManager("", true, false, false)
 	hdm.manager.GetAnnotationMap(sets.String{}, []string{hiAIAscend910Prefix})
 	t.Logf("TestGroupDevByPower Run Pass")
+}
+
+// Test910PListAndWatch test 910 listen and watch
+func Test910PListAndWatch(t *testing.T) {
+	hdm := setParams(false, common.RunMode910)
+	if err := hdm.GetNPUs(); err != nil {
+		t.Fatal(err)
+	}
+	mockNode := gomonkey.ApplyFunc(getNodeNpuUsed, func(usedDevices *sets.String, hps *HwPluginServe) {
+		return
+	})
+	mockNodeCtx := gomonkey.ApplyFunc(getNodeWithTodoCtx, func(_ *KubeInteractor) (*v1.Node, error) {
+		return nil, nil
+	})
+	mockPatchNode := gomonkey.ApplyFunc(patchNodeWithTodoCtx, func(_ *KubeInteractor, _ []byte) (*v1.Node, error) {
+		return nil, nil
+	})
+	devices := map[string]*common.NpuDevice{"Ascend910": &common.NpuDevice{ID: "0", Health: "Healthy"}}
+	hps := &HwPluginServe{devices: devices, hdm: hdm, devType: hiAIAscend910Prefix}
+	hdm.manager.DoWithVolcanoListAndWatch(hps)
+	mockNode.Reset()
+	mockNodeCtx.Reset()
+	mockPatchNode.Reset()
+	if len(totalDevices) != 1 || totalDevices.List()[0] != "0" {
+		t.Fatal("Test910PListAndWatch Run Failed")
+	}
+	t.Logf("Test910PListAndWatch Run Pass")
 }

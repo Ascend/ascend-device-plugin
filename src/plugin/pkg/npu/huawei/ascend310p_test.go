@@ -10,8 +10,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/agiledragon/gomonkey/v2"
 	"huawei.com/npu-exporter/devmanager"
+	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 )
 
 // TestHwAscend310PManagerGetNPUs for GetNPUs
@@ -66,6 +71,33 @@ func TestHwAscend310PManagerGetDevPath(t *testing.T) {
 		t.Fatal("TestHwAscend310PManager_GetDevPath Run Failed")
 	}
 	t.Logf("TestHwAscend310PManager_GetDevPath Run Pass")
+}
+
+// Test310PListAndWatch test 310p listen and watch
+func Test310PListAndWatch(t *testing.T) {
+	hdm := setParams(false, common.RunMode310P)
+	if err := hdm.GetNPUs(); err != nil {
+		t.Fatal(err)
+	}
+	mockNode := gomonkey.ApplyFunc(getNodeNpuUsed, func(usedDevices *sets.String, hps *HwPluginServe) {
+		return
+	})
+	mockNodeCtx := gomonkey.ApplyFunc(getNodeWithTodoCtx, func(_ *KubeInteractor) (*v1.Node, error) {
+		return nil, nil
+	})
+	mockPatchNode := gomonkey.ApplyFunc(patchNodeWithTodoCtx, func(_ *KubeInteractor, _ []byte) (*v1.Node, error) {
+		return nil, nil
+	})
+	devices := map[string]*common.NpuDevice{"Ascend310": &common.NpuDevice{ID: "0", Health: "Healthy"}}
+	hps := &HwPluginServe{devices: devices, hdm: hdm, devType: hiAIAscend310PPrefix}
+	hdm.manager.DoWithVolcanoListAndWatch(hps)
+	mockNode.Reset()
+	mockNodeCtx.Reset()
+	mockPatchNode.Reset()
+	if len(totalDevices) != 1 || totalDevices.List()[0] != "0" {
+		t.Fatal("Test310PListAndWatch Run Failed")
+	}
+	t.Logf("Test310PListAndWatch Run Pass")
 }
 
 func createFake310PHwDevManager(mode string, fdFlag, useAscendDocker, volcanoType bool) *HwDevManager {

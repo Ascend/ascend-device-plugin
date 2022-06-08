@@ -5,7 +5,6 @@ Copyright(C) 2020-2022. Huawei Technologies Co.,Ltd.  All rights reserved.
 package huawei
 
 import (
-	"context"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -13,13 +12,10 @@ import (
 	"time"
 
 	"huawei.com/npu-exporter/hwlog"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/kubernetes/pkg/util/node"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 )
@@ -55,7 +51,7 @@ func NewKubeInteractor() (*KubeInteractor, error) {
 }
 
 func (ki *KubeInteractor) annotationReset() {
-	curNode, err := ki.clientset.CoreV1().Nodes().Get(context.Background(), ki.nodeName, metav1.GetOptions{})
+	curNode, err := getNodeWithBackgroundCtx(ki)
 	if err != nil {
 		hwlog.RunLog.Errorf("failed to get node, nodeName: %s, err: %v", ki.nodeName, err)
 		return
@@ -63,7 +59,7 @@ func (ki *KubeInteractor) annotationReset() {
 	newNode := curNode.DeepCopy()
 	ki.resetNodeAnnotations(newNode)
 	hwlog.RunLog.Infof("newNode.Annotations: %v", newNode.Annotations)
-	updatedNode, _, err := node.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), curNode, newNode)
+	updatedNode, _, err := patchNodeState(ki, curNode, newNode)
 	if err != nil {
 		hwlog.RunLog.Errorf("failed to patch volcano npu resource: %v", err)
 		return
@@ -75,7 +71,7 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 	isAlloc, isVir bool, devType string) error {
 	var err error
 	err = wait.PollImmediate(interval*time.Second, timeout*time.Second, func() (bool, error) {
-		curNode, err := ki.clientset.CoreV1().Nodes().Get(context.Background(), ki.nodeName, metav1.GetOptions{})
+		curNode, err := getNodeWithBackgroundCtx(ki)
 		if err != nil {
 			hwlog.RunLog.Errorf("failed to get node, nodeName: %s, err: %v", ki.nodeName, err)
 			return false, nil
@@ -97,8 +93,7 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 			ki.update310PAnnotation(curNode, newNode, groupAllocatableDevs[huaweiAscend310P])
 		}
 		hwlog.RunLog.Infof("newNode.Annotations: %v", newNode.Annotations)
-		updatedNode, _, err := node.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), curNode,
-			newNode)
+		updatedNode, _, err := patchNodeState(ki, curNode, newNode)
 		if err != nil {
 			hwlog.RunLog.Errorf("failed to patch volcano npu resource: %v", err)
 			return false, nil
@@ -295,15 +290,12 @@ func judgeSameAscend(annotation string, allocatableDevices sets.String) bool {
 }
 
 func (ki *KubeInteractor) patchNode(patchFunc func(*v1.Node) []byte) error {
-	node, err := ki.clientset.CoreV1().Nodes().Get(context.TODO(), ki.nodeName, metav1.GetOptions{})
+	curNode, err := getNodeWithTodoCtx(ki)
 	if err != nil {
 		hwlog.RunLog.Warnf("get node error, %v", err)
 		return err
 	}
-	pbyte := patchFunc(node)
-	_, err = ki.clientset.CoreV1().Nodes().Patch(context.TODO(), ki.nodeName, types.MergePatchType, pbyte,
-		metav1.PatchOptions{})
-	if err != nil {
+	if _, err := patchNodeWithTodoCtx(ki, patchFunc(curNode)); err != nil {
 		hwlog.RunLog.Warnf("path node error, %v", err)
 		return err
 	}

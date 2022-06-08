@@ -7,14 +7,18 @@ package huawei
 import (
 	"testing"
 
+	"github.com/agiledragon/gomonkey/v2"
+	"k8s.io/apimachinery/pkg/api/resource"
+
 	"github.com/golang/mock/gomock"
 	"github.com/smartystreets/goconvey/convey"
 	"golang.org/x/net/context"
 	"huawei.com/npu-exporter/hwlog"
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 
+	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 	"Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_kubernetes"
 	"Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_v1"
 )
@@ -75,6 +79,41 @@ func TestChangeLabelFormat(t *testing.T) {
 			convey.So(shortSets, convey.ShouldEqual, sets.String{"1": sets.Empty{}})
 		})
 	})
+}
+
+// TestAnnotationReset test annotation reset
+func TestAnnotationReset(t *testing.T) {
+	hdm := setParams(false, common.RunMode310P)
+	if err := hdm.GetNPUs(); err != nil {
+		t.Fatal(err)
+	}
+	annotations := make(map[string]string, 1)
+	annotations[huaweiAscend310P] = "Ascend310P-0"
+	node := &v1.Node{
+		Status: v1.NodeStatus{
+			Allocatable: v1.ResourceList{
+				huaweiAscend310P: resource.Quantity{},
+			},
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: annotations,
+		},
+	}
+	mockNodeCtx := gomonkey.ApplyFunc(getNodeWithBackgroundCtx, func(_ *KubeInteractor) (*v1.Node, error) {
+		return node, nil
+	})
+	mockState := gomonkey.ApplyFunc(patchNodeState, func(_ *KubeInteractor, _, _ *v1.Node) (*v1.Node, []byte, error) {
+		return node, nil, nil
+	})
+	devices := map[string]*common.NpuDevice{"Ascend310P": &common.NpuDevice{ID: "0", Health: "Healthy"}}
+	hps := &HwPluginServe{devices: devices, hdm: hdm, devType: hiAIAscend310PPrefix}
+	hps.kubeInteractor.annotationReset()
+	mockNodeCtx.Reset()
+	mockState.Reset()
+	if node.Annotations[huaweiAscend310P] != "Ascend310P-0" {
+		t.Fatal("TestAnnotationReset Run Failed")
+	}
+	t.Logf("TestAnnotationReset Run Pass")
 }
 
 func init() {
