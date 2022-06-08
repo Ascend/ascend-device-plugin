@@ -126,5 +126,8 @@ func Test910PListAndWatch(t *testing.T) {
 	mockNode.Reset()
 	mockNodeCtx.Reset()
 	mockPatchNode.Reset()
-	t.Logf("Test310PListAndWatch Run Pass")
+	if len(totalDevices) != 1 || totalDevices.List()[0] != "0" {
+		t.Fatal("Test910PListAndWatch Run Failed")
+	}
+	t.Logf("Test910PListAndWatch Run Pass")
 }

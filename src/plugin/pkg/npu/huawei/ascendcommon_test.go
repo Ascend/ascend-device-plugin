@@ -250,5 +250,8 @@ func TestDoWithVolcanoListAndWatch(t *testing.T) {
 	mockNode.Reset()
 	mockNodeCtx.Reset()
 	mockPatchNode.Reset()
+	if len(totalDevices) != 1 || totalDevices.List()[0] != "0" {
+		t.Fatal("TestDoWithVolcanoListAndWatch Run Failed")
+	}
 	t.Logf("TestDoWithVolcanoListAndWatch Run Pass")
 }

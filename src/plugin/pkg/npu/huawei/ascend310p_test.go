@@ -11,10 +11,9 @@ import (
 	"testing"
 
 	"github.com/agiledragon/gomonkey/v2"
+	"huawei.com/npu-exporter/devmanager"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-
-	"huawei.com/npu-exporter/devmanager"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
@@ -95,6 +94,9 @@ func Test310PListAndWatch(t *testing.T) {
 	mockNode.Reset()
 	mockNodeCtx.Reset()
 	mockPatchNode.Reset()
+	if len(totalDevices) != 1 || totalDevices.List()[0] != "0" {
+		t.Fatal("Test310PListAndWatch Run Failed")
+	}
 	t.Logf("Test310PListAndWatch Run Pass")
 }
 
