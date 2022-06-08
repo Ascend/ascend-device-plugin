@@ -6,6 +6,7 @@
 package huawei
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -13,6 +14,10 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/kubernetes/pkg/util/node"
 
 	"huawei.com/npu-exporter/devmanager"
 	npuCommon "huawei.com/npu-exporter/devmanager/common"
@@ -417,4 +422,21 @@ func (adc *ascendCommonFunction) isVirExist(hps *HwPluginServe) bool {
 		return true
 	}
 	return common.IsVirtualDev(hps.hdm.allDevTypes[0])
+}
+
+func getNodeWithBackgroundCtx(ki *KubeInteractor) (*v1.Node, error) {
+	return ki.clientset.CoreV1().Nodes().Get(context.Background(), ki.nodeName, metav1.GetOptions{})
+}
+
+func getNodeWithTodoCtx(ki *KubeInteractor) (*v1.Node, error) {
+	return ki.clientset.CoreV1().Nodes().Get(context.TODO(), ki.nodeName, metav1.GetOptions{})
+}
+
+func patchNodeWithTodoCtx(ki *KubeInteractor, pByte []byte) (*v1.Node, error) {
+	return ki.clientset.CoreV1().Nodes().Patch(context.TODO(), ki.nodeName, types.MergePatchType, pByte,
+		metav1.PatchOptions{})
+}
+
+func patchNodeState(ki *KubeInteractor, curNode, newNode *v1.Node) (*v1.Node, []byte, error) {
+	return node.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), curNode, newNode)
 }

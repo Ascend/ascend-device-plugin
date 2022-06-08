@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/agiledragon/gomonkey/v2"
-	"github.com/golang/mock/gomock"
 	"github.com/smartystreets/goconvey/convey"
 	"go.uber.org/atomic"
 	"golang.org/x/net/context"
@@ -23,9 +22,6 @@ import (
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
-	mockV1Beta1 "Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_kubelet_v1beta1"
-	"Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_kubernetes"
-	"Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_v1"
 )
 
 const (
@@ -37,64 +33,50 @@ const (
 	unHealthyCode   = 2
 )
 
-//TestPluginAPIListAndWatch for listAndWatch
-func TestPluginAPIListAndWatch(t *testing.T) {
-	hdm := createFakeDevManager("ascend910")
-	o := Option{GetFdFlag: false, UseAscendDocker: false, UseVolcanoType: false, ListAndWatchPeriod: sleepTime,
-		AutoStowingDevs: true, KubeConfig: ""}
-	hdm.SetParameters(o)
+// TestPluginAPIListAndWatchWithoutVolcano for listAndWatch with out volcano schedule
+func TestPluginAPIListAndWatchWithoutVolcano(t *testing.T) {
+	hdm := setParams(false, common.RunMode910)
 	if err := hdm.GetNPUs(); err != nil {
 		t.Fatal(err)
 	}
 	devTypes := hdm.GetDevType()
 	if len(devTypes) == 0 {
-		t.Fatal("TestPluginAPI_ListAndWatch Run Failed")
+		t.Fatal("TestPluginAPIListAndWatchWithoutVolcano Run Failed")
 	}
-	var fakePluginAPI *pluginAPI
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	node1 := &v1.Node{
-		ObjectMeta: metav1.ObjectMeta{Annotations: make(map[string]string), Labels: make(map[string]string)}}
-	podList := &v1.PodList{}
-	pod1 := v1.Pod{ObjectMeta: metav1.ObjectMeta{Annotations: make(map[string]string), Labels: make(map[string]string)}}
-	podList.Items = append(podList.Items, pod1)
-	node1.Annotations[huaweiAscend910] = "Ascend910-1,Ascend910-2"
-	pod1.Annotations[huaweiAscend910] = "Ascend910-1"
-	mockK8s := mock_kubernetes.NewMockInterface(ctrl)
-	mockV1 := mock_v1.NewMockCoreV1Interface(ctrl)
-	mockNode := mock_v1.NewMockNodeInterface(ctrl)
-	mockPod := mock_v1.NewMockPodInterface(ctrl)
-	mockNode.EXPECT().Get(context.Background(), gomock.Any(), metav1.GetOptions{}).AnyTimes().Return(node1, nil)
-	mockNode.EXPECT().Patch(context.Background(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
-		gomock.Any()).AnyTimes().Return(node1, nil)
-	mockPod.EXPECT().List(context.Background(), gomock.Any()).AnyTimes().Return(podList, nil)
-	mockV1.EXPECT().Pods(gomock.Any()).AnyTimes().Return(mockPod)
-	mockV1.EXPECT().Nodes().AnyTimes().Return(mockNode)
-	mockK8s.EXPECT().CoreV1().AnyTimes().Return(mockV1)
-	fakeKubeInteractor := &KubeInteractor{clientset: mockK8s, nodeName: "NODE_NAME"}
-	hdm.allDevs = getTestDevs()
+	mockKube := gomonkey.ApplyFunc(sendDevToKubelet,
+		func(_ *v1beta1.ListAndWatchResponse, _ v1beta1.DevicePlugin_ListAndWatchServer) error {
+			return nil
+		})
+	fakeKubeInteractor := &KubeInteractor{clientset: nil, nodeName: "NODE_NAME"}
 	for _, devType := range devTypes {
-		mockstream := mockV1Beta1.NewMockDevicePlugin_ListAndWatchServer(ctrl)
-		mockstream.EXPECT().Send(&v1beta1.ListAndWatchResponse{}).AnyTimes().Return(nil)
-		fakePluginAPI = createFakePluginAPI(hdm, devType, fakeKubeInteractor)
+		fakePluginAPI := createFakePluginAPI(hdm, devType, fakeKubeInteractor)
 		go changeBreakFlag(fakePluginAPI)
-		err := fakePluginAPI.ListAndWatch(&v1beta1.Empty{}, mockstream)
+		err := fakePluginAPI.ListAndWatch(&v1beta1.Empty{}, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
-	t.Logf("TestPluginAPI_ListAndWatch Run Pass")
+	mockKube.Reset()
+	t.Logf("TestPluginAPIListAndWatchWithoutVolcano Run Pass")
 }
 
 func getTestDevs() []common.NpuDevice {
 	return []common.NpuDevice{
 		{
-			DevType:       "Ascend310P",
-			ID:            "Ascend310P-0",
+			DevType:       "Ascend910",
+			ID:            "Ascend910-2c-100-1",
 			Health:        "Health",
 			NetworkHealth: "Health",
 		},
 	}
+}
+
+func setParams(volcanoType bool, runMode string) *HwDevManager {
+	hdm := createFakeDevManager(runMode)
+	hdm.SetParameters(
+		Option{GetFdFlag: false, UseAscendDocker: false, UseVolcanoType: volcanoType,
+			ListAndWatchPeriod: sleepTime, AutoStowingDevs: true, KubeConfig: ""})
+	return hdm
 }
 
 func changeBreakFlag(api *pluginAPI) {
@@ -124,16 +106,7 @@ func createFakePluginAPI(hdm *HwDevManager, devType string, ki *KubeInteractor) 
 
 // TestAddAnnotation for test AddAnnotation
 func TestAddAnnotation(t *testing.T) {
-	hdm := createFakeDevManager("ascend910")
-	o := Option{
-		GetFdFlag:          false,
-		UseAscendDocker:    false,
-		UseVolcanoType:     true,
-		ListAndWatchPeriod: sleepTime,
-		AutoStowingDevs:    true,
-		KubeConfig:         "",
-	}
-	hdm.SetParameters(o)
+	hdm := setParams(true, common.RunMode910)
 	if err := hdm.GetNPUs(); err != nil {
 		t.Fatal(err)
 	}
@@ -142,11 +115,8 @@ func TestAddAnnotation(t *testing.T) {
 		t.Fatal("TestAddAnnotation Run Failed")
 	}
 	var fakePluginAPI *pluginAPI
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockK8s := mock_kubernetes.NewMockInterface(ctrl)
 	fakeKubeInteractor := &KubeInteractor{
-		clientset: mockK8s,
+		clientset: nil,
 		nodeName:  "NODE_NAME",
 	}
 	for _, devType := range devTypes {
@@ -171,10 +141,7 @@ func TestAddAnnotation(t *testing.T) {
 
 // TestAllocate for test Allocate
 func TestAllocate(t *testing.T) {
-	hdm := createFakeDevManager("ascend910")
-	o := Option{GetFdFlag: false, UseAscendDocker: false, UseVolcanoType: false, ListAndWatchPeriod: sleepTime,
-		AutoStowingDevs: true, KubeConfig: ""}
-	hdm.SetParameters(o)
+	hdm := setParams(false, common.RunMode910)
 	if err := hdm.GetNPUs(); err != nil {
 		t.Fatal(err)
 	}
@@ -182,25 +149,16 @@ func TestAllocate(t *testing.T) {
 	if len(devTypes) == 0 {
 		t.Fatal("TestPluginAPI_Allocate Run Failed")
 	}
-	devicesIDs := []string{"Ascend910-8c-1-1"}
-	var containerRequests []*v1beta1.ContainerAllocateRequest
-	tmp := &v1beta1.ContainerAllocateRequest{
-		DevicesIDs: devicesIDs,
+	containerRequests := []*v1beta1.ContainerAllocateRequest{
+		{
+			DevicesIDs: []string{"Ascend910-8c-1-1"},
+		},
 	}
-	containerRequests = append(containerRequests, tmp)
 	requests := v1beta1.AllocateRequest{
 		ContainerRequests: containerRequests,
 	}
-	ctrl := gomock.NewController(t)
-	mockK8s := mock_kubernetes.NewMockInterface(ctrl)
-	mockV1 := mock_v1.NewMockCoreV1Interface(ctrl)
-	mockNode := mock_v1.NewMockNodeInterface(ctrl)
-	mockPod := mock_v1.NewMockPodInterface(ctrl)
-	mockV1.EXPECT().Pods(gomock.Any()).AnyTimes().Return(mockPod)
-	mockV1.EXPECT().Nodes().AnyTimes().Return(mockNode)
-	mockK8s.EXPECT().CoreV1().AnyTimes().Return(mockV1)
 	fakeKubeInteractor := &KubeInteractor{
-		clientset: mockK8s,
+		clientset: nil,
 		nodeName:  "NODE_NAME",
 	}
 	fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", fakeKubeInteractor)
@@ -212,8 +170,7 @@ func TestAllocate(t *testing.T) {
 		Health:  v1beta1.Healthy,
 	}
 
-	_, requestErrs := fakePluginAPI.Allocate(ctx, &requests)
-	if requestErrs != nil {
+	if _, requestErrs := fakePluginAPI.Allocate(ctx, &requests); requestErrs != nil {
 		t.Fatal("TestPluginAPI_Allocate Run Failed")
 	}
 
