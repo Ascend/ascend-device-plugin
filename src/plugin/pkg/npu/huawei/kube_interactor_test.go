@@ -110,6 +110,9 @@ func TestAnnotationReset(t *testing.T) {
 	hps.kubeInteractor.annotationReset()
 	mockNodeCtx.Reset()
 	mockState.Reset()
+	if node.Annotations[huaweiAscend310P] != "Ascend310P-0" {
+		t.Fatal("TestAnnotationReset Run Failed")
+	}
 	t.Logf("TestAnnotationReset Run Pass")
 }
 
