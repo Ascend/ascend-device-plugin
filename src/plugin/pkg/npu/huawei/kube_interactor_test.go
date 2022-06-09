@@ -8,53 +8,60 @@ import (
 	"testing"
 
 	"github.com/agiledragon/gomonkey/v2"
-	"k8s.io/apimachinery/pkg/api/resource"
-
-	"github.com/golang/mock/gomock"
 	"github.com/smartystreets/goconvey/convey"
-	"golang.org/x/net/context"
 	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
-	"Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_kubernetes"
-	"Ascend-device-plugin/src/plugin/pkg/npu/huawei/mock_v1"
 )
 
-const nodeRunTime = 2
-
-// TestPatchAnnotationOnNode for patch Annonation
-func TestPatchAnnotationOnNode(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	node1 := &v1.Node{
-		ObjectMeta: metav1.ObjectMeta{Annotations: make(map[string]string), Labels: make(map[string]string)},
-	}
-	node1.Annotations[huaweiAscend910] = "Ascend910-1,Ascend910-2"
-	mockK8s := mock_kubernetes.NewMockInterface(ctrl)
-	mockV1 := mock_v1.NewMockCoreV1Interface(ctrl)
-	mockNode := mock_v1.NewMockNodeInterface(ctrl)
-	mockNode.EXPECT().Get(context.Background(), gomock.Any(), metav1.GetOptions{}).Return(node1, nil)
-	mockNode.EXPECT().Patch(context.Background(), gomock.Any(), gomock.Any(),
-		gomock.Any(), gomock.Any(), gomock.Any()).Return(node1, nil)
-	mockV1.EXPECT().Nodes().Return(mockNode).Times(nodeRunTime)
-	mockK8s.EXPECT().CoreV1().Return(mockV1).Times(nodeRunTime)
-	freeDevices := sets.NewString()
-	freeDevices.Insert("Ascend910-1")
-	freeDevices.Insert("Ascend910-5")
+// Test310PPatchAnnotationOnNode for patch Annonation
+func Test310PPatchAnnotationOnNode(t *testing.T) {
+	node := getTestNode(huaweiAscend310P, "Ascend310P-0")
+	mockNodeCtx := gomonkey.ApplyFunc(getNodeWithBackgroundCtx, func(_ *KubeInteractor) (*v1.Node, error) {
+		return node, nil
+	})
+	mockState := gomonkey.ApplyFunc(patchNodeState, func(_ *KubeInteractor, _, _ *v1.Node) (*v1.Node, []byte, error) {
+		return node, nil, nil
+	})
+	defer func() {
+		mockNodeCtx.Reset()
+		mockState.Reset()
+	}()
 	fakeKubeInteractor := &KubeInteractor{
-		clientset: mockK8s,
+		clientset: nil,
 		nodeName:  "NODE_NAME",
 	}
-
-	groupAllocatableDevs := NewHwAscend910Manager().GetAnnotationMap(freeDevices, []string{"Ascend910"})
-	err := fakeKubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, true, false, "Ascend910")
-	if err != nil {
+	if err := fakeKubeInteractor.patchAnnotationOnNode(getGroupAllocatableDevs("Ascend310P-1"),
+		false, false, hiAIAscend310PPrefix); err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("TestPatchAnnotationOnNode Run Pass")
+	t.Logf("Test310PPatchAnnotationOnNode Run Pass")
+}
+
+// Test910PatchAnnotationOnNode for patch Annonation
+func Test910PatchAnnotationOnNode(t *testing.T) {
+	node := getTestNode(huaweiAscend910, "Ascend910-0")
+	mockNodeCtx := gomonkey.ApplyFunc(getNodeWithBackgroundCtx, func(_ *KubeInteractor) (*v1.Node, error) {
+		return node, nil
+	})
+	mockState := gomonkey.ApplyFunc(patchNodeState, func(_ *KubeInteractor, _, _ *v1.Node) (*v1.Node, []byte, error) {
+		return node, nil, nil
+	})
+	defer func() {
+		mockNodeCtx.Reset()
+		mockState.Reset()
+	}()
+	fakeKubeInteractor := &KubeInteractor{
+		clientset: nil,
+		nodeName:  "NODE_NAME",
+	}
+	if err := fakeKubeInteractor.patchAnnotationOnNode(getGroupAllocatableDevs("Ascend910-1"),
+		true, false, hiAIAscend910Prefix); err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("Test910PatchAnnotationOnNode Run Pass")
 }
 
 // TestChangeLabelFormat for test label format
@@ -87,18 +94,7 @@ func TestAnnotationReset(t *testing.T) {
 	if err := hdm.GetNPUs(); err != nil {
 		t.Fatal(err)
 	}
-	annotations := make(map[string]string, 1)
-	annotations[huaweiAscend310P] = "Ascend310P-0"
-	node := &v1.Node{
-		Status: v1.NodeStatus{
-			Allocatable: v1.ResourceList{
-				huaweiAscend310P: resource.Quantity{},
-			},
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: annotations,
-		},
-	}
+	node := getTestNode(huaweiAscend310P, "Ascend310P-0")
 	mockNodeCtx := gomonkey.ApplyFunc(getNodeWithBackgroundCtx, func(_ *KubeInteractor) (*v1.Node, error) {
 		return node, nil
 	})
@@ -114,6 +110,12 @@ func TestAnnotationReset(t *testing.T) {
 		t.Fatal("TestAnnotationReset Run Failed")
 	}
 	t.Logf("TestAnnotationReset Run Pass")
+}
+
+func getGroupAllocatableDevs(ascendValue string) map[string]string {
+	freeDevices := sets.NewString()
+	freeDevices.Insert(ascendValue)
+	return NewHwAscend910Manager().GetAnnotationMap(freeDevices, []string{hiAIAscend310PPrefix})
 }
 
 func init() {

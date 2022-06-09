@@ -60,13 +60,78 @@ func TestPluginAPIListAndWatchWithoutVolcano(t *testing.T) {
 	t.Logf("TestPluginAPIListAndWatchWithoutVolcano Run Pass")
 }
 
-func getTestDevs() []common.NpuDevice {
-	return []common.NpuDevice{
+// TestUpdatePodRealAllocate for update pod real using devices
+func TestUpdatePodRealAllocate(t *testing.T) {
+	hdm := setParams(true, common.RunMode910)
+	if err := hdm.GetNPUs(); err != nil {
+		t.Fatal(err)
+	}
+	fakeKubeInteractor := &KubeInteractor{clientset: nil, nodeName: "NODE_NAME"}
+	podList := getTestPodList(huaweiAscend910, "Ascend310P-0")
+	mockPod := gomonkey.ApplyFunc(getPodList, func(_ *KubeInteractor) (*v1.PodList, error) {
+		return podList, nil
+	})
+	fakePluginAPI := createFakePluginAPI(hdm, hiAIAscend910Prefix, fakeKubeInteractor)
+	fakePluginAPI.updatePodRealAllocate(podPhaseBlackList)
+	mockPod.Reset()
+	if len(fakePluginAPI.hps.vol2KlDevMap) != 0 {
+		t.Fatal("TestUpdatePodRealAllocate Run Failed")
+	}
+	t.Logf("TestUpdatePodRealAllocate Run Pass")
+}
+
+func getTestPodList(ascendType, ascendValue string) *v1.PodList {
+	annotations := make(map[string]string, 1)
+	annotations[ascendType] = ascendValue
+	containers := getContainers()
+	podList := []v1.Pod{
 		{
-			DevType:       "Ascend910",
-			ID:            "Ascend910-2c-100-1",
-			Health:        "Health",
-			NetworkHealth: "Health",
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "mindx-dls-npu-1p-default-2p-0",
+				Namespace:   "btg-test",
+				Annotations: annotations,
+			},
+			Status: v1.PodStatus{
+				Phase: v1.PodPending,
+			},
+			Spec: v1.PodSpec{
+				Containers: containers,
+			},
+		},
+	}
+	return &v1.PodList{
+		Items: podList,
+	}
+}
+
+func getContainers() []v1.Container {
+	limits := resource.NewQuantity(1, resource.DecimalExponent)
+	container := v1.Container{
+		Resources: v1.ResourceRequirements{
+			Limits: v1.ResourceList{
+				v1.ResourceName(huaweiAscend910): *limits,
+			},
+		},
+	}
+	return []v1.Container{
+		container,
+	}
+}
+
+func getTestNode(ascendType, ascendValue string) *v1.Node {
+	annotations := make(map[string]string, 1)
+	annotations[ascendType] = ascendValue
+	labels := make(map[string]string, 1)
+	labels[huaweiRecoverAscend910] = "0"
+	return &v1.Node{
+		Status: v1.NodeStatus{
+			Allocatable: v1.ResourceList{
+				v1.ResourceName(ascendType): resource.Quantity{},
+			},
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: annotations,
+			Labels:      labels,
 		},
 	}
 }
@@ -99,6 +164,7 @@ func createFakePluginAPI(hdm *HwDevManager, devType string, ki *KubeInteractor) 
 			healthDevice:   sets.String{},
 			unHealthDevice: sets.String{},
 			stopCh:         make(chan struct{}),
+			vol2KlDevMap:   make(map[string]string, maxTrainDevicesNum),
 		},
 		outbreak: atomic.NewBool(false),
 	}

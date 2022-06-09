@@ -1,32 +1,11 @@
 #!/bin/bash
-# Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
+# Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
 set -e
 CUR_DIR=$(dirname "$(readlink -f $0)")
 TOP_DIR=$(realpath "${CUR_DIR}"/..)
 export GO111MODULE="on"
 export GONOSUMDB="*"
 export PATH=$GOPATH/bin:$PATH
-
-go get github.com/golang/mock/mockgen
-go get golang.org/x/net
-go get golang.org/x/term
-go get golang.org/x/text
-go get k8s.io/client-go@v0.19.4
-go get k8s.io/kubelet@v0.19.4
-go get k8s.io/kubernetes@v1.19.4
-MOCK_TOP=${TOP_DIR}/src/plugin/pkg/npu/huawei
-mkdir -p "${MOCK_TOP}/mock_v1"
-mkdir -p "${MOCK_TOP}/mock_kubernetes"
-mkdir -p "${MOCK_TOP}/mock_kubelet_v1beta1"
-
-mockgen k8s.io/client-go/kubernetes/typed/core/v1 CoreV1Interface >${MOCK_TOP}/mock_v1/corev1_mock.go
-mockgen k8s.io/client-go/kubernetes Interface >${MOCK_TOP}/mock_kubernetes/k8s_interface_mock.go
-mockgen k8s.io/client-go/kubernetes/typed/core/v1 NodeInterface >${MOCK_TOP}/mock_v1/node_interface_mock.go
-mockgen k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1 DevicePlugin_ListAndWatchServer >${MOCK_TOP}/mock_kubelet_v1beta1/deviceplugin_mock.go
-mockgen k8s.io/client-go/kubernetes/typed/core/v1 PodInterface >${MOCK_TOP}/mock_v1/pod_interface_mock.go
-
-
-export PKG_CONFIG_PATH=${TOP_DIR}/src/plugin/config/config_310/:$PKG_CONFIG_PATH
 
 function execute_test() {
   if ! (go test  -mod=mod -gcflags=all=-l -v -race -coverprofile cov.out ${TOP_DIR}/src/plugin/pkg/npu/... >./$file_input); then
@@ -64,7 +43,4 @@ echo "</table></body></html>" >>./$file_detail_output
 
 echo "************************************* End   LLT Test *************************************"
 
-rm -rf ${MOCK_TOP}/mock_v1
-rm -rf ${MOCK_TOP}/mock_kubernetes
-rm -rf ${MOCK_TOP}/mock_kubelet_v1beta1
 exit 0

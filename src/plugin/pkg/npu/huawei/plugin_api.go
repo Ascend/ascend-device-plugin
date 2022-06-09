@@ -640,12 +640,7 @@ func getOldestPod(pods []v1.Pod, hps *HwPluginServe) *v1.Pod {
 }
 
 func (s *pluginAPI) filterPods(blackList map[v1.PodPhase]int, conditionFunc func(pod *v1.Pod) bool) ([]v1.Pod, error) {
-	nodeName := s.hps.kubeInteractor.nodeName
-	selector := fields.SelectorFromSet(fields.Set{"spec.nodeName": nodeName})
-	pods, err := s.hps.kubeInteractor.clientset.CoreV1().Pods(v1.NamespaceAll).List(
-		context.Background(), metav1.ListOptions{
-			FieldSelector: selector.String(),
-		})
+	pods, err := getPodList(s.hps.kubeInteractor)
 	if err != nil {
 		return nil, err
 	}
