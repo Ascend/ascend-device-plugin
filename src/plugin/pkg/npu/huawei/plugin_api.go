@@ -24,9 +24,7 @@ import (
 	"huawei.com/npu-exporter/hwlog"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
@@ -410,8 +408,7 @@ func getNodeNpuUsed(usedDevices *sets.String, hps *HwPluginServe) {
 		hwlog.RunLog.Errorf("get node from k8s error: %v", err)
 		return
 	}
-	getFailed := getNPUByStatus(kubeClient, node.Name, hps, &useNpu)
-	if getFailed {
+	if getFailed := getNPUByStatus(hps, &useNpu); getFailed {
 		return
 	}
 	for _, device := range useNpu {
@@ -421,12 +418,10 @@ func getNodeNpuUsed(usedDevices *sets.String, hps *HwPluginServe) {
 	return
 }
 
-func getNPUByStatus(kubeClient kubernetes.Interface, nodeName string, hps *HwPluginServe, useNpu *[]string) bool {
-	selector := fields.SelectorFromSet(fields.Set{"spec.nodeName": nodeName})
-	podList, err := kubeClient.CoreV1().Pods(v1.NamespaceAll).List(context.Background(), metav1.ListOptions{
-		FieldSelector: selector.String()})
+func getNPUByStatus(hps *HwPluginServe, useNpu *[]string) bool {
+	podList, err := getPodList(hps.kubeInteractor)
 	if err != nil {
-		hwlog.RunLog.Errorf(fmt.Sprintf("nodeName: %s, err: %v", nodeName, err))
+		hwlog.RunLog.Errorf(fmt.Sprintf("nodeName: %s, err: %v", hps.kubeInteractor.nodeName, err))
 		return true
 	}
 	for _, pod := range podList.Items {
