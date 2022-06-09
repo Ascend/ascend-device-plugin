@@ -8,7 +8,7 @@ export GONOSUMDB="*"
 export PATH=$GOPATH/bin:$PATH
 
 function execute_test() {
-  if ! (go test  -mod=mod -gcflags=all=-l -v -race -coverprofile cov.out ${TOP_DIR}/src/plugin/pkg/npu/... >./$file_input); then
+  if ! (go test  -mod=mod -gcflags=all=-l -v -race -coverprofile cov.out ${TOP_DIR}/src/plugin/pkg/npu/huawei/... >./$file_input); then
     echo '****** go test cases error! ******'
     exit 1
   else
