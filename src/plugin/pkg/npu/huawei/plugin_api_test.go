@@ -5,7 +5,9 @@
 package huawei
 
 import (
+	"math"
 	"reflect"
+	"strconv"
 	"testing"
 	"time"
 
@@ -60,13 +62,79 @@ func TestPluginAPIListAndWatchWithoutVolcano(t *testing.T) {
 	t.Logf("TestPluginAPIListAndWatchWithoutVolcano Run Pass")
 }
 
-func getTestDevs() []common.NpuDevice {
-	return []common.NpuDevice{
+// TestUpdatePodRealAllocate for update pod real using devices
+func TestUpdatePodRealAllocate(t *testing.T) {
+	hdm := setParams(true, common.RunMode910)
+	if err := hdm.GetNPUs(); err != nil {
+		t.Fatal(err)
+	}
+	fakeKubeInteractor := &KubeInteractor{clientset: nil, nodeName: "NODE_NAME"}
+	podList := getTestPodList(huaweiAscend910, "Ascend910-0")
+	mockPod := gomonkey.ApplyFunc(getPodList, func(_ *KubeInteractor) (*v1.PodList, error) {
+		return podList, nil
+	})
+	fakePluginAPI := createFakePluginAPI(hdm, hiAIAscend910Prefix, fakeKubeInteractor)
+	fakePluginAPI.updatePodRealAllocate(podPhaseBlackList)
+	mockPod.Reset()
+	if len(fakePluginAPI.hps.vol2KlDevMap) != 0 {
+		t.Fatal("TestUpdatePodRealAllocate Run Failed")
+	}
+	t.Logf("TestUpdatePodRealAllocate Run Pass")
+}
+
+func getTestPodList(ascendType, ascendValue string) *v1.PodList {
+	annotations := make(map[string]string, 1)
+	annotations[ascendType] = ascendValue
+	annotations[podPredicateTime] = strconv.FormatUint(math.MaxUint64, baseDec)
+	containers := getContainers()
+	podList := []v1.Pod{
 		{
-			DevType:       "Ascend910",
-			ID:            "Ascend910-2c-100-1",
-			Health:        "Health",
-			NetworkHealth: "Health",
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "mindx-dls-npu-1p-default-2p-0",
+				Namespace:   "btg-test",
+				Annotations: annotations,
+			},
+			Status: v1.PodStatus{
+				Phase: v1.PodPending,
+			},
+			Spec: v1.PodSpec{
+				Containers: containers,
+			},
+		},
+	}
+	return &v1.PodList{
+		Items: podList,
+	}
+}
+
+func getContainers() []v1.Container {
+	limits := resource.NewQuantity(1, resource.DecimalExponent)
+	container := v1.Container{
+		Resources: v1.ResourceRequirements{
+			Limits: v1.ResourceList{
+				v1.ResourceName(huaweiAscend910): *limits,
+			},
+		},
+	}
+	return []v1.Container{
+		container,
+	}
+}
+
+func getTestNode(ascendType, ascendValue string) *v1.Node {
+	annotations := make(map[string]string, 1)
+	annotations[ascendType] = ascendValue
+	labels := make(map[string]string, 1)
+	labels[huaweiRecoverAscend910] = "0"
+	return &v1.Node{
+		Status: v1.NodeStatus{
+			Allocatable: v1.ResourceList{
+				v1.ResourceName(ascendType): resource.Quantity{},
+			},
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: annotations,
+			Labels:      labels,
 		},
 	}
 }
@@ -99,6 +167,7 @@ func createFakePluginAPI(hdm *HwDevManager, devType string, ki *KubeInteractor) 
 			healthDevice:   sets.String{},
 			unHealthDevice: sets.String{},
 			stopCh:         make(chan struct{}),
+			vol2KlDevMap:   make(map[string]string, maxTrainDevicesNum),
 		},
 		outbreak: atomic.NewBool(false),
 	}
@@ -147,34 +216,97 @@ func TestAllocate(t *testing.T) {
 	}
 	devTypes := hdm.GetDevType()
 	if len(devTypes) == 0 {
-		t.Fatal("TestPluginAPI_Allocate Run Failed")
+		t.Fatal("TestAllocate Run Failed")
 	}
+	fakeKubeInteractor := &KubeInteractor{clientset: nil, nodeName: "NODE_NAME"}
+	fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", fakeKubeInteractor)
+	fakePluginAPI.hps.devices["Ascend910-8c-1-1"] = getTestDevs()
+
+	if _, requestErrs := fakePluginAPI.Allocate(nil, getK8sRequest()); requestErrs != nil {
+		t.Fatal("TestAllocate Run Failed")
+	}
+	t.Logf("TestAllocate Run Pass")
+}
+
+// TestAllocateWithVolcano for test Allocate with volcano
+func TestAllocateWithVolcano(t *testing.T) {
+	hdm := setParams(true, common.RunMode910)
+	if err := hdm.GetNPUs(); err != nil {
+		t.Fatal(err)
+	}
+	fakeKubeInteractor := &KubeInteractor{clientset: nil, nodeName: "NODE_NAME"}
+	node := getTestNode(huaweiAscend910, "Ascend910-8c-1-1")
+	podList := getTestPodList(huaweiAscend910, "Ascend910-8c-1-1")
+	mockPod := gomonkey.ApplyFunc(getPodList, func(_ *KubeInteractor) (*v1.PodList, error) {
+		return podList, nil
+	})
+	mockUpdate := gomonkey.ApplyFunc(tryUpdatePodAnnotation, func(_ *HwPluginServe, _ *v1.Pod,
+		_ map[string]string) error {
+		return nil
+	})
+	mockUsedNpu := gomonkey.ApplyFunc(getNodeNpuUsed, func(usedDevices *sets.String, hps *HwPluginServe) {
+		return
+	})
+	mockNodeCtx := gomonkey.ApplyFunc(getNodeWithBackgroundCtx, func(_ *KubeInteractor) (*v1.Node, error) {
+		return node, nil
+	})
+	mockState := gomonkey.ApplyFunc(patchNodeState, func(_ *KubeInteractor, _, _ *v1.Node) (*v1.Node, []byte, error) {
+		return node, nil, nil
+	})
+	defer func() {
+		mockPod.Reset()
+		mockUpdate.Reset()
+		mockUsedNpu.Reset()
+		mockNodeCtx.Reset()
+		mockState.Reset()
+	}()
+	fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", fakeKubeInteractor)
+	fakePluginAPI.hps.devices["Ascend910-8c-1-1"] = getTestDevs()
+	if _, requestErrs := fakePluginAPI.Allocate(nil, getK8sRequest()); requestErrs != nil {
+		t.Fatal("TestAllocateWithVolcano Run Failed")
+	}
+	t.Logf("TestAllocateWithVolcano Run Pass")
+}
+
+func getK8sRequest() *v1beta1.AllocateRequest {
 	containerRequests := []*v1beta1.ContainerAllocateRequest{
 		{
 			DevicesIDs: []string{"Ascend910-8c-1-1"},
 		},
 	}
-	requests := v1beta1.AllocateRequest{
+	return &v1beta1.AllocateRequest{
 		ContainerRequests: containerRequests,
 	}
-	fakeKubeInteractor := &KubeInteractor{
-		clientset: nil,
-		nodeName:  "NODE_NAME",
-	}
-	fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", fakeKubeInteractor)
-	var ctx context.Context
-	fakePluginAPI.hps.devices["Ascend910-8c-1-1"] = &common.NpuDevice{
+}
+
+func getTestDevs() *common.NpuDevice {
+	return &common.NpuDevice{
 		DevType: "Ascend910-8c",
 		PciID:   "",
 		ID:      "Ascend910-8c-1-1",
 		Health:  v1beta1.Healthy,
 	}
+}
 
-	if _, requestErrs := fakePluginAPI.Allocate(ctx, &requests); requestErrs != nil {
-		t.Fatal("TestPluginAPI_Allocate Run Failed")
+// TestGetNPUByStatus test get npu by status
+func TestGetNPUByStatus(t *testing.T) {
+	hdm := setParams(true, common.RunMode910)
+	if err := hdm.GetNPUs(); err != nil {
+		t.Fatal(err)
 	}
-
-	t.Logf("TestPluginAPI_Allocate Run Pass")
+	fakeKubeInteractor := &KubeInteractor{clientset: nil, nodeName: "NODE_NAME"}
+	fakePluginAPI := createFakePluginAPI(hdm, "Ascend910", fakeKubeInteractor)
+	podList := getTestPodList(huaweiAscend910, "Ascend910-8c-1-1")
+	mockPod := gomonkey.ApplyFunc(getPodList, func(_ *KubeInteractor) (*v1.PodList, error) {
+		return podList, nil
+	})
+	var useNpu []string
+	getFailed := getNPUByStatus(fakePluginAPI.hps, &useNpu)
+	mockPod.Reset()
+	if getFailed {
+		t.Fatal("TestGetNPUByStatus Run Failed")
+	}
+	t.Logf("TestGetNPUByStatus Run Pass")
 }
 
 // TestGetDevicePluginOptions for test GetDevicePluginOptions

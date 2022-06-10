@@ -15,16 +15,16 @@ import (
 	"strings"
 	"syscall"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/kubernetes/pkg/util/node"
-
 	"huawei.com/npu-exporter/devmanager"
 	npuCommon "huawei.com/npu-exporter/devmanager/common"
 	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+	"k8s.io/kubernetes/pkg/util/node"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 )
@@ -439,4 +439,11 @@ func patchNodeWithTodoCtx(ki *KubeInteractor, pByte []byte) (*v1.Node, error) {
 
 func patchNodeState(ki *KubeInteractor, curNode, newNode *v1.Node) (*v1.Node, []byte, error) {
 	return node.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), curNode, newNode)
+}
+
+func getPodList(ki *KubeInteractor) (*v1.PodList, error) {
+	selector := fields.SelectorFromSet(fields.Set{"spec.nodeName": ki.nodeName})
+	return ki.clientset.CoreV1().Pods(v1.NamespaceAll).List(context.Background(), metav1.ListOptions{
+		FieldSelector: selector.String(),
+	})
 }
