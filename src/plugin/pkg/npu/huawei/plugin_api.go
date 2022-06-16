@@ -157,17 +157,7 @@ func (s *pluginAPI) ListAndWatch(emtpy *v1beta1.Empty, stream v1beta1.DevicePlug
 func (s *pluginAPI) updateKubeletDevInfo(resp *v1beta1.ListAndWatchResponse,
 	stream v1beta1.DevicePlugin_ListAndWatchServer) {
 	if firstTimeList {
-		totalNetworkUnhealthDevices = sets.String{}
-		totalUHDevices = sets.String{}
-		for _, dev := range s.hps.devices {
-			resp.Devices = append(resp.Devices, &v1beta1.Device{ID: dev.ID, Health: dev.Health})
-			s.hps.healthDevice.Insert(dev.ID)
-		}
-		if err := sendDevToKubelet(resp, stream); err != nil {
-			hwlog.RunLog.Errorf("listAndWatch: send device info failed, please "+
-				"check kubelet status, err: %s", err.Error())
-		}
-		firstTimeList = false
+		s.initK8sInfo(resp, stream)
 		return
 	}
 	var notInVolDev []string
@@ -206,6 +196,20 @@ func (s *pluginAPI) updateKubeletDevInfo(resp *v1beta1.ListAndWatchResponse,
 		hwlog.RunLog.Errorf("listAndWatch: send device info failed, please "+
 			"check kubelet status, err: %s", err.Error())
 	}
+}
+
+func (s *pluginAPI) initK8sInfo(resp *v1beta1.ListAndWatchResponse, stream v1beta1.DevicePlugin_ListAndWatchServer) {
+	totalNetworkUnhealthDevices = sets.String{}
+	totalUHDevices = sets.String{}
+	for _, dev := range s.hps.devices {
+		resp.Devices = append(resp.Devices, &v1beta1.Device{ID: dev.ID, Health: dev.Health})
+		s.hps.healthDevice.Insert(dev.ID)
+	}
+	if err := sendDevToKubelet(resp, stream); err != nil {
+		hwlog.RunLog.Errorf("listAndWatch: send device info failed, please "+
+			"check kubelet status, err: %s", err.Error())
+	}
+	firstTimeList = false
 }
 
 func (s *pluginAPI) isDeviceStatusChange() bool {
