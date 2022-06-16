@@ -182,6 +182,7 @@ func (hdm *HwDevManager) Serve(devType string, stop chan struct{}) {
 	}
 	stopCount.Add(1)
 	if int(stopCount.Load()) == len(hdm.GetDevType()) {
+		hdm.dmgr.ShutDown()
 		stop <- struct{}{}
 	}
 }
@@ -275,7 +276,6 @@ func (hdm *HwDevManager) signalWatch(watcher *fsnotify.Watcher, sigs chan os.Sig
 			hwlog.RunLog.Infof("Received signal: %s, shutting down.", s.String())
 			hdm.stopFlag.Store(true)
 			hps.Stop()
-			hdm.dmgr.ShutDown()
 		}
 	}
 	return restart
