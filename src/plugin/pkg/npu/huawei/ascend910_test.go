@@ -122,6 +122,7 @@ func Test910PListAndWatch(t *testing.T) {
 	})
 	devices := map[string]*common.NpuDevice{"Ascend910": &common.NpuDevice{ID: "0", Health: "Healthy"}}
 	hps := &HwPluginServe{devices: devices, hdm: hdm, devType: hiAIAscend910Prefix}
+	totalNetworkUnhealthDevices = sets.String{}
 	hdm.manager.DoWithVolcanoListAndWatch(hps)
 	mockNode.Reset()
 	mockNodeCtx.Reset()

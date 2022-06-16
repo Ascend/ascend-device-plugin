@@ -157,6 +157,8 @@ func (s *pluginAPI) ListAndWatch(emtpy *v1beta1.Empty, stream v1beta1.DevicePlug
 func (s *pluginAPI) updateKubeletDevInfo(resp *v1beta1.ListAndWatchResponse,
 	stream v1beta1.DevicePlugin_ListAndWatchServer) {
 	if firstTimeList {
+		totalNetworkUnhealthDevices = sets.String{}
+		totalUHDevices = sets.String{}
 		for _, dev := range s.hps.devices {
 			resp.Devices = append(resp.Devices, &v1beta1.Device{ID: dev.ID, Health: dev.Health})
 			s.hps.healthDevice.Insert(dev.ID)
