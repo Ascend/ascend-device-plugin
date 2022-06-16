@@ -67,8 +67,8 @@ func (ki *KubeInteractor) annotationReset() {
 	hwlog.RunLog.Infof("updatedNode.Annotations: %v", updatedNode.Annotations)
 }
 
-func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]string,
-	isAlloc, isVir bool, devType string) error {
+func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]string, isAlloc bool,
+	devType string) error {
 	var err error
 	err = wait.PollImmediate(interval*time.Second, timeout*time.Second, func() (bool, error) {
 		curNode, err := getNodeWithBackgroundCtx(ki)
@@ -86,11 +86,12 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 		// variables are defined in advance, the value will be used in subsequent assignment
 		newNetworkRecoverDevSets := sets.String{}
 		// for 910 failure rescheduling
-		if devType == hiAIAscend910Prefix && !isVir {
-			ki.update910Annotation(curNode, newNode, groupAllocatableDevs, &newNetworkRecoverDevSets)
+		if strings.Contains(devType, hiAIAscend910Prefix) {
+			ki.update910Annotation(curNode, newNode, groupAllocatableDevs[huaweiAscend910], &newNetworkRecoverDevSets)
+			ki.setNonAutoStowAnnotation(newNode, groupAllocatableDevs)
 		}
-		if devType == hiAIAscend310PPrefix && !isVir {
-			ki.update310PAnnotation(curNode, newNode, groupAllocatableDevs[huaweiAscend310P])
+		if strings.Contains(devType, hiAIAscend310PPrefix) {
+			ki.update310PAnnotation(newNode, groupAllocatableDevs[huaweiAscend310P])
 		}
 		hwlog.RunLog.Infof("newNode.Annotations: %v", newNode.Annotations)
 		updatedNode, _, err := patchNodeState(ki, curNode, newNode)
@@ -100,7 +101,7 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 		}
 		hwlog.RunLog.Infof("updatedNode.Annotations: %v", updatedNode.Annotations)
 		// Ascend910, if update success, update the lastTimeNetworkRecoverDevices
-		if (devType == hiAIAscend910Prefix) && !isVir {
+		if strings.Contains(devType, hiAIAscend910Prefix) {
 			lastTimeNetworkRecoverDevices = newNetworkRecoverDevSets
 		}
 		return true, nil
@@ -108,7 +109,7 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 	return err
 }
 
-func (ki *KubeInteractor) update910Annotation(node, newNode *v1.Node, groupAllocatableDevs map[string]string,
+func (ki *KubeInteractor) update910Annotation(node, newNode *v1.Node, ascend910 string,
 	newNetworkRecoverDevSets *sets.String) {
 
 	// format recover label data
@@ -118,9 +119,7 @@ func (ki *KubeInteractor) update910Annotation(node, newNode *v1.Node, groupAlloc
 		ki.convertDevListToSets(node.Annotations[huaweiUnHealthAscend910],
 			nodeAnnotationsDeviceSep, common.RunMode910),
 		formatedLabelRecover,
-		ki.convertDevListToSets(groupAllocatableDevs[huaweiAscend910],
-			nodeAnnotationsDeviceSep, common.RunMode910))
-
+		ki.convertDevListToSets(ascend910, nodeAnnotationsDeviceSep, common.RunMode910))
 	// format network recover label data
 	formatedLabelNetworkRecover := changeToLongFormat(ki.convertDevListToSets(node.
 		Labels[huaweiNetworkRecoverAscend910], nodeLabelsDeviceSep, common.RunMode910))
@@ -143,14 +142,40 @@ func (ki *KubeInteractor) update910Annotation(node, newNode *v1.Node, groupAlloc
 	*newNetworkRecoverDevSets = newRecoverDevSets
 }
 
-func (ki *KubeInteractor) update310PAnnotation(node, newNode *v1.Node, newAscend310P string) {
-	_, ascend310P := getUnHealthDev(totalUHDevices,
-		ki.convertDevListToSets(node.Annotations[huaweiUnHealthAscend310P],
-			nodeAnnotationsDeviceSep, common.RunMode310P), nil,
-		ki.convertDevListToSets(newAscend310P, nodeAnnotationsDeviceSep, common.RunMode310P))
-
-	newNode.Annotations[huaweiAscend310P] = ascend310P
+func (ki *KubeInteractor) update310PAnnotation(newNode *v1.Node, newAscend310P string) {
+	newNode.Annotations[huaweiAscend310P] = newAscend310P
 	newNode.Annotations[huaweiUnHealthAscend310P] = ki.convertSetsToString(totalUHDevices, nodeAnnotationsDeviceSep)
+}
+
+func (ki *KubeInteractor) setNonAutoStowAnnotation(newNode *v1.Node, groupDev map[string]string) {
+	if autoStowingDevs {
+		return
+	}
+	recoverDev, ok := newNode.Labels[huaweiRecoverAscend910]
+	if !ok || len(recoverDev) == 0 {
+		return
+	}
+	for _, devID := range strings.Split(recoverDev, ".") {
+		for devType := range groupDev {
+			ki.setVirDevNewAnnotation(devType, devID, newNode)
+		}
+	}
+}
+
+func (ki *KubeInteractor) setVirDevNewAnnotation(devType, devID string, newNode *v1.Node) {
+	if !common.IsVirtualDev(devType) {
+		return
+	}
+	var newDevNameList []string
+	devNameList := strings.Split(newNode.Annotations[devType], ",")
+	for _, devName := range devNameList {
+		phyID, _, err := common.GetDeviceID(devName, common.VirtualDev)
+		if err != nil || phyID == devID {
+			continue
+		}
+		newDevNameList = append(newDevNameList, devName)
+	}
+	newNode.Annotations[devType] = strings.Join(newDevNameList, nodeAnnotationsDeviceSep)
 }
 
 // get elements one by one from the sets and mark the physical id "x" to "Ascend910-x"
@@ -207,6 +232,7 @@ func (ki *KubeInteractor) convertDevListToSets(devices, sepType, runMode string)
 			}
 			deviceSets.Insert(device)
 		}
+		return deviceSets
 	}
 	// for annotation
 	// check device format, must Ascend910-0,Ascend910-1 and more
@@ -217,7 +243,7 @@ func (ki *KubeInteractor) convertDevListToSets(devices, sepType, runMode string)
 	reg := regexp.MustCompile(pattern)
 	for _, device := range strings.Split(devices, ",") {
 		if !reg.MatchString(device) {
-			hwlog.RunLog.Warnf("current device format error")
+			hwlog.RunLog.Warnf("current device %v format error", device)
 			continue
 		}
 		deviceSets.Insert(device)
@@ -258,8 +284,7 @@ func (ki *KubeInteractor) resetNodeAnnotations(node *v1.Node) {
 	annotationList := []string{huaweiUnHealthAscend910, huaweiNetworkUnHealthAscend910, huaweiAscend910,
 		huaweiAscend310P, resourceNamePrefix + pwr2CSuffix, resourceNamePrefix + pwr4CSuffix,
 		resourceNamePrefix + pwr8CSuffix, resourceNamePrefix + pwr16CSuffix, resourceNamePrefix + chip310PCore1C,
-		resourceNamePrefix + chip310PCore2C, resourceNamePrefix + chip310PCore4C, huaweiRecoverAscend910,
-		huaweiNetworkRecoverAscend910}
+		resourceNamePrefix + chip310PCore2C, resourceNamePrefix + chip310PCore4C, huaweiUnHealthAscend310P}
 	for _, k := range annotationList {
 		if _, exist := node.Status.Allocatable[v1.ResourceName(k)]; !exist {
 			delete(node.Annotations, k)
@@ -267,6 +292,8 @@ func (ki *KubeInteractor) resetNodeAnnotations(node *v1.Node) {
 		}
 		node.Annotations[k] = ""
 	}
+	node.Labels[huaweiRecoverAscend910] = ""
+	node.Labels[huaweiNetworkRecoverAscend910] = ""
 }
 
 func (ki *KubeInteractor) convertStringToSet(deviceNames string) sets.String {

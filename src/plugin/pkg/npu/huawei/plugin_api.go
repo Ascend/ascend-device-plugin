@@ -302,12 +302,7 @@ func (s *pluginAPI) patchUnusedDevice() error {
 	getNodeNpuUsed(&usedDevices, s.hps)
 	freeDevices := s.hps.healthDevice.Difference(usedDevices)
 	groupAllocatableDevs := s.hps.hdm.manager.GetAnnotationMap(freeDevices, []string{s.hps.devType})
-	isVir := false
-	if s.ascendRuntimeOptions == common.VirtualDev {
-		isVir = true
-	}
-	if err := s.hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, true, isVir,
-		s.hps.devType); err != nil {
+	if err := s.hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, true, s.hps.devType); err != nil {
 		return fmt.Errorf("patch Annotations failed, error is: %v", err)
 	}
 	return nil

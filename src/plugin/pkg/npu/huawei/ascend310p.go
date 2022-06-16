@@ -88,27 +88,21 @@ func (hnm *HwAscend310PManager) DoWithVolcanoListAndWatch(hps *HwPluginServe) {
 	totalDevices = totalDevices.Union(freeDevices)
 	if stateThreadNum == len(hps.hdm.allDevTypes) {
 		groupAllocatableDevs := hnm.GetAnnotationMap(totalDevices, hps.hdm.allDevTypes)
-		if err := hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, false, hnm.isVirExist(hps),
-			hps.devType); err != nil {
+		if err := hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, false, hps.devType); err != nil {
 			hwlog.RunLog.Errorf("patch Annotation failed, err: %v", err)
 		}
-		totalDevices = totalDevices.Intersection(sets.String{})
-		stateThreadNum = 0
+		hnm.resetStateSet()
 	}
 }
 
 func (hnm *HwAscend310PManager) groupDevsByStatus(hps *HwPluginServe) {
-	if hps.devType == hiAIAscend310PPrefix {
-		totalUHDevices = sets.String{}
-	}
 	hps.healthDevice = sets.String{}
 	for _, device := range hps.devices {
-		if common.IsVirtualDev(device.ID) || device.Health == v1beta1.Healthy {
+		if device.Health == v1beta1.Healthy {
 			hps.healthDevice.Insert(device.ID)
+			continue
 		}
-		if device.Health != v1beta1.Healthy {
-			totalUHDevices.Insert(device.ID)
-		}
+		hnm.setUnHealthyDev(hiAIAscend310PPrefix, device)
 	}
 	hwlog.RunLog.Debugf("healthy device %v", hps.healthDevice)
 	hwlog.RunLog.Debugf("total unhealthy devices %v", totalUHDevices)

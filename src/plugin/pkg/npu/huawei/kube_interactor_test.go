@@ -33,8 +33,8 @@ func Test310PPatchAnnotationOnNode(t *testing.T) {
 		clientset: nil,
 		nodeName:  "NODE_NAME",
 	}
-	if err := fakeKubeInteractor.patchAnnotationOnNode(getGroupAllocatableDevs("Ascend310P-1"),
-		false, false, hiAIAscend310PPrefix); err != nil {
+	if err := fakeKubeInteractor.patchAnnotationOnNode(getGroupAllocatableDevs("Ascend310P-1"), false,
+		hiAIAscend310PPrefix); err != nil {
 		t.Fatal(err)
 	}
 	t.Logf("Test310PPatchAnnotationOnNode Run Pass")
@@ -57,8 +57,8 @@ func Test910PatchAnnotationOnNode(t *testing.T) {
 		clientset: nil,
 		nodeName:  "NODE_NAME",
 	}
-	if err := fakeKubeInteractor.patchAnnotationOnNode(getGroupAllocatableDevs("Ascend910-1"),
-		true, false, hiAIAscend910Prefix); err != nil {
+	if err := fakeKubeInteractor.patchAnnotationOnNode(getGroupAllocatableDevs("Ascend910-1"), false,
+		hiAIAscend910Prefix); err != nil {
 		t.Fatal(err)
 	}
 	t.Logf("Test910PatchAnnotationOnNode Run Pass")
