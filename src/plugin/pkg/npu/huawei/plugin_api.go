@@ -800,9 +800,6 @@ func (s *pluginAPI) updatePodRealAllocate(blackList map[v1.PodPhase]int) {
 	s.hps.vol2KlDevMap = make(map[string]string, maxTrainDevicesNum)
 	for _, pod := range pods {
 		hwlog.RunLog.Debugf("pods: %v, %v, %v", pod.Name, pod.Status.Phase, pod.UID)
-		if _, exist := pod.Annotations[podRealAlloc]; exist {
-			continue
-		}
 		data, exist := checkpointData[string(pod.UID)]
 		if !exist {
 			continue
@@ -812,17 +809,20 @@ func (s *pluginAPI) updatePodRealAllocate(blackList map[v1.PodPhase]int) {
 
 		kltRequestDevices, dpResponseDevices, err := GetAnnotation(data, s.hps.devType)
 		if err != nil {
-			hwlog.RunLog.Errorf("get annotation failed: %v", err)
+			hwlog.RunLog.Warnf("get annotation failed: %v", err)
 			continue
 		}
 		hwlog.RunLog.Debugf("get annotation kltDevValue: %v, dpDevValue: %v", kltRequestDevices, dpResponseDevices)
 
 		if len(kltRequestDevices) != len(dpResponseDevices) {
-			hwlog.RunLog.Errorf("klt len not equ vol , klt : %v vol : %v", kltRequestDevices, dpResponseDevices)
+			hwlog.RunLog.Warnf("klt len not equ vol , klt : %v vol : %v", kltRequestDevices, dpResponseDevices)
 			continue
 		}
 		for index, vol := range dpResponseDevices {
 			s.hps.vol2KlDevMap[vol] = kltRequestDevices[index]
+		}
+		if _, exist := pod.Annotations[podRealAlloc]; exist {
+			continue
 		}
 		if err := s.updatePodAnnotation(&pod, kltRequestDevices, dpResponseDevices); err != nil {
 			hwlog.RunLog.Errorf("update pod annotation failed, error is %v", err)
