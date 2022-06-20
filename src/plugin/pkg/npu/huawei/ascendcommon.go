@@ -417,11 +417,27 @@ func (adc *ascendCommonFunction) assembleVirtualDevices(phyID int32, VDevInfos n
 	return devices, vDeviTypes, vDevID
 }
 
-func (adc *ascendCommonFunction) isVirExist(hps *HwPluginServe) bool {
-	if len(hps.hdm.allDevTypes) > 1 {
-		return true
+func (adc *ascendCommonFunction) setUnHealthyDev(devType string, device *common.NpuDevice) {
+	if !common.IsVirtualDev(device.ID) {
+		totalUHDevices.Insert(device.ID)
+		return
 	}
-	return common.IsVirtualDev(hps.hdm.allDevTypes[0])
+	phyID, _, err := common.GetDeviceID(device.ID, common.VirtualDev)
+	if err != nil {
+		hwlog.RunLog.Errorf("getDeviceID err: %v", err)
+		return
+	}
+	dev := fmt.Sprintf("%s-%s", devType, phyID)
+	if !totalUHDevices.Has(dev) {
+		totalUHDevices.Insert(dev)
+	}
+}
+
+func (adc *ascendCommonFunction) resetStateSet() {
+	totalDevices = totalDevices.Intersection(sets.String{})
+	totalUHDevices = totalDevices.Intersection(sets.String{})
+	totalNetworkUnhealthDevices = totalNetworkUnhealthDevices.Intersection(sets.String{})
+	stateThreadNum = 0
 }
 
 func getNodeWithBackgroundCtx(ki *KubeInteractor) (*v1.Node, error) {

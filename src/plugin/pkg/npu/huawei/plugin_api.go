@@ -157,15 +157,7 @@ func (s *pluginAPI) ListAndWatch(emtpy *v1beta1.Empty, stream v1beta1.DevicePlug
 func (s *pluginAPI) updateKubeletDevInfo(resp *v1beta1.ListAndWatchResponse,
 	stream v1beta1.DevicePlugin_ListAndWatchServer) {
 	if firstTimeList {
-		for _, dev := range s.hps.devices {
-			resp.Devices = append(resp.Devices, &v1beta1.Device{ID: dev.ID, Health: dev.Health})
-			s.hps.healthDevice.Insert(dev.ID)
-		}
-		if err := sendDevToKubelet(resp, stream); err != nil {
-			hwlog.RunLog.Errorf("listAndWatch: send device info failed, please "+
-				"check kubelet status, err: %s", err.Error())
-		}
-		firstTimeList = false
+		s.initK8sInfo(resp, stream)
 		return
 	}
 	var notInVolDev []string
@@ -204,6 +196,20 @@ func (s *pluginAPI) updateKubeletDevInfo(resp *v1beta1.ListAndWatchResponse,
 		hwlog.RunLog.Errorf("listAndWatch: send device info failed, please "+
 			"check kubelet status, err: %s", err.Error())
 	}
+}
+
+func (s *pluginAPI) initK8sInfo(resp *v1beta1.ListAndWatchResponse, stream v1beta1.DevicePlugin_ListAndWatchServer) {
+	totalNetworkUnhealthDevices = sets.String{}
+	totalUHDevices = sets.String{}
+	for _, dev := range s.hps.devices {
+		resp.Devices = append(resp.Devices, &v1beta1.Device{ID: dev.ID, Health: dev.Health})
+		s.hps.healthDevice.Insert(dev.ID)
+	}
+	if err := sendDevToKubelet(resp, stream); err != nil {
+		hwlog.RunLog.Errorf("listAndWatch: send device info failed, please "+
+			"check kubelet status, err: %s", err.Error())
+	}
+	firstTimeList = false
 }
 
 func (s *pluginAPI) isDeviceStatusChange() bool {
@@ -302,12 +308,7 @@ func (s *pluginAPI) patchUnusedDevice() error {
 	getNodeNpuUsed(&usedDevices, s.hps)
 	freeDevices := s.hps.healthDevice.Difference(usedDevices)
 	groupAllocatableDevs := s.hps.hdm.manager.GetAnnotationMap(freeDevices, []string{s.hps.devType})
-	isVir := false
-	if s.ascendRuntimeOptions == common.VirtualDev {
-		isVir = true
-	}
-	if err := s.hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, true, isVir,
-		s.hps.devType); err != nil {
+	if err := s.hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, true, s.hps.devType); err != nil {
 		return fmt.Errorf("patch Annotations failed, error is: %v", err)
 	}
 	return nil

@@ -96,12 +96,10 @@ func (hnm *HwAscend910Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe) {
 	totalDevices = totalDevices.Union(freeDevices)
 	if stateThreadNum == len(hps.hdm.allDevTypes) {
 		groupAllocatableDevs := hnm.GetAnnotationMap(totalDevices, hps.hdm.allDevTypes)
-		if err := hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, false, hnm.isVirExist(hps),
-			hps.devType); err != nil {
+		if err := hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, false, hps.devType); err != nil {
 			hwlog.RunLog.Errorf("patch Annotation failed, err: %v", err)
 		}
-		totalDevices = totalDevices.Intersection(sets.String{})
-		stateThreadNum = 0
+		hnm.resetStateSet()
 	}
 }
 
@@ -122,24 +120,16 @@ func (hnm *HwAscend910Manager) GetDeviceNetworkState(logicID int32, device *comm
 }
 
 func (hnm *HwAscend910Manager) groupDevsByStatus(hps *HwPluginServe) {
-	if hps.devType == hiAIAscend910Prefix {
-		totalUHDevices = sets.String{}
-		totalNetworkUnhealthDevices = sets.String{}
-	}
 	hps.healthDevice = sets.String{}
 	for _, device := range hps.devices {
 		if device.NetworkHealth != v1beta1.Healthy {
 			totalNetworkUnhealthDevices.Insert(device.ID)
 		}
-
-		if common.IsVirtualDev(device.ID) || device.Health == v1beta1.Healthy {
+		if device.Health == v1beta1.Healthy {
 			hps.healthDevice.Insert(device.ID)
 			continue
 		}
-
-		if device.Health != v1beta1.Healthy {
-			totalUHDevices.Insert(device.ID)
-		}
+		hnm.setUnHealthyDev(hiAIAscend910Prefix, device)
 	}
 	hwlog.RunLog.Debugf("healthy device %v", hps.healthDevice)
 	hwlog.RunLog.Debugf("total unhealthy devices %v", totalUHDevices)
