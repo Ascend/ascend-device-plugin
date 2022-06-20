@@ -175,7 +175,7 @@ func (ki *KubeInteractor) setVirDevNewAnnotation(devType, devID string, newNode 
 		}
 		newDevNameList = append(newDevNameList, devName)
 	}
-	newNode.Annotations[devType] = strings.Join(newDevNameList, nodeAnnotationsDeviceSep)
+	newNode.Annotations[devType] = strings.Join(newDevNameList, ",")
 }
 
 // get elements one by one from the sets and mark the physical id "x" to "Ascend910-x"
@@ -292,8 +292,10 @@ func (ki *KubeInteractor) resetNodeAnnotations(node *v1.Node) {
 		}
 		node.Annotations[k] = ""
 	}
-	node.Labels[huaweiRecoverAscend910] = ""
-	node.Labels[huaweiNetworkRecoverAscend910] = ""
+	if autoStowingDevs {
+		node.Labels[huaweiRecoverAscend910] = ""
+		node.Labels[huaweiNetworkRecoverAscend910] = ""
+	}
 }
 
 func (ki *KubeInteractor) convertStringToSet(deviceNames string) sets.String {
