@@ -282,9 +282,10 @@ func (ki *KubeInteractor) singleDevAnnotationUpdate(annotationTag string, groupA
 
 func (ki *KubeInteractor) resetNodeAnnotations(node *v1.Node) {
 	annotationList := []string{huaweiUnHealthAscend910, huaweiNetworkUnHealthAscend910, huaweiAscend910,
-		huaweiAscend310P, resourceNamePrefix + pwr2CSuffix, resourceNamePrefix + pwr4CSuffix,
-		resourceNamePrefix + pwr8CSuffix, resourceNamePrefix + pwr16CSuffix, resourceNamePrefix + chip310PCore1C,
-		resourceNamePrefix + chip310PCore2C, resourceNamePrefix + chip310PCore4C, huaweiUnHealthAscend310P}
+		huaweiAscend310P, resourceNamePrefix + chip910Core2C, resourceNamePrefix + chip910Core4C,
+		resourceNamePrefix + chip910Core8C, resourceNamePrefix + chip910Core16C, resourceNamePrefix + chip310PCore1C,
+		resourceNamePrefix + chip310PCore2C, resourceNamePrefix + chip310PCore4C,
+		resourceNamePrefix + chip310PCore4C3Cpu, resourceNamePrefix + chip310PCore2C1Cpu, huaweiUnHealthAscend310P}
 	for _, k := range annotationList {
 		if _, exist := node.Status.Allocatable[v1.ResourceName(k)]; !exist {
 			delete(node.Annotations, k)

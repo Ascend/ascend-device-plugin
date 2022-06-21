@@ -14,6 +14,7 @@ import (
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/smartystreets/goconvey/convey"
 	"huawei.com/npu-exporter/devmanager"
+	npuCommon "huawei.com/npu-exporter/devmanager/common"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
@@ -22,7 +23,8 @@ import (
 )
 
 const (
-	testLogicID = 3
+	testLogicID  = 3
+	testVirDevID = 100
 )
 
 // TestUnhealthyState for UnhealthyState
@@ -254,4 +256,168 @@ func TestDoWithVolcanoListAndWatch(t *testing.T) {
 		t.Fatal("TestDoWithVolcanoListAndWatch Run Failed")
 	}
 	t.Logf("TestDoWithVolcanoListAndWatch Run Pass")
+}
+
+// TestAssembleSpecVirtualDevice test assembleSpecVirtualDevice
+func TestAssembleSpecVirtualDevice(t *testing.T) {
+	phyID := int32(0)
+	runMode := hiAIAscend910Prefix
+	convey.Convey("TestAssembleSpecVirtualDevice", t, func() {
+		convey.Convey("aicore is 0", func() {
+			adc := ascendCommonFunction{}
+			vDevInfo := npuCommon.CgoVDevQueryStru{VDevID: uint32(0)}
+			_, _, err := adc.assembleSpecVirtualDevice(runMode, phyID, vDevInfo)
+			convey.So(err, convey.ShouldNotBeNil)
+		})
+		convey.Convey("template name is invalid", func() {
+			adc := ascendCommonFunction{}
+			vDevID := uint32(testVirDevID)
+			aiCore := float32(1)
+			invalidTemplateName := "vir04x"
+			vDevInfo := npuCommon.CgoVDevQueryStru{
+				VDevID: vDevID,
+				QueryInfo: npuCommon.CgoVDevQueryInfo{
+					Name:      invalidTemplateName,
+					Computing: npuCommon.CgoComputingResource{Aic: aiCore},
+				},
+			}
+			_, _, err := adc.assembleSpecVirtualDevice(runMode, phyID, vDevInfo)
+			convey.So(err, convey.ShouldNotBeNil)
+		})
+		convey.Convey("template name is valid", func() {
+			adc := ascendCommonFunction{}
+			vDevID := uint32(testVirDevID)
+			aiCore := float32(1)
+			templateName := "vir04"
+			vDevInfo := npuCommon.CgoVDevQueryStru{
+				VDevID: vDevID,
+				QueryInfo: npuCommon.CgoVDevQueryInfo{
+					Name:      templateName,
+					Computing: npuCommon.CgoComputingResource{Aic: aiCore},
+				},
+			}
+			getDevTypeGet, exist := getDevTypeByTemplateName(runMode, templateName)
+			convey.So(exist, convey.ShouldBeTrue)
+			vDevType, devID, err := adc.assembleSpecVirtualDevice(runMode, phyID, vDevInfo)
+			convey.So(err, convey.ShouldBeNil)
+			convey.So(vDevType, convey.ShouldEqual, getDevTypeGet)
+			getDevID := fmt.Sprintf("%s-%d-%d", vDevType, vDevInfo.VDevID, phyID)
+			convey.So(devID, convey.ShouldEqual, getDevID)
+		})
+	})
+}
+
+// TestAssembleVirtualDevices test assembleVirtualDevices
+func TestAssembleVirtualDevices(t *testing.T) {
+	phyID := int32(0)
+	runMode := hiAIAscend910Prefix
+	convey.Convey("TestAssembleVirtualDevices", t, func() {
+		convey.Convey("call assembleSpecVirtualDevice failed", func() {
+			adc := ascendCommonFunction{}
+			vDevInfos := npuCommon.VirtualDevInfo{VDevInfo: []npuCommon.CgoVDevQueryStru{{VDevID: uint32(0)}}}
+			devices, deviTypes, vDevID := adc.assembleVirtualDevices(phyID, vDevInfos, runMode)
+			convey.So(devices, convey.ShouldBeNil)
+			convey.So(deviTypes, convey.ShouldBeNil)
+			convey.So(vDevID, convey.ShouldBeNil)
+		})
+		convey.Convey("call assembleSpecVirtualDevice success", func() {
+			adc := ascendCommonFunction{}
+			vDevID := uint32(testVirDevID)
+			templateName := "vir04"
+			aiCore := float32(1)
+			vDevInfos := npuCommon.VirtualDevInfo{
+				VDevInfo: []npuCommon.CgoVDevQueryStru{
+					{
+						VDevID: vDevID,
+						QueryInfo: npuCommon.CgoVDevQueryInfo{
+							Name:      templateName,
+							Computing: npuCommon.CgoComputingResource{Aic: aiCore},
+						},
+					},
+				},
+			}
+			devices, deviTypes, ids := adc.assembleVirtualDevices(phyID, vDevInfos, runMode)
+			convey.So(devices, convey.ShouldNotBeNil)
+			convey.So(deviTypes, convey.ShouldNotBeNil)
+			convey.So(ids, convey.ShouldNotBeNil)
+		})
+	})
+}
+
+// TestGetUnHealthDev test getUnHealthDev
+func TestGetUnHealthDev(t *testing.T) {
+	convey.Convey("TestGetUnHealthDev", t, func() {
+		convey.Convey("autoStowingDevs true", func() {
+			autoStowingDevsSave := autoStowingDevs
+			autoStowingDevs = true
+			device910 := sets.String{}
+			device910.Insert("Ascend910-0")
+			listenUHDev := sets.String{}
+			annotationUHDev := sets.String{}
+			labelsRecoverDev := sets.String{}
+			_, newAscend910 := getUnHealthDev(listenUHDev, annotationUHDev, labelsRecoverDev, device910)
+			convey.So(newAscend910, convey.ShouldNotBeNil)
+			autoStowingDevs = autoStowingDevsSave
+		})
+		convey.Convey("autoStowingDevs false", func() {
+			autoStowingDevsSave := autoStowingDevs
+			autoStowingDevs = false
+			device910 := sets.String{}
+			device910.Insert("Ascend910-0")
+			listenUHDev := sets.String{}
+			annotationUHDev := sets.String{}
+			labelsRecoverDev := sets.String{}
+			_, newAscend910 := getUnHealthDev(listenUHDev, annotationUHDev, labelsRecoverDev, device910)
+			convey.So(newAscend910, convey.ShouldNotBeNil)
+			autoStowingDevs = autoStowingDevsSave
+		})
+	})
+}
+
+// TestSetUnHealthyDev test setUnHealthyDev
+func TestSetUnHealthyDev(t *testing.T) {
+	convey.Convey("TestSetUnHealthyDev", t, func() {
+		convey.Convey("IsVirtualDev false", func() {
+			totalUHDevicesSave := totalUHDevices
+			totalUHDevices = sets.String{}
+			device := common.NpuDevice{ID: "Ascend910-0"}
+			adc := ascendCommonFunction{}
+			adc.setUnHealthyDev("Ascend910", &device)
+			convey.So(totalUHDevices.Len(), convey.ShouldEqual, 1)
+			totalUHDevices = totalUHDevicesSave
+		})
+		convey.Convey("GetDeviceID failed ", func() {
+			totalUHDevicesSave := totalUHDevices
+			totalUHDevices = sets.String{}
+			device := common.NpuDevice{ID: "Ascend910-2c-100-0-0"}
+			mock := gomonkey.ApplyFunc(common.GetDeviceID, func(deviceName string,
+				ascendRuntimeOptions string) (string, string, error) {
+				return "", "", fmt.Errorf("error")
+			})
+			defer mock.Reset()
+			adc := ascendCommonFunction{}
+			adc.setUnHealthyDev("Ascend910", &device)
+			convey.So(totalUHDevices.Len(), convey.ShouldEqual, 0)
+			totalUHDevices = totalUHDevicesSave
+		})
+		convey.Convey("GetDeviceID has ", func() {
+			totalUHDevicesSave := totalUHDevices
+			totalUHDevices = sets.String{}
+			totalUHDevices.Insert("Ascend910-0")
+			device := common.NpuDevice{ID: "Ascend910-2c-100-0"}
+			adc := ascendCommonFunction{}
+			adc.setUnHealthyDev("Ascend910", &device)
+			convey.So(totalUHDevices.Len(), convey.ShouldEqual, 1)
+			totalUHDevices = totalUHDevicesSave
+		})
+		convey.Convey("GetDeviceID not has ", func() {
+			totalUHDevicesSave := totalUHDevices
+			totalUHDevices = sets.String{}
+			device := common.NpuDevice{ID: "Ascend910-2c-100-0"}
+			adc := ascendCommonFunction{}
+			adc.setUnHealthyDev("Ascend910", &device)
+			convey.So(totalUHDevices.Len(), convey.ShouldEqual, 1)
+			totalUHDevices = totalUHDevicesSave
+		})
+	})
 }

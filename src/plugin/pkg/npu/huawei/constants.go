@@ -59,4 +59,15 @@ const (
 	baseDec   = 10
 	bitSize   = 64
 	bitSize32 = 32
+
+	chip310PCore1C     = "Ascend310P-1c"
+	chip310PCore2C     = "Ascend310P-2c"
+	chip310PCore4C     = "Ascend310P-4c"
+	chip310PCore4C3Cpu = "Ascend310P-4c.3cpu"
+	chip310PCore2C1Cpu = "Ascend310P-2c.1cpu"
+
+	chip910Core2C  = "Ascend910-2c"
+	chip910Core4C  = "Ascend910-4c"
+	chip910Core8C  = "Ascend910-8c"
+	chip910Core16C = "Ascend910-16c"
 )
