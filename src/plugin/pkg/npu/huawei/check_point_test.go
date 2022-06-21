@@ -4,6 +4,7 @@
 package huawei
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"testing"
@@ -14,53 +15,6 @@ import (
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"k8s.io/kubernetes/pkg/kubelet/cm/devicemanager/checkpoint"
 )
-
-// TestReadCheckPoint test read check point file
-func TestReadCheckPoint(t *testing.T) {
-	t.Logf("Start UT TestReadCheckPoint")
-	convey.Convey("readCheckPoint", t, func() {
-		convey.Convey("utils.ReadLimitBytes failed", func() {
-			mock := gomonkey.ApplyFunc(utils.ReadLimitBytes, func(path string, limitLength int) ([]byte, error) {
-				return nil, fmt.Errorf("err")
-			})
-			defer mock.Reset()
-			_, err := readCheckPoint("")
-			convey.So(err, convey.ShouldNotBeNil)
-		})
-		mockRead := gomonkey.ApplyFunc(utils.ReadLimitBytes, func(path string, limitLength int) ([]byte, error) {
-			return nil, nil
-		})
-		defer mockRead.Reset()
-		convey.Convey("cp.UnmarshalCheckpoint failed", func() {
-			mockUnmarshal := gomonkey.ApplyMethod(reflect.TypeOf(new(checkpoint.Data)), "UnmarshalCheckpoint",
-				func(_ *checkpoint.Data, blob []byte) error { return fmt.Errorf("err") })
-			defer mockUnmarshal.Reset()
-			_, err := readCheckPoint("")
-			convey.So(err, convey.ShouldNotBeNil)
-		})
-		convey.Convey("cp.VerifyChecksum failed", func() {
-			mockUnmarshal := gomonkey.ApplyMethod(reflect.TypeOf(new(checkpoint.Data)), "UnmarshalCheckpoint",
-				func(_ *checkpoint.Data, blob []byte) error { return nil })
-			defer mockUnmarshal.Reset()
-			mockVerify := gomonkey.ApplyMethod(reflect.TypeOf(new(checkpoint.Data)), "VerifyChecksum",
-				func(_ *checkpoint.Data) error { return fmt.Errorf("err") })
-			defer mockVerify.Reset()
-			_, err := readCheckPoint("")
-			convey.So(err, convey.ShouldNotBeNil)
-		})
-		convey.Convey("cp.VerifyChecksum ok", func() {
-			mockUnmarshal := gomonkey.ApplyMethod(reflect.TypeOf(new(checkpoint.Data)), "UnmarshalCheckpoint",
-				func(_ *checkpoint.Data, blob []byte) error { return nil })
-			defer mockUnmarshal.Reset()
-			mockVerify := gomonkey.ApplyMethod(reflect.TypeOf(new(checkpoint.Data)), "VerifyChecksum",
-				func(_ *checkpoint.Data) error { return nil })
-			defer mockVerify.Reset()
-			_, err := readCheckPoint("")
-			convey.So(err, convey.ShouldBeNil)
-		})
-	})
-	t.Logf("UT TestReadCheckPoint Success")
-}
 
 // TestGetEnvVisibleDevices test get env visible devices
 func TestGetEnvVisibleDevices(t *testing.T) {
@@ -109,37 +63,40 @@ func TestGetEnvVisibleDevices(t *testing.T) {
 func TestGetKubeletCheckPoint(t *testing.T) {
 	t.Logf("Start UT TestGetKubeletCheckPoint")
 	convey.Convey("GetKubeletCheckPoint", t, func() {
-		convey.Convey("readCheckPoint failed", func() {
-			mock := gomonkey.ApplyFunc(readCheckPoint, func(filePath string) ([]checkpoint.PodDevicesEntry,
-				error) {
+		convey.Convey("utils.ReadLimitBytes failed", func() {
+			mock := gomonkey.ApplyFunc(utils.ReadLimitBytes, func(path string, limitLength int) ([]byte, error) {
 				return nil, fmt.Errorf("err")
 			})
 			defer mock.Reset()
 			_, err := GetKubeletCheckPoint(kubeletCheckPointFile)
 			convey.So(err, convey.ShouldNotBeNil)
 		})
-		convey.Convey("getEnvVisibleDevices failed", func() {
-			mockRead := gomonkey.ApplyFunc(readCheckPoint, func(filePath string) ([]checkpoint.PodDevicesEntry,
-				error) {
-				return []checkpoint.PodDevicesEntry{{PodUID: "xxx"}}, nil
+		convey.Convey("unmarshal failed", func() {
+			mockRead := gomonkey.ApplyFunc(utils.ReadLimitBytes, func(path string, limitLength int) ([]byte, error) {
+				return nil, nil
 			})
 			defer mockRead.Reset()
-			mockGet := gomonkey.ApplyFunc(getEnvVisibleDevices, func(allocResp []byte) []string { return nil })
-			defer mockGet.Reset()
+			mockUnmarshal := gomonkey.ApplyFunc(json.Unmarshal, func(data []byte, v interface{}) error {
+				return fmt.Errorf("err")
+			})
+			defer mockUnmarshal.Reset()
 			_, err := GetKubeletCheckPoint(kubeletCheckPointFile)
-			convey.So(err, convey.ShouldBeNil)
+			convey.So(err, convey.ShouldNotBeNil)
 		})
-		convey.Convey("get kubelet check point success ", func() {
-			mockRead := gomonkey.ApplyFunc(readCheckPoint, func(filePath string) ([]checkpoint.PodDevicesEntry,
-				error) {
-				return []checkpoint.PodDevicesEntry{{PodUID: "xxx"}}, nil
+		convey.Convey("VerifyChecksum failed", func() {
+			mockRead := gomonkey.ApplyFunc(utils.ReadLimitBytes, func(path string, limitLength int) ([]byte, error) {
+				return nil, nil
 			})
 			defer mockRead.Reset()
-			mockGet := gomonkey.ApplyFunc(getEnvVisibleDevices,
-				func(allocResp []byte) []string { return []string{"0"} })
-			defer mockGet.Reset()
+			mockUnmarshal := gomonkey.ApplyFunc(json.Unmarshal, func(data []byte, v interface{}) error {
+				return nil
+			})
+			defer mockUnmarshal.Reset()
+			mockVerify := gomonkey.ApplyMethod(reflect.TypeOf(new(checkpoint.Data)), "VerifyChecksum",
+				func(_ *checkpoint.Data) error { return fmt.Errorf("err") })
+			defer mockVerify.Reset()
 			_, err := GetKubeletCheckPoint(kubeletCheckPointFile)
-			convey.So(err, convey.ShouldBeNil)
+			convey.So(err, convey.ShouldNotBeNil)
 		})
 	})
 	t.Logf("UT TestGetKubeletCheckPoint Success")
