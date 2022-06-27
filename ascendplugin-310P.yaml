@@ -52,10 +52,12 @@ spec:
               mountPath: /var/lib/kubelet/device-plugins
             - name: hiai-driver
               mountPath: /usr/local/Ascend/driver
+              readOnly: true
             - name: log-path
               mountPath: /var/log/mindx-dl/devicePlugin
             - name: localtime
               mountPath: /etc/localtime
+              readOnly: true
             - name: tmp
               mountPath: /tmp
       volumes:
