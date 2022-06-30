@@ -55,9 +55,6 @@ spec:
             readOnly: true
           - name: log-path
             mountPath: /var/log/mindx-dl/devicePlugin
-          - name: localtime
-            mountPath: /etc/localtime
-            readOnly: true
           - name: tmp
             mountPath: /tmp
       volumes:
@@ -71,9 +68,6 @@ spec:
           hostPath:
             path: /var/log/mindx-dl/devicePlugin
             type: Directory
-        - name: localtime
-          hostPath:
-            path: /etc/localtime
         - name: tmp
           hostPath:
             path: /tmp

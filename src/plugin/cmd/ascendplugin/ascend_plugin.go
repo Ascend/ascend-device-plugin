@@ -26,6 +26,7 @@ const (
 	maxListWatchPeriod = 60
 	// minListWatchPeriod is the min listening device state's period
 	minListWatchPeriod = 3
+	maxRunModeLength   = 10
 )
 
 var (
@@ -87,6 +88,10 @@ func checkParam() bool {
 	}
 	if !(*presetVirtualDevice) {
 		fmt.Println("presetVirtualDevice can be only set to true")
+		return false
+	}
+	if len(*mode) > maxRunModeLength {
+		hwlog.RunLog.Errorf("run mode param length invalid")
 		return false
 	}
 	return true
