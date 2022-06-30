@@ -90,6 +90,10 @@ func checkParam() bool {
 		fmt.Println("presetVirtualDevice can be only set to true")
 		return false
 	}
+	if len(*mode) > maxRunModeLength {
+		hwlog.RunLog.Errorf("run mode param length invalid")
+		return false
+	}
 	return true
 }
 
@@ -108,10 +112,6 @@ func main() {
 		return
 	}
 	hwlog.RunLog.Infof("ascend device plugin starting and the version is %s", BuildVersion)
-	if len(*mode) > maxRunModeLength {
-		hwlog.RunLog.Errorf("run mode param length invalid")
-		return
-	}
 	neverStop := make(chan struct{})
 
 	switch *mode {
