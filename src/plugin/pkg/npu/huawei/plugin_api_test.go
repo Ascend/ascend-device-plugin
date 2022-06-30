@@ -149,7 +149,7 @@ func setParams(volcanoType bool, runMode string) *HwDevManager {
 
 func changeBreakFlag(api *pluginAPI) {
 	time.Sleep(sleepTestFour * time.Second)
-	api.hps.hdm.stopFlag.Store(true)
+	api.hps.outbreak.Store(true)
 	if api.hps.stopCh == nil {
 		return
 	}
@@ -167,9 +167,9 @@ func createFakePluginAPI(hdm *HwDevManager, devType string, ki *KubeInteractor) 
 			healthDevice:   sets.String{},
 			unHealthDevice: sets.String{},
 			stopCh:         make(chan struct{}),
+			outbreak:       atomic.NewBool(false),
 			vol2KlDevMap:   make(map[string]string, maxTrainDevicesNum),
 		},
-		outbreak: atomic.NewBool(false),
 	}
 }
 
@@ -200,8 +200,8 @@ func TestAddAnnotation(t *testing.T) {
 	if fakePluginAPI == nil {
 		t.Fatal("TestAddAnnotation Run Failed: create fake plugin api failed")
 	}
-	annonationString := fakePluginAPI.addAnnotation(devices, "pod_name", "127.0.0.0")
-	if annonationString == annonationTest1 || annonationString == annonationTest2 {
+	annotationString := fakePluginAPI.addAnnotation(devices, "pod_name", "127.0.0.0")
+	if annotationString == annonationTest1 || annotationString == annonationTest2 {
 		t.Logf("TestAddAnnotation Run Pass")
 	} else {
 		t.Fatal("TestAddAnnotation Run Failed")

@@ -175,6 +175,7 @@ func (hdm *HwDevManager) Serve(devType string, stop chan struct{}) {
 			if err != nil {
 				return
 			}
+			time.Sleep(sleepTime * time.Second)
 		}
 		// Monitor file signals and system signals
 		osSignChan := newSignWatcher(syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGKILL)

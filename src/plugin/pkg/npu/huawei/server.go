@@ -29,6 +29,7 @@ type HwPluginServe struct {
 	devType        string
 	runMode        string
 	stopCh         chan struct{}
+	outbreak       *atomic.Bool
 }
 
 // HwPluginServeInterface the interface of PluginServer
@@ -60,6 +61,7 @@ func NewHwPluginServe(hdm *HwDevManager, devType string) HwPluginServeInterface 
 		healthDevice:   sets.String{},
 		unHealthDevice: sets.String{},
 		stopCh:         make(chan struct{}),
+		outbreak:       atomic.NewBool(false),
 	}
 }
 
@@ -104,8 +106,8 @@ func (hps *HwPluginServe) Start(pluginSocketPath string) error {
 		hwlog.RunLog.Infof("register to kubelet success.")
 		return nil
 	}
+	hps.outbreak.Store(true)
 	hps.grpcServer.Stop()
-	time.Sleep(sleepTime * time.Second)
 	hwlog.RunLog.Errorf("register to kubelet failed, err: %s", err.Error())
 	return err
 }
@@ -113,7 +115,7 @@ func (hps *HwPluginServe) Start(pluginSocketPath string) error {
 func (hps *HwPluginServe) setSocket() {
 	hps.grpcServer = grpc.NewServer()
 	// Registers service.
-	plugin := &pluginAPI{hps: hps, outbreak: atomic.NewBool(false)}
+	plugin := &pluginAPI{hps: hps}
 	v1beta1.RegisterDevicePluginServer(hps.grpcServer, plugin)
 }
 
@@ -122,7 +124,10 @@ func (hps *HwPluginServe) Stop() {
 	if hps.grpcServer == nil {
 		return
 	}
-	<-hps.stopCh
+	if !hps.outbreak.Load() {
+		hps.outbreak.Store(true)
+		<-hps.stopCh
+	}
 	hps.grpcServer.Stop()
 	hps.grpcServer = nil
 

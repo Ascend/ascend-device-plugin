@@ -18,7 +18,6 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/atomic"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"huawei.com/npu-exporter/hwlog"
@@ -32,7 +31,6 @@ import (
 
 type pluginAPI struct {
 	hps                  *HwPluginServe
-	outbreak             *atomic.Bool
 	ascendRuntimeOptions string
 }
 
@@ -128,7 +126,7 @@ func (s *pluginAPI) ListAndWatch(emtpy *v1beta1.Empty, stream v1beta1.DevicePlug
 	resp := new(v1beta1.ListAndWatchResponse)
 	s.updateKubeletDevInfo(resp, stream)
 	for {
-		if s.hps.hdm.stopFlag.Load() {
+		if s.hps.outbreak.Load() {
 			break
 		}
 		sleepTime := listAndWatchPeriod - sleep2ListW
