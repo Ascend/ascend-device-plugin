@@ -80,14 +80,25 @@ func initLogModule(stopCh <-chan struct{}) error {
 	return nil
 }
 
+func checkParam() bool {
+	if *listWatchPeriod < minListWatchPeriod || *listWatchPeriod > maxListWatchPeriod {
+		fmt.Printf("list and watch period %d out of range\n", *listWatchPeriod)
+		return false
+	}
+	if !(*presetVirtualDevice) {
+		fmt.Println("presetVirtualDevice can be only set to true")
+		return false
+	}
+	return true
+}
+
 func main() {
 	flag.Parse()
 	if *version {
 		fmt.Printf("%s version: %s\n", BuildName, BuildVersion)
 		return
 	}
-	if *listWatchPeriod < minListWatchPeriod || *listWatchPeriod > maxListWatchPeriod {
-		fmt.Printf("list and watch period %d out of range\n", *listWatchPeriod)
+	if !checkParam() {
 		return
 	}
 	stopCh := make(chan struct{})

@@ -16,12 +16,6 @@ import (
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 )
 
-const (
-	chip310PCore1C = "Ascend310P-1c"
-	chip310PCore2C = "Ascend310P-2c"
-	chip310PCore4C = "Ascend310P-4c"
-)
-
 // HwAscend310PManager manages huawei Ascend310P devices.
 type HwAscend310PManager struct {
 	ascendCommonFunction
@@ -56,7 +50,7 @@ func (hnm *HwAscend310PManager) GetNPUs(allDevices *[]common.NpuDevice, allDevic
 		if err != nil {
 			return err
 		}
-		cgoDsmiVDevInfos, err := hnm.getVirtualDevice(devList[i])
+		vDevInfos, err := hnm.getVirtualDevice(devList[i])
 		if err != nil && !strings.Contains(err.Error(), FunctionNotFound) {
 			if !strings.Contains(err.Error(), noVDevFound) {
 				hwlog.RunLog.Errorf("Query virtual device info failure!, err: %s", err.Error())
@@ -64,11 +58,11 @@ func (hnm *HwAscend310PManager) GetNPUs(allDevices *[]common.NpuDevice, allDevic
 			}
 		}
 		var devices []common.NpuDevice
-		if cgoDsmiVDevInfos.VDevNum == 0 {
+		if vDevInfos.TotalResource.VDevNum == 0 {
 			devices, deviTypes = hnm.assemblePhyDevices(phyID, hiAIAscend310PPrefix)
 			phyDevMapVirtualDev[phyID] = fmt.Sprintf("%d", phyID)
 		} else {
-			devices, deviTypes, vDevID = hnm.assembleVirtualDevices(phyID, cgoDsmiVDevInfos, hiAIAscend310PPrefix)
+			devices, deviTypes, vDevID = hnm.assembleVirtualDevices(phyID, vDevInfos, hiAIAscend310PPrefix)
 			phyDevMapVirtualDev[phyID] = strings.Join(vDevID, ",")
 		}
 		*allDevices = append(*allDevices, devices...)

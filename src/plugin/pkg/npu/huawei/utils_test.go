@@ -8,6 +8,8 @@ import (
 	"os"
 	"syscall"
 	"testing"
+
+	"github.com/smartystreets/goconvey/convey"
 )
 
 // TestCreateNetListen for createNetListen
@@ -66,4 +68,70 @@ func TestWatchFile(t *testing.T) {
 		t.Logf("watchFile failed")
 	}
 	t.Logf("TestNewFileWatch Run Pass")
+}
+
+// TestGetDevTypeByTemplateName for test getDevTypeByTemplateName
+func TestGetDevTypeByTemplateName(t *testing.T) {
+	convey.Convey("TestGetDevTypeByTemplateName", t, func() {
+		convey.Convey("devType is default type", func() {
+			devType := hiAIAscend310Prefix
+			template := ""
+			vDevType, exist := getDevTypeByTemplateName(devType, template)
+			convey.So(vDevType, convey.ShouldBeEmpty)
+			convey.So(exist, convey.ShouldBeFalse)
+		})
+		convey.Convey("devType is 310P", func() {
+			devType := hiAIAscend310PPrefix
+			template := "vir04"
+			vDevType, exist := getDevTypeByTemplateName(devType, template)
+			convey.So(vDevType, convey.ShouldNotBeEmpty)
+			convey.So(exist, convey.ShouldBeTrue)
+		})
+		convey.Convey("devType is 910", func() {
+			devType := hiAIAscend910Prefix
+			template := "vir04"
+			vDevType, exist := getDevTypeByTemplateName(devType, template)
+			convey.So(vDevType, convey.ShouldNotBeEmpty)
+			convey.So(exist, convey.ShouldBeTrue)
+		})
+	})
+}
+
+// TestGetDeviceType for test getDeviceType
+func TestGetDeviceType(t *testing.T) {
+	convey.Convey("TestGetDeviceType", t, func() {
+		convey.Convey("devType is valid physical device", func() {
+			devName := hiAIAscend310Prefix + "-0"
+			devType, err := getDeviceType(devName)
+			convey.So(err, convey.ShouldBeNil)
+			convey.So(devType, convey.ShouldEqual, hiAIAscend310Prefix)
+		})
+		convey.Convey("devType is invalid physical device", func() {
+			devName := "AscendX10-0"
+			_, err := getDeviceType(devName)
+			convey.So(err, convey.ShouldNotBeNil)
+		})
+		convey.Convey("devType is valid virtual device", func() {
+			validDeviceType := getVirtualDeviceType()
+			for vDeviceType := range validDeviceType {
+				deviceName := vDeviceType + "-100-0"
+				devType, err := getDeviceType(deviceName)
+				convey.So(err, convey.ShouldBeNil)
+				convey.So(devType, convey.ShouldEqual, vDeviceType)
+			}
+		})
+		convey.Convey("devType is invalid virtual device", func() {
+			devName := hiAIAscend310PPrefix + "-8c-100-0"
+			_, err := getDeviceType(devName)
+			convey.So(err, convey.ShouldNotBeNil)
+		})
+		convey.Convey("devType is invalid device name", func() {
+			devName := hiAIAscend310PPrefix + "-8c-100-0-0"
+			_, err := getDeviceType(devName)
+			convey.So(err, convey.ShouldNotBeNil)
+			devName = hiAIAscend310PPrefix
+			_, err = getDeviceType(devName)
+			convey.So(err, convey.ShouldNotBeNil)
+		})
+	})
 }

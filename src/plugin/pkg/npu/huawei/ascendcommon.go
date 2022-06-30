@@ -369,11 +369,11 @@ func (adc *ascendCommonFunction) GetAnnotationMap(allocatableDevices sets.String
 }
 
 func (adc *ascendCommonFunction) getVirtualDevice(logicID int32) (npuCommon.VirtualDevInfo, error) {
-	cgoDsmiVDevInfos, err := adc.dmgr.GetVirtualDeviceInfo(logicID)
+	vDevInfos, err := adc.dmgr.GetVirtualDeviceInfo(logicID)
 	if err != nil {
 		return npuCommon.VirtualDevInfo{}, fmt.Errorf("query virtual device info failure: %s", err)
 	}
-	return cgoDsmiVDevInfos, nil
+	return vDevInfos, nil
 }
 
 func (adc *ascendCommonFunction) removeDuplicate(allDeviceTypes *[]string) []string {
@@ -398,21 +398,35 @@ func (adc *ascendCommonFunction) assemblePhyDevices(phyID int32, runMode string)
 	return devices, deviTypes
 }
 
-func (adc *ascendCommonFunction) assembleVirtualDevices(phyID int32, VDevInfos npuCommon.VirtualDevInfo,
+func (adc *ascendCommonFunction) assembleSpecVirtualDevice(runMode string, phyID int32,
+	vDevInfo npuCommon.CgoVDevQueryStru) (string, string, error) {
+	coreNum := int32(vDevInfo.QueryInfo.Computing.Aic)
+	if coreNum <= 0 {
+		return "", "", fmt.Errorf("invalid vdev info, ai core is 0")
+	}
+	vDeviType, exist := getDevTypeByTemplateName(runMode, vDevInfo.QueryInfo.Name)
+	if !exist {
+		return "", "", fmt.Errorf("check templatename failed, templatename is %s", vDevInfo.QueryInfo.Name)
+	}
+	devID := fmt.Sprintf("%s-%d-%d", vDeviType, vDevInfo.VDevID, phyID)
+	return vDeviType, devID, nil
+}
+
+func (adc *ascendCommonFunction) assembleVirtualDevices(phyID int32, vDevInfos npuCommon.VirtualDevInfo,
 	runMode string) ([]common.NpuDevice, []string, []string) {
 	var devices []common.NpuDevice
 	var vDeviTypes []string
 	var vDevID []string
-	for _, dsmiSubVDevInfo := range VDevInfos.CgoDsmiSubVDevInfos {
-		if dsmiSubVDevInfo.Spec.CoreNum == zeroCore {
+	for _, subVDevInfo := range vDevInfos.VDevInfo {
+		vDeviType, devID, err := adc.assembleSpecVirtualDevice(runMode, phyID, subVDevInfo)
+		if err != nil {
+			hwlog.RunLog.Error(err)
 			continue
 		}
-		vDeviType := fmt.Sprintf("%s-%sc", runMode, dsmiSubVDevInfo.Spec.CoreNum)
-		devID := fmt.Sprintf("%s-%sc-%d-%d", runMode, dsmiSubVDevInfo.Spec.CoreNum, dsmiSubVDevInfo.VDevID, phyID)
 		device := adc.AssembleNpuDeviceStruct(vDeviType, devID)
 		devices = append(devices, device)
 		vDeviTypes = append(vDeviTypes, vDeviType)
-		vDevID = append(vDevID, fmt.Sprintf("%d", dsmiSubVDevInfo.VDevID))
+		vDevID = append(vDevID, fmt.Sprintf("%d", subVDevInfo.VDevID))
 	}
 	return devices, vDeviTypes, vDevID
 }

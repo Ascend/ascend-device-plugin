@@ -192,3 +192,26 @@ func TestSetRunModeSuccess(t *testing.T) {
 		})
 	})
 }
+
+// TestNewHwDevManager for NewHwDevManager
+func TestNewHwDevManager(t *testing.T) {
+	convey.Convey("TestNewHwDevManager", t, func() {
+		convey.Convey("AutoInit failed", func() {
+			mock := gomonkey.ApplyFunc(devmanager.AutoInit, func(_ string) (*devmanager.DeviceManager, error) {
+				return nil, fmt.Errorf("error")
+			})
+			defer mock.Reset()
+			devM := NewHwDevManager("")
+			convey.So(devM, convey.ShouldBeNil)
+		})
+		convey.Convey("DevType is 910", func() {
+			mock0 := gomonkey.ApplyFunc(devmanager.AutoInit, func(_ string) (*devmanager.DeviceManager, error) {
+				return &devmanager.DeviceManager{DevType: npuCommon.Ascend910}, nil
+			})
+			defer mock0.Reset()
+			devM0 := NewHwDevManager("")
+			convey.So(devM0, convey.ShouldNotBeNil)
+			convey.So(devM0.runMode, convey.ShouldEqual, common.RunMode910)
+		})
+	})
+}

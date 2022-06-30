@@ -26,13 +26,6 @@ const (
 	networkDetectInit = uint32(6)
 )
 
-const (
-	pwr2CSuffix  = "Ascend910-2c"
-	pwr4CSuffix  = "Ascend910-4c"
-	pwr8CSuffix  = "Ascend910-8c"
-	pwr16CSuffix = "Ascend910-16c"
-)
-
 // HwAscend910Manager manages huawei Ascend910 devices.
 type HwAscend910Manager struct {
 	ascendCommonFunction
@@ -64,7 +57,7 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]common.NpuDevice, allDevice
 		if err != nil {
 			return err
 		}
-		cgoDsmiVDevInfos, err := hnm.getVirtualDevice(devList[i])
+		vDevInfos, err := hnm.getVirtualDevice(devList[i])
 		if err != nil && !strings.Contains(err.Error(), FunctionNotFound) {
 			if !strings.Contains(err.Error(), noVDevFound) {
 				hwlog.RunLog.Errorf("Query virtual device info failure!, err: %s", err.Error())
@@ -72,11 +65,11 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]common.NpuDevice, allDevice
 			}
 		}
 		var devices []common.NpuDevice
-		if cgoDsmiVDevInfos.VDevNum == 0 {
+		if vDevInfos.TotalResource.VDevNum == 0 {
 			devices, deviTypes = hnm.assemblePhyDevices(phyID, hiAIAscend910Prefix)
 			phyDevMapVirtualDev[phyID] = fmt.Sprintf("%d", phyID)
 		} else {
-			devices, deviTypes, vDevID = hnm.assembleVirtualDevices(phyID, cgoDsmiVDevInfos, hiAIAscend910Prefix)
+			devices, deviTypes, vDevID = hnm.assembleVirtualDevices(phyID, vDevInfos, hiAIAscend910Prefix)
 			phyDevMapVirtualDev[phyID] = strings.Join(vDevID, ",")
 		}
 		*allDevices = append(*allDevices, devices...)
@@ -150,15 +143,13 @@ func (hnm *HwAscend910Manager) GetAnnotationMap(allocatableDevices sets.String, 
 func filterTagPowerDevice(allocatableDevices sets.String, suffix string) string {
 	var powerAnnotation []string
 	for deviceName := range allocatableDevices {
-		switch suffix {
-		case hiAIAscend910Prefix, hiAIAscend310PPrefix:
-			if !common.IsVirtualDev(deviceName) {
-				powerAnnotation = append(powerAnnotation, deviceName)
-			}
-		default:
-			if strings.Contains(deviceName, suffix) {
-				powerAnnotation = append(powerAnnotation, deviceName)
-			}
+		devType, err := getDeviceType(deviceName)
+		if err != nil {
+			hwlog.RunLog.Warnf("invalid device name: %s", deviceName)
+			continue
+		}
+		if devType == suffix {
+			powerAnnotation = append(powerAnnotation, deviceName)
 		}
 	}
 	return strings.Join(powerAnnotation, ",")
