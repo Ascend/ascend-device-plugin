@@ -26,6 +26,7 @@ const (
 	maxListWatchPeriod = 60
 	// minListWatchPeriod is the min listening device state's period
 	minListWatchPeriod = 3
+	maxRunModeLength   = 10
 )
 
 var (
@@ -107,6 +108,10 @@ func main() {
 		return
 	}
 	hwlog.RunLog.Infof("ascend device plugin starting and the version is %s", BuildVersion)
+	if len(*mode) > maxRunModeLength {
+		hwlog.RunLog.Errorf("run mode param length invalid")
+		return
+	}
 	neverStop := make(chan struct{})
 
 	switch *mode {
