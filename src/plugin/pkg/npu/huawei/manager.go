@@ -313,7 +313,7 @@ func (hdm *HwDevManager) SetRunMode() error {
 		}
 	}
 
-	if strings.Contains(chipName, "310P") || strings.Contains(chipName, "710") {
+	if strings.Contains(chipName, "310P") {
 		hdm.runMode = common.RunMode310P
 		return nil
 	}

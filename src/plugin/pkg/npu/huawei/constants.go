@@ -32,6 +32,7 @@ const (
 
 	huaweiAscend910  = "huawei.com/Ascend910"
 	huaweiAscend310P = "huawei.com/Ascend310P"
+	huaweiAscend310  = "huawei.com/Ascend310"
 	podPredicateTime = "predicate-time"
 	pod2kl           = "huawei.com/kltDev"
 	podRealAlloc     = "huawei.com/AscendReal"

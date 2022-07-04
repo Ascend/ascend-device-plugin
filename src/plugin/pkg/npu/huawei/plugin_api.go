@@ -80,6 +80,9 @@ const (
 
 	// retryPodUpdateCount is max number of retry update pod annotation
 	retryPodUpdateCount = 3
+
+	maxPodLimit       = 110
+	maxContainerLimit = 300000
 )
 
 // Register function is use to register k8s devicePlugin to kubelet.
@@ -330,18 +333,51 @@ func (s *pluginAPI) useVolcano(ascendVisibleDevicesMap *map[string]string, alloc
 	return nil
 }
 
+func logAllocateRequest(requestDevices []string) {
+	if len(requestDevices) == 0 {
+		hwlog.RunLog.Errorf("allocate request device's length is 0")
+		return
+	}
+	rqtDevice := requestDevices[0]
+	devType, err := getDeviceType(rqtDevice)
+	if err != nil {
+		hwlog.RunLog.Errorf("allocate request invalid device name: %s", rqtDevice)
+		return
+	}
+	if common.IsVirtualDev(rqtDevice) {
+		deviceID, virID, err := common.GetDeviceID(rqtDevice, common.VirtualDev)
+		if err != nil {
+			hwlog.RunLog.Errorf("dev ID is invalid, deviceID: %s", rqtDevice)
+			return
+		}
+		hwlog.RunLog.Infof("allocate request %s:{%s}", devType, fmt.Sprintf("%s-%s", virID, deviceID))
+		return
+	}
+	var devIDs []string
+	for _, requestDevice := range requestDevices {
+		deviceID, _, err := common.GetDeviceID(requestDevice, physicalDev)
+		if err != nil {
+			hwlog.RunLog.Errorf("dev ID is invalid, deviceID: %s", requestDevice)
+			return
+		}
+		devIDs = append(devIDs, deviceID)
+	}
+	hwlog.RunLog.Infof("allocate request %s:{%s}", devType, strings.Join(devIDs, ","))
+}
+
 // Allocate is called by kubelet to mount device to k8s pod.
 func (s *pluginAPI) Allocate(ctx context.Context, requests *v1beta1.AllocateRequest) (*v1beta1.AllocateResponse,
 	error) {
 
 	resps := new(v1beta1.AllocateResponse)
-	hwlog.RunLog.Infof("allocate request: %#v", requests.String())
+	hwlog.RunLog.Info("allocate request")
 	requestErrs := s.setAscendRuntimeOptions(requests)
 	if requestErrs != nil {
 		return nil, requestErrs
 	}
 
 	for _, rqt := range requests.ContainerRequests {
+		logAllocateRequest(rqt.DevicesIDs)
 		resp := new(v1beta1.ContainerAllocateResponse)
 
 		allocateNum := len(rqt.DevicesIDs)
@@ -370,12 +406,16 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *v1beta1.AllocateRequ
 			s.mountDevice(resp, ascendVisibleDevicesMap)
 		}
 		resps.ContainerResponses = append(resps.ContainerResponses, resp)
-		hwlog.RunLog.Infof("allocate responses: %s", resps.String())
+		hwlog.RunLog.Info("allocate response")
 	}
 	return resps, nil
 }
 
 func (s *pluginAPI) setAscendRuntimeOptions(requests *v1beta1.AllocateRequest) error {
+	if len(requests.ContainerRequests) > maxContainerLimit {
+		return fmt.Errorf("the number of container request %d exceeds the upper limit",
+			len(requests.ContainerRequests))
+	}
 	for _, rqt := range requests.ContainerRequests {
 		for _, deviceName := range rqt.DevicesIDs {
 			if common.IsVirtualDev(deviceName) && len(rqt.DevicesIDs) > interval {
@@ -425,7 +465,11 @@ func getNPUByStatus(hps *HwPluginServe, useNpu *[]string) bool {
 		hwlog.RunLog.Errorf(fmt.Sprintf("nodeName: %s, err: %v", hps.kubeInteractor.nodeName, err))
 		return true
 	}
-	for _, pod := range podList.Items {
+	for index, pod := range podList.Items {
+		if index >= maxPodLimit {
+			hwlog.RunLog.Error("The number of pods exceeds the upper limit")
+			return true
+		}
 		if pod.Status.Phase == v1.PodSucceeded {
 			continue
 		}
@@ -435,8 +479,8 @@ func getNPUByStatus(hps *HwPluginServe, useNpu *[]string) bool {
 			continue
 		}
 		tmpNpuList := strings.Split(tmpNpu, ",")
-		if len(tmpNpuList) == 0 {
-			hwlog.RunLog.Errorf("invalid annotation %#v", tmpNpu)
+		if len(tmpNpuList) == 0 || len(tmpNpuList) > maxDevicesNum {
+			hwlog.RunLog.Warnf("invalid annotation, len is %d", len(tmpNpu))
 			continue
 		}
 		*useNpu = append(*useNpu, tmpNpuList...)
@@ -458,6 +502,9 @@ func addEnv(devices map[string]string, ascendRuntimeOptions string, resp *v1beta
 
 	(*resp).Envs[ascendVisibleDevicesEnv] = strings.Join(ascendVisibleDevices, ",")
 	(*resp).Envs[ascendRuntimeOptionsEnv] = ascendRuntimeOptions
+
+	hwlog.RunLog.Infof("allocate resp env: %s; %s", (*resp).Envs[ascendVisibleDevicesEnv],
+		(*resp).Envs[ascendRuntimeOptionsEnv])
 }
 
 func (s *pluginAPI) addAnnotation(devices map[string]string, podName, serverID string) string {
@@ -564,7 +611,9 @@ func (s *pluginAPI) mountfile(resp *v1beta1.ContainerAllocateResponse) {
 }
 
 func sendDevToKubelet(resp *v1beta1.ListAndWatchResponse, stream v1beta1.DevicePlugin_ListAndWatchServer) error {
-	hwlog.RunLog.Infof("ListAndWatch: send devices, resp: %s", resp.String())
+	for i := 0; i < len(resp.Devices); i++ {
+		hwlog.RunLog.Infof("ListAndWatch resp devices: %s %s", resp.Devices[i].ID, resp.Devices[i].Health)
+	}
 	if err := stream.Send(resp); err != nil {
 		return err
 	}
@@ -605,8 +654,12 @@ func (s *pluginAPI) getPodConfigurationAnnotation(podName string, ascendVisibleD
 		return "", err
 	}
 	var serverID string
-	for _, addresses := range node.Status.Addresses {
-		if addresses.Type == v1.NodeInternalIP {
+	for index, addresses := range node.Status.Addresses {
+		if index > maxPodLimit {
+			hwlog.RunLog.Error("The number of node status in exceeds the upper limit")
+			break
+		}
+		if addresses.Type == v1.NodeInternalIP && net.ParseIP(addresses.Address) != nil {
 			serverID = addresses.Address
 			break
 		}
@@ -641,7 +694,11 @@ func (s *pluginAPI) filterPods(blackList map[v1.PodPhase]int, conditionFunc func
 		return nil, err
 	}
 	var res []v1.Pod
-	for _, pod := range pods.Items {
+	for index, pod := range pods.Items {
+		if index >= maxPodLimit {
+			hwlog.RunLog.Error("The number of pods exceeds the upper limit")
+			return res, nil
+		}
 		hwlog.RunLog.Debugf("pod: %v, %v", pod.Name, pod.Status.Phase)
 		if err := s.checkPodNameAndSpace(pod.Name, podNameMaxLength); err != nil {
 			hwlog.RunLog.Errorf("pod name syntax illegal, err: %v", err)
@@ -689,6 +746,10 @@ func (s *pluginAPI) isShouldDeletePod(pod *v1.Pod) bool {
 	if pod.DeletionTimestamp != nil {
 		return true
 	}
+	if len(pod.Status.ContainerStatuses) > maxContainerLimit {
+		hwlog.RunLog.Error("The number of container exceeds the upper limit")
+		return true
+	}
 	for _, status := range pod.Status.ContainerStatuses {
 		if status.State.Waiting != nil &&
 			strings.Contains(status.State.Waiting.Message, "PreStartContainer check failed") {
@@ -713,8 +774,12 @@ func getPredicateTimeFromPodAnnotation(pod *v1.Pod) uint64 {
 }
 
 func (s *pluginAPI) getNPUResourceNumOfPod(pod *v1.Pod) int64 {
-	var total int64
 	containers := pod.Spec.Containers
+	if len(containers) > maxContainerLimit {
+		hwlog.RunLog.Error("The number of container exceeds the upper limit")
+		return int64(0)
+	}
+	var total int64
 	annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, s.hps.devType)
 	for _, container := range containers {
 		if val, ok := container.Resources.Limits[v1.ResourceName(annotationTag)]; ok {
@@ -857,7 +922,6 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int) (map[string]string, e
 	if err != nil {
 		return nil, fmt.Errorf("get ascend devs with volcano failed, err: %v", err)
 	}
-	hwlog.RunLog.Infof("Volcano found ascendVisibleDevices: %v", ascendVisibleDevices)
 	return ascendVisibleDevices, nil
 }
 
