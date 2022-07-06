@@ -168,7 +168,7 @@ func createFakePluginAPI(hdm *HwDevManager, devType string, ki *KubeInteractor) 
 			unHealthDevice: sets.String{},
 			stopCh:         make(chan struct{}),
 			outbreak:       atomic.NewBool(false),
-			vol2KlDevMap:   make(map[string]string, maxTrainDevicesNum),
+			vol2KlDevMap:   make(map[string]string, maxDevicesNum),
 		},
 	}
 }

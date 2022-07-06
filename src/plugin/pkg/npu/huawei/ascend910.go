@@ -50,7 +50,7 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]common.NpuDevice, allDevice
 	if devNum > hiAIMaxDeviceNum {
 		return fmt.Errorf("invalid device num: %d", devNum)
 	}
-	phyDevMapVirtualDev := make(map[int32]string, maxTrainDevicesNum)
+	phyDevMapVirtualDev := make(map[int32]string, maxDevicesNum)
 	var deviTypes, vDevID []string
 	for i := int32(0); i < devNum; i++ {
 		phyID, err := hnm.dmgr.GetPhysicIDFromLogicID(devList[i])

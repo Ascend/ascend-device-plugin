@@ -79,7 +79,7 @@ func convertDeviceIDV2(podDevices DevicesPerNUMA) []string {
 		}
 		for count, device := range devices {
 			// Limiting the number of for cycles
-			if count >= maxTrainDevicesNum {
+			if count >= maxDevicesNum {
 				break
 			}
 			deviceIDs = append(deviceIDs, device)
@@ -137,7 +137,7 @@ func getEnvVisibleDevices(allocResp []byte) []string {
 	var validDeviceIDs []string
 	deviceIDs := strings.Split(visibleDevices, ",")
 	for count, deviceID := range deviceIDs {
-		if count >= maxTrainDevicesNum {
+		if count >= maxDevicesNum {
 			break
 		}
 		idNum, err := strconv.Atoi(deviceID)
