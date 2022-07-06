@@ -91,7 +91,7 @@ func checkParam() bool {
 		return false
 	}
 	if len(*mode) > maxRunModeLength {
-		hwlog.RunLog.Errorf("run mode param length invalid")
+		fmt.Println("run mode param length invalid")
 		return false
 	}
 	return true

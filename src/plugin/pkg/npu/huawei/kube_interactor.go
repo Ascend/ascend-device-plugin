@@ -7,6 +7,7 @@ package huawei
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -29,6 +30,8 @@ const (
 
 	// labelDeviceLen like Ascend910-0 split length is 2
 	labelDeviceLen = 2
+
+	maxDeviceCountPeerLog = 20
 )
 
 // KubeInteractor include kubeclientSet & nodeName
@@ -50,6 +53,56 @@ func NewKubeInteractor() (*KubeInteractor, error) {
 	}, nil
 }
 
+func getAnnotationList() map[string]struct{} {
+	return map[string]struct{}{huaweiUnHealthAscend910: {}, huaweiNetworkUnHealthAscend910: {},
+		huaweiAscend910: {}, huaweiAscend310P: {}, huaweiAscend310: {}, resourceNamePrefix + chip910Core2C: {},
+		resourceNamePrefix + chip910Core4C: {}, resourceNamePrefix + chip910Core8C: {},
+		resourceNamePrefix + chip910Core16C: {}, resourceNamePrefix + chip310PCore1C: {},
+		resourceNamePrefix + chip310PCore2C: {}, resourceNamePrefix + chip310PCore4C: {},
+		resourceNamePrefix + chip310PCore4C3Cpu: {}, resourceNamePrefix + chip310PCore2C1Cpu: {},
+		huaweiUnHealthAscend310P: {}}
+}
+
+func logAnnotation(annotations map[string]string, logInfo string) {
+	hwAnnotate := getAnnotationList()
+	logAnnotate := make(map[string][]string, 1)
+	for k, v := range annotations {
+		if _, exist := hwAnnotate[k]; !exist || len(v) == 0 {
+			continue
+		}
+		deviceType := strings.Replace(k, resourceNamePrefix, "", 1)
+		devices := strings.Split(v, ",")
+		var deviceIDs []string
+		for _, device := range devices {
+			phyID, virID, err := common.GetDeviceID(device, common.VirtualDev)
+			if err != nil {
+				hwlog.RunLog.Errorf("%s get device id failed, err: %v", device, err)
+				continue
+			}
+			if virID != "" {
+				deviceIDs = append(deviceIDs, fmt.Sprintf("%s-%s", virID, phyID))
+				continue
+			}
+			deviceIDs = append(deviceIDs, phyID)
+		}
+		sort.Strings(deviceIDs)
+		logAnnotate[deviceType] = deviceIDs
+	}
+	for devType, deviceIDs := range logAnnotate {
+		var devInfos []string
+		for _, devInfo := range deviceIDs {
+			devInfos = append(devInfos, devInfo)
+			if len(devInfos) >= maxDeviceCountPeerLog {
+				hwlog.RunLog.Infof("%s Annotate{%s:%s}", logInfo, devType, strings.Join(devInfos, ","))
+				devInfos = devInfos[:0]
+			}
+		}
+		if len(devInfos) != 0 {
+			hwlog.RunLog.Infof("%s Annotate{%s:%s}", logInfo, devType, strings.Join(devInfos, ","))
+		}
+	}
+}
+
 func (ki *KubeInteractor) annotationReset() {
 	curNode, err := getNodeWithBackgroundCtx(ki)
 	if err != nil {
@@ -58,13 +111,13 @@ func (ki *KubeInteractor) annotationReset() {
 	}
 	newNode := curNode.DeepCopy()
 	ki.resetNodeAnnotations(newNode)
-	hwlog.RunLog.Infof("newNode.Annotations: %v", newNode.Annotations)
+	logAnnotation(newNode.Annotations, "reset new")
 	updatedNode, _, err := patchNodeState(ki, curNode, newNode)
 	if err != nil {
 		hwlog.RunLog.Errorf("failed to patch volcano npu resource: %v", err)
 		return
 	}
-	hwlog.RunLog.Infof("updatedNode.Annotations: %v", updatedNode.Annotations)
+	logAnnotation(updatedNode.Annotations, "reset update")
 }
 
 func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]string, isAlloc bool,
@@ -93,13 +146,13 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 		if strings.Contains(devType, hiAIAscend310PPrefix) {
 			ki.update310PAnnotation(newNode, groupAllocatableDevs[huaweiAscend310P])
 		}
-		hwlog.RunLog.Infof("newNode.Annotations: %v", newNode.Annotations)
+		logAnnotation(newNode.Annotations, "new")
 		updatedNode, _, err := patchNodeState(ki, curNode, newNode)
 		if err != nil {
 			hwlog.RunLog.Errorf("failed to patch volcano npu resource: %v", err)
 			return false, nil
 		}
-		hwlog.RunLog.Infof("updatedNode.Annotations: %v", updatedNode.Annotations)
+		logAnnotation(updatedNode.Annotations, "update")
 		// Ascend910, if update success, update the lastTimeNetworkRecoverDevices
 		if strings.Contains(devType, hiAIAscend910Prefix) {
 			lastTimeNetworkRecoverDevices = newNetworkRecoverDevSets
@@ -225,7 +278,12 @@ func (ki *KubeInteractor) convertDevListToSets(devices, sepType, runMode string)
 	if sepType == nodeLabelsDeviceSep {
 		// for label
 		// check device format, must 0.1.2 and more
-		for _, device := range strings.Split(devices, ".") {
+		deviceInfo := strings.Split(devices, ".")
+		if len(deviceInfo) > maxDevicesNum {
+			hwlog.RunLog.Error("The number of device exceeds the upper limit")
+			return sets.String{}
+		}
+		for _, device := range deviceInfo {
 			if _, err := strconv.ParseInt(device, baseDec, bitSize); err != nil {
 				hwlog.RunLog.Warnf("current device id invalid, err: %v", err)
 				continue
@@ -241,7 +299,12 @@ func (ki *KubeInteractor) convertDevListToSets(devices, sepType, runMode string)
 		pattern = `^Ascend310P-\d+`
 	}
 	reg := regexp.MustCompile(pattern)
-	for _, device := range strings.Split(devices, ",") {
+	deviceInfo := strings.Split(devices, ",")
+	if len(deviceInfo) > maxDevicesNum {
+		hwlog.RunLog.Error("The number of device exceeds the upper limit")
+		return sets.String{}
+	}
+	for _, device := range deviceInfo {
 		if !reg.MatchString(device) {
 			hwlog.RunLog.Warnf("current device %v format error", device)
 			continue
@@ -281,12 +344,7 @@ func (ki *KubeInteractor) singleDevAnnotationUpdate(annotationTag string, groupA
 }
 
 func (ki *KubeInteractor) resetNodeAnnotations(node *v1.Node) {
-	annotationList := []string{huaweiUnHealthAscend910, huaweiNetworkUnHealthAscend910, huaweiAscend910,
-		huaweiAscend310P, resourceNamePrefix + chip910Core2C, resourceNamePrefix + chip910Core4C,
-		resourceNamePrefix + chip910Core8C, resourceNamePrefix + chip910Core16C, resourceNamePrefix + chip310PCore1C,
-		resourceNamePrefix + chip310PCore2C, resourceNamePrefix + chip310PCore4C,
-		resourceNamePrefix + chip310PCore4C3Cpu, resourceNamePrefix + chip310PCore2C1Cpu, huaweiUnHealthAscend310P}
-	for _, k := range annotationList {
+	for k := range getAnnotationList() {
 		if _, exist := node.Status.Allocatable[v1.ResourceName(k)]; !exist {
 			delete(node.Annotations, k)
 			continue
