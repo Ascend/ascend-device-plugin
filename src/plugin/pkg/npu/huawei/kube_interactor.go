@@ -294,8 +294,8 @@ func (ki *KubeInteractor) resetNodeAnnotations(node *v1.Node) {
 		node.Annotations[k] = ""
 	}
 	if autoStowingDevs {
-		node.Labels[huaweiRecoverAscend910] = ""
-		node.Labels[huaweiNetworkRecoverAscend910] = ""
+		delete(node.Labels, huaweiRecoverAscend910)
+		delete(node.Labels, huaweiNetworkRecoverAscend910)
 	}
 }
 
