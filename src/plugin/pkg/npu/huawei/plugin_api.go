@@ -73,9 +73,6 @@ const (
 	// maxDevicesNum is max number of devices
 	maxDevicesNum = 64
 
-	// maxTrainDevicesNum is max number of train devices
-	maxTrainDevicesNum = 8
-
 	// retryPodUpdateCount is max number of retry update pod annotation
 	retryPodUpdateCount = 3
 
@@ -112,7 +109,7 @@ func (hps *HwPluginServe) Register() error {
 	if _, err = client.Register(context.Background(), reqt); err != nil {
 		return fmt.Errorf("register to kubelet fail: %v", err)
 	}
-	hps.vol2KlDevMap = make(map[string]string, maxTrainDevicesNum)
+	hps.vol2KlDevMap = make(map[string]string, maxDevicesNum)
 	return nil
 }
 
@@ -377,11 +374,6 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *v1beta1.AllocateRequ
 	for _, rqt := range requests.ContainerRequests {
 		logAllocateRequest(rqt.DevicesIDs)
 		resp := new(v1beta1.ContainerAllocateResponse)
-
-		allocateNum := len(rqt.DevicesIDs)
-		if allocateNum > maxDevicesNum {
-			return nil, fmt.Errorf("the devices can't bigger than %d", maxDevicesNum)
-		}
 		ascendVisibleDevicesMap, errs := s.getDeviceListIP(rqt.DevicesIDs)
 		if errs != nil {
 			hwlog.RunLog.Errorf("plugin doesn't have device, err: %v", errs)
@@ -389,7 +381,7 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *v1beta1.AllocateRequ
 		}
 
 		if useVolcanoType {
-			if err := s.useVolcano(&ascendVisibleDevicesMap, allocateNum); err != nil {
+			if err := s.useVolcano(&ascendVisibleDevicesMap, len(rqt.DevicesIDs)); err != nil {
 				hwlog.RunLog.Errorf("use volcano schedule failed, error is %v", err)
 				return nil, err
 			}
@@ -415,6 +407,9 @@ func (s *pluginAPI) setAscendRuntimeOptions(requests *v1beta1.AllocateRequest) e
 			len(requests.ContainerRequests))
 	}
 	for _, rqt := range requests.ContainerRequests {
+		if len(rqt.DevicesIDs) > maxDevicesNum {
+			return fmt.Errorf("the devices can't bigger than %d", maxDevicesNum)
+		}
 		for _, deviceName := range rqt.DevicesIDs {
 			if common.IsVirtualDev(deviceName) && len(rqt.DevicesIDs) > interval {
 				return fmt.Errorf("request more than one virtual device, current is %d", len(rqt.DevicesIDs))
@@ -501,8 +496,7 @@ func addEnv(devices map[string]string, ascendRuntimeOptions string, resp *v1beta
 	(*resp).Envs[ascendVisibleDevicesEnv] = strings.Join(ascendVisibleDevices, ",")
 	(*resp).Envs[ascendRuntimeOptionsEnv] = ascendRuntimeOptions
 
-	hwlog.RunLog.Infof("allocate resp env: %s; %s", (*resp).Envs[ascendVisibleDevicesEnv],
-		(*resp).Envs[ascendRuntimeOptionsEnv])
+	hwlog.RunLog.Infof("allocate resp env: %s; %s", strings.Join(ascendVisibleDevices, ","), ascendRuntimeOptions)
 }
 
 func (s *pluginAPI) addAnnotation(devices map[string]string, podName, serverID string) string {
@@ -782,8 +776,8 @@ func (s *pluginAPI) getNPUResourceNumOfPod(pod *v1.Pod) int64 {
 	for _, container := range containers {
 		if val, ok := container.Resources.Limits[v1.ResourceName(annotationTag)]; ok {
 			limitsDevNum := val.Value()
-			if limitsDevNum < 0 || limitsDevNum > int64(maxTrainDevicesNum) {
-				hwlog.RunLog.Errorf("apply devices number should be in [0, 8]")
+			if limitsDevNum < 0 || limitsDevNum > int64(maxDevicesNum) {
+				hwlog.RunLog.Errorf("apply devices number should be in the range of [0, %d]", maxDevicesNum)
 				return int64(0)
 			}
 			if limitsDevNum > math.MaxInt64-total {
@@ -861,7 +855,7 @@ func (s *pluginAPI) updatePodRealAllocate(blackList map[v1.PodPhase]int) {
 		return
 	}
 
-	s.hps.vol2KlDevMap = make(map[string]string, maxTrainDevicesNum)
+	s.hps.vol2KlDevMap = make(map[string]string, maxDevicesNum)
 	for _, pod := range pods {
 		hwlog.RunLog.Debugf("pods: %v, %v, %v", pod.Name, pod.Status.Phase, pod.UID)
 		data, exist := checkpointData[string(pod.UID)]
