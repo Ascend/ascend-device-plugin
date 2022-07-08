@@ -336,6 +336,18 @@ func (ki *KubeInteractor) multiDevAnnotationUpdate(groupAllocatableDevs map[stri
 		}
 		newNode.Annotations[annotationTag] = deviceNames
 	}
+	ki.delVirDevInfo(newNode)
+}
+
+func (ki *KubeInteractor) delVirDevInfo(newNode *v1.Node) {
+	for annotationTag := range getAnnotationList() {
+		if _, ok := newNode.Annotations[annotationTag]; !ok {
+			continue
+		}
+		if common.IsVirtualDev(annotationTag) {
+			delete(newNode.Annotations, annotationTag)
+		}
+	}
 }
 
 func (ki *KubeInteractor) singleDevAnnotationUpdate(annotationTag string, groupAllocatableDevs map[string]string,
@@ -344,12 +356,8 @@ func (ki *KubeInteractor) singleDevAnnotationUpdate(annotationTag string, groupA
 }
 
 func (ki *KubeInteractor) resetNodeAnnotations(node *v1.Node) {
-	for k := range getAnnotationList() {
-		if _, exist := node.Status.Allocatable[v1.ResourceName(k)]; !exist {
-			delete(node.Annotations, k)
-			continue
-		}
-		node.Annotations[k] = ""
+	for annotationTag := range getAnnotationList() {
+		delete(node.Annotations, annotationTag)
 	}
 	if autoStowingDevs {
 		delete(node.Labels, huaweiRecoverAscend910)
