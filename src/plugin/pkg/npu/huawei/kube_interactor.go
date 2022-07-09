@@ -141,7 +141,6 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 		// for 910 failure rescheduling
 		if strings.Contains(devType, hiAIAscend910Prefix) {
 			ki.update910Annotation(curNode, newNode, groupAllocatableDevs[huaweiAscend910], &newNetworkRecoverDevSets)
-			ki.setNonAutoStowAnnotation(newNode, groupAllocatableDevs)
 		}
 		if strings.Contains(devType, hiAIAscend310PPrefix) {
 			ki.update310PAnnotation(newNode, groupAllocatableDevs[huaweiAscend310P])
@@ -198,37 +197,6 @@ func (ki *KubeInteractor) update910Annotation(node, newNode *v1.Node, ascend910 
 func (ki *KubeInteractor) update310PAnnotation(newNode *v1.Node, newAscend310P string) {
 	newNode.Annotations[huaweiAscend310P] = newAscend310P
 	newNode.Annotations[huaweiUnHealthAscend310P] = ki.convertSetsToString(totalUHDevices, nodeAnnotationsDeviceSep)
-}
-
-func (ki *KubeInteractor) setNonAutoStowAnnotation(newNode *v1.Node, groupDev map[string]string) {
-	if autoStowingDevs {
-		return
-	}
-	recoverDev, ok := newNode.Labels[huaweiRecoverAscend910]
-	if !ok || len(recoverDev) == 0 {
-		return
-	}
-	for _, devID := range strings.Split(recoverDev, ".") {
-		for devType := range groupDev {
-			ki.setVirDevNewAnnotation(devType, devID, newNode)
-		}
-	}
-}
-
-func (ki *KubeInteractor) setVirDevNewAnnotation(devType, devID string, newNode *v1.Node) {
-	if !common.IsVirtualDev(devType) {
-		return
-	}
-	var newDevNameList []string
-	devNameList := strings.Split(newNode.Annotations[devType], ",")
-	for _, devName := range devNameList {
-		phyID, _, err := common.GetDeviceID(devName, common.VirtualDev)
-		if err != nil || phyID == devID {
-			continue
-		}
-		newDevNameList = append(newDevNameList, devName)
-	}
-	newNode.Annotations[devType] = strings.Join(newDevNameList, ",")
 }
 
 // get elements one by one from the sets and mark the physical id "x" to "Ascend910-x"
