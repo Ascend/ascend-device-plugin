@@ -157,10 +157,7 @@ func (s *pluginAPI) ListAndWatch(emtpy *v1beta1.Empty, stream v1beta1.DevicePlug
 
 func (s *pluginAPI) updateKubeletDevInfo(resp *v1beta1.ListAndWatchResponse,
 	stream v1beta1.DevicePlugin_ListAndWatchServer) {
-	if firstTimeList {
-		s.initK8sInfo(resp, stream)
-		return
-	}
+	s.initK8sInfo(resp, stream)
 	var notInVolDev []string
 	allDev := sets.String{}
 	klDev := sets.String{}
@@ -190,6 +187,9 @@ func (s *pluginAPI) updateKubeletDevInfo(resp *v1beta1.ListAndWatchResponse,
 			hwlog.RunLog.Warnf(" not exist map key, %s  map %+v", dev.ID, s.hps.vol2KlDevMap)
 			continue
 		}
+		if useVolcanoType && s.hps.kubeInteractor.isSkipRecoverLabel(d, s.hps.runMode) {
+			continue
+		}
 		resp.Devices = append(resp.Devices, &v1beta1.Device{ID: d, Health: dev.Health})
 	}
 	time.Sleep(sleep2ListW * time.Second)
@@ -200,6 +200,9 @@ func (s *pluginAPI) updateKubeletDevInfo(resp *v1beta1.ListAndWatchResponse,
 }
 
 func (s *pluginAPI) initK8sInfo(resp *v1beta1.ListAndWatchResponse, stream v1beta1.DevicePlugin_ListAndWatchServer) {
+	if !firstTimeList {
+		return
+	}
 	totalNetworkUnhealthDevices = sets.String{}
 	totalUHDevices = sets.String{}
 	for _, dev := range s.hps.devices {
@@ -395,7 +398,6 @@ func (s *pluginAPI) Allocate(ctx context.Context, requests *v1beta1.AllocateRequ
 			}
 		}
 		if s.hps.runMode == common.RunMode910 || s.hps.runMode == common.RunMode310P {
-			s.mountfile(resp)
 			s.responseAnnotation(resp, ascendVisibleDevicesMap)
 		}
 		addEnv(ascendVisibleDevicesMap, s.ascendRuntimeOptions, resp)
@@ -567,45 +569,6 @@ func (s *pluginAPI) PreStartContainer(ctx context.Context,
 	r *v1beta1.PreStartContainerRequest) (*v1beta1.PreStartContainerResponse, error) {
 	hwlog.RunLog.Infof("PreStart just call in UT.")
 	return &v1beta1.PreStartContainerResponse{}, nil
-}
-
-func (s *pluginAPI) mountfile(resp *v1beta1.ContainerAllocateResponse) {
-	timeStr := time.Now().Format("20060102150405")
-	rankID := "" + timeStr + "-0"
-	resp.Mounts = append(resp.Mounts, &v1beta1.Mount{
-		ContainerPath: hiAISlogdConfig,
-		HostPath:      hiAISlogdConfig,
-		ReadOnly:      true,
-	})
-
-	logPath := "/var/log/npu"
-	hostLogPath := logPath + "/slog/container/" + rankID
-	resp.Mounts = append(resp.Mounts, &v1beta1.Mount{
-		ContainerPath: logPath + "/slog",
-		HostPath:      hostLogPath,
-		ReadOnly:      false,
-	})
-
-	hostProfilingPath := logPath + "/profiling/container/" + rankID
-	resp.Mounts = append(resp.Mounts, &v1beta1.Mount{
-		ContainerPath: logPath + "/profiling",
-		HostPath:      hostProfilingPath,
-		ReadOnly:      false,
-	})
-
-	hostDumpPath := logPath + "/dump/container/" + rankID
-	resp.Mounts = append(resp.Mounts, &v1beta1.Mount{
-		ContainerPath: logPath + "/dump",
-		HostPath:      hostDumpPath,
-		ReadOnly:      false,
-	})
-
-	hostDockerSlogPath := logPath + "/docker_slog_" + rankID
-	resp.Mounts = append(resp.Mounts, &v1beta1.Mount{
-		ContainerPath: "/usr/slog",
-		HostPath:      hostDockerSlogPath,
-		ReadOnly:      false,
-	})
 }
 
 func sendDevToKubelet(resp *v1beta1.ListAndWatchResponse, stream v1beta1.DevicePlugin_ListAndWatchServer) error {
@@ -873,7 +836,7 @@ func (s *pluginAPI) updatePodRealAllocate(blackList map[v1.PodPhase]int) {
 
 		kltRequestDevices, dpResponseDevices, err := GetAnnotation(data, s.hps.devType)
 		if err != nil {
-			hwlog.RunLog.Warnf("get annotation failed: %v", err)
+			hwlog.RunLog.Debugf("get annotation failed: %v", err)
 			continue
 		}
 		hwlog.RunLog.Debugf("get annotation kltDevValue: %v, dpDevValue: %v", kltRequestDevices, dpResponseDevices)

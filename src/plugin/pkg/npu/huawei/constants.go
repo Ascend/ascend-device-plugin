@@ -11,7 +11,6 @@ const (
 	hiAIAscend910Prefix  = "Ascend910"
 	hiAIAscend310PPrefix = "Ascend310P"
 	hiAIAscendfdPrefix   = "davinci-mini"
-	hiAISlogdConfig      = "/etc/slog.conf"
 	hiAIMaxDeviceNum     = 64
 	hiAIMaxCardNum       = 64
 	hiAIMaxDevNumInCard  = 4
