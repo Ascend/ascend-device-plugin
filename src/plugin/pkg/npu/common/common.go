@@ -23,8 +23,6 @@ const (
 	// VirtualDev represent virtual device
 	VirtualDev = "VIRTUAL"
 
-	// VNpuCfgKey is the key for virtual NPU configMap record
-	VNpuCfgKey             = "VNPUCfg"
 	virtualDevicesPattern  = "Ascend910-(2|4|8|16)c"
 	virtual310PDevsPattern = "Ascend310P-(1|2|4)c"
 )

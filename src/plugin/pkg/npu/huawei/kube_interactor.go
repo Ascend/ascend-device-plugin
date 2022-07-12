@@ -34,6 +34,10 @@ const (
 	maxDeviceCountPeerLog = 20
 )
 
+var (
+	recoverLabel []string
+)
+
 // KubeInteractor include kubeclientSet & nodeName
 type KubeInteractor struct {
 	clientset kubernetes.Interface
@@ -136,13 +140,14 @@ func (ki *KubeInteractor) patchAnnotationOnNode(groupAllocatableDevs map[string]
 		} else {
 			ki.multiDevAnnotationUpdate(groupAllocatableDevs, curNode, newNode)
 		}
+		ki.delVirDevInfo(newNode)
 		// variables are defined in advance, the value will be used in subsequent assignment
 		newNetworkRecoverDevSets := sets.String{}
 		// for 910 failure rescheduling
-		if strings.Contains(devType, hiAIAscend910Prefix) {
+		if strings.Contains(devType, hiAIAscend910Prefix) && !isAlloc {
 			ki.update910Annotation(curNode, newNode, groupAllocatableDevs[huaweiAscend910], &newNetworkRecoverDevSets)
 		}
-		if strings.Contains(devType, hiAIAscend310PPrefix) {
+		if strings.Contains(devType, hiAIAscend310PPrefix) && !isAlloc {
 			ki.update310PAnnotation(newNode, groupAllocatableDevs[huaweiAscend310P])
 		}
 		logAnnotation(newNode.Annotations, "new")
@@ -192,11 +197,32 @@ func (ki *KubeInteractor) update910Annotation(node, newNode *v1.Node, ascend910 
 	newNode.Labels[huaweiNetworkRecoverAscend910] = ki.convertSetsToString(shortNewRecoverDevSets, nodeLabelsDeviceSep)
 
 	*newNetworkRecoverDevSets = newRecoverDevSets
+	recoverLabel = shortNewLabelsRecoverDev.List()
 }
 
 func (ki *KubeInteractor) update310PAnnotation(newNode *v1.Node, newAscend310P string) {
 	newNode.Annotations[huaweiAscend310P] = newAscend310P
 	newNode.Annotations[huaweiUnHealthAscend310P] = ki.convertSetsToString(totalUHDevices, nodeAnnotationsDeviceSep)
+}
+
+func (ki *KubeInteractor) isSkipRecoverLabel(devName, runMode string) bool {
+	if autoStowingDevs || runMode != common.RunMode910 {
+		return false
+	}
+	if len(recoverLabel) <= 0 || len(recoverLabel) > maxDevicesNum {
+		return false
+	}
+	phyID, _, err := common.GetDeviceID(devName, common.VirtualDev)
+	if err != nil {
+		hwlog.RunLog.Errorf("%s get device id failed, err: %v", devName, err)
+		return true
+	}
+	for _, dev := range recoverLabel {
+		if dev == phyID {
+			return true
+		}
+	}
+	return false
 }
 
 // get elements one by one from the sets and mark the physical id "x" to "Ascend910-x"
@@ -304,7 +330,6 @@ func (ki *KubeInteractor) multiDevAnnotationUpdate(groupAllocatableDevs map[stri
 		}
 		newNode.Annotations[annotationTag] = deviceNames
 	}
-	ki.delVirDevInfo(newNode)
 }
 
 func (ki *KubeInteractor) delVirDevInfo(newNode *v1.Node) {
