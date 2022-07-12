@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/agiledragon/gomonkey/v2 v2.2.0
-	github.com/fsnotify/fsnotify v1.4.9
+	github.com/fsnotify/fsnotify v1.5.1
 	github.com/smartystreets/goconvey v1.6.4
 	go.uber.org/atomic v1.7.0
 	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2
