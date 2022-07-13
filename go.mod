@@ -21,7 +21,7 @@ replace (
 	github.com/containernetworking/cni => github.com/containernetworking/cni v0.8.1
 	github.com/gorilla/websocket => github.com/gorilla/websocket v1.4.2
 	go.uber.org/atomic => go.uber.org/atomic v1.6.0
-	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4 => golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
+	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2 => golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
 	huawei.com/kmc => codehub-dg-y.huawei.com/it-edge-native/edge-native-core/coastguard.git v1.0.6
 	huawei.com/npu-exporter => codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.2.14
 	k8s.io/api => codehub-dg-y.huawei.com/OpenSourceCenter/kubernetes.git/staging/src/k8s.io/api v1.19.4-h4
