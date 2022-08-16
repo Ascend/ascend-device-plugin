@@ -47,12 +47,6 @@ type ascendCommonFunction struct {
 	unHealthyKey        string
 }
 
-func setDeviceByPath(defaultDevices *[]string, device string) {
-	if _, err := os.Stat(device); err == nil {
-		*defaultDevices = append(*defaultDevices, device)
-	}
-}
-
 // GetPhyIDByName get physical id from device name
 func GetPhyIDByName(DeviceName string) (uint32, error) {
 	var phyID uint32
@@ -374,35 +368,4 @@ func (adc *ascendCommonFunction) setUnHealthyDev(devType string, device *common.
 	if !totalUHDevices.Has(dev) {
 		totalUHDevices.Insert(dev)
 	}
-}
-
-func (adc *ascendCommonFunction) resetStateSet() {
-	totalDevices = totalDevices.Intersection(sets.String{})
-	totalUHDevices = totalDevices.Intersection(sets.String{})
-	totalNetworkUnhealthDevices = totalNetworkUnhealthDevices.Intersection(sets.String{})
-	stateThreadNum = 0
-}
-
-func getNodeWithBackgroundCtx(ki *KubeInteractor) (*v1.Node, error) {
-	return ki.clientset.CoreV1().Nodes().Get(context.Background(), ki.nodeName, metav1.GetOptions{})
-}
-
-func getNodeWithTodoCtx(ki *KubeInteractor) (*v1.Node, error) {
-	return ki.clientset.CoreV1().Nodes().Get(context.TODO(), ki.nodeName, metav1.GetOptions{})
-}
-
-func patchNodeWithTodoCtx(ki *KubeInteractor, pByte []byte) (*v1.Node, error) {
-	return ki.clientset.CoreV1().Nodes().Patch(context.TODO(), ki.nodeName, types.MergePatchType, pByte,
-		metav1.PatchOptions{})
-}
-
-func patchNodeState(ki *KubeInteractor, curNode, newNode *v1.Node) (*v1.Node, []byte, error) {
-	return node.PatchNodeStatus(ki.clientset.CoreV1(), types.NodeName(ki.nodeName), curNode, newNode)
-}
-
-func getPodList(ki *KubeInteractor) (*v1.PodList, error) {
-	selector := fields.SelectorFromSet(fields.Set{"spec.nodeName": ki.nodeName})
-	return ki.clientset.CoreV1().Pods(v1.NamespaceAll).List(context.Background(), metav1.ListOptions{
-		FieldSelector: selector.String(),
-	})
 }

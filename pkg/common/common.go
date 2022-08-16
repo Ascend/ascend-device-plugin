@@ -27,6 +27,8 @@ func GetPattern() map[string]string {
 		"nodeName":    `^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`,
 		"podName":     "^[a-z0-9]+[a-z0-9\\-]*[a-z0-9]+$",
 		"fullPodName": "^[a-z0-9]+([a-z0-9\\-.]*)[a-z0-9]+$",
+		"vir910":      "Ascend910-(2|4|8|16)c",
+		"vir310p":     "Ascend310P-(1|2|4)c",
 	}
 }
 
@@ -79,10 +81,10 @@ func MarshalData(data interface{}) []byte {
 
 // MapDeepCopy map deep copy
 func MapDeepCopy(source map[string]string) map[string]string {
-	if source == nil {
-		return nil
-	}
 	dest := make(map[string]string, len(source))
+	if source == nil {
+		return dest
+	}
 	for key, value := range source {
 		dest[key] = value
 	}
@@ -157,7 +159,6 @@ func VerifyPathAndPermission(verifyPath string) (string, bool) {
 	return realPath, true
 }
 
-// CheckPodNameAndSpace check pod name and space
 func checkPodNameAndSpace(podPara string, maxLength int) error {
 	if len(podPara) > maxLength {
 		return fmt.Errorf("para length %d is bigger than %d", len(podPara), maxLength)

@@ -180,4 +180,6 @@ const (
 
 	// CommaSepDev if the separator between devices on annotation
 	CommaSepDev = ","
+	// GangSepDev if the separator between devices for split id
+	GangSepDev = "-"
 )
