@@ -15,7 +15,7 @@ import (
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"k8s.io/kubernetes/pkg/kubelet/cm/devicemanager/checkpoint"
 
-	"Ascend-device-plugin/src/plugin/pkg/npu/common"
+	"Ascend-device-plugin/pkg/common"
 )
 
 const (

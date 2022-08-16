@@ -11,8 +11,8 @@ import (
 
 	"huawei.com/npu-exporter/hwlog"
 
-	"Ascend-device-plugin/src/plugin/pkg/npu/common"
-	"Ascend-device-plugin/src/plugin/pkg/npu/huawei"
+	"Ascend-device-plugin/pkg/common"
+	"Ascend-device-plugin/pkg/huawei"
 )
 
 const (

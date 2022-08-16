@@ -1,7 +1,7 @@
 /*
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
  */
-
+// Package huawei server
 package huawei
 
 import (
@@ -14,7 +14,7 @@ import (
 	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/apimachinery/pkg/util/sets"
 
-	"Ascend-device-plugin/src/plugin/pkg/npu/common"
+	"Ascend-device-plugin/pkg/common"
 )
 
 type fakeHwPluginServe struct {

@@ -1,7 +1,7 @@
 /*
 * Copyright(C) 2020-2022. Huawei Technologies Co.,Ltd. All rights reserved.
  */
-
+// Package huawei ascend 310
 package huawei
 
 import (

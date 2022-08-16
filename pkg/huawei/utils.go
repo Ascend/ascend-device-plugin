@@ -1,7 +1,7 @@
 /*
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
  */
-
+// Package huawei utils
 package huawei
 
 import (
@@ -15,7 +15,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"huawei.com/npu-exporter/hwlog"
 
-	"Ascend-device-plugin/src/plugin/pkg/npu/common"
+	"Ascend-device-plugin/pkg/common"
 )
 
 const (

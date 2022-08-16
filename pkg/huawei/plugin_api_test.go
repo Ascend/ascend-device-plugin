@@ -1,7 +1,7 @@
 /*
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
  */
-
+// Package huawei the device-plugin frame interface
 package huawei
 
 import (
@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
-	"Ascend-device-plugin/src/plugin/pkg/npu/common"
+	"Ascend-device-plugin/pkg/common"
 )
 
 const (

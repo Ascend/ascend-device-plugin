@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
-	"Ascend-device-plugin/src/plugin/pkg/npu/common"
+	"Ascend-device-plugin/pkg/common"
 )
 
 type pluginAPI struct {

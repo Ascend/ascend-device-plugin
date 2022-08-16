@@ -2,8 +2,10 @@
 # Perform  build k8s-device-plugin
 # Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
 set -e
+
 CUR_DIR=$(dirname "$(readlink -f "$0")")
 TOP_DIR=$(realpath "${CUR_DIR}"/..)
+
 build_version="v3.0.0"
 version_file="${TOP_DIR}"/service_config.ini
 if  [ -f "$version_file" ]; then
@@ -24,11 +26,12 @@ if [ "$1" == "ci" ] || [ "$2" == "ci" ]; then
 fi
 
 function clean() {
-    rm -rf "${TOP_DIR}"/output/*
+    rm -rf "${TOP_DIR}"/output/
+    mkdir -p "${TOP_DIR}"/output
 }
 
 function build_plugin() {
-    cd "${TOP_DIR}"/src/plugin/cmd/ascendplugin
+    cd "${TOP_DIR}"
     export CGO_ENABLED=1
     export CGO_CFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
     export CGO_CPPFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
@@ -55,7 +58,7 @@ function copy_kmc_files() {
 }
 
 function mv_file() {
-    mv "${TOP_DIR}/src/plugin/cmd/ascendplugin/${output_name}"   "${TOP_DIR}"/output
+    mv "${TOP_DIR}/${output_name}"   "${TOP_DIR}"/output
 }
 
 function change_mod() {
@@ -65,19 +68,19 @@ function change_mod() {
 
 function modify_version() {
     cd "${TOP_DIR}"
-    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$TOP_DIR"/ascendplugin-910.yaml
-    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$TOP_DIR"/ascendplugin-volcano.yaml
-    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$TOP_DIR"/ascendplugin-310.yaml
-    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$TOP_DIR"/ascendplugin-310-volcano.yaml
-    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$TOP_DIR"/ascendplugin-310P.yaml
-    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$TOP_DIR"/ascendplugin-310P-volcano.yaml
-    cp "$TOP_DIR"/Dockerfile "$TOP_DIR"/output/
-    cp "$TOP_DIR"/ascendplugin-910.yaml "$TOP_DIR"/output/device-plugin-910-"${build_version}".yaml
-    cp "$TOP_DIR"/ascendplugin-volcano.yaml "$TOP_DIR"/output/device-plugin-volcano-"${build_version}".yaml
-    cp "$TOP_DIR"/ascendplugin-310.yaml "$TOP_DIR"/output/device-plugin-310-"${build_version}".yaml
-    cp "$TOP_DIR"/ascendplugin-310-volcano.yaml "$TOP_DIR"/output/device-plugin-310-volcano-"${build_version}".yaml
-    cp "$TOP_DIR"/ascendplugin-310P.yaml "$TOP_DIR"/output/device-plugin-310P-"${build_version}".yaml
-    cp "$TOP_DIR"/ascendplugin-310P-volcano.yaml "$TOP_DIR"/output/device-plugin-310P-volcano-"${build_version}".yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$CUR_DIR"/ascendplugin-910.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$CUR_DIR"/ascendplugin-volcano.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$CUR_DIR"/ascendplugin-310.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$CUR_DIR"/ascendplugin-310-volcano.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$CUR_DIR"/ascendplugin-310P.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$CUR_DIR"/ascendplugin-310P-volcano.yaml
+    cp "$CUR_DIR"/Dockerfile "$TOP_DIR"/output/
+    cp "$CUR_DIR"/ascendplugin-910.yaml "$TOP_DIR"/output/device-plugin-910-"${build_version}".yaml
+    cp "$CUR_DIR"/ascendplugin-volcano.yaml "$TOP_DIR"/output/device-plugin-volcano-"${build_version}".yaml
+    cp "$CUR_DIR"/ascendplugin-310.yaml "$TOP_DIR"/output/device-plugin-310-"${build_version}".yaml
+    cp "$CUR_DIR"/ascendplugin-310-volcano.yaml "$TOP_DIR"/output/device-plugin-310-volcano-"${build_version}".yaml
+    cp "$CUR_DIR"/ascendplugin-310P.yaml "$TOP_DIR"/output/device-plugin-310P-"${build_version}".yaml
+    cp "$CUR_DIR"/ascendplugin-310P-volcano.yaml "$TOP_DIR"/output/device-plugin-310P-volcano-"${build_version}".yaml
 
     sed -i "s#output/device-plugin#device-plugin#" "$TOP_DIR"/output/Dockerfile
 }

@@ -1,7 +1,7 @@
 /*
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
  */
-
+// Package huawei manager
 package huawei
 
 import (
@@ -21,7 +21,7 @@ import (
 	"huawei.com/npu-exporter/utils"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
-	"Ascend-device-plugin/src/plugin/pkg/npu/common"
+	"Ascend-device-plugin/pkg/common"
 )
 
 const (

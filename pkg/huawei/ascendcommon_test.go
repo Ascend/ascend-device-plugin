@@ -1,7 +1,7 @@
 /*
 * Copyright(C) 2021-2022. Huawei Technologies Co.,Ltd. All rights reserved.
  */
-
+// Package huawei ascend commmon
 package huawei
 
 import (
@@ -19,7 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
-	"Ascend-device-plugin/src/plugin/pkg/npu/common"
+	"Ascend-device-plugin/pkg/common"
 )
 
 const (

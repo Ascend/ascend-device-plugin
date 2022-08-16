@@ -1,7 +1,7 @@
 /*
 Copyright(C) 2020-2022. Huawei Technologies Co.,Ltd.  All rights reserved.
 */
-
+// Package huawei kube interactor
 package huawei
 
 import (
@@ -18,7 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 
-	"Ascend-device-plugin/src/plugin/pkg/npu/common"
+	"Ascend-device-plugin/pkg/common"
 )
 
 const (
