@@ -35,47 +35,6 @@ type HwDevManager struct {
 	dmgr        devmanager.DeviceInterface
 }
 
-// Option option
-type Option struct {
-	// GetFdFlag to describe FdFlag
-	GetFdFlag bool
-	// UseAscendDocker to chose docker type
-	UseAscendDocker bool
-	UseVolcanoType  bool
-
-	// ListAndWatchPeriod set listening device state period
-	ListAndWatchPeriod int
-
-	// AutoStowingDevs auto stowing fixes devices or not
-	AutoStowingDevs bool
-
-	KubeConfig string
-
-	PresetVDevice bool
-}
-
-var (
-	// GetFdFlag to describe FdFlag
-	GetFdFlag bool
-	// UseAscendDocker to chose docker type
-	UseAscendDocker bool
-	useVolcanoType  bool
-
-	// ListAndWatchPeriod set listening device state period
-	listAndWatchPeriod int
-
-	// AutoStowingDevs auto stowing fixes devices or not
-	autoStowingDevs bool
-
-	kubeConfig string
-	// switch error log
-	logFlag = true
-
-	presetVDevice bool
-
-	stopCount atomic.Int32
-)
-
 type devManager interface {
 	GetNPUs(*[]common.NpuDevice, *[]string, string) error
 	GetDevPath(string, string) (string, string)
@@ -127,10 +86,6 @@ func (hdm *HwDevManager) GetNPUs() error {
 	}
 	hwlog.RunLog.Infof("device plugin start")
 	hdm.manager.SetDmgr(hdm.dmgr)
-
-	if err := GetDefaultDevices(&hdm.defaultDevs); err != nil {
-		return err
-	}
 
 	if err := hdm.manager.GetNPUs(&hdm.allDevs, &hdm.allDevTypes, hdm.manager.GetMatchingDeviType()); err != nil {
 		return err

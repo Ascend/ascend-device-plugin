@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -27,24 +26,6 @@ import (
 	"k8s.io/kubernetes/pkg/util/node"
 
 	"Ascend-device-plugin/pkg/common"
-)
-
-const (
-	// PhysicalDev represent physical device
-	physicalDev = ""
-
-	// NormalState health state
-	normalState = uint32(0)
-
-	// GeneralAlarm health state
-	generalAlarm = uint32(1)
-
-	// Default device ip
-	defaultDeviceIP = "127.0.0.1"
-
-	// rootUID and rootGID is user group
-	rootUID = 0
-	rootGID = 0
 )
 
 type antStu struct {
@@ -64,32 +45,6 @@ type ascendCommonFunction struct {
 	phyDevMapVirtualDev map[int32]string
 	name                string
 	unHealthyKey        string
-}
-
-// GetDefaultDevices get default devices
-func GetDefaultDevices(defaultDevices *[]string) error {
-	// hiAIManagerDevice is required
-	if _, err := os.Stat(common.HiAIManagerDevice); err != nil {
-		return err
-	}
-	*defaultDevices = append(*defaultDevices, common.HiAIManagerDevice)
-
-	setDeviceByPath(defaultDevices, common.HiAIHDCDevice)
-	setDeviceByPath(defaultDevices, common.HiAISVMDevice)
-	if GetFdFlag {
-		setDeviceByPathWhen200RC(defaultDevices)
-	}
-	return nil
-}
-
-func setDeviceByPathWhen200RC(defaultDevices *[]string) {
-	setDeviceByPath(defaultDevices, common.HiAi200RCEventSched)
-	setDeviceByPath(defaultDevices, common.HiAi200RCHiDvpp)
-	setDeviceByPath(defaultDevices, common.HiAi200RCLog)
-	setDeviceByPath(defaultDevices, common.HiAi200RCMemoryBandwidth)
-	setDeviceByPath(defaultDevices, common.HiAi200RCSVM0)
-	setDeviceByPath(defaultDevices, common.HiAi200RCTsAisle)
-	setDeviceByPath(defaultDevices, common.HiAi200RCUpgrade)
 }
 
 func setDeviceByPath(defaultDevices *[]string, device string) {
@@ -180,32 +135,6 @@ func UnhealthyState(healthyState uint32, logicID int32, healthyType string, dmgr
 			"logicID: %d, phyID: %d, %s: %d", logicID, phyID, healthyType, healthyState)
 	}
 	return nil
-}
-
-// VerifyPath used to verify the validity of the path
-func VerifyPath(verifyPath string) (string, bool) {
-	hwlog.RunLog.Infof("starting check device socket file path.")
-	absVerifyPath, err := filepath.Abs(verifyPath)
-	if err != nil {
-		hwlog.RunLog.Errorf("abs current path failed")
-		return "", false
-	}
-	pathInfo, err := os.Stat(absVerifyPath)
-	if err != nil {
-		hwlog.RunLog.Errorf("file path not exist")
-		return "", false
-	}
-	realPath, err := filepath.EvalSymlinks(absVerifyPath)
-	if err != nil || absVerifyPath != realPath {
-		hwlog.RunLog.Errorf("Symlinks is not allowed")
-		return "", false
-	}
-	stat, ok := pathInfo.Sys().(*syscall.Stat_t)
-	if !ok || stat.Uid != rootUID || stat.Gid != rootGID {
-		hwlog.RunLog.Errorf("Non-root owner group of the path")
-		return "", false
-	}
-	return realPath, true
 }
 
 // AssembleNpuDeviceStruct is used to create a struct of npuDevice

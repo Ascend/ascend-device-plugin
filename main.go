@@ -12,7 +12,6 @@ import (
 	"huawei.com/npu-exporter/hwlog"
 
 	"Ascend-device-plugin/pkg/common"
-	"Ascend-device-plugin/pkg/huawei"
 )
 
 const (
@@ -43,11 +42,11 @@ var (
 	autoStowing = flag.Bool("autoStowing", true, "Whether to automatically stow the fixed device")
 	logLevel    = flag.Int("logLevel", 0,
 		"Log level, -1-debug, 0-info(default), 1-warning, 2-error, 3-dpanic, 4-panic, 5-fatal (default 0)")
-	logMaxAge = flag.Int("maxAge", huawei.MaxAge,
+	logMaxAge = flag.Int("maxAge", common.MaxAge,
 		"Maximum number of days for backup run log files, must be greater than or equal to 7 days")
 	logFile = flag.String("logFile", defaultLogPath,
 		"The log file path, if the file size exceeds 20MB, will be rotate")
-	logMaxBackups = flag.Int("maxBackups", huawei.MaxBackups,
+	logMaxBackups = flag.Int("maxBackups", common.MaxBackups,
 		"Maximum number of backup log files, range is (0, 30]")
 	kubeconfig = flag.String("kubeConfig", "", "Path to a kubeconfig. "+
 		"Only required if out-of-cluster.")
@@ -112,45 +111,12 @@ func main() {
 		return
 	}
 	hwlog.RunLog.Infof("ascend device plugin starting and the version is %s", BuildVersion)
-	neverStop := make(chan struct{})
 
-	switch *mode {
-	case common.RunMode310, common.RunMode910, common.RunMode310P, "":
-		hwlog.RunLog.Infof("ascend device plugin running mode: %s", *mode)
-	default:
-		hwlog.RunLog.Infof("unSupport mode: %s, waiting indefinitely", *mode)
-		<-neverStop
-	}
-	hdm := huawei.NewHwDevManager(*mode)
-	if hdm == nil {
-		hwlog.RunLog.Errorf("init device manager failed")
-		return
-	}
-	if err := hdm.SetRunMode(); err != nil {
-		hwlog.RunLog.Errorf("err to set Run mode, err: %v ", err)
-		<-neverStop
-	}
-	hdm.SetParameters(getParams())
-	if err := hdm.GetNPUs(); err != nil {
-		hwlog.RunLog.Errorf("no devices found. waiting indefinitely, err: %s", err.Error())
-		<-neverStop
-	}
-	if len(hdm.GetDevType()) == 0 {
-		hwlog.RunLog.Errorf("no devices type found. waiting indefinitely")
-		<-neverStop
-	}
-	if *volcanoType {
-		if err := common.GetNodeNameFromEnv(); err != nil {
-			hwlog.RunLog.Errorf("get node name failed. waiting indefinitely, err: %v", err)
-			<-neverStop
-		}
-	}
-	startDiffTypeServe(hdm, neverStop)
-	<-neverStop
+	setParameters()
 }
 
-func getParams() huawei.Option {
-	return huawei.Option{
+func setParameters() {
+	common.ParamOption = common.Option{
 		GetFdFlag:          *fdFlag,
 		UseAscendDocker:    *useAscendDocker,
 		UseVolcanoType:     *volcanoType,
@@ -158,12 +124,5 @@ func getParams() huawei.Option {
 		ListAndWatchPeriod: *listWatchPeriod,
 		KubeConfig:         *kubeconfig,
 		PresetVDevice:      *presetVirtualDevice,
-	}
-}
-
-func startDiffTypeServe(hdm *huawei.HwDevManager, stop chan struct{}) {
-	for _, devType := range hdm.GetDevType() {
-		hwlog.RunLog.Infof("ascend device serve started, devType: %s", devType)
-		go hdm.Serve(devType, stop)
 	}
 }

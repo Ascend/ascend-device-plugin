@@ -34,52 +34,6 @@ type pluginAPI struct {
 	ascendRuntimeOptions string
 }
 
-// Instance is for annotation
-type Instance struct { // Instance
-	PodName  string   `json:"pod_name"`  // pod Name
-	ServerID string   `json:"server_id"` // serverdId
-	Devices  []Device `json:"devices"`   // dev
-}
-
-// Device id for Instcance
-type Device struct { // Device
-	DeviceID string `json:"device_id"` // device id
-	DeviceIP string `json:"device_ip"` // device ip
-}
-
-var (
-	totalDevices                  sets.String
-	stateThreadNum                int
-	m                             sync.Mutex
-	firstTimeList                 = true
-	dpStartReset                  sync.Once
-	totalUHDevices                sets.String
-	totalNetworkUnhealthDevices   sets.String
-	lastTimeNetworkRecoverDevices sets.String
-	listenDevCountIsChange        = make(map[string]bool, initMapCap)
-	podPhaseBlackList             = map[v1.PodPhase]int{v1.PodFailed: 0, v1.PodSucceeded: 0}
-)
-
-const (
-	// envNum is the number of env variables that will be written to the container
-	envNum = 2
-
-	// podNameMaxLength is the max pod name length
-	podNameMaxLength = 253
-
-	// podNameSpaceMaxLength is the max pod namespace length
-	podNameSpaceMaxLength = 63
-
-	// maxDevicesNum is max number of devices
-	maxDevicesNum = 64
-
-	// retryPodUpdateCount is max number of retry update pod annotation
-	retryPodUpdateCount = 3
-
-	maxPodLimit       = 110
-	maxContainerLimit = 300000
-)
-
 // Register function is use to register k8s devicePlugin to kubelet.
 func (hps *HwPluginServe) Register() error {
 	realKubeletSockPath, isOk := VerifyPath(v1beta1.KubeletSocket)
@@ -485,22 +439,6 @@ func getNPUByStatus(hps *HwPluginServe, useNpu *[]string) bool {
 	return false
 }
 
-func addEnv(devices map[string]string, ascendRuntimeOptions string, resp *v1beta1.ContainerAllocateResponse) {
-	// add env
-	var ascendVisibleDevices []string
-	if len((*resp).Envs) == 0 {
-		(*resp).Envs = make(map[string]string, envNum)
-	}
-	for deviceID := range devices {
-		ascendVisibleDevices = append(ascendVisibleDevices, deviceID)
-	}
-
-	(*resp).Envs[ascendVisibleDevicesEnv] = strings.Join(ascendVisibleDevices, ",")
-	(*resp).Envs[ascendRuntimeOptionsEnv] = ascendRuntimeOptions
-
-	hwlog.RunLog.Infof("allocate resp env: %s; %s", strings.Join(ascendVisibleDevices, ","), ascendRuntimeOptions)
-}
-
 func (s *pluginAPI) addAnnotation(devices map[string]string, podName, serverID string) string {
 	// Annotations
 	var instance Instance
@@ -687,16 +625,6 @@ func (s *pluginAPI) mountDevice(resp *v1beta1.ContainerAllocateResponse, devices
 	}
 }
 
-func (s *pluginAPI) isAscendAssignedPod(pod *v1.Pod) bool {
-	annotationTag := fmt.Sprintf("%s%s", resourceNamePrefix, s.hps.devType)
-	_, ok := pod.ObjectMeta.Annotations[annotationTag]
-	if !ok {
-		hwlog.RunLog.Debugf("no assigned flag, pod Name: %s, pod NameSpace: %s", pod.Name, pod.Namespace)
-		return false
-	}
-	return true
-}
-
 func (s *pluginAPI) isShouldDeletePod(pod *v1.Pod) bool {
 	if pod.DeletionTimestamp != nil {
 		return true
@@ -878,22 +806,6 @@ func (s *pluginAPI) doWithVolcanoSchedule(allocateNum int) (map[string]string, e
 		return nil, fmt.Errorf("get ascend devs with volcano failed, err: %v", err)
 	}
 	return ascendVisibleDevices, nil
-}
-
-func (s *pluginAPI) checkPodNameAndSpace(podPara string, maxLength int) error {
-	if len(podPara) > maxLength {
-		return fmt.Errorf("para length %d is bigger than %d", len(podPara), maxLength)
-	}
-	pattern := "^[a-z0-9]+[a-z0-9\\-]*[a-z0-9]+$"
-	if maxLength == podNameMaxLength {
-		pattern = "^[a-z0-9]+([a-z0-9\\-.]*)[a-z0-9]+$"
-	}
-
-	reg := regexp.MustCompile(pattern)
-	if !reg.MatchString(podPara) {
-		return fmt.Errorf("podPara is illegal")
-	}
-	return nil
 }
 
 func (s *pluginAPI) getDeviceListIP(devices []string) (map[string]string, error) {

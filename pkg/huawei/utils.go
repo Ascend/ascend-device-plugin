@@ -8,58 +8,13 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"os/signal"
 	"path"
 	"strings"
 
-	"github.com/fsnotify/fsnotify"
 	"huawei.com/npu-exporter/hwlog"
 
 	"Ascend-device-plugin/pkg/common"
 )
-
-const (
-	phyDevTypeIndex = 0
-	virDevTypeIndex = 1
-)
-
-// FileWatch is used to watch sock file
-type FileWatch struct {
-	fileWatcher *fsnotify.Watcher
-}
-
-// NewFileWatch is used to watch socket file
-func NewFileWatch() *FileWatch {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return nil
-	}
-	return &FileWatch{
-		fileWatcher: watcher,
-	}
-}
-
-func (fw *FileWatch) watchFile(fileName string) error {
-	_, err := os.Stat(fileName)
-	if err != nil {
-		return err
-	}
-	err = fw.fileWatcher.Add(fileName)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func newSignWatcher(osSigns ...os.Signal) chan os.Signal {
-	// create signs chan
-	signChan := make(chan os.Signal, 1)
-	for _, sign := range osSigns {
-		signal.Notify(signChan, sign)
-	}
-
-	return signChan
-}
 
 func createNetListen(pluginSocketPath string) (net.Listener, error) {
 	if _, err := os.Stat(pluginSocketPath); err == nil {
