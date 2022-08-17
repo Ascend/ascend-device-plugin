@@ -2,8 +2,8 @@
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
  */
 
-// Package huawei for 310p ut.
-package huawei
+// Package device for 310p ut.
+package device
 
 import (
 	"fmt"

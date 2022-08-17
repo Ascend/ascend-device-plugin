@@ -1,8 +1,8 @@
 /*
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
  */
-// Package huawei ascend 910
-package huawei
+// Package device ascend 910
+package device
 
 import (
 	"fmt"

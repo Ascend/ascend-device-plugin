@@ -47,6 +47,8 @@ const (
 	// Pod310PDeviceKey pod annotation key, for generate 310P hccl rank table
 	Pod310PDeviceKey = "ascend.kubectl.kubernetes.io/ascend-310P-configuration"
 
+	// PodResourceSeverKey for pod resource key
+	PodResourceSeverKey = "podResource"
 	// VirtualDev Virtual device tag
 	VirtualDev = "VIRTUAL"
 	// FunctionNotFound for describe devmanager interface function is exist or not

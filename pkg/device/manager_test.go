@@ -1,8 +1,8 @@
 /*
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
  */
-// Package huawei manager
-package huawei
+// Package device manager
+package device
 
 import (
 	"fmt"

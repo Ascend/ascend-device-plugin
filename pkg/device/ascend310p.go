@@ -2,8 +2,8 @@
 * Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
  */
 
-// Package huawei implements the query and allocation of the device and the function of the log.
-package huawei
+// Package device implements the query and allocation of the device and the function of the log.
+package device
 
 import (
 	"fmt"

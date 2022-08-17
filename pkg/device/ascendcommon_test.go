@@ -1,8 +1,8 @@
 /*
 * Copyright(C) 2021-2022. Huawei Technologies Co.,Ltd. All rights reserved.
  */
-// Package huawei ascend commmon
-package huawei
+// Package device ascend commmon
+package device
 
 import (
 	"fmt"
