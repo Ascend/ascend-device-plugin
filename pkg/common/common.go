@@ -38,17 +38,13 @@ func GetPodPhaseBlackList() map[v1.PodPhase]int {
 }
 
 // SetAscendRuntimeEnv is to set ascend runtime environment
-func SetAscendRuntimeEnv(devices map[string]string, ascendRuntimeOptions string,
+func SetAscendRuntimeEnv(devices []string, ascendRuntimeOptions string,
 	resp *v1beta1.ContainerAllocateResponse) {
 	var ascendVisibleDevices []string
 	if len((*resp).Envs) == 0 {
 		(*resp).Envs = make(map[string]string, runtimeEnvNum)
 	}
-	for deviceID := range devices {
-		ascendVisibleDevices = append(ascendVisibleDevices, deviceID)
-	}
-
-	(*resp).Envs[ascendVisibleDevicesEnv] = strings.Join(ascendVisibleDevices, ",")
+	(*resp).Envs[ascendVisibleDevicesEnv] = strings.Join(devices, ",")
 	(*resp).Envs[ascendRuntimeOptionsEnv] = ascendRuntimeOptions
 
 	hwlog.RunLog.Infof("allocate resp env: %s; %s", strings.Join(ascendVisibleDevices, ","), ascendRuntimeOptions)
@@ -91,6 +87,19 @@ func MapDeepCopy(source map[string]string) map[string]string {
 	return dest
 }
 
+// GetDeviceFromPodAnnotation get devices from pod annotation
+func GetDeviceFromPodAnnotation(pod *v1.Pod, deviceType string) ([]string, error) {
+	if pod == nil {
+		return nil, fmt.Errorf("invalid pod")
+	}
+	annotationTag := fmt.Sprintf("%s%s", ResourceNamePrefix, deviceType)
+	annotation, exist := pod.Annotations[annotationTag]
+	if !exist {
+		return nil, fmt.Errorf("cannot find the annotation")
+	}
+	return strings.Split(annotation, ","), nil
+}
+
 func setDeviceByPathWhen200RC(defaultDevices []string) {
 	setDeviceByPath(&defaultDevices, HiAi200RCEventSched)
 	setDeviceByPath(&defaultDevices, HiAi200RCHiDvpp)
@@ -124,6 +133,29 @@ func GetDefaultDevices(getFdFlag bool) ([]string, error) {
 	return defaultDevices, nil
 }
 
+func getNPUResourceNumOfPod(pod *v1.Pod, deviceType string) int64 {
+	containers := pod.Spec.Containers
+	if len(containers) > MaxContainerLimit {
+		hwlog.RunLog.Error("The number of container exceeds the upper limit")
+		return int64(0)
+	}
+	var total int64
+	annotationTag := fmt.Sprintf("%s%s", ResourceNamePrefix, deviceType)
+	for _, container := range containers {
+		val, ok := container.Resources.Limits[v1.ResourceName(annotationTag)]
+		if !ok {
+			continue
+		}
+		limitsDevNum := val.Value()
+		if limitsDevNum < 0 || limitsDevNum > int64(MaxDevicesNum) {
+			hwlog.RunLog.Errorf("apply devices number should be in the range of [0, %d]", MaxDevicesNum)
+			return int64(0)
+		}
+		total += limitsDevNum
+	}
+	return total
+}
+
 func isAscendAssignedPod(pod *v1.Pod, deviceType string) bool {
 	annotationTag := fmt.Sprintf("%s%s", ResourceNamePrefix, deviceType)
 	if _, ok := pod.ObjectMeta.Annotations[annotationTag]; !ok {
@@ -131,6 +163,57 @@ func isAscendAssignedPod(pod *v1.Pod, deviceType string) bool {
 		return false
 	}
 	return true
+}
+
+func isShouldDeletePod(pod *v1.Pod) bool {
+	if pod.DeletionTimestamp != nil {
+		return true
+	}
+	if len(pod.Status.ContainerStatuses) > MaxContainerLimit {
+		hwlog.RunLog.Error("The number of container exceeds the upper limit")
+		return true
+	}
+	for _, status := range pod.Status.ContainerStatuses {
+		if status.State.Waiting != nil &&
+			strings.Contains(status.State.Waiting.Message, "PreStartContainer check failed") {
+			return true
+		}
+	}
+	return pod.Status.Reason == "UnexpectedAdmissionError"
+}
+
+// FilterPods get pods which meet the conditions
+func FilterPods(pods *v1.PodList, blackList map[v1.PodPhase]int, deviceType string,
+	conditionFunc func(pod *v1.Pod) bool) ([]v1.Pod, error) {
+	var res []v1.Pod
+	if pods == nil {
+		return res, fmt.Errorf("input pods variable is nil")
+	}
+	if len(pods.Items) >= MaxPodLimit {
+		return res, fmt.Errorf("filter the number of pods exceeds the upper limit")
+	}
+	for _, pod := range pods.Items {
+		hwlog.RunLog.Debugf("pod: %v, %v", pod.Name, pod.Status.Phase)
+		if err := checkPodNameAndSpace(pod.Name, PodNameMaxLength); err != nil {
+			hwlog.RunLog.Errorf("pod name syntax illegal, err: %v", err)
+			continue
+		}
+		if err := checkPodNameAndSpace(pod.Namespace, PodNameSpaceMaxLength); err != nil {
+			hwlog.RunLog.Errorf("pod namespace syntax illegal, err: %v", err)
+			continue
+		}
+		if _, exist := blackList[pod.Status.Phase]; exist {
+			continue
+		}
+		if conditionFunc != nil && !conditionFunc(&pod) {
+			continue
+		}
+		if getNPUResourceNumOfPod(&pod, deviceType) > 0 && isAscendAssignedPod(&pod,
+			deviceType) && !isShouldDeletePod(&pod) {
+			res = append(res, pod)
+		}
+	}
+	return res, nil
 }
 
 // VerifyPathAndPermission used to verify the validity of the path and permission and return resolved absolute path

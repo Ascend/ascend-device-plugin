@@ -31,11 +31,11 @@ func getDeviceID(deviceName string, ascendRuntimeOptions string) (string, string
 }
 
 // GetDeviceListID get device id by input device name
-func GetDeviceListID(devices []string, ascendRuntimeOptions string) (map[string]string, error) {
+func GetDeviceListID(devices []string, ascendRuntimeOptions string) ([]string, error) {
 	if len(devices) > MaxDevicesNum {
 		return nil, fmt.Errorf("device num excceed max num, when get device list id")
 	}
-	ascendVisibleDevices := make(map[string]string, len(devices))
+	var ascendVisibleDevices []string
 	for _, id := range devices {
 		deviceID, virID, err := getDeviceID(id, ascendRuntimeOptions)
 		if err != nil {
@@ -43,10 +43,10 @@ func GetDeviceListID(devices []string, ascendRuntimeOptions string) (map[string]
 			return nil, err
 		}
 		if ascendRuntimeOptions == VirtualDev {
-			ascendVisibleDevices[virID] = ""
+			ascendVisibleDevices = append(ascendVisibleDevices, virID)
 			continue
 		}
-		ascendVisibleDevices[deviceID] = ""
+		ascendVisibleDevices = append(ascendVisibleDevices, deviceID)
 	}
 	return ascendVisibleDevices, nil
 }
