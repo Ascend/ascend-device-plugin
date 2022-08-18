@@ -67,17 +67,18 @@ func (tool *AscendTools) UpdateNodeDeviceInfo(devStatusSet common.DevStatusSet,
 	err := wait.PollImmediate(common.Interval*time.Second, common.Timeout*time.Second, func() (bool, error) {
 		deviceList, err := tool.getDeviceListFromConfigMap()
 		if err != nil {
-			hwlog.RunLog.Error(err)
-			return false, err
+			hwlog.RunLog.Errorf("get device list failed, err: %#v", err)
+			return false, nil
 		}
 		newDeviceList := common.MapDeepCopy(deviceList)
 		if err := updateDeviceInfoFunc(deviceList, newDeviceList, devStatusSet); err != nil {
-			return false, err
+			hwlog.RunLog.Errorf("update device info failed, err: %#v", err)
+			return false, nil
 		}
 		tool.delVirDevInfo(newDeviceList)
 		if _, err := tool.client.WriteDeviceInfoDataIntoCM(newDeviceList); err != nil {
-			hwlog.RunLog.Error("write device info failed")
-			return false, err
+			hwlog.RunLog.Error("write device info failed: %#v", err)
+			return false, nil
 		}
 
 		return true, nil
