@@ -176,14 +176,12 @@ func checkPodNameAndSpace(podPara string, maxLength int) error {
 }
 
 // NewFileWatch is used to watch socket file
-func NewFileWatch() *FileWatch {
+func NewFileWatch() (*FileWatch, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return &FileWatch{
-		FileWatcher: watcher,
-	}
+	return &FileWatch{FileWatcher: watcher}, nil
 }
 
 // WatchFile add file to watch
