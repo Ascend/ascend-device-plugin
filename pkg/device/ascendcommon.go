@@ -77,7 +77,7 @@ func (tool *AscendTools) UpdateNodeDeviceInfo(devStatusSet common.DevStatusSet,
 		}
 		tool.delVirDevInfo(newDeviceList)
 		if _, err := tool.client.WriteDeviceInfoDataIntoCM(newDeviceList); err != nil {
-			hwlog.RunLog.Error("write device info failed: %#v", err)
+			hwlog.RunLog.Errorf("write device info failed: %#v", err)
 			return false, nil
 		}
 
