@@ -28,12 +28,18 @@ const (
 
 // HwAscend910Manager manages huawei Ascend910 devices.
 type HwAscend910Manager struct {
-	ascendCommonFunction
+	AscendTools
 }
 
 // NewHwAscend910Manager is used to create ascend 910 manager
 func NewHwAscend910Manager() *HwAscend910Manager {
-	return &HwAscend910Manager{}
+	return &HwAscend910Manager{
+		AscendTools: AscendTools{
+			name:         common.Ascend910,
+			unHealthyKey: common.HuaweiUnHealthAscend910,
+			devCount:     common.MaxDevicesNum,
+		},
+	}
 }
 
 // GetNPUs Discovers all HUAWEI Ascend910 devices by call devmanager interface
@@ -47,52 +53,33 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]common.NpuDevice, allDevice
 	if err != nil {
 		return err
 	}
-	if devNum > hiAIMaxDeviceNum {
+	if devNum > hnm.devCount {
 		return fmt.Errorf("invalid device num: %d", devNum)
 	}
-	phyDevMapVirtualDev := make(map[int32]string, maxDevicesNum)
-	var deviTypes, vDevID []string
 	for i := int32(0); i < devNum; i++ {
-		phyID, err := hnm.dmgr.GetPhysicIDFromLogicID(devList[i])
+		davinCiDev, err := hnm.getDavinCiDev(devList[i], nil)
 		if err != nil {
 			return err
 		}
 		vDevInfos, err := hnm.getVirtualDevice(devList[i])
-		if err != nil && !strings.Contains(err.Error(), FunctionNotFound) {
-			if !strings.Contains(err.Error(), noVDevFound) {
-				hwlog.RunLog.Errorf("Query virtual device info failure!, err: %s", err.Error())
-				continue
-			}
+		if err != nil {
+			hwlog.RunLog.Errorf("The virtual device is considered not exist, please check the error: %#v", err)
 		}
-		var devices []common.NpuDevice
 		if vDevInfos.TotalResource.VDevNum == 0 {
-			devices, deviTypes = hnm.assemblePhyDevices(phyID, hiAIAscend910Prefix)
-			phyDevMapVirtualDev[phyID] = fmt.Sprintf("%d", phyID)
-		} else {
-			devices, deviTypes, vDevID = hnm.assembleVirtualDevices(phyID, vDevInfos, hiAIAscend910Prefix)
-			phyDevMapVirtualDev[phyID] = strings.Join(vDevID, ",")
+			hnm.assemblePhyDevices(davinCiDev, allDevices, allDeviceTypes)
+			continue
 		}
-		*allDevices = append(*allDevices, devices...)
-		*allDeviceTypes = append(*allDeviceTypes, deviTypes...)
+		hnm.assembleVirtualDevices(davinCiDev, vDevInfos, allDevices, allDeviceTypes)
 	}
-	hnm.phyDevMapVirtualDev = phyDevMapVirtualDev
 	*allDeviceTypes = hnm.removeDuplicate(allDeviceTypes)
 	return nil
 }
 
 // DoWithVolcanoListAndWatch ascend910 affinity scheduling
-func (hnm *HwAscend910Manager) DoWithVolcanoListAndWatch(hps *HwPluginServe) {
-	hnm.groupDevsByStatus(hps)
-	usedDevices := sets.NewString()
-	getNodeNpuUsed(&usedDevices, hps)
-	freeDevices := hps.healthDevice.Difference(usedDevices)
-	totalDevices = totalDevices.Union(freeDevices)
-	if stateThreadNum == len(hps.hdm.allDevTypes) {
-		groupAllocatableDevs := hnm.GetAnnotationMap(totalDevices, hps.hdm.allDevTypes)
-		if err := hps.kubeInteractor.patchAnnotationOnNode(groupAllocatableDevs, false, hps.devType); err != nil {
-			hwlog.RunLog.Errorf("patch Annotation failed, err: %v", err)
-		}
-		hnm.resetStateSet()
+func (hnm *HwAscend910Manager) DoWithVolcanoListAndWatch(classifyDevs map[string][]*common.NpuDevice) {
+	devStatusSet := hnm.getDevStatesDevSet(classifyDevs)
+	if err := hnm.UpdateNodeDeviceInfo(devStatusSet, hnm.updateDeviceInfo); err != nil {
+		hwlog.RunLog.Errorf("update device info failed, err: %#v", err)
 	}
 }
 

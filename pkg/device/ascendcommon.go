@@ -6,17 +6,20 @@
 package device
 
 import (
-	"Ascend-device-plugin/pkg/common"
-	"Ascend-device-plugin/pkg/kubeclient"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"huawei.com/npu-exporter/devmanager"
 	npuCommon "huawei.com/npu-exporter/devmanager/common"
 	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+
+	"Ascend-device-plugin/pkg/common"
+	"Ascend-device-plugin/pkg/kubeclient"
 )
 
 // AscendTools struct definition
@@ -56,6 +59,41 @@ func (tool *AscendTools) SetKubeClient(client *kubeclient.ClientK8s) {
 // GetKubeClient get ClientK8s
 func (tool *AscendTools) GetKubeClient() *kubeclient.ClientK8s {
 	return tool.client
+}
+
+// UpdateNodeDeviceInfo update device info
+func (tool *AscendTools) UpdateNodeDeviceInfo(devStatusSet common.DevStatusSet,
+	updateDeviceInfoFunc func(map[string]string, map[string]string, common.DevStatusSet) error) error {
+	err := wait.PollImmediate(common.Interval*time.Second, common.Timeout*time.Second, func() (bool, error) {
+		deviceList, err := tool.getDeviceListFromConfigMap()
+		if err != nil {
+			hwlog.RunLog.Error(err)
+			return false, err
+		}
+		newDeviceList := common.MapDeepCopy(deviceList)
+		if err := updateDeviceInfoFunc(deviceList, newDeviceList, devStatusSet); err != nil {
+			return false, err
+		}
+		tool.delVirDevInfo(newDeviceList)
+		if _, err := tool.client.WriteDeviceInfoDataIntoCM(newDeviceList); err != nil {
+			hwlog.RunLog.Error("write device info failed")
+			return false, err
+		}
+
+		return true, nil
+	})
+	return err
+}
+
+func (tool *AscendTools) delVirDevInfo(newDeviceList map[string]string) {
+	for annotationTag := range common.GetAllDeviceInfoTypeList() {
+		if _, ok := newDeviceList[annotationTag]; !ok {
+			continue
+		}
+		if common.IsVirtualDev(annotationTag) {
+			delete(newDeviceList, annotationTag)
+		}
+	}
 }
 
 func (tool *AscendTools) assembleNpuDeviceStruct(deviType, deviceName string, logicID, phyID int32) common.NpuDevice {
@@ -141,4 +179,67 @@ func getDeviceInfoData(deviceInfo *v1.ConfigMap) (map[string]string, error) {
 		return nil, fmt.Errorf("unmarshal configmap data failed, err: %#v", err)
 	}
 	return nodeDeviceInfo.DeviceInfo.DeviceList, nil
+}
+
+func (tool *AscendTools) getDevStatesDevSet(classifyDevs map[string][]*common.NpuDevice) common.DevStatusSet {
+	totalFreeDevices := make(map[string]sets.String, len(classifyDevs))
+	totalUHDevices, totalNetUHDevices := sets.String{}, sets.String{}
+	for devType, classifyDev := range classifyDevs {
+		healthDevices, uhDevices, netUnHDevices := tool.groupDevsByStatus(classifyDev, tool.name)
+		usedDevices := tool.client.GetPodsUsedNpu(devType)
+		totalFreeDevices[devType] = healthDevices.Difference(usedDevices)
+		totalUHDevices = totalUHDevices.Union(uhDevices)
+		totalNetUHDevices = totalNetUHDevices.Union(netUnHDevices)
+	}
+	return common.DevStatusSet{
+		FreeHealthyDevice:  totalFreeDevices,
+		UnHealthyDevice:    totalUHDevices,
+		NetUnHealthyDevice: totalNetUHDevices,
+	}
+}
+
+func (tool *AscendTools) groupDevsByStatus(subClassDevices []*common.NpuDevice, runMode string) (
+	sets.String, sets.String, sets.String) {
+	healthDevice, totalUHDevices, totalNetworkUHDevices := sets.String{}, sets.String{}, sets.String{}
+	for _, device := range subClassDevices {
+		if device.NetworkHealth != v1beta1.Healthy {
+			totalNetworkUHDevices.Insert(device.DeviceName)
+		}
+		if device.Health == v1beta1.Healthy {
+			healthDevice.Insert(device.DeviceName)
+			continue
+		}
+		if !common.IsVirtualDev(device.DeviceName) {
+			totalUHDevices.Insert(device.DeviceName)
+			continue
+		}
+		dev := fmt.Sprintf("%s-%d", runMode, device.PhyID)
+		if !totalUHDevices.Has(dev) {
+			totalUHDevices.Insert(dev)
+		}
+	}
+	hwlog.RunLog.Debugf("healthy device %v", healthDevice)
+	hwlog.RunLog.Debugf("total unhealthy devices %v", totalUHDevices)
+	hwlog.RunLog.Debugf("total network unhealthy devices %v", totalNetworkUHDevices)
+	return healthDevice, totalUHDevices, totalNetworkUHDevices
+}
+
+func (tool *AscendTools) getDavinCiDev(logicID int32, templateName map[string]string) (common.DavinCiDev, error) {
+	phyID, err := tool.dmgr.GetPhysicIDFromLogicID(logicID)
+	if err != nil {
+		return common.DavinCiDev{}, err
+	}
+	return common.DavinCiDev{
+		TemplateName: templateName,
+		LogicID:      logicID,
+		PhyID:        phyID,
+	}, nil
+}
+
+func (tool *AscendTools) getVirtualDevice(logicID int32) (npuCommon.VirtualDevInfo, error) {
+	virtualDevInfos, err := tool.dmgr.GetVirtualDeviceInfo(logicID)
+	if err != nil {
+		return npuCommon.VirtualDevInfo{}, fmt.Errorf("query virtual device info failure: %s", err)
+	}
+	return virtualDevInfos, nil
 }
