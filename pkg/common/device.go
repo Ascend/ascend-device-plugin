@@ -6,6 +6,7 @@ package common
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"huawei.com/npu-exporter/hwlog"
@@ -62,4 +63,60 @@ func IsVirtualDev(devType string) bool {
 // ToString convert input data to string
 func ToString(devices sets.String, sepType string) string {
 	return strings.Join(devices.List(), sepType)
+}
+
+// ConvertDevListToSets convert devices to Sets
+func ConvertDevListToSets(devices, sepType string) sets.String {
+	if devices == "" {
+		return sets.String{}
+	}
+	deviceInfo := strings.Split(devices, sepType)
+	if len(deviceInfo) > MaxDevicesNum {
+		hwlog.RunLog.Error("The number of device exceeds the upper limit")
+		return sets.String{}
+	}
+	if sepType == DotSepDev {
+		return labelToSets(deviceInfo)
+	}
+	return deviceInfoToSets(deviceInfo)
+}
+
+// for label, check device format, must 0.1.2 and more
+func labelToSets(deviceInfo []string) sets.String {
+	deviceSets := sets.String{}
+	for _, device := range deviceInfo {
+		if _, isValidNum := IsValidNumber(device); isValidNum {
+			deviceSets.Insert(device)
+		}
+	}
+	return deviceSets
+}
+
+// for device info, check device format, must Ascend910-0,Ascend910-1 and more
+func deviceInfoToSets(deviceInfo []string) sets.String {
+	// pattern no need to defined as global variable, only used here
+	pattern := `^Ascend910-\d+`
+	deviceSets := sets.String{}
+	for _, device := range deviceInfo {
+		if match, err := regexp.MatchString(pattern, device); !match || err != nil {
+			hwlog.RunLog.Warnf("current device %s format err: %#v", device, err)
+			continue
+		}
+		deviceSets.Insert(device)
+	}
+	return deviceSets
+}
+
+// IsValidNumber input checkVal is a valid number
+func IsValidNumber(checkVal string) (int64, bool) {
+	if strings.Contains(checkVal, "_") {
+		hwlog.RunLog.Warnf("device id %s invalid", checkVal)
+		return -1, false
+	}
+	conversionRes, err := strconv.ParseInt(checkVal, BaseDec, BitSize)
+	if err != nil {
+		hwlog.RunLog.Warnf("current device id invalid, err: %#v", err)
+		return -1, false
+	}
+	return conversionRes, true
 }

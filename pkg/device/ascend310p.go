@@ -39,7 +39,7 @@ func (hnm *HwAscend310PManager) GetNPUs(allDevices *[]common.NpuDevice, allDevic
 		return fmt.Errorf("invalid device num: %d", devNum)
 	}
 	for i := int32(0); i < devNum; i++ {
-		davinCiDev, err := hnm.getDavinCiDev(devList[i], nil)
+		davinCiDev, err := hnm.getDavinCiDev(devList[i], hnm.getTemplateName2DeviceTypeMap())
 		if err != nil {
 			return err
 		}
@@ -62,6 +62,16 @@ func (hnm *HwAscend310PManager) DoWithVolcanoListAndWatch(classifyDevs map[strin
 	devStatusSet := hnm.getDevStatesDevSet(classifyDevs)
 	if err := hnm.UpdateNodeDeviceInfo(devStatusSet, hnm.updateDeviceInfo); err != nil {
 		hwlog.RunLog.Errorf("update device info failed, err: %#v", err)
+	}
+}
+
+func (hnm *HwAscend310PManager) getTemplateName2DeviceTypeMap() map[string]string {
+	return map[string]string{
+		"vir04":    common.Ascend310Pc4,
+		"vir04_3c": common.Ascend310Pc4Cpu3,
+		"vir02":    common.Ascend310Pc2,
+		"vir02_1c": common.Ascend310Pc2Cpu1,
+		"vir01":    common.Ascend310Pc1,
 	}
 }
 
