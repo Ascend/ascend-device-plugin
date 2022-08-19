@@ -6,6 +6,8 @@ package device
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"huawei.com/npu-exporter/devmanager"
@@ -37,6 +39,7 @@ type devManager interface {
 	GetDmgr() devmanager.DeviceInterface
 	SetKubeClient(*kubeclient.ClientK8s)
 	GetKubeClient() *kubeclient.ClientK8s
+	AddPodAnnotation(*v1.Pod, []string, []string, string, string) error
 }
 
 // SetDmgr set devmanager
@@ -241,4 +244,65 @@ func (tool *AscendTools) getVirtualDevice(logicID int32) (npuCommon.VirtualDevIn
 		return npuCommon.VirtualDevInfo{}, fmt.Errorf("query virtual device info failure: %s", err)
 	}
 	return virtualDevInfos, nil
+}
+
+func (tool *AscendTools) getDeviceIP(phyID string) (string, error) {
+	transPhyID, err := strconv.ParseInt(phyID, common.BaseDec, common.BitSize32)
+	if err != nil {
+		hwlog.RunLog.Errorf(" Device id transform failed, DeviceName: %s", phyID)
+		return "", err
+	}
+	logicID, err := tool.dmgr.GetLogicIDFromPhysicID(int32(transPhyID))
+	if err != nil {
+		return "", fmt.Errorf("transfor phyID %s to logicID failed, error code : %s", phyID, err.Error())
+	}
+	return tool.dmgr.GetDeviceIPAddress(logicID)
+}
+
+func (tool *AscendTools) getDeviceListIP(devices []string, deviceType string) (map[string]string, error) {
+	ascendRuntimeOptions := ""
+	if common.IsVirtualDev(deviceType) {
+		ascendRuntimeOptions = common.VirtualDev
+	}
+	ascendDevices, err := common.GetDeviceListID(devices, ascendRuntimeOptions)
+	if err != nil {
+		hwlog.RunLog.Errorf("get device list id err: %s", err.Error())
+		return nil, err
+	}
+	devicesWithIP := make(map[string]string, len(devices))
+	for _, id := range ascendDevices {
+		if ascendRuntimeOptions == common.VirtualDev {
+			devicesWithIP[id] = common.DefaultDeviceIP
+			continue
+		}
+		if !strings.Contains(deviceType, common.Ascend910) {
+			devicesWithIP[id] = ""
+			continue
+		}
+		deviceIP, err := tool.getDeviceIP(id)
+		if err != nil {
+			hwlog.RunLog.Errorf("get device %s ip err: %s", id, err.Error())
+			return nil, err
+		}
+		devicesWithIP[id] = deviceIP
+	}
+	return devicesWithIP, nil
+}
+
+// AddPodAnnotation get ip of device list
+func (tool *AscendTools) AddPodAnnotation(pod *v1.Pod, kltRequestDevices, dpResponseDevices []string,
+	deviceType, serverID string) error {
+	ascendVisibleDevices, err := tool.getDeviceListIP(dpResponseDevices, deviceType)
+	if err != nil {
+		return fmt.Errorf("get ascend devices ip failed, err: %s", err.Error())
+	}
+	configuration := common.GetPodConfiguration(ascendVisibleDevices, pod.Name, serverID)
+	annotation := map[string]string{common.Pod2kl: strings.Join(kltRequestDevices, common.CommaSepDev),
+		common.PodRealAlloc: strings.Join(dpResponseDevices, common.CommaSepDev)}
+	if tool.name == common.Ascend910 {
+		annotation[common.Pod910DeviceKey] = configuration
+	} else if tool.name == common.Ascend310P {
+		annotation[common.Pod310PDeviceKey] = configuration
+	}
+	return tool.client.TryUpdatePodAnnotation(pod, annotation)
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"huawei.com/npu-exporter/devmanager"
 	"huawei.com/npu-exporter/hwlog"
+	"k8s.io/api/core/v1"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/pkg/common"
@@ -47,7 +48,9 @@ func NewHwDevManager(devM devmanager.DeviceInterface, client *kubeclient.ClientK
 		hwlog.RunLog.Errorf("set all device and type failed, err: %v", err)
 		return nil
 	}
-
+	if common.ParamOption.UseVolcanoType {
+		hdm.ServerMap[common.PodResourceSeverKey] = server.NewPodResource()
+	}
 	return &hdm
 }
 
@@ -294,4 +297,78 @@ func (hdm *HwDevManager) handleDeleteEvent(deleteFile string) {
 			hwlog.RunLog.Warnf("notify: sock file %s deleted, please check !", deleteFile)
 		}
 	}
+}
+
+func (hdm *HwDevManager) updatePodAnnotation() error {
+	element, exist := hdm.ServerMap[common.PodResourceSeverKey]
+	if !exist {
+		return fmt.Errorf("not found pod resource client")
+	}
+	prClient, ok := element.(*server.PodResource)
+	if !ok {
+		return fmt.Errorf("serverMap convert pod resource client failed")
+	}
+	podResource, err := prClient.GetPodResource()
+	if err != nil {
+		return fmt.Errorf("get pod resource failed, %s", err.Error())
+	}
+	podList, err := hdm.manager.GetKubeClient().GetPodList()
+	if err != nil {
+		return err
+	}
+	serverID, err := hdm.manager.GetKubeClient().GetNodeServerID()
+	if err != nil {
+		return fmt.Errorf("get node server id failed: %s", err.Error())
+	}
+	for _, devType := range hdm.AllDevTypes {
+		element, exist := hdm.ServerMap[devType]
+		if !exist {
+			return fmt.Errorf("not found %s plugin server", devType)
+		}
+		ps, ok := element.(*server.PluginServer)
+		if !ok {
+			return fmt.Errorf("serverMap convert %s failed", devType)
+		}
+		if err := hdm.updateSpecTypePodAnnotation(podList, devType, serverID, podResource, ps); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (hdm *HwDevManager) updateSpecTypePodAnnotation(podList *v1.PodList, deviceType, serverID string,
+	podDevice map[string]server.PodDevice, pluginServer *server.PluginServer) error {
+	pods, err := common.FilterPods(podList, common.GetPodPhaseBlackList(), deviceType, nil)
+	if err != nil {
+		return err
+	}
+	for _, pod := range pods {
+		hwlog.RunLog.Debugf("pods: %s, %s, %s", pod.Name, pod.Status.Phase, pod.UID)
+		if _, exist := pod.Annotations[common.PodRealAlloc]; exist {
+			continue
+		}
+		podKey := pod.Namespace + "_" + pod.Name
+		podResource, exist := podDevice[podKey]
+		if !exist {
+			hwlog.RunLog.Debugf("get %s klt device list failed, not in pod resource", podKey)
+			continue
+		}
+		if podResource.ResourceName != common.ResourceNamePrefix+deviceType {
+			hwlog.RunLog.Debugf("podKey %s resource name not equal device type %s", podKey, podResource.ResourceName,
+				deviceType)
+			continue
+		}
+		volDeviceList, err := pluginServer.GetRealAllocateDevices(podResource.DeviceIds)
+		if err != nil {
+			hwlog.RunLog.Debugf("get device list %#v failed, %s", podResource.DeviceIds, err.Error())
+			continue
+		}
+		if err := hdm.manager.AddPodAnnotation(&pod, podResource.DeviceIds, volDeviceList, deviceType,
+			serverID); err != nil {
+			hwlog.RunLog.Errorf("update pod %s annotation failed, %s", podKey, err.Error())
+		} else {
+			hwlog.RunLog.Infof("update pod %s annotation success", podKey)
+		}
+	}
+	return nil
 }

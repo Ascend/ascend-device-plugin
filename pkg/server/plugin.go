@@ -154,6 +154,9 @@ func (ps *PluginServer) checkAllocateRequest(requests *v1beta1.AllocateRequest) 
 			return fmt.Errorf("the devices can't bigger than %d", common.MaxDevicesNum)
 		}
 		for _, deviceName := range rqt.DevicesIDs {
+			if len(deviceName) > common.MaxDeviceNameLen {
+				return fmt.Errorf("length of device name %d is invalid", len(deviceName))
+			}
 			if !ps.deviceExists(deviceName) {
 				return fmt.Errorf("plugin doesn't have device %s", deviceName)
 			}

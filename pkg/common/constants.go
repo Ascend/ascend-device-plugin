@@ -25,6 +25,10 @@ const (
 	MaxContainerLimit = 300000
 	// RetryUpdateCount is max number of retry resource update
 	RetryUpdateCount = 3
+	// MaxResourceNameLen max length of resource name, like "huawei.com/Ascend310P-4c.3cpu"
+	MaxResourceNameLen = 50
+	// MaxDeviceNameLen max length of device name, like "Ascend310P-4c.3cpu-100-0"
+	MaxDeviceNameLen = 50
 
 	// DeviceInfoCMNameSpace namespace of device info configmap
 	DeviceInfoCMNameSpace = "kube-system"

@@ -8,6 +8,7 @@ import (
 
 	"google.golang.org/grpc"
 	"huawei.com/npu-exporter/devmanager"
+	"k8s.io/kubernetes/pkg/kubelet/apis/podresources/v1alpha1"
 
 	"Ascend-device-plugin/pkg/common"
 	"Ascend-device-plugin/pkg/kubeclient"
@@ -37,4 +38,17 @@ type PluginServer struct {
 	devManager           devmanager.DeviceInterface
 	vol2KlDevMap         map[string]string
 	restart              bool
+}
+
+// PodDevice define device info in pod
+type PodDevice struct {
+	ResourceName string
+	DeviceIds    []string
+}
+
+// PodResource implements the get pod resource info
+type PodResource struct {
+	conn    *grpc.ClientConn
+	client  v1alpha1.PodResourcesListerClient
+	restart bool
 }

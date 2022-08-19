@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"syscall"
 
@@ -194,11 +195,11 @@ func FilterPods(pods *v1.PodList, blackList map[v1.PodPhase]int, deviceType stri
 	}
 	for _, pod := range pods.Items {
 		hwlog.RunLog.Debugf("pod: %v, %v", pod.Name, pod.Status.Phase)
-		if err := checkPodNameAndSpace(pod.Name, PodNameMaxLength); err != nil {
+		if err := CheckPodNameAndSpace(pod.Name, PodNameMaxLength); err != nil {
 			hwlog.RunLog.Errorf("pod name syntax illegal, err: %v", err)
 			continue
 		}
-		if err := checkPodNameAndSpace(pod.Namespace, PodNameSpaceMaxLength); err != nil {
+		if err := CheckPodNameAndSpace(pod.Namespace, PodNameSpaceMaxLength); err != nil {
 			hwlog.RunLog.Errorf("pod namespace syntax illegal, err: %v", err)
 			continue
 		}
@@ -242,7 +243,8 @@ func VerifyPathAndPermission(verifyPath string) (string, bool) {
 	return realPath, true
 }
 
-func checkPodNameAndSpace(podPara string, maxLength int) error {
+// CheckPodNameAndSpace used to check pod name or pod namespace
+func CheckPodNameAndSpace(podPara string, maxLength int) error {
 	if len(podPara) > maxLength {
 		return fmt.Errorf("para length %d is bigger than %d", len(podPara), maxLength)
 	}
@@ -283,4 +285,23 @@ func NewSignWatcher(osSigns ...os.Signal) chan os.Signal {
 		signal.Notify(signChan, sign)
 	}
 	return signChan
+}
+
+// GetPodConfiguration get annotation configuration of pod
+func GetPodConfiguration(devices map[string]string, podName, serverID string) string {
+	var sortDevicesKey []string
+	for deviceID := range devices {
+		sortDevicesKey = append(sortDevicesKey, deviceID)
+	}
+	sort.Strings(sortDevicesKey)
+	instance := Instance{PodName: podName, ServerID: serverID}
+	for _, deviceID := range sortDevicesKey {
+		instance.Devices = append(instance.Devices, Device{DeviceID: deviceID, DeviceIP: devices[deviceID]})
+	}
+	instanceByte, err := json.Marshal(instance)
+	if err != nil {
+		hwlog.RunLog.Errorf("Transform marshal failed, err: %s", err.Error())
+		return ""
+	}
+	return string(instanceByte)
 }
