@@ -1,8 +1,6 @@
-/*
-* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
- */
+// Copyright (c) 2022. Huawei Technologies Co., Ltd. All rights reserved.
 
-// Package device implements the query and allocation of the device and the function of the log.
+// Package device a series of device function
 package device
 
 import (

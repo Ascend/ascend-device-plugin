@@ -23,8 +23,8 @@ const (
 	MaxPodLimit = 110
 	// MaxContainerLimit max container num
 	MaxContainerLimit = 300000
-	// RetryPodUpdateCount is max number of retry update pod annotation
-	RetryPodUpdateCount = 3
+	// RetryUpdateCount is max number of retry resource update
+	RetryUpdateCount = 3
 
 	// DeviceInfoCMNameSpace namespace of device info configmap
 	DeviceInfoCMNameSpace = "kube-system"

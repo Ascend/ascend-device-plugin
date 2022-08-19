@@ -21,7 +21,7 @@ import (
 
 // TryUpdatePodAnnotation is to try updating pod annotation
 func (ki *ClientK8s) TryUpdatePodAnnotation(pod *v1.Pod, annotation map[string]string) error {
-	for i := 0; i < common.RetryPodUpdateCount; i++ {
+	for i := 0; i < common.RetryUpdateCount; i++ {
 		podNew, err := ki.GetPod(pod)
 		if err != nil || podNew == nil {
 			hwlog.RunLog.Errorf("query pod info failed. %#v", err)
@@ -35,6 +35,7 @@ func (ki *ClientK8s) TryUpdatePodAnnotation(pod *v1.Pod, annotation map[string]s
 			return nil
 		}
 		hwlog.RunLog.Errorf("update pod annotation failed, times: %d, error is %#v", i+1, err)
+		time.Sleep(time.Second)
 	}
 	return fmt.Errorf("exceeded max number of retries")
 }
@@ -98,20 +99,27 @@ func (ki *ClientK8s) WriteDeviceInfoDataIntoCM(deviceInfo map[string]string) (*v
 }
 
 //  AnnotationReset reset annotation and device info
-func (ki *ClientK8s) AnnotationReset() {
+func (ki *ClientK8s) AnnotationReset() error {
+	var err error
 	curNode, err := ki.GetNode()
 	if err != nil {
 		hwlog.RunLog.Errorf("failed to get node, nodeName: %s, err: %#v", ki.NodeName, err)
-		return
+		return err
 	}
 	newNode := curNode.DeepCopy()
 	ki.resetNodeAnnotations(newNode)
 	ki.ResetDeviceInfo()
-	if _, _, err = ki.PatchNodeState(curNode, newNode); err != nil {
-		hwlog.RunLog.Errorf("failed to patch volcano npu resource: %#v", err)
-		return
+	for i := 0; i < common.RetryUpdateCount; i++ {
+		if _, _, err = ki.PatchNodeState(curNode, newNode); err == nil {
+			hwlog.RunLog.Infof("reset annotation success")
+			return nil
+		}
+		hwlog.RunLog.Errorf("failed to patch volcano npu resource, times:%d", i+1)
+		time.Sleep(time.Second)
+		continue
 	}
-	hwlog.RunLog.Infof("reset annotation success")
+	hwlog.RunLog.Errorf("failed to patch volcano npu resource: %#v", err)
+	return err
 }
 
 // GetPodsUsedNpu get npu by status

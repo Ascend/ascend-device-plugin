@@ -88,6 +88,109 @@ func (hdm *HwDevManager) setAllDeviceAndType() error {
 	return hdm.manager.GetNPUs(&hdm.AllDevs, &hdm.AllDevTypes)
 }
 
+func (hdm *HwDevManager) initPluginServer(dmgr devmanager.DeviceInterface, client *kubeclient.ClientK8s) error {
+	hdm.ServerMap = make(map[string]server.InterfaceServer, len(hdm.AllDevTypes))
+	hdm.groupDevice = ClassifyDevices(hdm.AllDevs, hdm.AllDevTypes)
+	defaultDevices, err := common.GetDefaultDevices(common.ParamOption.GetFdFlag)
+	if err != nil {
+		hwlog.RunLog.Error("get default device error")
+		return err
+	}
+	for _, devcieType := range hdm.AllDevTypes {
+		hdm.ServerMap[devcieType] = server.NewPluginServer(dmgr, client, devcieType,
+			hdm.groupDevice[devcieType], defaultDevices)
+	}
+	return nil
+}
+
+// ListenDevice ListenDevice coroutine
+func (hdm *HwDevManager) ListenDevice(ctx context.Context) {
+	hwlog.RunLog.Info("starting the listen device")
+	go hdm.Serve(ctx)
+	for {
+		select {
+		case _, ok := <-ctx.Done():
+			if !ok {
+				hwlog.RunLog.Info("catch stop signal channel is closed")
+			}
+			hwlog.RunLog.Info("listen device stop")
+			break
+		default:
+			time.Sleep(time.Duration(common.ParamOption.ListAndWatchPeriod) * time.Second)
+			hdm.notifyToK8s()
+			hdm.useVolcanoNotify()
+		}
+	}
+}
+
+func (hdm *HwDevManager) notifyToK8s() {
+	for _, devType := range hdm.AllDevTypes {
+		classifyDev := hdm.groupDevice[devType]
+		isDevStateChange := hdm.manager.IsDeviceStatusChange(classifyDev, devType)
+		if !isDevStateChange {
+			continue
+		}
+		// if any device state or network state change, sure notify k8s
+		serverMap, ok := hdm.ServerMap[devType]
+		if !ok {
+			hwlog.RunLog.Warnf("server map (%s) not exist", devType)
+			continue
+		}
+		if !serverMap.(*server.PluginServer).Notify(classifyDev) {
+			hwlog.RunLog.Warnf("deviceType(%s) notify failed, server may not start, please check", devType)
+		}
+
+	}
+}
+
+func (hdm *HwDevManager) useVolcanoNotify() {
+	if !common.ParamOption.UseVolcanoType {
+		return
+	}
+	common.DpStartReset.Do(func() {
+		if err := hdm.manager.GetKubeClient().AnnotationReset(); err != nil {
+			hwlog.RunLog.Warn("device plugin first reset annotation and config map error")
+		}
+	})
+	hdm.manager.DoWithVolcanoListAndWatch(hdm.groupDevice)
+	if err := hdm.updatePodAnnotation(); err != nil {
+		hwlog.RunLog.Error(err)
+	}
+}
+
+// SignCatch stop system sign catch
+func (hdm *HwDevManager) SignCatch(cancel context.CancelFunc) {
+	osSignChan := common.NewSignWatcher(syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGKILL)
+	if osSignChan == nil {
+		hwlog.RunLog.Error("the stop signal is not initialized")
+		return
+	}
+	select {
+	case s, signEnd := <-osSignChan:
+		if signEnd == false {
+			hwlog.RunLog.Info("catch stop signal channel is closed")
+			return
+		}
+		hwlog.RunLog.Infof("Received signal: %s, shutting down.", s.String())
+		cancel()
+		hdm.DeleteDeviceInfo()
+		hdm.manager.GetDmgr().ShutDown()
+	}
+}
+
+// DeleteDeviceInfo delete the device info configmap
+func (hdm *HwDevManager) DeleteDeviceInfo() {
+	client := hdm.manager.GetKubeClient()
+	if !common.ParamOption.UseVolcanoType || client == nil {
+		return
+	}
+	if err := client.DeleteConfigMap(); err != nil {
+		hwlog.RunLog.Errorf("delete device info configmap failed, error is %#v", err)
+		return
+	}
+	hwlog.RunLog.Infof("delete device info configmap")
+}
+
 // Serve Serve function
 func (hdm *HwDevManager) Serve(ctx context.Context) {
 	// initiate a global socket path watcher
@@ -170,14 +273,15 @@ func (hdm *HwDevManager) setRestartForAll() {
 func (hdm *HwDevManager) startAllServer(socketWatcher *common.FileWatch) bool {
 	success := true
 	for deviceType := range hdm.ServerMap {
-		if hdm.ServerMap[deviceType].GetRestartFlag() {
-			if err := hdm.ServerMap[deviceType].Start(socketWatcher); err != nil {
-				hwlog.RunLog.Errorf("Could not contact Kubelet for %s, retrying. "+
-					"Did you enable the device plugin feature gate?", deviceType)
-				success = false
-			} else {
-				hdm.ServerMap[deviceType].SetRestartFlag(false)
-			}
+		if !hdm.ServerMap[deviceType].GetRestartFlag() {
+			continue
+		}
+		if err := hdm.ServerMap[deviceType].Start(socketWatcher); err != nil {
+			hwlog.RunLog.Errorf("Could not contact Kubelet for %s, retrying. "+
+				"Did you enable the device plugin feature gate?", deviceType)
+			success = false
+		} else {
+			hdm.ServerMap[deviceType].SetRestartFlag(false)
 		}
 	}
 	return success

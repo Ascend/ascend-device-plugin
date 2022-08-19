@@ -1,8 +1,6 @@
-/*
-* Copyright(C) Huawei Technologies Co.,Ltd. 2020-2021. All rights reserved.
- */
+// Copyright (c) 2022. Huawei Technologies Co., Ltd. All rights reserved.
 
-// Package device implements the query and allocation of the device and the function of the log.
+// Package device a series of device function.
 package device
 
 import (
@@ -31,6 +29,28 @@ func NewHwAscend310Manager() *HwAscend310Manager {
 			devCount:     common.MaxCardNum * common.MaxDevNumInCard,
 		},
 	}
+}
+
+// GetNPUs Discovers all HUAWEI Ascend310 devices by call devmanager interface
+func (hnm *HwAscend310Manager) GetNPUs(allDevices *[]common.NpuDevice, allDeviceTypes *[]string) error {
+	devNum, devList, err := hnm.dmgr.GetDeviceList()
+	if err != nil {
+		return err
+	}
+	if devNum > hnm.devCount {
+		return fmt.Errorf("invalid device num: %d", devNum)
+	}
+	for i := int32(0); i < devNum; i++ {
+		phyID, err := hnm.dmgr.GetPhysicIDFromLogicID(devList[i])
+		if err != nil {
+			return err
+		}
+		deviceName := fmt.Sprintf("%s-%d", hnm.name, phyID)
+		device := hnm.assembleNpuDeviceStruct(hnm.name, deviceName, devList[i], phyID)
+		*allDevices = append(*allDevices, device)
+	}
+	*allDeviceTypes = append(*allDeviceTypes, hnm.name)
+	return nil
 }
 
 // DoWithVolcanoListAndWatch ascend310 watch device
