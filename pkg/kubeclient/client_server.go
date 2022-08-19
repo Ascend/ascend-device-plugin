@@ -12,6 +12,7 @@ import (
 
 	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 
@@ -50,7 +51,7 @@ func (ki *ClientK8s) isConfigMapChanged(cm *v1.ConfigMap) bool {
 func (ki *ClientK8s) createOrUpdateConfigMap(cm *v1.ConfigMap) (*v1.ConfigMap, error) {
 	newCM, err := ki.CreateConfigMap(cm)
 	if err != nil {
-		if err.Error() != string(metav1.StatusReasonAlreadyExists) {
+		if !ki.IsCMExist(err) {
 			return nil, fmt.Errorf("unable to create configmap, %#v", err)
 		}
 		// To reduce the cm write operations
@@ -63,6 +64,11 @@ func (ki *ClientK8s) createOrUpdateConfigMap(cm *v1.ConfigMap) (*v1.ConfigMap, e
 		}
 	}
 	return newCM, nil
+}
+
+// IsCMExist judge cm is exist
+func (ki *ClientK8s) IsCMExist(err error) bool {
+	return errors.IsAlreadyExists(err)
 }
 
 // WriteDeviceInfoDataIntoCM write deviceinfo into config map
