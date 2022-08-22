@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
-	"huawei.com/npu-exporter/hwlog"
+	"huawei.com/mindx/common/hwlog"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/pkg/common"

@@ -6,7 +6,7 @@ package device
 import (
 	"fmt"
 
-	"huawei.com/npu-exporter/hwlog"
+	"huawei.com/mindx/common/hwlog"
 
 	"Ascend-device-plugin/pkg/common"
 )

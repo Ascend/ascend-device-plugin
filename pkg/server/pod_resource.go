@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"huawei.com/npu-exporter/hwlog"
+	"huawei.com/mindx/common/hwlog"
 	"k8s.io/kubernetes/pkg/kubelet/apis/podresources"
 	"k8s.io/kubernetes/pkg/kubelet/apis/podresources/v1alpha1"
 
@@ -137,7 +137,7 @@ func (pr *PodResource) GetPodResource() (map[string]PodDevice, error) {
 		if err != nil || resourceName == "" || len(podDevice) == 0 {
 			continue
 		}
-		device[pod.Namespace+"_"+pod.Name] = PodDevice{
+		device[pod.Namespace+common.UnderLine+pod.Name] = PodDevice{
 			ResourceName: resourceName,
 			DeviceIds:    podDevice,
 		}

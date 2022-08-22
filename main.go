@@ -6,12 +6,16 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 
-	"huawei.com/npu-exporter/hwlog"
+	"huawei.com/mindx/common/hwlog"
+	"huawei.com/npu-exporter/devmanager"
 
 	"Ascend-device-plugin/pkg/common"
+	"Ascend-device-plugin/pkg/device"
+	"Ascend-device-plugin/pkg/kubeclient"
 )
 
 const (
@@ -61,7 +65,7 @@ var (
 	BuildVersion string
 )
 
-func initLogModule(stopCh <-chan struct{}) error {
+func initLogModule(ctx context.Context) error {
 	var loggerPath string
 	loggerPath = *logFile
 	if *fdFlag {
@@ -73,7 +77,7 @@ func initLogModule(stopCh <-chan struct{}) error {
 		MaxBackups:  *logMaxBackups,
 		MaxAge:      *logMaxAge,
 	}
-	if err := hwlog.InitRunLogger(&hwLogConfig, stopCh); err != nil {
+	if err := hwlog.InitRunLogger(&hwLogConfig, ctx); err != nil {
 		fmt.Printf("hwlog init failed, error is %v", err)
 		return err
 	}
@@ -105,14 +109,48 @@ func main() {
 	if !checkParam() {
 		return
 	}
-	stopCh := make(chan struct{})
-	defer close(stopCh)
-	if err := initLogModule(stopCh); err != nil {
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	if err := initLogModule(ctx); err != nil {
 		return
 	}
 	hwlog.RunLog.Infof("ascend device plugin starting and the version is %s", BuildVersion)
 
 	setParameters()
+	hdm, err := InitFunction()
+	if err != nil {
+		return
+	}
+
+	go hdm.ListenDevice(ctx)
+	hdm.SignCatch(cancel)
+}
+
+// InitFunction init function
+func InitFunction() (*device.HwDevManager, error) {
+	var err error
+	devM, err := devmanager.AutoInit("")
+	if err != nil {
+		hwlog.RunLog.Errorf("init devmanager failed, err: %v", err)
+		return nil, err
+	}
+	var kubeClient *kubeclient.ClientK8s
+	if common.ParamOption.UseVolcanoType {
+		kubeClient, err = kubeclient.NewClientK8s(common.ParamOption.KubeConfig)
+		if err != nil {
+			hwlog.RunLog.Errorf("init kubeclient failed")
+			return nil, err
+		}
+		hwlog.RunLog.Infof("init kubeclient success")
+	}
+	hdm := device.NewHwDevManager(devM, kubeClient)
+	if hdm == nil {
+		hwlog.RunLog.Errorf("init device manager failed")
+		return nil, err
+	}
+	hwlog.RunLog.Infof("init device manager success")
+	return hdm, nil
 }
 
 func setParameters() {

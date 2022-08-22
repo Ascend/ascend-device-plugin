@@ -5,10 +5,9 @@ package device
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
-	"huawei.com/npu-exporter/hwlog"
+	"huawei.com/mindx/common/hwlog"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
@@ -47,7 +46,7 @@ func NewHwAscend910Manager() *HwAscend910Manager {
 // physical npu sets corresponding to the deviTypes, and vNPU is vDeviTypes
 // vDeviTypes may is: [Ascend910-4c, Ascend910-4c, Ascend910-8c], also deviTypes may is: [Ascend910, Ascend910]
 // one class deviType will generate a socket file, like ascend910-4c.sock or Ascend910.sock, so we deduplicate
-func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]common.NpuDevice, allDeviceTypes *[]string, _ string) error {
+func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]common.NpuDevice, allDeviceTypes *[]string) error {
 	devNum, devList, err := hnm.dmgr.GetDeviceList()
 	if err != nil {
 		return err
@@ -82,8 +81,7 @@ func (hnm *HwAscend910Manager) DoWithVolcanoListAndWatch(classifyDevs map[string
 	}
 }
 
-// GetDeviceNetworkState check NPU network health
-func (hnm *HwAscend910Manager) GetDeviceNetworkState(logicID int32, device *common.NpuDevice) (string, error) {
+func (hnm *AscendTools) getDeviceNetworkState(logicID int32, device *common.NpuDevice) (string, error) {
 	healthCode, err := hnm.dmgr.GetDeviceNetWorkHealth(logicID)
 	if err != nil {
 		return "", err
@@ -198,7 +196,7 @@ func (hnm *HwAscend910Manager) getPatchLabel(chips sets.String) string {
 
 	var ascendLabel []string
 	for devName := range chips {
-		devTypeAndID := strings.Split(devName, common.GangSepDev)
+		devTypeAndID := strings.Split(devName, common.MiddelLine)
 		if len(devTypeAndID) != common.LabelDeviceLen {
 			continue
 		}
@@ -251,7 +249,7 @@ func (hnm *HwAscend910Manager) toStandardDeviceFmt(devices sets.String) sets.Str
 func (tool *AscendTools) checkDeviceNetworkHealthStatus(devices []*common.NpuDevice) bool {
 	var isNetStateChange = false
 	for idx, device := range devices {
-		healthStatus, err := tool.GetDeviceNetworkState(device.LogicID, device)
+		healthStatus, err := tool.getDeviceNetworkState(device.LogicID, device)
 		if err != nil {
 			healthStatus = v1beta1.Unhealthy
 		}

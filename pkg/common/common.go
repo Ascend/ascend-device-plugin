@@ -17,7 +17,7 @@ import (
 	"syscall"
 
 	"github.com/fsnotify/fsnotify"
-	"huawei.com/npu-exporter/hwlog"
+	"huawei.com/mindx/common/hwlog"
 	"k8s.io/api/core/v1"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
@@ -30,6 +30,7 @@ func GetPattern() map[string]string {
 		"fullPodName": "^[a-z0-9]+([a-z0-9\\-.]*)[a-z0-9]+$",
 		"vir910":      "Ascend910-(2|4|8|16)c",
 		"vir310p":     "Ascend310P-(1|2|4)c",
+		"ascend910":   `^Ascend910-\d+`,
 	}
 }
 

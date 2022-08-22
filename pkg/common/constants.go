@@ -77,6 +77,10 @@ const (
 	LabelDeviceLen = 2
 	// DefaultDeviceIP device ip address
 	DefaultDeviceIP = "127.0.0.1"
+	// NormalState health state
+	NormalState = uint32(0)
+	// GeneralAlarm health state
+	GeneralAlarm = uint32(1)
 
 	// SocketChmod socket file mode
 	SocketChmod = 0600
@@ -186,6 +190,8 @@ const (
 
 	// CommaSepDev if the separator between devices on annotation
 	CommaSepDev = ","
-	// GangSepDev if the separator between devices for split id
-	GangSepDev = "-"
+	// MiddelLine if the separator between devices for split id
+	MiddelLine = "-"
+	// UnderLine the separator between ids
+	UnderLine = "_"
 )

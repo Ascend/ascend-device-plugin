@@ -90,11 +90,11 @@ func TestDoWithVolcanoListAndWatch910(t *testing.T) {
 	})
 }
 
-func TestChangeToLongFormat(t *testing.T) {
-	convey.Convey("910 test ChangeToLongFormat", t, func() {
+func TestToStandardDeviceFmt(t *testing.T) {
+	convey.Convey("910 test toStandardDeviceFmt", t, func() {
 		hnm := NewHwAscend910Manager()
 		devices := sets.String{}.Insert("test910")
-		res := hnm.changeToLongFormat(devices)
+		res := hnm.toStandardDeviceFmt(devices)
 		convey.So(len(res), convey.ShouldEqual, 1)
 	})
 }

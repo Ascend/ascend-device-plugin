@@ -14,8 +14,8 @@ import (
 
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/smartystreets/goconvey/convey"
-	"huawei.com/npu-exporter/hwlog"
-	"huawei.com/npu-exporter/utils"
+	"huawei.com/mindx/common/hwlog"
+	"huawei.com/mindx/common/k8stool"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,7 +49,7 @@ func initK8S() (*ClientK8s, error) {
 	if err := os.Setenv(nodeNameKey, nodeNameValue); err != nil {
 		return nil, err
 	}
-	mockK8s := gomonkey.ApplyFunc(utils.K8sClientFor, func(string, string) (*kubernetes.Clientset, error) {
+	mockK8s := gomonkey.ApplyFunc(k8stool.K8sClientFor, func(string, string) (*kubernetes.Clientset, error) {
 		return nil, nil
 	})
 	defer mockK8s.Reset()

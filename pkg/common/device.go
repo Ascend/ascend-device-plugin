@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"huawei.com/npu-exporter/hwlog"
+	"huawei.com/mindx/common/hwlog"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
@@ -17,7 +17,7 @@ func getDeviceID(deviceName string, ascendRuntimeOptions string) (string, string
 	// hiAIAscend310Prefix: davinci-mini
 	// vnpu: davinci-coreNum-vid-devID, like Ascend910-2c-111-0
 	// ascend310:  davinci-mini0
-	idSplit := strings.Split(deviceName, GangSepDev)
+	idSplit := strings.Split(deviceName, MiddelLine)
 
 	if len(idSplit) < PhyDeviceLen {
 		return "", "", fmt.Errorf("id: %s is invalid", deviceName)
@@ -95,10 +95,9 @@ func labelToSets(deviceInfo []string) sets.String {
 // for device info, check device format, must Ascend910-0,Ascend910-1 and more
 func deviceInfoToSets(deviceInfo []string) sets.String {
 	// pattern no need to defined as global variable, only used here
-	pattern := `^Ascend910-\d+`
 	deviceSets := sets.String{}
 	for _, device := range deviceInfo {
-		if match, err := regexp.MatchString(pattern, device); !match || err != nil {
+		if match, err := regexp.MatchString(GetPattern()["ascend910"], device); !match || err != nil {
 			hwlog.RunLog.Warnf("current device %s format err: %#v", device, err)
 			continue
 		}
@@ -109,7 +108,7 @@ func deviceInfoToSets(deviceInfo []string) sets.String {
 
 // IsValidNumber input checkVal is a valid number
 func IsValidNumber(checkVal string) (int64, bool) {
-	if strings.Contains(checkVal, "_") {
+	if strings.Contains(checkVal, UnderLine) {
 		hwlog.RunLog.Warnf("device id %s invalid", checkVal)
 		return -1, false
 	}

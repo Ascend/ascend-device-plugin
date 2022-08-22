@@ -9,8 +9,8 @@ import (
 	"os"
 	"regexp"
 
-	"huawei.com/npu-exporter/hwlog"
-	"huawei.com/npu-exporter/utils"
+	"huawei.com/mindx/common/hwlog"
+	"huawei.com/mindx/common/k8stool"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,7 +31,7 @@ type ClientK8s struct {
 
 // NewClientK8s create ClientK8s
 func NewClientK8s(kubeConfig string) (*ClientK8s, error) {
-	client, err := utils.K8sClientFor(kubeConfig, common.Component)
+	client, err := k8stool.K8sClientFor(kubeConfig, common.Component)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create kube client: %v", err)
 	}

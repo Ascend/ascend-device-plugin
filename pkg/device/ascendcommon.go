@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"huawei.com/mindx/common/hwlog"
 	"huawei.com/npu-exporter/devmanager"
 	npuCommon "huawei.com/npu-exporter/devmanager/common"
-	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -39,6 +39,7 @@ type devManager interface {
 	GetDmgr() devmanager.DeviceInterface
 	SetKubeClient(*kubeclient.ClientK8s)
 	GetKubeClient() *kubeclient.ClientK8s
+	IsDeviceStatusChange([]*common.NpuDevice, string) bool
 	AddPodAnnotation(*v1.Pod, []string, []string, string, string) error
 }
 
@@ -68,8 +69,8 @@ func (tool *AscendTools) UpdateNodeDeviceInfo(devStatusSet common.DevStatusSet,
 	err := wait.PollImmediate(common.Interval*time.Second, common.Timeout*time.Second, func() (bool, error) {
 		deviceList, err := tool.getDeviceListFromConfigMap()
 		if err != nil {
-			hwlog.RunLog.Errorf("get device list failed, err: %#v", err)
-			return false, nil
+			hwlog.RunLog.Warnf("get device list from config map failed", err)
+			tool.client.ResetDeviceInfo()
 		}
 		newDeviceList := common.MapDeepCopy(deviceList)
 		if err := updateDeviceInfoFunc(deviceList, newDeviceList, devStatusSet); err != nil {
@@ -179,6 +180,9 @@ func getDeviceInfoData(deviceInfo *v1.ConfigMap) (map[string]string, error) {
 	var nodeDeviceInfo common.NodeDeviceInfoCache
 	if err := json.Unmarshal([]byte(data), &nodeDeviceInfo); err != nil {
 		return nil, fmt.Errorf("unmarshal configmap data failed, err: %#v", err)
+	}
+	if nodeDeviceInfo.CheckCode != common.MakeDataHash(nodeDeviceInfo.DeviceInfo) {
+		return nil, fmt.Errorf("configmap check hash code error")
 	}
 	return nodeDeviceInfo.DeviceInfo.DeviceList, nil
 }
@@ -314,7 +318,7 @@ func (tool *AscendTools) IsDeviceStatusChange(devices []*common.NpuDevice, devTy
 	for idx, device := range devices {
 		state, ok := devStateMap[device.PhyID]
 		if !ok {
-			state = tool.GetDevState(device.LogicID)
+			state = tool.getDevState(device.LogicID)
 			devStateMap[device.PhyID] = state
 		}
 		if state != device.Health {
@@ -346,4 +350,34 @@ func classifyDevByType(allDevs []common.NpuDevice, suffix string) []*common.NpuD
 		}
 	}
 	return classifyDev
+}
+
+func (tool *AscendTools) getDevState(logicID int32) string {
+	healthState, err := tool.dmgr.GetDeviceHealth(logicID)
+	if err != nil {
+		hwlog.RunLog.Errorf("get device healthy state failed, deviceId: %d, err: %#v", logicID, err)
+		return v1beta1.Unhealthy
+	}
+	switch healthState {
+	case common.NormalState, common.GeneralAlarm:
+		return v1beta1.Healthy
+	default:
+		if err = tool.unhealthyState(healthState, logicID); err != nil {
+			hwlog.RunLog.Errorf("UnhealthyState, err: %#v", err)
+		}
+		return v1beta1.Unhealthy
+	}
+}
+
+// UnhealthyState state unhealthy info
+func (tool *AscendTools) unhealthyState(healthyState uint32, logicID int32) error {
+	phyID, err := tool.dmgr.GetPhysicIDFromLogicID(logicID)
+	if err != nil {
+		return fmt.Errorf("get phyID failed %v", err)
+	}
+	if _, _, err := tool.dmgr.GetDeviceErrorCode(logicID); err != nil {
+		return fmt.Errorf("get device error code failed %v", err)
+	}
+	hwlog.RunLog.Errorf("device logicID: %d, phyID: %d, state is %d", logicID, phyID, healthyState)
+	return nil
 }

@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"huawei.com/mindx/common/hwlog"
 	"huawei.com/npu-exporter/devmanager"
-	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/api/core/v1"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
@@ -46,6 +46,10 @@ func NewHwDevManager(devM devmanager.DeviceInterface, client *kubeclient.ClientK
 	}
 	if err := hdm.setAllDeviceAndType(); err != nil {
 		hwlog.RunLog.Errorf("set all device and type failed, err: %v", err)
+		return nil
+	}
+	if err := hdm.initPluginServer(devM, client); err != nil {
+		hwlog.RunLog.Errorf("init plugin server failed, err: %v", err)
 		return nil
 	}
 	if common.ParamOption.UseVolcanoType {
@@ -88,7 +92,13 @@ func (hdm *HwDevManager) setAscendManager(dmgr devmanager.DeviceInterface, clien
 }
 
 func (hdm *HwDevManager) setAllDeviceAndType() error {
-	return hdm.manager.GetNPUs(&hdm.AllDevs, &hdm.AllDevTypes)
+	if err := hdm.manager.GetNPUs(&hdm.AllDevs, &hdm.AllDevTypes); err != nil {
+		return err
+	}
+	if len(hdm.AllDevTypes) == 0 {
+		return fmt.Errorf("no devices type found")
+	}
+	return nil
 }
 
 func (hdm *HwDevManager) initPluginServer(dmgr devmanager.DeviceInterface, client *kubeclient.ClientK8s) error {
@@ -347,7 +357,7 @@ func (hdm *HwDevManager) updateSpecTypePodAnnotation(podList *v1.PodList, device
 		if _, exist := pod.Annotations[common.PodRealAlloc]; exist {
 			continue
 		}
-		podKey := pod.Namespace + "_" + pod.Name
+		podKey := pod.Namespace + common.UnderLine + pod.Name
 		podResource, exist := podDevice[podKey]
 		if !exist {
 			hwlog.RunLog.Debugf("get %s klt device list failed, not in pod resource", podKey)
