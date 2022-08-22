@@ -70,8 +70,9 @@ func TestPluginServerStartPart1(t *testing.T) {
 			grpcServer: grpc.NewServer(),
 			deviceType: common.Ascend910}
 
-		socketWatcher := common.NewFileWatch()
-		err := ps.Start(socketWatcher)
+		socketWatcher, err := common.NewFileWatch()
+		convey.So(err, convey.ShouldBeNil)
+		err = ps.Start(socketWatcher)
 		convey.So(err.Error(), convey.ShouldEqual, "socket path verify failed")
 	})
 
@@ -92,8 +93,9 @@ func TestPluginServerStartPart1(t *testing.T) {
 			grpcServer: grpc.NewServer(),
 			deviceType: common.Ascend910}
 
-		socketWatcher := common.NewFileWatch()
-		err := ps.Start(socketWatcher)
+		socketWatcher, err := common.NewFileWatch()
+		convey.So(err, convey.ShouldBeNil)
+		err = ps.Start(socketWatcher)
 		convey.So(err.Error(), convey.ShouldEqual, "watch file failed")
 	})
 }
@@ -127,8 +129,9 @@ func TestPluginServerStartPart2(t *testing.T) {
 			grpcServer: grpc.NewServer(),
 			deviceType: common.Ascend910}
 
-		socketWatcher := common.NewFileWatch()
-		err := ps.Start(socketWatcher)
+		socketWatcher, err := common.NewFileWatch()
+		convey.So(err, convey.ShouldBeNil)
+		err = ps.Start(socketWatcher)
 		convey.So(err.Error(), convey.ShouldEqual, "remove file failed")
 	})
 }
@@ -162,8 +165,9 @@ func TestPluginServerStartPart3(t *testing.T) {
 			grpcServer: grpc.NewServer(),
 			deviceType: common.Ascend910}
 
-		socketWatcher := common.NewFileWatch()
-		err := ps.Start(socketWatcher)
+		socketWatcher, err := common.NewFileWatch()
+		convey.So(err, convey.ShouldBeNil)
+		err = ps.Start(socketWatcher)
 		convey.So(err.Error(), convey.ShouldEqual, "create listener failed")
 	})
 }
@@ -202,8 +206,9 @@ func TestPluginServerStartPart4(t *testing.T) {
 			grpcServer: grpc.NewServer(),
 			deviceType: common.Ascend910}
 
-		socketWatcher := common.NewFileWatch()
-		err := ps.Start(socketWatcher)
+		socketWatcher, err := common.NewFileWatch()
+		convey.So(err, convey.ShouldBeNil)
+		err = ps.Start(socketWatcher)
 		convey.So(err.Error(), convey.ShouldEqual, "change file mode failed")
 	})
 }
@@ -257,8 +262,9 @@ func TestPluginServerStartPart5(t *testing.T) {
 			grpcServer: grpc.NewServer(),
 			deviceType: common.Ascend910}
 
-		socketWatcher := common.NewFileWatch()
-		err := ps.Start(socketWatcher)
+		socketWatcher, err := common.NewFileWatch()
+		convey.So(err, convey.ShouldBeNil)
+		err = ps.Start(socketWatcher)
 		convey.So(err.Error(), convey.ShouldEqual, "check kubelet socket file path failed")
 	})
 }
@@ -315,8 +321,9 @@ func TestPluginServerStartPart6(t *testing.T) {
 			grpcServer: grpc.NewServer(),
 			deviceType: common.Ascend910}
 
-		socketWatcher := common.NewFileWatch()
-		err := ps.Start(socketWatcher)
+		socketWatcher, err := common.NewFileWatch()
+		convey.So(err, convey.ShouldBeNil)
+		err = ps.Start(socketWatcher)
 		convey.So(err.Error(), convey.ShouldContainSubstring, "connect to kubelet fail:")
 	})
 }
@@ -374,8 +381,9 @@ func TestPluginServerStartPart7(t *testing.T) {
 		ps := &PluginServer{
 			isRunning: common.NewAtomicBool(false), grpcServer: grpc.NewServer(), deviceType: common.Ascend910}
 
-		socketWatcher := common.NewFileWatch()
-		err := ps.Start(socketWatcher)
+		socketWatcher, err := common.NewFileWatch()
+		convey.So(err, convey.ShouldBeNil)
+		err = ps.Start(socketWatcher)
 		convey.So(err.Error(), convey.ShouldContainSubstring, "register to kubelet fail")
 	})
 }
@@ -432,8 +440,9 @@ func TestPluginServerStartPart8(t *testing.T) {
 		ps := &PluginServer{
 			isRunning: common.NewAtomicBool(false), grpcServer: grpc.NewServer(), deviceType: common.Ascend910}
 
-		socketWatcher := common.NewFileWatch()
-		err := ps.Start(socketWatcher)
+		socketWatcher, err := common.NewFileWatch()
+		convey.So(err, convey.ShouldBeNil)
+		err = ps.Start(socketWatcher)
 		convey.So(err, convey.ShouldBeNil)
 	})
 }
