@@ -245,3 +245,20 @@ func (hnm *HwAscend910Manager) toStandardDeviceFmt(devices sets.String) sets.Str
 
 	return standardSets
 }
+
+// check device network health status
+// only for Ascend910 and Non-virtual device
+func (tool *AscendTools) checkDeviceNetworkHealthStatus(devices []*common.NpuDevice) bool {
+	var isNetStateChange = false
+	for idx, device := range devices {
+		healthStatus, err := tool.GetDeviceNetworkState(device.LogicID, device)
+		if err != nil {
+			healthStatus = v1beta1.Unhealthy
+		}
+		if healthStatus != device.NetworkHealth {
+			isNetStateChange = true
+			devices[idx].NetworkHealth = healthStatus
+		}
+	}
+	return isNetStateChange
+}

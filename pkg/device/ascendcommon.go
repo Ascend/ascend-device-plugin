@@ -306,3 +306,44 @@ func (tool *AscendTools) AddPodAnnotation(pod *v1.Pod, kltRequestDevices, dpResp
 	}
 	return tool.client.TryUpdatePodAnnotation(pod, annotation)
 }
+
+// IsDeviceStatusChange is device status change
+func (tool *AscendTools) IsDeviceStatusChange(devices []*common.NpuDevice, devType string) bool {
+	isStateChange := false
+	devStateMap := make(map[int32]string, len(devices))
+	for idx, device := range devices {
+		state, ok := devStateMap[device.PhyID]
+		if !ok {
+			state = tool.GetDevState(device.LogicID)
+			devStateMap[device.PhyID] = state
+		}
+		if state != device.Health {
+			isStateChange = true
+			devices[idx].Health = state
+		}
+	}
+	if devType == common.Ascend910 {
+		isStateChange = tool.checkDeviceNetworkHealthStatus(devices) || isStateChange
+	}
+
+	return isStateChange
+}
+
+// ClassifyDevices classify diff type devices
+func ClassifyDevices(allDevs []common.NpuDevice, devTypes []string) map[string][]*common.NpuDevice {
+	var classifyMap = make(map[string][]*common.NpuDevice, len(devTypes))
+	for _, suffix := range devTypes {
+		classifyMap[suffix] = classifyDevByType(allDevs, suffix)
+	}
+	return classifyMap
+}
+
+func classifyDevByType(allDevs []common.NpuDevice, suffix string) []*common.NpuDevice {
+	var classifyDev []*common.NpuDevice
+	for index, device := range allDevs {
+		if device.DevType == suffix {
+			classifyDev = append(classifyDev, &allDevs[index])
+		}
+	}
+	return classifyDev
+}
