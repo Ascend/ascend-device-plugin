@@ -4,18 +4,23 @@
 package common
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
 	"strings"
 
 	"huawei.com/mindx/common/k8stool"
+	"huawei.com/mindx/common/utils"
+	"huawei.com/mindx/common/x509"
 	"k8s.io/client-go/kubernetes"
 )
 
 const (
-	kubeEnvMaxLength = 253
-	component        = "device-plugin"
+	kubeEnvMaxLength     = 253
+	component            = "device-plugin"
+	defaultKubeConfig    = "/etc/mindx-dl/device-plugin/.config/config6"
+	defaultKubeConfigBkp = "/etc/mindx-dl/device-plugin/.config6"
 	// PhyDeviceLen is the length of physical device
 	PhyDeviceLen = 2
 	// VirDeviceLen is the length of virtual device
@@ -75,6 +80,17 @@ func CheckNodeName(nodeName string) error {
 
 // NewKubeClient get client from KUBECONFIG  or not
 func NewKubeClient(kubeConfig string) (*kubernetes.Clientset, error) {
+	if kubeConfig == "" || kubeConfig == defaultKubeConfig {
+		cfgInstance, err := x509.NewBKPInstance(nil, defaultKubeConfig, defaultKubeConfigBkp)
+		if err != nil {
+			return nil, err
+		}
+		cfgBytes, err := cfgInstance.ReadFromDisk(utils.FileMode, true)
+		if err != nil || cfgBytes == nil {
+			return nil, errors.New("no kubeConfig file Found")
+		}
+		kubeConfig = defaultKubeConfig
+	}
 	return k8stool.K8sClientFor(kubeConfig, component)
 }
 
