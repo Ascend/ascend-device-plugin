@@ -5,11 +5,12 @@
 package huawei
 
 import (
+	"context"
 	"testing"
 
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/smartystreets/goconvey/convey"
-	"huawei.com/npu-exporter/hwlog"
+	"huawei.com/mindx/common/hwlog"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 
@@ -119,10 +120,8 @@ func getGroupAllocatableDevs(ascendValue string) map[string]string {
 }
 
 func init() {
-	stopCh := make(chan struct{})
-	defer close(stopCh)
 	hwLogConfig := hwlog.LogConfig{
 		OnlyToStdout: true,
 	}
-	hwlog.InitRunLogger(&hwLogConfig, stopCh)
+	hwlog.InitRunLogger(&hwLogConfig, context.Background())
 }

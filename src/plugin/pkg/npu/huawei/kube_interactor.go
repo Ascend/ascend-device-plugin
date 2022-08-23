@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"huawei.com/npu-exporter/hwlog"
+	"huawei.com/mindx/common/hwlog"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"

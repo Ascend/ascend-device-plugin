@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"huawei.com/npu-exporter/utils"
+	"huawei.com/mindx/common/k8stool"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -75,7 +75,7 @@ func CheckNodeName(nodeName string) error {
 
 // NewKubeClient get client from KUBECONFIG  or not
 func NewKubeClient(kubeConfig string) (*kubernetes.Clientset, error) {
-	return utils.K8sClientFor(kubeConfig, component)
+	return k8stool.K8sClientFor(kubeConfig, component)
 }
 
 // GetNodeNameFromEnv get node name from env
