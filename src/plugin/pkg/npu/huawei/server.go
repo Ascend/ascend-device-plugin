@@ -18,13 +18,15 @@ package huawei
 
 import (
 	"fmt"
-	"go.uber.org/atomic"
-	"google.golang.org/grpc"
-	"Ascend-device-plugin/src/plugin/pkg/npu/hwlog"
-	"k8s.io/apimachinery/pkg/util/sets"
-	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"os"
 	"time"
+
+	"go.uber.org/atomic"
+	"google.golang.org/grpc"
+	"k8s.io/apimachinery/pkg/util/sets"
+	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+
+	"Ascend-device-plugin/src/plugin/pkg/npu/hwlog"
 )
 
 // HwPluginServe show plugin data
@@ -52,13 +54,9 @@ type HwPluginServeInterface interface {
 
 // NewHwPluginServe new a device plugin server
 func NewHwPluginServe(hdm *HwDevManager, devType string, socket string) HwPluginServeInterface {
-	var ki *KubeInteractor
-	var err error
-	if useVolcanoType {
-		ki, err = NewKubeInteractor()
-		if err != nil {
-			hwlog.Errorf("cannot create kube interactor, err: %v", err)
-		}
+	ki, err := NewKubeInteractor()
+	if err != nil {
+		hwlog.Errorf("cannot create kube interactor, err: %v", err)
 	}
 	return &HwPluginServe{
 		devType:        devType,

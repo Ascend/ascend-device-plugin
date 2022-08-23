@@ -1,3 +1,37 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ascend-device-plugin-sa
+  namespace: kube-system
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: pods-node-ascend-device-plugin-role
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "update"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["nodes/status"]
+    verbs: ["get", "patch"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: pods-node-ascend-device-plugin-rolebinding
+subjects:
+  - kind: ServiceAccount
+    name: ascend-device-plugin-sa
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: pods-node-ascend-device-plugin-role
+  apiGroup: rbac.authorization.k8s.io
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -29,6 +63,7 @@ spec:
       priorityClassName: "system-node-critical"
       nodeSelector:
         accelerator: huawei-Ascend910
+      serviceAccountName: ascend-device-plugin-sa
       containers:
       - image: ascend-k8sdeviceplugin:v2.0.2
         name: device-plugin-01
@@ -49,14 +84,26 @@ spec:
         volumeMounts:
           - name: device-plugin
             mountPath: /var/lib/kubelet/device-plugins
+          - name: pod-resources
+            mountPath: /var/lib/kubelet/pod-resources
           - name: hiai-driver
             mountPath: /usr/local/Ascend/driver
           - name: log-path
             mountPath: /var/log/mindx-dl/devicePlugin
+          - name: localtime
+            mountPath: /etc/localtime
+        env:
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
       volumes:
         - name: device-plugin
           hostPath:
             path: /var/lib/kubelet/device-plugins
+        - name: pod-resources
+          hostPath:
+            path: /var/lib/kubelet/pod-resources
         - name: hiai-driver
           hostPath:
             path: /usr/local/Ascend/driver
@@ -64,3 +111,6 @@ spec:
           hostPath:
             path: /var/log/mindx-dl/devicePlugin
             type: Directory
+        - name: localtime
+          hostPath:
+            path: /etc/localtime
