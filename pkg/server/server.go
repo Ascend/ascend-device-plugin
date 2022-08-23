@@ -154,5 +154,5 @@ func createNetListener(socketWatcher *common.FileWatch, deviceType string) (net.
 	if err = os.Chmod(pluginSocketPath, common.SocketChmod); err != nil {
 		hwlog.RunLog.Errorf("change file: %s mode error", path.Base(pluginSocketPath))
 	}
-	return netListen, nil
+	return netListen, err
 }
