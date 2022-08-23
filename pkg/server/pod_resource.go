@@ -134,7 +134,7 @@ func (pr *PodResource) GetPodResource() (map[string]PodDevice, error) {
 			continue
 		}
 		resourceName, podDevice, err := pr.getDeviceFromPod(pod)
-		if err != nil {
+		if err != nil || resourceName == "" || len(podDevice) == 0 {
 			continue
 		}
 		device[pod.Namespace+"_"+pod.Name] = PodDevice{

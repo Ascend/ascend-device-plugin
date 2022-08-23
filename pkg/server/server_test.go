@@ -14,19 +14,10 @@ import (
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/smartystreets/goconvey/convey"
 	"google.golang.org/grpc"
-	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/pkg/common"
 )
-
-func init() {
-	stopCh := make(chan struct{})
-	hwLogConfig := hwlog.LogConfig{
-		OnlyToStdout: true,
-	}
-	hwlog.InitRunLogger(&hwLogConfig, stopCh)
-}
 
 // TestPluginServerGetRestartFlag Test PluginServer GetRestartFlag()
 func TestPluginServerGetRestartFlag(t *testing.T) {

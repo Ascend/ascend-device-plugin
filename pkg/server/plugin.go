@@ -295,7 +295,7 @@ func getDevPath(id, ascendRuntimeOptions string) (string, string) {
 }
 
 func mountDevice(resp *v1beta1.ContainerAllocateResponse, devices []string, ascendRuntimeOptions string) {
-	for deviceID := range devices {
+	for _, deviceID := range devices {
 		containerPath, hostPath := getDevPath(fmt.Sprintf("%s", deviceID), ascendRuntimeOptions)
 		resp.Devices = append(resp.Devices, &v1beta1.DeviceSpec{
 			HostPath:      hostPath,
