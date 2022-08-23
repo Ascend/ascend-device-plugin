@@ -120,6 +120,10 @@ const (
 	Ascend310Pc4Cpu3 = "Ascend310P-4c.3cpu"
 	// Ascend310Pc2Cpu1 Ascend310P 2core 1cpu
 	Ascend310Pc2Cpu1 = "Ascend310P-2c.1cpu"
+	// Ascend310Pc4Cpu4Dvpp Ascend310P 4core 4cpu dvpp
+	Ascend310Pc4Cpu4Dvpp = "Ascend310P-4c.4cpu.dvpp"
+	// Ascend310Pc4Cpu3Ndvpp Ascend310P 4core 3cpu ndvpp
+	Ascend310Pc4Cpu3Ndvpp = "Ascend310P-4c.3cpu.ndvpp"
 	// HuaweiAscend310P with prefix
 	HuaweiAscend310P = ResourceNamePrefix + Ascend310P
 

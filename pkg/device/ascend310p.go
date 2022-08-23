@@ -65,11 +65,13 @@ func (hnm *HwAscend310PManager) DoWithVolcanoListAndWatch(classifyDevs map[strin
 
 func (hnm *HwAscend310PManager) getTemplateName2DeviceTypeMap() map[string]string {
 	return map[string]string{
-		"vir04":    common.Ascend310Pc4,
-		"vir04_3c": common.Ascend310Pc4Cpu3,
-		"vir02":    common.Ascend310Pc2,
-		"vir02_1c": common.Ascend310Pc2Cpu1,
-		"vir01":    common.Ascend310Pc1,
+		"vir04":          common.Ascend310Pc4,
+		"vir04_3c":       common.Ascend310Pc4Cpu3,
+		"vir02":          common.Ascend310Pc2,
+		"vir02_1c":       common.Ascend310Pc2Cpu1,
+		"vir01":          common.Ascend310Pc1,
+		"vir04_4c_dvpp":  common.Ascend310Pc4Cpu4Dvpp,
+		"vir04_3c_ndvpp": common.Ascend310Pc4Cpu3Ndvpp,
 	}
 }
 
