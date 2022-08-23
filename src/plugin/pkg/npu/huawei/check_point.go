@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"huawei.com/npu-exporter/hwlog"
-	"huawei.com/npu-exporter/utils"
+	"huawei.com/mindx/common/hwlog"
+	"huawei.com/mindx/common/utils"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"k8s.io/kubernetes/pkg/kubelet/cm/devicemanager/checkpoint"
 

@@ -15,10 +15,10 @@ import (
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/smartystreets/goconvey/convey"
 	"go.uber.org/atomic"
+	"huawei.com/mindx/common/hwlog"
+	"huawei.com/mindx/common/utils"
 	"huawei.com/npu-exporter/devmanager"
 	npuCommon "huawei.com/npu-exporter/devmanager/common"
-	"huawei.com/npu-exporter/hwlog"
-	"huawei.com/npu-exporter/utils"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
