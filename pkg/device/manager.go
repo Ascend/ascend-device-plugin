@@ -364,8 +364,8 @@ func (hdm *HwDevManager) updateSpecTypePodAnnotation(podList *v1.PodList, device
 			continue
 		}
 		if podResource.ResourceName != common.ResourceNamePrefix+deviceType {
-			hwlog.RunLog.Debugf("podKey %s resource name not equal device type %s", podKey, podResource.ResourceName,
-				deviceType)
+			hwlog.RunLog.Debugf("podKey %s resource name %s not equal device type %s", podKey,
+				podResource.ResourceName, deviceType)
 			continue
 		}
 		volDeviceList, err := pluginServer.GetRealAllocateDevices(podResource.DeviceIds)

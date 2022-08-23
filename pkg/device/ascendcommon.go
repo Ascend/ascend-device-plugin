@@ -69,7 +69,7 @@ func (tool *AscendTools) UpdateNodeDeviceInfo(devStatusSet common.DevStatusSet,
 	err := wait.PollImmediate(common.Interval*time.Second, common.Timeout*time.Second, func() (bool, error) {
 		deviceList, err := tool.getDeviceListFromConfigMap()
 		if err != nil {
-			hwlog.RunLog.Warnf("get device list from config map failed", err)
+			hwlog.RunLog.Warnf("get device list from config map failed, %s", err.Error())
 			tool.client.ResetDeviceInfo()
 		}
 		newDeviceList := common.MapDeepCopy(deviceList)

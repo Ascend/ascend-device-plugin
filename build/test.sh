@@ -9,6 +9,7 @@ export PATH=$GOPATH/bin:$PATH
 
 function execute_test() {
   if ! (go test  -mod=mod -gcflags=all=-l -v -race -coverprofile cov.out ${TOP_DIR}/pkg/... >./$file_input); then
+    cat ./$file_input
     echo '****** go test cases error! ******'
     exit 1
   else

@@ -81,6 +81,9 @@ func TestPodResourceStart2(t *testing.T) {
 				return nil, nil, nil
 			})
 			defer mockGetClient.Reset()
+			funcStub := gomonkey.ApplyFunc(common.VerifyPathAndPermission,
+				func(verifyPathAndPermission string) (string, bool) { return verifyPathAndPermission, true })
+			defer funcStub.Reset()
 			convey.So(pr.Start(socketWatcher), convey.ShouldBeNil)
 		})
 	})
@@ -202,39 +205,6 @@ func TestPodResourceGetPodResource2(t *testing.T) {
 		convey.So(len(device), convey.ShouldEqual, 0)
 	})
 	mockList.Reset()
-}
-
-// TestPodResourceRestart for test restart pod resource client
-func TestPodResourceRestart(t *testing.T) {
-	convey.Convey("test pod resource client", t, func() {
-		mockVerifyPath := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(verifyPath string) (string, bool) {
-			return "", true
-		})
-		mockVerifyPath.Reset()
-		mockWatchFile := gomonkey.ApplyMethod(reflect.TypeOf(new(common.FileWatch)), "WatchFile",
-			func(_ *common.FileWatch, fileName string) error { return nil })
-		defer mockWatchFile.Reset()
-		mockGetClient := gomonkey.ApplyFunc(podresources.GetClient, func(socket string,
-			connectionTimeout time.Duration, maxMsgSize int) (v1alpha1.PodResourcesListerClient,
-			*grpc.ClientConn, error) {
-			return &FakeClient{}, &grpc.ClientConn{}, nil
-		})
-		defer mockGetClient.Reset()
-		mockClose := gomonkey.ApplyMethod(reflect.TypeOf(new(grpc.ClientConn)), "Close",
-			func(_ *grpc.ClientConn) error { return nil })
-		defer mockClose.Reset()
-		pr := &PodResource{restart: false}
-		socketWatcher, err := common.NewFileWatch()
-		convey.So(err, convey.ShouldBeNil)
-		err = pr.Start(socketWatcher)
-		convey.So(err, convey.ShouldBeNil)
-		pr.Stop()
-		convey.So(pr.conn, convey.ShouldBeNil)
-		pr.Start(socketWatcher)
-		convey.So(err, convey.ShouldBeNil)
-		pr.Stop()
-		convey.So(pr.conn, convey.ShouldBeNil)
-	})
 }
 
 type FakeClient struct{}

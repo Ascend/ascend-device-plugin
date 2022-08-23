@@ -4,6 +4,7 @@
 package device
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -21,11 +22,10 @@ import (
 )
 
 func init() {
-	stopCh := make(chan struct{})
 	hwLogConfig := hwlog.LogConfig{
 		OnlyToStdout: true,
 	}
-	hwlog.InitRunLogger(&hwLogConfig, stopCh)
+	hwlog.InitRunLogger(&hwLogConfig, context.Background())
 }
 
 func createFake310Manager(fdFlag, useAscendDocker bool) *HwDevManager {

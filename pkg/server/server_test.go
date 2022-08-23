@@ -10,6 +10,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/smartystreets/goconvey/convey"
@@ -376,14 +377,16 @@ func TestPluginServerStartPart7(t *testing.T) {
 		convey.So(err, convey.ShouldBeNil)
 		err = ps.Start(socketWatcher)
 		convey.So(err.Error(), convey.ShouldContainSubstring, "register to kubelet fail")
+		time.Sleep(time.Second)
 	})
 }
 
 // TestPluginServerStartPart8 Test PluginServer Start()
 func TestPluginServerStartPart8(t *testing.T) {
 	convey.Convey("when register conn close failed", t, func() {
-		funcStub := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(VerifyPathAndPermission string) (string, bool) {
-			return VerifyPathAndPermission, true
+		funcStub := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(path string) (string,
+			bool) {
+			return path, true
 		})
 		defer funcStub.Reset()
 

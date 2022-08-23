@@ -100,7 +100,7 @@ func TestToStandardDeviceFmt(t *testing.T) {
 }
 
 func TestGetPatchLabel(t *testing.T) {
-	convey.Convey("910 getPatchLabel", func() {
+	convey.Convey("910 getPatchLabel", t, func() {
 		hnm := NewHwAscend910Manager()
 		devices := sets.String{}.Insert("100-1")
 		devices.Insert("100-2")

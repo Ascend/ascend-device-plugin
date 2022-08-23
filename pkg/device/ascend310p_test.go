@@ -26,8 +26,8 @@ func createFake310pManager() *HwDevManager {
 	return hdm
 }
 
-func TestHwAscend310pManagerGetNPUs(t *testing.T) {
-	convey.Convey("310p get npu", func() {
+func TestHwAscend310PManagerGetNPUs(t *testing.T) {
+	convey.Convey("310p get npu", t, func() {
 		hdm := createFake310pManager()
 		err := hdm.manager.GetNPUs(&hdm.AllDevs, &hdm.AllDevTypes)
 		convey.So(err, convey.ShouldBeNil)
@@ -38,7 +38,7 @@ func TestHwAscend310pManagerGetNPUs(t *testing.T) {
 }
 
 func TestDoWithVolcanoListAndWatch310p(t *testing.T) {
-	convey.Convey("310p DoWithVolcanoListAndWatch", func() {
+	convey.Convey("310p DoWithVolcanoListAndWatch", t, func() {
 		hdm := createFake310pManager()
 		fakeKubeInteractor := &kubeclient.ClientK8s{Clientset: nil, NodeName: "NODE_NAME"}
 		hdm.manager.SetKubeClient(fakeKubeInteractor)

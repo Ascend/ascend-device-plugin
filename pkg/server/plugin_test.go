@@ -47,11 +47,10 @@ var (
 )
 
 func init() {
-	stopCh := make(chan struct{})
 	hwLogConfig := hwlog.LogConfig{
 		OnlyToStdout: true,
 	}
-	hwlog.InitRunLogger(&hwLogConfig, stopCh)
+	hwlog.InitRunLogger(&hwLogConfig, context.Background())
 }
 
 // TestListAndWatch for test the interface ListAndWatch
