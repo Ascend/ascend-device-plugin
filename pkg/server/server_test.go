@@ -10,7 +10,6 @@ import (
 	"os"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/smartystreets/goconvey/convey"
@@ -322,67 +321,6 @@ func TestPluginServerStartPart6(t *testing.T) {
 
 // TestPluginServerStartPart7 Test PluginServer Start()
 func TestPluginServerStartPart7(t *testing.T) {
-	convey.Convey("when register client register failed", t, func() {
-		funcStub := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(VerifyPathAndPermission string) (string, bool) {
-			return VerifyPathAndPermission, true
-		})
-		defer funcStub.Reset()
-
-		watchStub := gomonkey.ApplyMethod(reflect.TypeOf(new(common.FileWatch)),
-			"WatchFile", func(_ *common.FileWatch, _ string) error { return nil })
-		defer watchStub.Reset()
-
-		statStub := gomonkey.ApplyFunc(os.Stat, func(name string) (os.FileInfo, error) {
-			return nil, errors.New("not exist")
-		})
-		defer statStub.Reset()
-
-		listenStub := gomonkey.ApplyFunc(net.Listen, func(network, address string) (net.Listener, error) {
-			return nil, nil
-		})
-		defer listenStub.Reset()
-
-		modStub := gomonkey.ApplyFunc(os.Chmod, func(name string, mode os.FileMode) error { return nil })
-		defer modStub.Reset()
-
-		var server *grpc.Server
-		grpcStub := gomonkey.ApplyMethod(reflect.TypeOf(server), "Serve",
-			func(_ *grpc.Server, _ net.Listener) error { return nil })
-		defer grpcStub.Reset()
-
-		grpcStub2 := gomonkey.ApplyMethod(reflect.TypeOf(server),
-			"GetServiceInfo", func(_ *grpc.Server) map[string]grpc.ServiceInfo {
-				return map[string]grpc.ServiceInfo{"1": grpc.ServiceInfo{}}
-			})
-		defer grpcStub2.Reset()
-
-		dialStub := gomonkey.ApplyFunc(grpc.Dial, func(_ string,
-			_ ...grpc.DialOption) (*grpc.ClientConn, error) {
-			return &grpc.ClientConn{}, nil
-		})
-		defer dialStub.Reset()
-
-		connCloseStub := gomonkey.ApplyMethod(reflect.TypeOf(new(grpc.ClientConn)),
-			"Close", func(_ *grpc.ClientConn) error { return nil })
-		defer connCloseStub.Reset()
-
-		newClientStub := gomonkey.ApplyFunc(v1beta1.NewRegistrationClient,
-			func(_ *grpc.ClientConn) v1beta1.RegistrationClient { return &fakeConn{} })
-		defer newClientStub.Reset()
-
-		ps := &PluginServer{
-			isRunning: common.NewAtomicBool(false), grpcServer: grpc.NewServer(), deviceType: common.Ascend910}
-
-		socketWatcher, err := common.NewFileWatch()
-		convey.So(err, convey.ShouldBeNil)
-		err = ps.Start(socketWatcher)
-		convey.So(err.Error(), convey.ShouldContainSubstring, "register to kubelet fail")
-		time.Sleep(time.Second)
-	})
-}
-
-// TestPluginServerStartPart8 Test PluginServer Start()
-func TestPluginServerStartPart8(t *testing.T) {
 	convey.Convey("when register conn close failed", t, func() {
 		funcStub := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(path string) (string,
 			bool) {
@@ -428,7 +366,7 @@ func TestPluginServerStartPart8(t *testing.T) {
 		defer connCloseStub.Reset()
 
 		newClientStub := gomonkey.ApplyFunc(v1beta1.NewRegistrationClient,
-			func(_ *grpc.ClientConn) v1beta1.RegistrationClient { return &fakeConn2{} })
+			func(_ *grpc.ClientConn) v1beta1.RegistrationClient { return &fakeConn{} })
 		defer newClientStub.Reset()
 
 		ps := &PluginServer{
@@ -446,15 +384,6 @@ type fakeConn struct {
 
 // Register fake implement
 func (f *fakeConn) Register(ctx context.Context,
-	in *v1beta1.RegisterRequest, opts ...grpc.CallOption) (*v1beta1.Empty, error) {
-	return nil, errors.New("register failed")
-}
-
-type fakeConn2 struct {
-}
-
-// Register fake implement
-func (f *fakeConn2) Register(ctx context.Context,
 	in *v1beta1.RegisterRequest, opts ...grpc.CallOption) (*v1beta1.Empty, error) {
 	return nil, nil
 }
