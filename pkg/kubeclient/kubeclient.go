@@ -11,6 +11,8 @@ import (
 
 	"huawei.com/mindx/common/hwlog"
 	"huawei.com/mindx/common/k8stool"
+	"huawei.com/mindx/common/utils"
+	"huawei.com/mindx/common/x509"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,6 +33,18 @@ type ClientK8s struct {
 
 // NewClientK8s create ClientK8s
 func NewClientK8s(kubeConfig string) (*ClientK8s, error) {
+	if kubeConfig == "" && (utils.IsExist(common.DefaultKubeConfig) || utils.IsExist(common.DefaultKubeConfigBkp)) {
+		// if default path kubeConfig file is not exist means use serverAccount
+		cfgInstance, err := x509.NewBKPInstance(nil, common.DefaultKubeConfig, common.DefaultKubeConfigBkp)
+		if err != nil {
+			return nil, err
+		}
+		cfgBytes, err := cfgInstance.ReadFromDisk(utils.FileMode, true)
+		if err != nil || cfgBytes == nil {
+			return nil, fmt.Errorf("no kubeConfig file Found")
+		}
+		kubeConfig = common.DefaultKubeConfig
+	}
 	client, err := k8stool.K8sClientFor(kubeConfig, common.Component)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create kube client: %v", err)

@@ -139,7 +139,7 @@ func InitFunction() (*device.HwDevManager, error) {
 	if common.ParamOption.UseVolcanoType {
 		kubeClient, err = kubeclient.NewClientK8s(common.ParamOption.KubeConfig)
 		if err != nil {
-			hwlog.RunLog.Errorf("init kubeclient failed")
+			hwlog.RunLog.Errorf("init kubeclient failed err: %#v", err)
 			return nil, err
 		}
 		hwlog.RunLog.Infof("init kubeclient success")
