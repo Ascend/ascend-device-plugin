@@ -42,14 +42,17 @@ func GetPodPhaseBlackList() map[v1.PodPhase]int {
 // SetAscendRuntimeEnv is to set ascend runtime environment
 func SetAscendRuntimeEnv(devices []string, ascendRuntimeOptions string,
 	resp *v1beta1.ContainerAllocateResponse) {
-	var ascendVisibleDevices []string
+	if resp == nil {
+		hwlog.RunLog.Error("resp is nil")
+		return
+	}
 	if len((*resp).Envs) == 0 {
 		(*resp).Envs = make(map[string]string, runtimeEnvNum)
 	}
 	(*resp).Envs[ascendVisibleDevicesEnv] = strings.Join(devices, ",")
 	(*resp).Envs[ascendRuntimeOptionsEnv] = ascendRuntimeOptions
 
-	hwlog.RunLog.Infof("allocate resp env: %s; %s", strings.Join(ascendVisibleDevices, ","), ascendRuntimeOptions)
+	hwlog.RunLog.Infof("allocate resp env: %s; %s", (*resp).Envs[ascendVisibleDevicesEnv], ascendRuntimeOptions)
 }
 
 // MakeDataHash Make Data Hash
