@@ -117,21 +117,20 @@ func (hnm *HwAscend910Manager) updateDeviceInfo(oldDevInfo, newDevInfo map[strin
 	}
 	newDevRecoverLabel, newAscend910 := hnm.getHealthAndRecoverDev(devStatusSet, nodeFmtDevRecover,
 		common.ConvertDevListToSets(oldDevInfo[common.HuaweiUnHealthAscend910], common.CommaSepDev))
-	newNetRecoverLabel, newNetUHDevSets := hnm.getNewNetworkRecoverDev(devStatusSet,
+	newNetRecoverSets, newNetUHDevSets := hnm.getNewNetworkRecoverDev(devStatusSet.NetUnHealthyDevice,
 		common.ConvertDevListToSets(oldDevInfo[common.HuaweiNetworkUnHealthAscend910], common.CommaSepDev),
 		nodeFmtDevNetRecover)
-
 	newDevInfo[common.HuaweiAscend910] = newAscend910
 	newDevInfo[common.HuaweiUnHealthAscend910] = common.ToString(devStatusSet.UnHealthyDevice, common.CommaSepDev)
 	newDevInfo[common.HuaweiNetworkUnHealthAscend910] = common.ToString(newNetUHDevSets, common.CommaSepDev)
 	if common.ParamOption.AutoStowingDevs {
 		return nil
 	}
-	if err := hnm.updateNodeLabel(curNode, newDevRecoverLabel, newNetRecoverLabel); err != nil {
+	if err := hnm.updateNodeLabel(curNode, newDevRecoverLabel, hnm.getPatchLabel(newNetRecoverSets)); err != nil {
 		hwlog.RunLog.Errorf("update node label failed, err: %#v", err)
 		return err
 	}
-	lastTimeNetworkRecoverDevices = newNetUHDevSets
+	lastTimeNetworkRecoverDevices = newNetRecoverSets
 	return nil
 }
 
@@ -161,30 +160,24 @@ func (hnm *HwAscend910Manager) getHealthAndRecoverDev(curDevStatusSet common.Dev
 }
 
 // getNewNetworkRecoverDev , return new devices to be restored and network unhealthy device in this times
-func (hnm *HwAscend910Manager) getNewNetworkRecoverDev(diffStatusSet common.DevStatusSet, nnu, nnr sets.String) (
-	string, sets.String) {
-	// nnu means node annotation network unhealthy devices
-	// nnr means device's network is ok and to be restored
-	// this time network unhealthy devices
-	tud := diffStatusSet.NetUnHealthyDevice
-	// if there is no network unhealthy device and autoStowingDevs is true
+func (hnm *HwAscend910Manager) getNewNetworkRecoverDev(totalNetUHDev, devInfoNetUHRecord,
+	labelRecoverRecord sets.String) (sets.String, sets.String) {
+	// devInfoNetUHRecord means device info record network unhealthy devices
+	// labelRecoverRecord means device's network is ok and to be restored
+	// if there is no network unhealthy device and autoStowing devices is true
 	if common.ParamOption.AutoStowingDevs {
-		return "", tud
+		return sets.String{}, totalNetUHDev
 	}
-
 	// devices recovered between the last check and this check
-	recoveredDevSets := lastTimeNetworkRecoverDevices.Difference(nnr)
+	recoveredDevSets := lastTimeNetworkRecoverDevices.Difference(labelRecoverRecord)
 
-	newNetworkRecoverDevSets := sets.String{}
-	newNetworkRecoverDevSets = newNetworkRecoverDevSets.Union(nnu.Difference(tud))
+	newNetworkRecoverDevSets := devInfoNetUHRecord.Difference(totalNetUHDev)
 	// remove the device that network is unhealthy in this times
-	newNetworkRecoverDevSets = newNetworkRecoverDevSets.Difference(nnr.Intersection(tud))
+	newNetworkRecoverDevSets = newNetworkRecoverDevSets.Difference(labelRecoverRecord.Intersection(totalNetUHDev))
 	// remove the device that recovered
 	newNetworkRecoverDevSets = newNetworkRecoverDevSets.Difference(recoveredDevSets)
-
-	newNetworkUnhealthyDevSets := nnu.Union(tud).Difference(recoveredDevSets)
-
-	return hnm.getPatchLabel(newNetworkRecoverDevSets), newNetworkUnhealthyDevSets
+	newNetworkUnhealthyDevSets := devInfoNetUHRecord.Union(totalNetUHDev).Difference(recoveredDevSets)
+	return newNetworkRecoverDevSets, newNetworkUnhealthyDevSets
 }
 
 // getPatchLabel get elements one by one from the sets and change the element "Ascend910-x" to "x"
