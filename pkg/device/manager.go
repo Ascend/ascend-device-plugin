@@ -187,6 +187,7 @@ func (hdm *HwDevManager) SignCatch(cancel context.CancelFunc) {
 		hwlog.RunLog.Infof("Received signal: %s, shutting down.", s.String())
 		cancel()
 		hdm.DeleteDeviceInfo()
+		hdm.stopAllSever()
 		hdm.manager.GetDmgr().ShutDown()
 	}
 }
@@ -235,8 +236,6 @@ func (hdm *HwDevManager) Serve(ctx context.Context) {
 			time.Sleep(common.SleepTime * time.Second)
 		}
 	}
-
-	hdm.stopAllSever()
 }
 
 func (hdm *HwDevManager) handleEvents(ctx context.Context, restartSignal chan os.Signal,

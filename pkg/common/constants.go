@@ -12,9 +12,7 @@ const (
 	MaxAge = 7
 
 	// KubeEnvMaxLength k8s env name max length
-	KubeEnvMaxLength = 253
-	// NodeNameEnvMaxLength node name max length
-	NodeNameEnvMaxLength = 253
+	KubeEnvMaxLength = 230
 	// PodNameMaxLength pod name max length
 	PodNameMaxLength = 253
 	// PodNameSpaceMaxLength pod name space max length
@@ -25,8 +23,6 @@ const (
 	MaxContainerLimit = 300000
 	// RetryUpdateCount is max number of retry resource update
 	RetryUpdateCount = 3
-	// MaxResourceNameLen max length of resource name, like "huawei.com/Ascend310P-4c.3cpu"
-	MaxResourceNameLen = 50
 	// MaxDeviceNameLen max length of device name, like "Ascend310P-4c.3cpu-100-0"
 	MaxDeviceNameLen = 50
 
@@ -55,16 +51,10 @@ const (
 	PodResourceSeverKey = "podResource"
 	// VirtualDev Virtual device tag
 	VirtualDev = "VIRTUAL"
-	// FunctionNotFound for describe devmanager interface function is exist or not
-	FunctionNotFound = "-99998"
 	// PhyDeviceLen like Ascend910-0 split length is 2
 	PhyDeviceLen = 2
 	// VirDeviceLen like Ascend910-2c-100-1 split length is 4
 	VirDeviceLen = 4
-	// PhyDevTypeIndex type index
-	PhyDevTypeIndex = 0
-	// VirDevTypeIndex type index
-	VirDevTypeIndex = 1
 	// MaxDevicesNum max device num
 	MaxDevicesNum = 64
 	// MaxCardNum max card num
