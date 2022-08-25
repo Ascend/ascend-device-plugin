@@ -159,9 +159,21 @@ func TestPodResourceGetPodResource1(t *testing.T) {
 		_, err := pr.GetPodResource()
 		convey.So(err, convey.ShouldNotBeNil)
 	})
+	convey.Convey("pod name syntax illegal", t, func() {
+		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "invalid_name",
+			Containers: make([]*v1alpha1.ContainerResources, common.MaxContainerLimit+1)}}
+		_, err := pr.GetPodResource()
+		convey.So(err, convey.ShouldBeNil)
+	})
+	convey.Convey("pod name syntax illegal", t, func() {
+		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "pod-name", Namespace: "invalid_namespace",
+			Containers: make([]*v1alpha1.ContainerResources, common.MaxContainerLimit+1)}}
+		_, err := pr.GetPodResource()
+		convey.So(err, convey.ShouldBeNil)
+	})
 	convey.Convey("the number of containers exceeds the upper limit", t, func() {
-		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Containers: make([]*v1alpha1.
-			ContainerResources, common.MaxContainerLimit+1)}}
+		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "pod-name", Namespace: "pod-namespace",
+			Containers: make([]*v1alpha1.ContainerResources, common.MaxContainerLimit+1)}}
 		_, err := pr.GetPodResource()
 		convey.So(err, convey.ShouldBeNil)
 	})
@@ -176,35 +188,73 @@ func TestPodResourceGetPodResource2(t *testing.T) {
 			opts ...grpc.CallOption) (*v1alpha1.ListPodResourcesResponse, error) {
 			return &podResourceResponse, nil
 		})
-	convey.Convey("Containers is nil", t, func() {
-		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Containers: []*v1alpha1.
-			ContainerResources{nil}}}
-		device, err := pr.GetPodResource()
-		convey.So(err, convey.ShouldBeNil)
-		convey.So(len(device), convey.ShouldEqual, 0)
-	})
-	convey.Convey("the number of container device type exceeds the upper limit", t, func() {
-		podResourceResponse.PodResources = []*v1alpha1.PodResources{{
+	defer mockList.Reset()
+	convey.Convey("the number of containers device type exceeds the upper limit", t, func() {
+		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "pod-name", Namespace: "pod-namespace",
 			Containers: []*v1alpha1.ContainerResources{{Devices: make([]*v1alpha1.ContainerDevices,
 				common.MaxDevicesNum+1)}}}}
-		device, err := pr.GetPodResource()
+		_, err := pr.GetPodResource()
 		convey.So(err, convey.ShouldBeNil)
-		convey.So(len(device), convey.ShouldEqual, 0)
 	})
-	convey.Convey("the number of containers exceeds the upper limit", t, func() {
-		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Containers: []*v1alpha1.
-			ContainerResources{{Devices: []*v1alpha1.ContainerDevices{nil,
-			{ResourceName: "Ascend"},
-			{ResourceName: common.ResourceNamePrefix + common.Ascend910, DeviceIds: make([]string,
-				common.MaxDevicesNum+1)},
-			{ResourceName: common.ResourceNamePrefix + common.Ascend910, DeviceIds: []string{common.Ascend910 + "-0",
-				common.Ascend910 + "-1"}}}}}},
-		}
-		device, err := pr.GetPodResource()
+	convey.Convey("containerDevice is nil", t, func() {
+		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "pod-name", Namespace: "pod-namespace",
+			Containers: []*v1alpha1.ContainerResources{{Devices: []*v1alpha1.ContainerDevices{nil}}}}}
+		_, err := pr.GetPodResource()
 		convey.So(err, convey.ShouldBeNil)
-		convey.So(len(device), convey.ShouldEqual, 0)
 	})
-	mockList.Reset()
+	convey.Convey("not huawei resource", t, func() {
+		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "pod-name", Namespace: "pod-namespace",
+			Containers: []*v1alpha1.ContainerResources{{Devices: []*v1alpha1.ContainerDevices{{ResourceName: ""}}}}}}
+		_, err := pr.GetPodResource()
+		convey.So(err, convey.ShouldBeNil)
+	})
+	convey.Convey("the number of container device exceeds the upper limit", t, func() {
+		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "pod-name", Namespace: "pod-namespace",
+			Containers: []*v1alpha1.ContainerResources{{Devices: []*v1alpha1.ContainerDevices{{
+				ResourceName: common.ResourceNamePrefix + common.Ascend910,
+				DeviceIds:    make([]string, common.MaxDevicesNum+1)}}}}}}
+		_, err := pr.GetPodResource()
+		convey.So(err, convey.ShouldBeNil)
+	})
+	convey.Convey("length of device name is invalid", t, func() {
+		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "pod-name", Namespace: "pod-namespace",
+			Containers: []*v1alpha1.ContainerResources{{Devices: []*v1alpha1.ContainerDevices{{
+				ResourceName: common.ResourceNamePrefix + common.Ascend910,
+				DeviceIds:    []string{string(make([]byte, common.MaxDeviceNameLen+1))}}}}}}}
+		_, err := pr.GetPodResource()
+		convey.So(err, convey.ShouldBeNil)
+	})
+}
+
+// TestPodResourceGetPodResource3 for test the interface GetPodResource part 3
+func TestPodResourceGetPodResource3(t *testing.T) {
+	pr := &PodResource{conn: &grpc.ClientConn{}, client: &FakeClient{}, restart: false}
+	podResourceResponse := v1alpha1.ListPodResourcesResponse{}
+	mockList := gomonkey.ApplyMethod(reflect.TypeOf(new(FakeClient)), "List",
+		func(_ *FakeClient, ctx context.Context, in *v1alpha1.ListPodResourcesRequest,
+			opts ...grpc.CallOption) (*v1alpha1.ListPodResourcesResponse, error) {
+			return &podResourceResponse, nil
+		})
+	defer mockList.Reset()
+	convey.Convey("get valid pod resource", t, func() {
+		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "pod-name", Namespace: "pod-namespace",
+			Containers: []*v1alpha1.ContainerResources{{Devices: []*v1alpha1.ContainerDevices{{
+				ResourceName: common.ResourceNamePrefix + common.Ascend910,
+				DeviceIds:    []string{common.Ascend910 + "-0"}}}}}}}
+		_, err := pr.GetPodResource()
+		convey.So(err, convey.ShouldBeNil)
+	})
+	convey.Convey("multi resource", t, func() {
+		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "pod-name", Namespace: "pod-namespace",
+			Containers: []*v1alpha1.ContainerResources{{Devices: []*v1alpha1.ContainerDevices{{
+				ResourceName: common.ResourceNamePrefix + common.Ascend910,
+				DeviceIds:    []string{common.Ascend910 + "-0"}}}},
+				{Devices: []*v1alpha1.ContainerDevices{{
+					ResourceName: common.ResourceNamePrefix + common.Ascend310,
+					DeviceIds:    []string{common.Ascend310 + "-0"}}}}}}}
+		_, err := pr.GetPodResource()
+		convey.So(err, convey.ShouldBeNil)
+	})
 }
 
 type FakeClient struct{}
