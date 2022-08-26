@@ -84,6 +84,15 @@ const (
 
 	// maxTrainDevicesNum is max number of train devices
 	maxTrainDevicesNum = 8
+
+	// maxDeviceNameLen is max device name length
+	maxDeviceNameLen = 50
+
+	// maxPodLimit is max pod limit
+	maxPodLimit = 110
+
+	// maxContainerLimit is max container limit
+	maxContainerLimit = 300000
 )
 
 // Register function is use to register k8s devicePlugin to kubelet.
@@ -139,6 +148,9 @@ func (s *pluginAPI) ListAndWatch(emtpy *pluginapi.Empty, stream pluginapi.Device
 		isStateChange := s.isDeviceStatusChange()
 		if useVolcanoType {
 			s.doWithVolcanoListAndWatch(isStateChange)
+		}
+		if err := s.updatePodConfiguration(); err != nil {
+			hwlog.Error(err)
 		}
 		if !isStateChange {
 			// close log print
@@ -795,7 +807,6 @@ func (s *pluginAPI) getAscendVisiDevsWithVolcano(allocateDevice sets.String, dev
 			return errs
 		}
 		(*devices)[deviceID] = deviceIP
-
 	}
 	return nil
 }
