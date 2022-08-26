@@ -15,9 +15,9 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"go.uber.org/atomic"
-	"huawei.com/mindx/common/hwlog"
 	"huawei.com/npu-exporter/devmanager"
 	npuCommon "huawei.com/npu-exporter/devmanager/common"
+	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 

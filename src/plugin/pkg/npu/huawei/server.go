@@ -10,7 +10,7 @@ import (
 
 	"go.uber.org/atomic"
 	"google.golang.org/grpc"
-	"huawei.com/mindx/common/hwlog"
+	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 

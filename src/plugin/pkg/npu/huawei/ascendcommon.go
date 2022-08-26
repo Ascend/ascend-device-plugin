@@ -15,9 +15,9 @@ import (
 	"strings"
 	"syscall"
 
-	"huawei.com/mindx/common/hwlog"
 	"huawei.com/npu-exporter/devmanager"
 	npuCommon "huawei.com/npu-exporter/devmanager/common"
+	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"

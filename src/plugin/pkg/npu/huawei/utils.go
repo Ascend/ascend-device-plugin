@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/fsnotify/fsnotify"
-	"huawei.com/mindx/common/hwlog"
+	"huawei.com/npu-exporter/hwlog"
 
 	"Ascend-device-plugin/src/plugin/pkg/npu/common"
 )
