@@ -14,7 +14,6 @@ import (
 	"huawei.com/mindx/common/utils"
 	"huawei.com/mindx/common/x509"
 	"k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
@@ -103,18 +102,6 @@ func (ki *ClientK8s) GetConfigMap() (*v1.ConfigMap, error) {
 // UpdateConfigMap update device info, which is cm
 func (ki *ClientK8s) UpdateConfigMap(cm *v1.ConfigMap) (*v1.ConfigMap, error) {
 	return ki.Clientset.CoreV1().ConfigMaps(cm.ObjectMeta.Namespace).Update(context.TODO(), cm, metav1.UpdateOptions{})
-}
-
-// DeleteConfigMap delete config map
-func (ki *ClientK8s) DeleteConfigMap() error {
-	if err := ki.Clientset.CoreV1().ConfigMaps(common.DeviceInfoCMNameSpace).Delete(context.TODO(), ki.DeviceInfoName,
-		metav1.DeleteOptions{}); err != nil {
-		if !errors.IsNotFound(err) {
-			return fmt.Errorf("failed to delete configmap %s in %s: %#v",
-				ki.DeviceInfoName, common.DeviceInfoCMNameSpace, err)
-		}
-	}
-	return nil
 }
 
 func (ki *ClientK8s) resetNodeAnnotations(node *v1.Node) {

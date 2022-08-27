@@ -186,23 +186,9 @@ func (hdm *HwDevManager) SignCatch(cancel context.CancelFunc) {
 		}
 		hwlog.RunLog.Infof("Received signal: %s, shutting down.", s.String())
 		cancel()
-		hdm.DeleteDeviceInfo()
 		hdm.stopAllSever()
 		hdm.manager.GetDmgr().ShutDown()
 	}
-}
-
-// DeleteDeviceInfo delete the device info configmap
-func (hdm *HwDevManager) DeleteDeviceInfo() {
-	client := hdm.manager.GetKubeClient()
-	if !common.ParamOption.UseVolcanoType || client == nil {
-		return
-	}
-	if err := client.DeleteConfigMap(); err != nil {
-		hwlog.RunLog.Errorf("delete device info configmap failed, error is %#v", err)
-		return
-	}
-	hwlog.RunLog.Infof("delete device info configmap")
 }
 
 // Serve Serve function
