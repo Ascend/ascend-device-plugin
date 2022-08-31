@@ -15,7 +15,7 @@ compile:
         - remove: ["{{ systemEnv.workspace }}/{{ component}}/output/"]
   process:
     language: go
-    compilePath: "{{ systemEnv.workspace }}/ascend-device-plugin/src/plugin/cmd/ascendplugin"
+    compilePath: "{{ systemEnv.workspace }}/ascend-device-plugin/"
     parameters: [['buildmode', "pie"],
                  ["mod", "mod"],
                  ['ldflags', '-X "main.BuildName=device-plugin" -X "main.BuildVersion={{version}}_linux-{{systemEnv.processor}}" -buildid none -s -extldflags=-Wl,-z,relro,-z,now,-z,noexecstack'],
@@ -25,65 +25,65 @@ compile:
     files:
       include:
         - move:
-            src: ["{{ systemEnv.workspace }}/ascend-device-plugin/src/plugin/cmd/ascendplugin/device-plugin"]
+            src: ["{{ systemEnv.workspace }}/ascend-device-plugin/device-plugin"]
             des: "{{ systemEnv.workspace }}/{{component}}/output"
         - sed:
             option: "-i"
             srcstr: 's/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:{{version}}/'
-            curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-910.yaml'
+            curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/build/ascendplugin-910.yaml'
         - sed:
             option: "-i"
             srcstr: "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:{{version}}/"
-            curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-volcano.yaml'
+            curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/build/ascendplugin-volcano.yaml'
         - sed:
             option: "-i"
             srcstr: 's/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:{{version}}/'
-            curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-310.yaml'
+            curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/build/ascendplugin-310.yaml'
         - sed:
             option: "-i"
             srcstr: 's/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:{{version}}/'
-            curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-310-volcano.yaml'
+            curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/build/ascendplugin-310-volcano.yaml'
         - sed:
             option: "-i"
             srcstr: "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:{{version}}/"
-            curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-310P.yaml'
+            curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/build/ascendplugin-310P.yaml'
         - sed:
             option: "-i"
             srcstr: 's/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:{{version}}/'
-            curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-310P-volcano.yaml'
+            curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/build/ascendplugin-310P-volcano.yaml'
         - copy:
             src:
-              - '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-910.yaml'
+              - '{{ systemEnv.workspace }}/ascend-device-plugin/build/ascendplugin-910.yaml'
             des: "{{ systemEnv.workspace }}/{{ component}}/output/device-plugin-910-{{version}}.yaml"
             rename: True
         - copy:
             src:
-              - '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-volcano.yaml'
+              - '{{ systemEnv.workspace }}/ascend-device-plugin/build/ascendplugin-volcano.yaml'
             des: "{{ systemEnv.workspace }}/{{ component}}/output/device-plugin-volcano-{{version}}.yaml"
             rename: True
         - copy:
             src:
-              - '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-310.yaml'
+              - '{{ systemEnv.workspace }}/ascend-device-plugin/build/ascendplugin-310.yaml'
             des: "{{ systemEnv.workspace }}/{{ component}}/output/device-plugin-310-{{version}}.yaml"
             rename: True
         - copy:
             src:
-              - '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-310-volcano.yaml'
+              - '{{ systemEnv.workspace }}/ascend-device-plugin/build/ascendplugin-310-volcano.yaml'
             des: "{{ systemEnv.workspace }}/{{ component}}/output/device-plugin-310-volcano-{{version}}.yaml"
             rename: True
         - copy:
             src:
-              - '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-310P.yaml'
+              - '{{ systemEnv.workspace }}/ascend-device-plugin/build/ascendplugin-310P.yaml'
             des: "{{ systemEnv.workspace }}/{{ component}}/output/device-plugin-310P-{{version}}.yaml"
             rename: True
         - copy:
             src:
-              - '{{ systemEnv.workspace }}/ascend-device-plugin/ascendplugin-310P-volcano.yaml'
+              - '{{ systemEnv.workspace }}/ascend-device-plugin/build/ascendplugin-310P-volcano.yaml'
             des: "{{ systemEnv.workspace }}/{{ component}}/output/device-plugin-310P-volcano-{{version}}.yaml"
             rename: True
         - copy:
             src:
-              - "{{ systemEnv.workspace }}/ascend-device-plugin/Dockerfile"
+              - "{{ systemEnv.workspace }}/ascend-device-plugin/build/Dockerfile"
             des: "{{ systemEnv.workspace }}/{{ component}}/output/"
         - sed:
             option: "-i"

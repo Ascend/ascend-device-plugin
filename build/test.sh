@@ -8,13 +8,14 @@ export GONOSUMDB="*"
 export PATH=$GOPATH/bin:$PATH
 
 function execute_test() {
-  if ! (go test  -mod=mod -gcflags=all=-l -v -race -coverprofile cov.out ${TOP_DIR}/src/plugin/pkg/npu/... >./$file_input); then
+  if ! (go test  -mod=mod -gcflags=all=-l -v -race -coverprofile cov.out ${TOP_DIR}/pkg/... >./$file_input); then
+    cat ./$file_input
     echo '****** go test cases error! ******'
     exit 1
   else
     echo ${file_detail_output}
     gocov convert cov.out | gocov-html >${file_detail_output}
-    gotestsum --junitfile unit-tests.xml "${TOP_DIR}"/src/plugin/pkg/npu/huawei/...
+    gotestsum --junitfile unit-tests.xml -- -race -gcflags=all=-l "${TOP_DIR}"/pkg/...
   fi
 }
 
