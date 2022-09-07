@@ -7,6 +7,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 
@@ -45,7 +46,7 @@ var (
 		"Listen and watch device state's period, unit second, range [3, 60]")
 	autoStowing = flag.Bool("autoStowing", true, "Whether to automatically stow the fixed device")
 	logLevel    = flag.Int("logLevel", 0,
-		"Log level, -1-debug, 0-info(default), 1-warning, 2-error, 3-dpanic, 4-panic, 5-fatal (default 0)")
+		"Log level, -1-debug, 0-info, 1-warning, 2-error, 3-critical(default 0)")
 	logMaxAge = flag.Int("maxAge", common.MaxAge,
 		"Maximum number of days for backup run log files, must be greater than or equal to 7 days")
 	logFile = flag.String("logFile", defaultLogPath,
@@ -147,7 +148,7 @@ func InitFunction() (*device.HwDevManager, error) {
 	hdm := device.NewHwDevManager(devM, kubeClient)
 	if hdm == nil {
 		hwlog.RunLog.Errorf("init device manager failed")
-		return nil, err
+		return nil, errors.New("init device manager failed")
 	}
 	hwlog.RunLog.Infof("init device manager success")
 	return hdm, nil
