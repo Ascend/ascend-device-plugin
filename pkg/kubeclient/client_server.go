@@ -135,7 +135,7 @@ func (ki *ClientK8s) GetPodsUsedNpu(devType string) sets.String {
 	}
 	var useNpu []string
 	for _, pod := range podList.Items {
-		if pod.Status.Phase == v1.PodSucceeded {
+		if pod.Status.Phase == v1.PodFailed || pod.Status.Phase == v1.PodSucceeded {
 			continue
 		}
 		annotationTag := fmt.Sprintf("%s%s", common.ResourceNamePrefix, devType)
