@@ -135,7 +135,36 @@ func GetDefaultDevices(getFdFlag bool) ([]string, error) {
 	if getFdFlag {
 		setDeviceByPathWhen200RC(defaultDevices)
 	}
+	if ParamOption.ProductType != Atlas200ISoc {
+		return defaultDevices, nil
+	}
+	socDefaultDevices, err := set200SocDefaultDevices()
+	if err != nil {
+		hwlog.RunLog.Errorf("get 200 soc default devices failed, err: %#v\n", err)
+		return nil, err
+	}
+	defaultDevices = append(defaultDevices, socDefaultDevices...)
 	return defaultDevices, nil
+}
+
+// set200SocDefaultDevices set 200 soc defaults devices
+func set200SocDefaultDevices() ([]string, error) {
+	var socDefaultDevices = []string{
+		Atlas200SocXSMEM,
+		HiAi200RCEventSched,
+		Atlas200SocVPC,
+		Atlas200SocVDEC,
+		Atlas200SocSYS,
+		HiAi200RCTsAisle,
+		HiAi200RCSVM0,
+		HiAi200RCLog,
+	}
+	for _, devPath := range socDefaultDevices {
+		if _, err := os.Stat(devPath); err != nil {
+			return nil, err
+		}
+	}
+	return socDefaultDevices, nil
 }
 
 func getNPUResourceNumOfPod(pod *v1.Pod, deviceType string) int64 {

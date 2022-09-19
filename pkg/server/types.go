@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"google.golang.org/grpc"
-	"huawei.com/npu-exporter/devmanager"
 	"k8s.io/kubernetes/pkg/kubelet/apis/podresources/v1alpha1"
 
 	"Ascend-device-plugin/pkg/common"
@@ -35,7 +34,6 @@ type PluginServer struct {
 	cachedLock           sync.RWMutex
 	reciChan             chan interface{}
 	stop                 chan interface{}
-	devManager           devmanager.DeviceInterface
 	vol2KlDevMap         map[string]string
 	restart              bool
 }

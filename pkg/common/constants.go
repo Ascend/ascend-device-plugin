@@ -179,6 +179,19 @@ const (
 )
 
 const (
+	// Atlas200ISoc 200 soc env
+	Atlas200ISoc = "Atlas 200I SoC A1"
+	// Atlas200SocXSMEM is xsmem_dev
+	Atlas200SocXSMEM = "/dev/xsmem_dev"
+	// Atlas200SocSYS is sys
+	Atlas200SocSYS = "/dev/sys"
+	// Atlas200SocVDEC is vdec
+	Atlas200SocVDEC = "/dev/vdec"
+	// Atlas200SocVPC is vpc
+	Atlas200SocVPC = "/dev/vpc"
+)
+
+const (
 	// rootUID and rootGID is user group
 	rootUID = 0
 	rootGID = 0

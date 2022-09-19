@@ -11,7 +11,6 @@ import (
 	"strconv"
 
 	"huawei.com/mindx/common/hwlog"
-	"huawei.com/npu-exporter/devmanager"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
@@ -372,12 +371,11 @@ func (ps *PluginServer) PreStartContainer(ctx context.Context,
 }
 
 // NewPluginServer returns an initialized PluginServer
-func NewPluginServer(devManager devmanager.DeviceInterface, client *kubeclient.ClientK8s, deviceType string,
+func NewPluginServer(client *kubeclient.ClientK8s, deviceType string,
 	devices []*common.NpuDevice, defaultDevs []string) *PluginServer {
 	ps := &PluginServer{
 		restart:      true,
 		reciChan:     make(chan interface{}),
-		devManager:   devManager,
 		kubeClient:   client,
 		deviceType:   deviceType,
 		defaultDevs:  defaultDevs,
