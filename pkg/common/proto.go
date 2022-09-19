@@ -69,6 +69,7 @@ type Option struct {
 	AutoStowingDevs    bool // auto stowing fixes devices or not
 	KubeConfig         string
 	PresetVDevice      bool
+	ProductType        string
 }
 
 // GetAllDeviceInfoTypeList Get All Device Info Type List

@@ -14,6 +14,8 @@ cloud.google.com/go/storage v1.0.0/go.mod h1:IhtSnM/ZTZV8YYJWCY8RULGVqBDmpoyjwiy
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/cache v0.0.1/go.mod h1:a/qzEfXJRRkAxE8zKCdhxUJWY5Tyfynwwg0gv33BatQ=
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/hwlog v0.0.2 h1:cdhQiD26wutbyV49nSV+VjkN1gAm8Tj7E5zv85GAa8s=
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/hwlog v0.0.2/go.mod h1:tuvVYh4aDcHqpiyNKZNiBgt1XBehJ130VubLidKWNjY=
+codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/hwlog v0.0.4 h1:aV4y7outk4qwhyiS2d1qmc8XHFpQ5jBOLjmfM+L8rJQ=
+codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/hwlog v0.0.4/go.mod h1:tuvVYh4aDcHqpiyNKZNiBgt1XBehJ130VubLidKWNjY=
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/k8stool v0.0.3 h1:lkiDOfib7XNSgHkKIqavs9FbvDRunW4t1CP6NgitVK0=
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/k8stool v0.0.3/go.mod h1:kAMBM48/MSRuY/JXs5O9fS8Xj9IuDVfeyy3tY5x1Bcw=
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/kmc v0.0.4 h1:g/TC+9whNpAmst8icxHUfq8zkcSKBTpSrYfRWCNBkLU=
@@ -30,6 +32,8 @@ codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/x509 v0.0
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/x509 v0.0.5/go.mod h1:FoSGYS9ZFyHnkfINz75zrC6ZdcKyfK1IaoFd8EZ7BQo=
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.2.16 h1:VfdN1cGqGSjnvj+f/k8VIiZI84k4u+pMazixzQkISf8=
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.2.16/go.mod h1:KtLP4O2Wd/VIEthQJmTaJEdSgvIkZ8VbCVrugWmk2c4=
+codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.2.17 h1:0IIddJBzNWRe2SAscCdFMusreiAoYnpvEzUg5Yb1/+o=
+codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.2.17/go.mod h1:DS1Bcmf//6uWisHzX+NTLtoSg6rmI2s3m1mVXJmm+xo=
 codehub-dg-y.huawei.com/OpenSourceCenter/kubernetes.git v1.19.4-h4 h1:X05D0Oi6fzBYyqXgnndyilTzhnsSqTQsPT0ezxewu3Q=
 codehub-dg-y.huawei.com/OpenSourceCenter/kubernetes.git v1.19.4-h4/go.mod h1:yhT1/ltQajQsha3tnYc9QPFYSumGM45nlZdjf7WqE1A=
 codehub-dg-y.huawei.com/OpenSourceCenter/kubernetes.git/staging/src/k8s.io/api v1.19.4-h4 h1:lVQ8yCZOb7UM2OMwIW0DDWc5242hFIM3n18Ri02IFR0=

@@ -11,7 +11,7 @@ require (
 	huawei.com/mindx/common/k8stool v0.0.0
 	huawei.com/mindx/common/utils v0.0.0
 	huawei.com/mindx/common/x509 v0.0.0
-	huawei.com/npu-exporter v0.2.16
+	huawei.com/npu-exporter v0.2.17
 	k8s.io/api v0.19.4
 	k8s.io/apimachinery v0.19.4
 	k8s.io/client-go v0.19.4
@@ -32,7 +32,7 @@ replace (
 	huawei.com/mindx/common/tls => codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/tls v0.0.1
 	huawei.com/mindx/common/utils => codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/utils v0.0.5
 	huawei.com/mindx/common/x509 => codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/x509 v0.0.5
-	huawei.com/npu-exporter => codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.2.16
+	huawei.com/npu-exporter => codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.2.17
 	k8s.io/api => codehub-dg-y.huawei.com/OpenSourceCenter/kubernetes.git/staging/src/k8s.io/api v1.19.4-h4
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.19.4
 	k8s.io/apimachinery => codehub-dg-y.huawei.com/OpenSourceCenter/kubernetes.git/staging/src/k8s.io/apimachinery v1.19.4-h4

@@ -13,7 +13,6 @@ import (
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/smartystreets/goconvey/convey"
 	"huawei.com/mindx/common/hwlog"
-	"huawei.com/npu-exporter/devmanager"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
@@ -55,7 +54,7 @@ func init() {
 
 // TestListAndWatch for test the interface ListAndWatch
 func TestListAndWatch(t *testing.T) {
-	ps := NewPluginServer(nil, nil, common.Ascend910, nil, nil)
+	ps := NewPluginServer(nil, common.Ascend910, nil, nil)
 	convey.Convey("test ListAndWatch", t, func() {
 		mockSend := gomonkey.ApplyFunc(sendToKubelet, func(stream v1beta1.DevicePlugin_ListAndWatchServer,
 			resp *v1beta1.ListAndWatchResponse) error {
@@ -83,7 +82,7 @@ func TestListAndWatch(t *testing.T) {
 
 // TestUpdateAllocMap for test the updateAllocMap
 func TestUpdateAllocMap(t *testing.T) {
-	ps := NewPluginServer(nil, nil, common.Ascend910, devices, nil)
+	ps := NewPluginServer(nil, common.Ascend910, devices, nil)
 	convey.Convey("length no equal", t, func() {
 		realAlloc := []string{"Ascend910-0", "Ascend910-2", "Ascend910-1"}
 		kltAlloc := []string{"Ascend910-2", "Ascend910-7", "Ascend910-0", "Ascend910-1"}
@@ -117,7 +116,7 @@ func TestUpdateAllocMap(t *testing.T) {
 
 // TestGenerateAllDeviceMap for test the generateAllDeviceMap
 func TestGenerateAllDeviceMap(t *testing.T) {
-	ps := NewPluginServer(nil, nil, common.Ascend910, devices, nil)
+	ps := NewPluginServer(nil, common.Ascend910, devices, nil)
 	convey.Convey("length no equal", t, func() {
 		ps.deepCopyDevice(devices)
 		realAlloc := []string{"Ascend910-0", "Ascend910-2", "Ascend910-1", "Ascend910-3"}
@@ -139,7 +138,7 @@ func TestGenerateAllDeviceMap(t *testing.T) {
 
 // TestResponseToKubelet for test the responseToKubelet
 func TestResponseToKubelet(t *testing.T) {
-	ps := NewPluginServer(nil, nil, common.Ascend910, devices, nil)
+	ps := NewPluginServer(nil, common.Ascend910, devices, nil)
 	convey.Convey("use volcano", t, func() {
 		common.ParamOption.UseVolcanoType = true
 		ps.deepCopyDevice(devices)
@@ -160,7 +159,7 @@ func TestResponseToKubelet(t *testing.T) {
 
 // TestAllocateRequestPhysicalDevice for test the Allocate request physical device
 func TestAllocateRequestPhysicalDevice(t *testing.T) {
-	ps := NewPluginServer(nil, nil, common.Ascend910, devices, nil)
+	ps := NewPluginServer(nil, common.Ascend910, devices, nil)
 	common.ParamOption.UseVolcanoType = false
 	var requests v1beta1.AllocateRequest
 	convey.Convey("invalid request", t, func() {
@@ -203,7 +202,7 @@ func TestAllocateRequestPhysicalDevice(t *testing.T) {
 // TestAllocateRequestVirtualDevice for test the Allocate request virtual device
 func TestAllocateRequestVirtualDevice(t *testing.T) {
 	common.ParamOption.UseVolcanoType = false
-	ps := NewPluginServer(nil, nil, common.Ascend910c2, devices, nil)
+	ps := NewPluginServer(nil, common.Ascend910c2, devices, nil)
 	var requests v1beta1.AllocateRequest
 	convey.Convey("invalid request", t, func() {
 		convey.Convey("request more than 1 virtual device", func() {
@@ -222,7 +221,7 @@ func TestAllocateRequestVirtualDevice(t *testing.T) {
 		})
 		convey.Convey("request virtual device exist", func() {
 			deviceID := "100"
-			ps := NewPluginServer(nil, nil, common.Ascend910c2, devices, nil)
+			ps := NewPluginServer(nil, common.Ascend910c2, devices, nil)
 			ps.cachedDevices = []common.NpuDevice{{DevType: common.Ascend910c2,
 				DeviceName: "Ascend910-2c-" + deviceID + "-0"}}
 			requests.ContainerRequests = []*v1beta1.
@@ -239,7 +238,7 @@ func TestAllocateRequestVirtualDevice(t *testing.T) {
 
 // TestAllocateWithVolcano1 for test the Allocate request physical device with volcano, not get valid oldest pod
 func TestAllocateWithVolcano1(t *testing.T) {
-	ps := NewPluginServer(nil, &kubeclient.ClientK8s{}, common.Ascend910, devices, nil)
+	ps := NewPluginServer(&kubeclient.ClientK8s{}, common.Ascend910, devices, nil)
 	common.ParamOption.UseVolcanoType = true
 	var requests v1beta1.AllocateRequest
 	requests.ContainerRequests = []*v1beta1.ContainerAllocateRequest{{DevicesIDs: []string{"Ascend910-0"}}}
@@ -282,7 +281,7 @@ func TestAllocateWithVolcano1(t *testing.T) {
 
 // TestAllocateWithVolcano2 for test the Allocate request physical device with volcano, get oldest pod
 func TestAllocateWithVolcano2(t *testing.T) {
-	ps := NewPluginServer(&devmanager.DeviceManagerMock{}, &kubeclient.ClientK8s{}, common.Ascend910, devices,
+	ps := NewPluginServer(&kubeclient.ClientK8s{}, common.Ascend910, devices,
 		[]string{common.HiAIManagerDevice})
 	common.ParamOption.UseVolcanoType = true
 	var requests v1beta1.AllocateRequest
@@ -330,7 +329,7 @@ func TestAllocateWithVolcano2(t *testing.T) {
 
 // TestAllocateWithVolcano3 for test the Allocate request physical device with volcano, part 3
 func TestAllocateWithVolcano3(t *testing.T) {
-	ps := NewPluginServer(&devmanager.DeviceManagerMock{}, &kubeclient.ClientK8s{}, common.Ascend910, devices,
+	ps := NewPluginServer(&kubeclient.ClientK8s{}, common.Ascend910, devices,
 		[]string{common.HiAIManagerDevice})
 	common.ParamOption.UseVolcanoType = true
 	var requests v1beta1.AllocateRequest

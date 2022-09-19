@@ -48,7 +48,7 @@ func NewHwDevManager(devM devmanager.DeviceInterface, client *kubeclient.ClientK
 		hwlog.RunLog.Errorf("set all device and type failed, err: %v", err)
 		return nil
 	}
-	if err := hdm.initPluginServer(devM, client); err != nil {
+	if err := hdm.initPluginServer(client); err != nil {
 		hwlog.RunLog.Errorf("init plugin server failed, err: %v", err)
 		return nil
 	}
@@ -88,6 +88,11 @@ func (hdm *HwDevManager) setAscendManager(dmgr devmanager.DeviceInterface, clien
 	if common.ParamOption.UseVolcanoType && client != nil {
 		hdm.manager.SetKubeClient(client)
 	}
+	productType, err := hdm.manager.GetDmgr().GetProductType()
+	if err != nil {
+		return err
+	}
+	common.ParamOption.ProductType = productType
 	return nil
 }
 
@@ -101,7 +106,7 @@ func (hdm *HwDevManager) setAllDeviceAndType() error {
 	return nil
 }
 
-func (hdm *HwDevManager) initPluginServer(dmgr devmanager.DeviceInterface, client *kubeclient.ClientK8s) error {
+func (hdm *HwDevManager) initPluginServer(client *kubeclient.ClientK8s) error {
 	hdm.ServerMap = make(map[string]server.InterfaceServer, len(hdm.AllDevTypes))
 	hdm.groupDevice = ClassifyDevices(hdm.AllDevs, hdm.AllDevTypes)
 	defaultDevices, err := common.GetDefaultDevices(common.ParamOption.GetFdFlag)
@@ -109,9 +114,9 @@ func (hdm *HwDevManager) initPluginServer(dmgr devmanager.DeviceInterface, clien
 		hwlog.RunLog.Error("get default device error")
 		return err
 	}
-	for _, devcieType := range hdm.AllDevTypes {
-		hdm.ServerMap[devcieType] = server.NewPluginServer(dmgr, client, devcieType,
-			hdm.groupDevice[devcieType], defaultDevices)
+	for _, deviceType := range hdm.AllDevTypes {
+		hdm.ServerMap[deviceType] = server.NewPluginServer(client, deviceType,
+			hdm.groupDevice[deviceType], defaultDevices)
 	}
 	return nil
 }
@@ -127,7 +132,7 @@ func (hdm *HwDevManager) ListenDevice(ctx context.Context) {
 				hwlog.RunLog.Info("catch stop signal channel is closed")
 			}
 			hwlog.RunLog.Info("listen device stop")
-			break
+			return
 		default:
 			time.Sleep(time.Duration(common.ParamOption.ListAndWatchPeriod) * time.Second)
 			hdm.notifyToK8s()
