@@ -64,6 +64,15 @@ spec:
           operator: "Equal"
           value: "v2"
           effect: NoSchedule
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: servertype
+                    operator: NotIn
+                    values:
+                      - soc
       priorityClassName: "system-node-critical"
       nodeSelector:
         accelerator: huawei-Ascend310P
