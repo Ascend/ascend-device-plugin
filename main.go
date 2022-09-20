@@ -34,7 +34,8 @@ const (
 )
 
 var (
-	mode            = flag.String("mode", "", "Device plugin running mode: ascend310, ascend310P, ascend910")
+	mode = flag.String("mode", "", "Device plugin running mode: ascend310, ascend310P, "+
+		"ascend910. This parameter will be deprecated in future versions")
 	fdFlag          = flag.Bool("fdFlag", false, "Whether to use fd system to manage device (default false)")
 	useAscendDocker = flag.Bool("useAscendDocker", true, "Whether to use ascend docker")
 	volcanoType     = flag.Bool("volcanoType", false,
@@ -96,6 +97,12 @@ func checkParam() bool {
 	}
 	if len(*mode) > maxRunModeLength {
 		fmt.Println("run mode param length invalid")
+		return false
+	}
+	switch *mode {
+	case common.RunMode310, common.RunMode910, common.RunMode310P, "":
+	default:
+		fmt.Printf("unSupport mode: %s\n", *mode)
 		return false
 	}
 	return true
