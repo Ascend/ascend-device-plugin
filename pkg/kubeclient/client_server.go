@@ -21,11 +21,17 @@ import (
 
 // TryUpdatePodAnnotation is to try updating pod annotation
 func (ki *ClientK8s) TryUpdatePodAnnotation(pod *v1.Pod, annotation map[string]string) error {
+	if pod == nil {
+		return fmt.Errorf("invalid pod")
+	}
 	for i := 0; i < common.RetryUpdateCount; i++ {
 		podNew, err := ki.GetPod(pod)
 		if err != nil || podNew == nil {
 			hwlog.RunLog.Errorf("query pod info failed. %#v", err)
 			continue
+		}
+		if podNew.Annotations == nil {
+			return fmt.Errorf("invalid pod Annotations")
 		}
 		for k, v := range annotation {
 			podNew.Annotations[k] = v
@@ -94,17 +100,21 @@ func (ki *ClientK8s) WriteDeviceInfoDataIntoCM(deviceInfo map[string]string) (*v
 		Data: map[string]string{common.DeviceInfoCMDataKey: string(data)},
 	}
 
-	hwlog.RunLog.Debugf("write device info cache into cm: %+v/%v.", deviceInfoCM.Namespace, deviceInfoCM.Name)
+	hwlog.RunLog.Debugf("write device info cache into cm: %s/%s.", deviceInfoCM.Namespace, deviceInfoCM.Name)
 	return ki.createOrUpdateConfigMap(deviceInfoCM)
 }
 
-//  AnnotationReset reset annotation and device info
+// AnnotationReset reset annotation and device info
 func (ki *ClientK8s) AnnotationReset() error {
 	var err error
 	curNode, err := ki.GetNode()
 	if err != nil {
 		hwlog.RunLog.Errorf("failed to get node, nodeName: %s, err: %#v", ki.NodeName, err)
 		return err
+	}
+	if curNode == nil {
+		hwlog.RunLog.Error("invalid node")
+		return fmt.Errorf("invalid node")
 	}
 	newNode := curNode.DeepCopy()
 	ki.resetNodeAnnotations(newNode)
@@ -126,7 +136,7 @@ func (ki *ClientK8s) AnnotationReset() error {
 func (ki *ClientK8s) GetPodsUsedNpu(devType string) sets.String {
 	podList, err := ki.GetPodList()
 	if err != nil {
-		hwlog.RunLog.Errorf(fmt.Sprintf("nodeName: %s, err: %v", ki.NodeName, err))
+		hwlog.RunLog.Errorf("nodeName: %s, err: %#v", ki.NodeName, err)
 		return sets.String{}
 	}
 	if len(podList.Items) >= common.MaxPodLimit {
@@ -135,6 +145,14 @@ func (ki *ClientK8s) GetPodsUsedNpu(devType string) sets.String {
 	}
 	var useNpu []string
 	for _, pod := range podList.Items {
+		if err := common.CheckPodNameAndSpace(pod.Name, common.PodNameMaxLength); err != nil {
+			hwlog.RunLog.Warnf("pod name syntax illegal, %s", err.Error())
+			continue
+		}
+		if err := common.CheckPodNameAndSpace(pod.Namespace, common.PodNameSpaceMaxLength); err != nil {
+			hwlog.RunLog.Warnf("pod namespace syntax illegal, %s", err.Error())
+			continue
+		}
 		if pod.Status.Phase == v1.PodFailed || pod.Status.Phase == v1.PodSucceeded {
 			continue
 		}

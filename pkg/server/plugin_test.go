@@ -33,14 +33,14 @@ var (
 		{DevType: common.Ascend910, DeviceName: "Ascend910-7", Health: "Healthy"},
 	}
 	mockPods = []v1.Pod{
-		{ObjectMeta: metav1.ObjectMeta{Name: "test1"}},
-		{ObjectMeta: metav1.ObjectMeta{Name: "test2",
+		{ObjectMeta: metav1.ObjectMeta{Name: "test1", Namespace: "test1"}},
+		{ObjectMeta: metav1.ObjectMeta{Name: "test2", Namespace: "test2",
 			Annotations: map[string]string{common.PodPredicateTime: "abcdef"}}},
-		{ObjectMeta: metav1.ObjectMeta{Name: "test3", Annotations: map[string]string{common.
+		{ObjectMeta: metav1.ObjectMeta{Name: "test3", Namespace: "test3", Annotations: map[string]string{common.
 			PodPredicateTime: "1", common.HuaweiAscend910: "Ascend910-1"}}},
-		{ObjectMeta: metav1.ObjectMeta{Name: "test4", Annotations: map[string]string{common.
+		{ObjectMeta: metav1.ObjectMeta{Name: "test4", Namespace: "test4", Annotations: map[string]string{common.
 			PodPredicateTime: "4", common.HuaweiAscend910: "Ascend910-2"}}},
-		{ObjectMeta: metav1.ObjectMeta{Name: "test5", Annotations: map[string]string{common.
+		{ObjectMeta: metav1.ObjectMeta{Name: "test5", Namespace: "test5", Annotations: map[string]string{common.
 			PodPredicateTime: "5", common.ResourceNamePrefix + common.Ascend910c2: "Ascend910-2c-180-3"}}},
 	}
 )

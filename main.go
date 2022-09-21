@@ -49,7 +49,7 @@ var (
 	logLevel    = flag.Int("logLevel", 0,
 		"Log level, -1-debug, 0-info, 1-warning, 2-error, 3-critical(default 0)")
 	logMaxAge = flag.Int("maxAge", common.MaxAge,
-		"Maximum number of days for backup run log files, must be greater than or equal to 7 days")
+		"Maximum number of days for backup run log files, range [7, 700] days")
 	logFile = flag.String("logFile", defaultLogPath,
 		"The log file path, if the file size exceeds 20MB, will be rotate")
 	logMaxBackups = flag.Int("maxBackups", common.MaxBackups,
@@ -150,14 +150,14 @@ func InitFunction() (*device.HwDevManager, error) {
 			hwlog.RunLog.Errorf("init kubeclient failed err: %#v", err)
 			return nil, err
 		}
-		hwlog.RunLog.Infof("init kubeclient success")
+		hwlog.RunLog.Info("init kube client success")
 	}
 	hdm := device.NewHwDevManager(devM, kubeClient)
 	if hdm == nil {
-		hwlog.RunLog.Errorf("init device manager failed")
+		hwlog.RunLog.Error("init device manager failed")
 		return nil, errors.New("init device manager failed")
 	}
-	hwlog.RunLog.Infof("init device manager success")
+	hwlog.RunLog.Info("init device manager success")
 	return hdm, nil
 }
 

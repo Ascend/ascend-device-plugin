@@ -66,11 +66,12 @@ func (tool *AscendTools) GetKubeClient() *kubeclient.ClientK8s {
 // UpdateNodeDeviceInfo update device info
 func (tool *AscendTools) UpdateNodeDeviceInfo(devStatusSet common.DevStatusSet,
 	updateDeviceInfoFunc func(map[string]string, map[string]string, common.DevStatusSet) error) error {
-	err := wait.PollImmediate(common.Interval*time.Second, common.Timeout*time.Second, func() (bool, error) {
+	waitErr := wait.PollImmediate(common.Interval*time.Second, common.Timeout*time.Second, func() (bool, error) {
 		deviceList, err := tool.getDeviceListFromConfigMap()
 		if err != nil {
 			hwlog.RunLog.Warnf("get device list from config map failed, %s", err.Error())
 			tool.client.ResetDeviceInfo()
+			return false, nil
 		}
 		newDeviceList := common.MapDeepCopy(deviceList)
 		if err := updateDeviceInfoFunc(deviceList, newDeviceList, devStatusSet); err != nil {
@@ -85,7 +86,7 @@ func (tool *AscendTools) UpdateNodeDeviceInfo(devStatusSet common.DevStatusSet,
 
 		return true, nil
 	})
-	return err
+	return waitErr
 }
 
 func (tool *AscendTools) delVirDevInfo(newDeviceList map[string]string) {

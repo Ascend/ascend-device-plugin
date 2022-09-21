@@ -73,7 +73,7 @@ func (ps *PluginServer) serve(socketWatcher *common.FileWatch) error {
 	v1beta1.RegisterDevicePluginServer(ps.grpcServer, ps)
 	go func() {
 		if err := ps.grpcServer.Serve(netListener); err != nil {
-			hwlog.RunLog.Errorf("GRPC server for '%s' crashed with error: %v", ps.deviceType, err)
+			hwlog.RunLog.Errorf("GRPC server for '%s' crashed with error: %#v", ps.deviceType, err)
 		}
 	}()
 
