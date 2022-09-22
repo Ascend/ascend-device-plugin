@@ -225,9 +225,9 @@ func (tool *AscendTools) groupDevsByStatus(subClassDevices []*common.NpuDevice, 
 			totalUHDevices.Insert(dev)
 		}
 	}
-	hwlog.RunLog.Debugf("healthy device %v", healthDevice)
-	hwlog.RunLog.Debugf("total unhealthy devices %v", totalUHDevices)
-	hwlog.RunLog.Debugf("total network unhealthy devices %v", totalNetworkUHDevices)
+	hwlog.RunLog.Debugf("healthy device %#v", healthDevice)
+	hwlog.RunLog.Debugf("total unhealthy devices %#v", totalUHDevices)
+	hwlog.RunLog.Debugf("total network unhealthy devices %#v", totalNetworkUHDevices)
 	return healthDevice, totalUHDevices, totalNetworkUHDevices
 }
 

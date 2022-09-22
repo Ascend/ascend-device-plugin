@@ -140,7 +140,7 @@ func InitFunction() (*device.HwDevManager, error) {
 	var err error
 	devM, err := devmanager.AutoInit("")
 	if err != nil {
-		hwlog.RunLog.Errorf("init devmanager failed, err: %v", err)
+		hwlog.RunLog.Errorf("init devmanager failed, err: %#v", err)
 		return nil, err
 	}
 	var kubeClient *kubeclient.ClientK8s
