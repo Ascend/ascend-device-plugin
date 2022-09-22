@@ -37,19 +37,19 @@ type HwDevManager struct {
 func NewHwDevManager(devM devmanager.DeviceInterface, client *kubeclient.ClientK8s) *HwDevManager {
 	var hdm HwDevManager
 	if err := hdm.setRunMode(devM.GetDevType()); err != nil {
-		hwlog.RunLog.Errorf("set runmode failed, err: %v", err)
+		hwlog.RunLog.Errorf("set runmode failed, err: %#v", err)
 		return nil
 	}
 	if err := hdm.setAscendManager(devM, client); err != nil {
-		hwlog.RunLog.Errorf("init hw dev manager failed, err: %v", err)
+		hwlog.RunLog.Errorf("init hw dev manager failed, err: %#v", err)
 		return nil
 	}
 	if err := hdm.setAllDeviceAndType(); err != nil {
-		hwlog.RunLog.Errorf("set all device and type failed, err: %v", err)
+		hwlog.RunLog.Errorf("set all device and type failed, err: %#v", err)
 		return nil
 	}
 	if err := hdm.initPluginServer(client); err != nil {
-		hwlog.RunLog.Errorf("init plugin server failed, err: %v", err)
+		hwlog.RunLog.Errorf("init plugin server failed, err: %#v", err)
 		return nil
 	}
 	if common.ParamOption.UseVolcanoType {
@@ -81,7 +81,7 @@ func (hdm *HwDevManager) setAscendManager(dmgr devmanager.DeviceInterface, clien
 	case common.RunMode310P:
 		hdm.manager = NewHwAscend310PManager()
 	default:
-		hwlog.RunLog.Errorf("found an unsupported device type")
+		hwlog.RunLog.Error("found an unsupported device type")
 		return errors.New("an unsupported device type")
 	}
 	hdm.manager.SetDmgr(dmgr)
@@ -252,7 +252,7 @@ func (hdm *HwDevManager) handleEvents(ctx context.Context, restartSignal chan os
 			hdm.handleDeleteEvent(deleteFile)
 		}
 		if event.Name == v1beta1.KubeletSocket && event.Op&fsnotify.Create == fsnotify.Create {
-			hwlog.RunLog.Infof("notify: kubelet.sock file created, restarting.")
+			hwlog.RunLog.Info("notify: kubelet.sock file created, restarting.")
 			hdm.setRestartForAll()
 		}
 	}
@@ -264,7 +264,7 @@ func (hdm *HwDevManager) stopAllSever() {
 		hwlog.RunLog.Infof("stop server type %s", deviceType)
 		hdm.ServerMap[deviceType].Stop()
 	}
-	hwlog.RunLog.Infof("stop all server done")
+	hwlog.RunLog.Info("stop all server done")
 }
 
 func (hdm *HwDevManager) setRestartForAll() {
@@ -316,6 +316,9 @@ func (hdm *HwDevManager) updatePodAnnotation() error {
 	if err != nil {
 		return err
 	}
+	if podList == nil {
+		return fmt.Errorf("get invalid pod list")
+	}
 	serverID, err := hdm.manager.GetKubeClient().GetNodeServerID()
 	if err != nil {
 		return fmt.Errorf("get node server id failed: %s", err.Error())
@@ -343,6 +346,14 @@ func (hdm *HwDevManager) updateSpecTypePodAnnotation(podList *v1.PodList, device
 		return err
 	}
 	for _, pod := range pods {
+		if err := common.CheckPodNameAndSpace(pod.Name, common.PodNameMaxLength); err != nil {
+			hwlog.RunLog.Warnf("pod name syntax illegal, %s", err.Error())
+			continue
+		}
+		if err := common.CheckPodNameAndSpace(pod.Namespace, common.PodNameSpaceMaxLength); err != nil {
+			hwlog.RunLog.Warnf("pod namespace syntax illegal, %s", err.Error())
+			continue
+		}
 		hwlog.RunLog.Debugf("pods: %s, %s, %s", pod.Name, pod.Status.Phase, pod.UID)
 		if _, exist := pod.Annotations[common.PodRealAlloc]; exist {
 			continue

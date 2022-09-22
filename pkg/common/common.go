@@ -140,7 +140,7 @@ func GetDefaultDevices(getFdFlag bool) ([]string, error) {
 	}
 	socDefaultDevices, err := set200SocDefaultDevices()
 	if err != nil {
-		hwlog.RunLog.Errorf("get 200 soc default devices failed, err: %#v\n", err)
+		hwlog.RunLog.Errorf("get 200I soc default devices failed, err: %#v", err)
 		return nil, err
 	}
 	defaultDevices = append(defaultDevices, socDefaultDevices...)
@@ -227,15 +227,15 @@ func FilterPods(pods *v1.PodList, blackList map[v1.PodPhase]int, deviceType stri
 		return res, fmt.Errorf("filter the number of pods exceeds the upper limit")
 	}
 	for _, pod := range pods.Items {
-		hwlog.RunLog.Debugf("pod: %v, %v", pod.Name, pod.Status.Phase)
 		if err := CheckPodNameAndSpace(pod.Name, PodNameMaxLength); err != nil {
-			hwlog.RunLog.Errorf("pod name syntax illegal, err: %v", err)
+			hwlog.RunLog.Warnf("pod name syntax illegal, err: %#v", err)
 			continue
 		}
 		if err := CheckPodNameAndSpace(pod.Namespace, PodNameSpaceMaxLength); err != nil {
-			hwlog.RunLog.Errorf("pod namespace syntax illegal, err: %v", err)
+			hwlog.RunLog.Warnf("pod namespace syntax illegal, err: %#v", err)
 			continue
 		}
+		hwlog.RunLog.Debugf("pod: %s, %s", pod.Name, pod.Status.Phase)
 		if _, exist := blackList[pod.Status.Phase]; exist {
 			continue
 		}
@@ -255,22 +255,22 @@ func VerifyPathAndPermission(verifyPath string) (string, bool) {
 	hwlog.RunLog.Debug("starting check device socket file path.")
 	absVerifyPath, err := filepath.Abs(verifyPath)
 	if err != nil {
-		hwlog.RunLog.Errorf("abs current path failed")
+		hwlog.RunLog.Error("abs current path failed")
 		return "", false
 	}
 	pathInfo, err := os.Stat(absVerifyPath)
 	if err != nil {
-		hwlog.RunLog.Errorf("file path not exist")
+		hwlog.RunLog.Error("file path not exist")
 		return "", false
 	}
 	realPath, err := filepath.EvalSymlinks(absVerifyPath)
 	if err != nil || absVerifyPath != realPath {
-		hwlog.RunLog.Errorf("Symlinks is not allowed")
+		hwlog.RunLog.Error("Symlinks is not allowed")
 		return "", false
 	}
 	stat, ok := pathInfo.Sys().(*syscall.Stat_t)
 	if !ok || stat.Uid != rootUID || stat.Gid != rootGID {
-		hwlog.RunLog.Errorf("Non-root owner group of the path")
+		hwlog.RunLog.Error("Non-root owner group of the path")
 		return "", false
 	}
 	return realPath, true

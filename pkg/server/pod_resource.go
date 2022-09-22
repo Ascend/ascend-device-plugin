@@ -120,17 +120,24 @@ func (pr *PodResource) GetPodResource() (map[string]PodDevice, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list pod resource failed: %s", err.Error())
 	}
+	if resp == nil {
+		return nil, fmt.Errorf("invalid list response")
+	}
 	if len(resp.PodResources) > common.MaxPodLimit {
 		return nil, fmt.Errorf("the number of pods %d exceeds the upper limit", len(resp.PodResources))
 	}
 	device := make(map[string]PodDevice, 1)
 	for _, pod := range resp.PodResources {
+		if pod == nil {
+			hwlog.RunLog.Warn("invalid pod")
+			continue
+		}
 		if err := common.CheckPodNameAndSpace(pod.Name, common.PodNameMaxLength); err != nil {
-			hwlog.RunLog.Errorf("pod name syntax illegal, %s", err.Error())
+			hwlog.RunLog.Warnf("pod name syntax illegal, %s", err.Error())
 			continue
 		}
 		if err := common.CheckPodNameAndSpace(pod.Namespace, common.PodNameSpaceMaxLength); err != nil {
-			hwlog.RunLog.Errorf("pod namespace syntax illegal, %s", err.Error())
+			hwlog.RunLog.Warnf("pod namespace syntax illegal, %s", err.Error())
 			continue
 		}
 		resourceName, podDevice, err := pr.getDeviceFromPod(pod)

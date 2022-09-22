@@ -28,7 +28,7 @@ func (ps *PluginServer) stopListAndWatch() {
 // Notify is called when device status changed, to notify ListAndWatch
 func (ps *PluginServer) Notify(devices []*common.NpuDevice) bool {
 	if ps == nil {
-		hwlog.RunLog.Errorf("invalid interface receiver")
+		hwlog.RunLog.Error("invalid interface receiver")
 		return false
 	}
 	if ps.isRunning.Load() {
@@ -175,7 +175,7 @@ func (ps *PluginServer) checkAllocateRequest(requests *v1beta1.AllocateRequest) 
 func getPredicateTimeFromPodAnnotation(pod *v1.Pod) uint64 {
 	assumeTimeStr, ok := pod.Annotations[common.PodPredicateTime]
 	if !ok {
-		hwlog.RunLog.Infof("volcano not write timestamp, pod Name: " + pod.Name)
+		hwlog.RunLog.Warnf("volcano not write timestamp, pod Name: %s", pod.Name)
 		return math.MaxUint64
 	}
 	predicateTime, err := strconv.ParseUint(assumeTimeStr, common.BaseDec, common.BitSize)
@@ -192,7 +192,7 @@ func (ps *PluginServer) getOldestPod(pods []v1.Pod) *v1.Pod {
 	}
 	oldest := pods[0]
 	for _, pod := range pods {
-		hwlog.RunLog.Debugf("pod %v, predicate time: %v", oldest.Name, pod.Annotations[common.PodPredicateTime])
+		hwlog.RunLog.Debugf("pod %s, predicate time: %s", oldest.Name, pod.Annotations[common.PodPredicateTime])
 		if getPredicateTimeFromPodAnnotation(&oldest) > getPredicateTimeFromPodAnnotation(&pod) {
 			oldest = pod
 		}
@@ -200,7 +200,7 @@ func (ps *PluginServer) getOldestPod(pods []v1.Pod) *v1.Pod {
 	hwlog.RunLog.Debugf("oldest pod %v, predicate time: %v", oldest.Name, oldest.Annotations[common.PodPredicateTime])
 	annotation := map[string]string{common.PodPredicateTime: strconv.FormatUint(math.MaxUint64, common.BaseDec)}
 	if err := ps.kubeClient.TryUpdatePodAnnotation(&oldest, annotation); err != nil {
-		hwlog.RunLog.Errorf("update pod %v failed, err: %v", oldest.Name, err)
+		hwlog.RunLog.Errorf("update pod %s failed, err: %#v", oldest.Name, err)
 		return nil
 	}
 	return &oldest
@@ -208,7 +208,7 @@ func (ps *PluginServer) getOldestPod(pods []v1.Pod) *v1.Pod {
 
 func (ps *PluginServer) updateAllocMap(realAlloc, kltAlloc []string) {
 	if len(realAlloc) != len(kltAlloc) {
-		hwlog.RunLog.Errorf("length of klt allocate not equal real allocate")
+		hwlog.RunLog.Error("number of devices of klt allocate not equal real allocate")
 		return
 	}
 	ps.allocMapLock.Lock()
@@ -366,7 +366,7 @@ func (ps *PluginServer) GetDevicePluginOptions(ctx context.Context, e *v1beta1.E
 // PreStartContainer is Standard interface to kubelet with empty implement.
 func (ps *PluginServer) PreStartContainer(ctx context.Context,
 	r *v1beta1.PreStartContainerRequest) (*v1beta1.PreStartContainerResponse, error) {
-	hwlog.RunLog.Infof("PreStart just call in UT.")
+	hwlog.RunLog.Info("PreStart just call in UT.")
 	return &v1beta1.PreStartContainerResponse{}, nil
 }
 

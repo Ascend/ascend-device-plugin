@@ -213,6 +213,9 @@ func (hnm *HwAscend910Manager) getRecoverLabelFromNodeSets(devRecoverLabel, netR
 		hwlog.RunLog.Error("get node error")
 		return nil, err
 	}
+	if curNode == nil || curNode.Labels == nil {
+		return nil, fmt.Errorf("invalid node")
+	}
 	// devRecoverLabel like Ascend910-0,Ascend910-2,Ascend910-3, means dev healthy exception
 	*devRecoverLabel = hnm.toStandardDeviceFmt(common.ConvertDevListToSets(
 		curNode.Labels[common.HuaweiRecoverAscend910], common.DotSepDev))
