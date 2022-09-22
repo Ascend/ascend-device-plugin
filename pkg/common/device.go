@@ -40,7 +40,7 @@ func GetDeviceListID(devices []string, ascendRuntimeOptions string) ([]string, e
 	for _, id := range devices {
 		deviceID, virID, err := getDeviceID(id, ascendRuntimeOptions)
 		if err != nil {
-			hwlog.RunLog.Errorf("get device ID err: %v", err)
+			hwlog.RunLog.Errorf("get device ID err: %#v", err)
 			return nil, err
 		}
 		if ascendRuntimeOptions == VirtualDev {

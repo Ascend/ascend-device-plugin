@@ -169,7 +169,7 @@ func (ki *ClientK8s) GetPodsUsedNpu(devType string) sets.String {
 		useNpu = append(useNpu, tmpNpuList...)
 		hwlog.RunLog.Debugf("pod Name: %s, getNPUByStatus vol : %#v", pod.Name, tmpNpu)
 	}
-	hwlog.RunLog.Debugf(fmt.Sprintf("nodeName: %s, useNpus: %v", ki.NodeName, useNpu))
+	hwlog.RunLog.Debugf("nodeName: %s, useNpus: %#v", ki.NodeName, useNpu)
 	return sets.NewString(useNpu...)
 }
 
