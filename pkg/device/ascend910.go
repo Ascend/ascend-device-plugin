@@ -63,6 +63,9 @@ func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]common.NpuDevice, allDevice
 		if err != nil {
 			hwlog.RunLog.Errorf("The virtual device is considered not exist, please check the error: %#v", err)
 		}
+		if vDevInfos.TotalResource.VDevNum > common.MaxVirtualDeviceNum {
+			return fmt.Errorf("invalid virtual device count")
+		}
 		if vDevInfos.TotalResource.VDevNum == 0 {
 			hnm.assemblePhyDevices(davinCiDev, allDevices, allDeviceTypes)
 			continue

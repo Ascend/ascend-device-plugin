@@ -154,7 +154,12 @@ func (hdm *HwDevManager) notifyToK8s() {
 			hwlog.RunLog.Warnf("server map (%s) not exist", devType)
 			continue
 		}
-		if !serverMap.(*server.PluginServer).Notify(classifyDev) {
+		pluginServer, ok := serverMap.(*server.PluginServer)
+		if !ok {
+			hwlog.RunLog.Warnf("pluginServer (%s) not ok", devType)
+			continue
+		}
+		if !pluginServer.Notify(classifyDev) {
 			hwlog.RunLog.Warnf("deviceType(%s) notify failed, server may not start, please check", devType)
 		}
 
