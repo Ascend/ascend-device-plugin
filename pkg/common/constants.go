@@ -18,7 +18,7 @@ const (
 	// PodNameSpaceMaxLength pod name space max length
 	PodNameSpaceMaxLength = 63
 	// MaxPodLimit max pod num
-	MaxPodLimit = 110
+	MaxPodLimit = 10000
 	// MaxContainerLimit max container num
 	MaxContainerLimit = 300000
 	// RetryUpdateCount is max number of retry resource update
