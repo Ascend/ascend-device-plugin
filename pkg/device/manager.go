@@ -280,16 +280,16 @@ func (hdm *HwDevManager) setRestartForAll() {
 
 func (hdm *HwDevManager) startAllServer(socketWatcher *common.FileWatch) bool {
 	success := true
-	for deviceType := range hdm.ServerMap {
-		if !hdm.ServerMap[deviceType].GetRestartFlag() {
+	for deviceType, serverInterface := range hdm.ServerMap {
+		if !serverInterface.GetRestartFlag() {
 			continue
 		}
-		if err := hdm.ServerMap[deviceType].Start(socketWatcher); err != nil {
+		if err := serverInterface.Start(socketWatcher); err != nil {
 			hwlog.RunLog.Errorf("Could not contact Kubelet for %s, retrying. "+
 				"Did you enable the device plugin feature gate?", deviceType)
 			success = false
 		} else {
-			hdm.ServerMap[deviceType].SetRestartFlag(false)
+			serverInterface.SetRestartFlag(false)
 		}
 	}
 	return success

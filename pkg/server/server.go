@@ -69,7 +69,10 @@ func (ps *PluginServer) serve(socketWatcher *common.FileWatch) error {
 	if err != nil {
 		return err
 	}
-	ps.grpcServer = grpc.NewServer()
+
+	ps.grpcServer = grpc.NewServer(grpc.MaxRecvMsgSize(common.MaxGRPCRecvMsgSize),
+		grpc.MaxConcurrentStreams(common.MaxGRPCConcurrentStreams))
+
 	v1beta1.RegisterDevicePluginServer(ps.grpcServer, ps)
 	go func() {
 		if err := ps.grpcServer.Serve(netListener); err != nil {
@@ -154,5 +157,8 @@ func createNetListener(socketWatcher *common.FileWatch, deviceType string) (net.
 	if err = os.Chmod(pluginSocketPath, common.SocketChmod); err != nil {
 		hwlog.RunLog.Errorf("change file: %s mode error", path.Base(pluginSocketPath))
 	}
+
+	netListen = common.NewLimiter(netListen)
+
 	return netListen, err
 }
