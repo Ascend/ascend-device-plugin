@@ -198,9 +198,10 @@ const (
 )
 
 const (
-	// rootUID and rootGID is user group
-	rootUID = 0
-	rootGID = 0
+	// RootUID is root user id
+	RootUID = 0
+	// RootGID is root group id
+	RootGID = 0
 
 	// DotSepDev if the separator between devices on labels
 	DotSepDev = "."

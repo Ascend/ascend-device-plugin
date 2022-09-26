@@ -269,7 +269,7 @@ func VerifyPathAndPermission(verifyPath string) (string, bool) {
 		return "", false
 	}
 	stat, ok := pathInfo.Sys().(*syscall.Stat_t)
-	if !ok || stat.Uid != rootUID || stat.Gid != rootGID {
+	if !ok || stat.Uid != RootUID || stat.Gid != RootGID {
 		hwlog.RunLog.Error("Non-root owner group of the path")
 		return "", false
 	}
