@@ -25,6 +25,8 @@ const (
 	RetryUpdateCount = 3
 	// MaxDeviceNameLen max length of device name, like "Ascend310P-4c.3cpu-100-0"
 	MaxDeviceNameLen = 50
+	// MaxVirtualDeviceNum max num of virtual device
+	MaxVirtualDeviceNum = 1024
 
 	// DeviceInfoCMNameSpace namespace of device info configmap
 	DeviceInfoCMNameSpace = "kube-system"
