@@ -5,7 +5,6 @@ package server
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -111,7 +110,7 @@ func (ps *PluginServer) deepCopyDevice(cachedDevices []*common.NpuDevice) {
 func (ps *PluginServer) ListAndWatch(empty *v1beta1.Empty, stream v1beta1.DevicePlugin_ListAndWatchServer) error {
 	send := func(stream v1beta1.DevicePlugin_ListAndWatchServer) {
 		if err := sendToKubelet(stream, ps.responseToKubelet()); err != nil {
-			hwlog.RunLog.Errorf("send to kubelet failed, error is %s", err.Error())
+			hwlog.RunLog.Errorf("send to kubelet failed, error is %#v", err)
 		}
 	}
 	ps.isRunning.Store(true)
@@ -180,7 +179,7 @@ func getPredicateTimeFromPodAnnotation(pod *v1.Pod) uint64 {
 	}
 	predicateTime, err := strconv.ParseUint(assumeTimeStr, common.BaseDec, common.BitSize)
 	if err != nil {
-		hwlog.RunLog.Errorf("parse timestamp failed, %s", err.Error())
+		hwlog.RunLog.Errorf("parse timestamp failed, %#v", err)
 		return math.MaxUint64
 	}
 	return predicateTime
@@ -300,7 +299,7 @@ func mountDevice(resp *v1beta1.ContainerAllocateResponse, devices []string, asce
 		resp.Devices = append(resp.Devices, &v1beta1.DeviceSpec{
 			HostPath:      hostPath,
 			ContainerPath: containerPath,
-			Permissions:   "rw",
+			Permissions:   "r",
 		})
 	}
 }
@@ -311,7 +310,7 @@ func mountDefaultDevice(resp *v1beta1.ContainerAllocateResponse, defaultDevs []s
 		resp.Devices = append(resp.Devices, &v1beta1.DeviceSpec{
 			HostPath:      d,
 			ContainerPath: d,
-			Permissions:   "rw",
+			Permissions:   "r",
 		})
 	}
 }
@@ -355,7 +354,7 @@ func (ps *PluginServer) Allocate(ctx context.Context, requests *v1beta1.Allocate
 // GetPreferredAllocation implement the kubelet device plugin interface
 func (ps *PluginServer) GetPreferredAllocation(context.Context, *v1beta1.PreferredAllocationRequest) (
 	*v1beta1.PreferredAllocationResponse, error) {
-	return nil, errors.New("not support")
+	return nil, fmt.Errorf("not support")
 }
 
 // GetDevicePluginOptions is Standard interface to kubelet.

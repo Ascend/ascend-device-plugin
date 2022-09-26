@@ -333,7 +333,7 @@ func GetPodConfiguration(devices map[string]string, podName, serverID string) st
 	}
 	instanceByte, err := json.Marshal(instance)
 	if err != nil {
-		hwlog.RunLog.Errorf("Transform marshal failed, err: %s", err.Error())
+		hwlog.RunLog.Errorf("Transform marshal failed, err: %#v", err)
 		return ""
 	}
 	return string(instanceByte)

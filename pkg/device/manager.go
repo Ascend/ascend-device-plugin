@@ -5,7 +5,6 @@ package device
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -67,7 +66,7 @@ func (hdm *HwDevManager) setRunMode(devType string) error {
 	case common.Ascend910:
 		hdm.RunMode = common.RunMode910
 	default:
-		return errors.New("an unsupported device type")
+		return fmt.Errorf("an unsupported device type")
 	}
 	return nil
 }
@@ -82,7 +81,7 @@ func (hdm *HwDevManager) setAscendManager(dmgr devmanager.DeviceInterface, clien
 		hdm.manager = NewHwAscend310PManager()
 	default:
 		hwlog.RunLog.Error("found an unsupported device type")
-		return errors.New("an unsupported device type")
+		return fmt.Errorf("an unsupported device type")
 	}
 	hdm.manager.SetDmgr(dmgr)
 	if common.ParamOption.UseVolcanoType && client != nil {
@@ -216,7 +215,7 @@ func (hdm *HwDevManager) Serve(ctx context.Context) {
 			return
 		}
 		if err := watcher.FileWatcher.Close(); err != nil {
-			hwlog.RunLog.Errorf("close file watcher, err: %s", err.Error())
+			hwlog.RunLog.Errorf("close file watcher, err: %#v", err)
 		}
 	}()
 
@@ -315,7 +314,7 @@ func (hdm *HwDevManager) updatePodAnnotation() error {
 	}
 	podResource, err := prClient.GetPodResource()
 	if err != nil {
-		return fmt.Errorf("get pod resource failed, %s", err.Error())
+		return fmt.Errorf("get pod resource failed, %#v", err)
 	}
 	podList, err := hdm.manager.GetKubeClient().GetPodList()
 	if err != nil {
@@ -326,7 +325,7 @@ func (hdm *HwDevManager) updatePodAnnotation() error {
 	}
 	serverID, err := hdm.manager.GetKubeClient().GetNodeServerID()
 	if err != nil {
-		return fmt.Errorf("get node server id failed: %s", err.Error())
+		return fmt.Errorf("get node server id failed: %#v", err)
 	}
 	for _, devType := range hdm.AllDevTypes {
 		element, exist := hdm.ServerMap[devType]
@@ -352,11 +351,11 @@ func (hdm *HwDevManager) updateSpecTypePodAnnotation(podList *v1.PodList, device
 	}
 	for _, pod := range pods {
 		if err := common.CheckPodNameAndSpace(pod.Name, common.PodNameMaxLength); err != nil {
-			hwlog.RunLog.Warnf("pod name syntax illegal, %s", err.Error())
+			hwlog.RunLog.Warnf("pod name syntax illegal, %#v", err)
 			continue
 		}
 		if err := common.CheckPodNameAndSpace(pod.Namespace, common.PodNameSpaceMaxLength); err != nil {
-			hwlog.RunLog.Warnf("pod namespace syntax illegal, %s", err.Error())
+			hwlog.RunLog.Warnf("pod namespace syntax illegal, %#v", err)
 			continue
 		}
 		hwlog.RunLog.Debugf("pods: %s, %s, %s", pod.Name, pod.Status.Phase, pod.UID)
@@ -376,12 +375,12 @@ func (hdm *HwDevManager) updateSpecTypePodAnnotation(podList *v1.PodList, device
 		}
 		volDeviceList, err := pluginServer.GetRealAllocateDevices(podResource.DeviceIds)
 		if err != nil {
-			hwlog.RunLog.Debugf("get device list %#v failed, %s", podResource.DeviceIds, err.Error())
+			hwlog.RunLog.Debugf("get device list %#v failed, %#v", podResource.DeviceIds, err)
 			continue
 		}
 		if err := hdm.manager.AddPodAnnotation(&pod, podResource.DeviceIds, volDeviceList, deviceType,
 			serverID); err != nil {
-			hwlog.RunLog.Errorf("update pod %s annotation failed, %s", podKey, err.Error())
+			hwlog.RunLog.Errorf("update pod %s annotation failed, %#v", podKey, err)
 		} else {
 			hwlog.RunLog.Infof("update pod %s annotation success", podKey)
 		}

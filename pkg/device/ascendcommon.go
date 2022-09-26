@@ -69,7 +69,7 @@ func (tool *AscendTools) UpdateNodeDeviceInfo(devStatusSet common.DevStatusSet,
 	waitErr := wait.PollImmediate(common.Interval*time.Second, common.Timeout*time.Second, func() (bool, error) {
 		deviceList, err := tool.getDeviceListFromConfigMap()
 		if err != nil {
-			hwlog.RunLog.Warnf("get device list from config map failed, %s", err.Error())
+			hwlog.RunLog.Warnf("get device list from config map failed, %#v", err)
 			tool.client.ResetDeviceInfo()
 			return false, nil
 		}
@@ -178,6 +178,9 @@ func getDeviceInfoData(deviceInfo *v1.ConfigMap) (map[string]string, error) {
 	if !ok {
 		return nil, fmt.Errorf("%s not exist", common.DeviceInfoCMDataKey)
 	}
+	if len(data) > common.CMDataMaxMemory {
+		return nil, fmt.Errorf("configMap data size is out of memory")
+	}
 	var nodeDeviceInfo common.NodeDeviceInfoCache
 	if err := json.Unmarshal([]byte(data), &nodeDeviceInfo); err != nil {
 		return nil, fmt.Errorf("unmarshal configmap data failed, err: %#v", err)
@@ -259,7 +262,7 @@ func (tool *AscendTools) getDeviceIP(phyID string) (string, error) {
 	}
 	logicID, err := tool.dmgr.GetLogicIDFromPhysicID(int32(transPhyID))
 	if err != nil {
-		return "", fmt.Errorf("transfor phyID %s to logicID failed, error code : %s", phyID, err.Error())
+		return "", fmt.Errorf("transfor phyID %s to logicID failed, err: %#v", phyID, err)
 	}
 	return tool.dmgr.GetDeviceIPAddress(logicID)
 }
@@ -271,7 +274,7 @@ func (tool *AscendTools) getDeviceListIP(devices []string, deviceType string) (m
 	}
 	ascendDevices, err := common.GetDeviceListID(devices, ascendRuntimeOptions)
 	if err != nil {
-		hwlog.RunLog.Errorf("get device list id err: %s", err.Error())
+		hwlog.RunLog.Errorf("get device list id err: %#v", err)
 		return nil, err
 	}
 	devicesWithIP := make(map[string]string, len(devices))
@@ -286,7 +289,7 @@ func (tool *AscendTools) getDeviceListIP(devices []string, deviceType string) (m
 		}
 		deviceIP, err := tool.getDeviceIP(id)
 		if err != nil {
-			hwlog.RunLog.Errorf("get device %s ip err: %s", id, err.Error())
+			hwlog.RunLog.Errorf("get device %s ip err: %#v", id, err)
 			return nil, err
 		}
 		devicesWithIP[id] = deviceIP
@@ -299,15 +302,13 @@ func (tool *AscendTools) AddPodAnnotation(pod *v1.Pod, kltRequestDevices, dpResp
 	deviceType, serverID string) error {
 	ascendVisibleDevices, err := tool.getDeviceListIP(dpResponseDevices, deviceType)
 	if err != nil {
-		return fmt.Errorf("get ascend devices ip failed, err: %s", err.Error())
+		return fmt.Errorf("get ascend devices ip failed, err: %#v", err)
 	}
 	configuration := common.GetPodConfiguration(ascendVisibleDevices, pod.Name, serverID)
 	annotation := map[string]string{common.Pod2kl: strings.Join(kltRequestDevices, common.CommaSepDev),
 		common.PodRealAlloc: strings.Join(dpResponseDevices, common.CommaSepDev)}
 	if tool.name == common.Ascend910 {
 		annotation[common.Pod910DeviceKey] = configuration
-	} else if tool.name == common.Ascend310P {
-		annotation[common.Pod310PDeviceKey] = configuration
 	}
 	return tool.client.TryUpdatePodAnnotation(pod, annotation)
 }
@@ -374,10 +375,10 @@ func (tool *AscendTools) getDevState(logicID int32) string {
 func (tool *AscendTools) unhealthyState(healthyState uint32, logicID int32) error {
 	phyID, err := tool.dmgr.GetPhysicIDFromLogicID(logicID)
 	if err != nil {
-		return fmt.Errorf("get phyID failed %v", err)
+		return fmt.Errorf("get phyID failed %#v", err)
 	}
 	if _, _, err := tool.dmgr.GetDeviceErrorCode(logicID); err != nil {
-		return fmt.Errorf("get device error code failed %v", err)
+		return fmt.Errorf("get device error code failed %#v", err)
 	}
 	hwlog.RunLog.Errorf("device logicID: %d, phyID: %d, state is %d", logicID, phyID, healthyState)
 	return nil

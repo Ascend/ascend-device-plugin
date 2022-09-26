@@ -5,7 +5,7 @@ package kubeclient
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"math"
 	"os"
 	"reflect"
@@ -75,14 +75,14 @@ func TestAnnotationReset(t *testing.T) {
 		convey.So(err, convey.ShouldEqual, nil)
 	})
 	convey.Convey("annotation reset with error", t, func() {
-		mockWrite, mockPatchNode, mockNode := annotationResetMock(errors.New("can not found device info cm"),
-			errors.New("patch node state failed"), nil)
+		mockWrite, mockPatchNode, mockNode := annotationResetMock(fmt.Errorf("can not found device info cm"),
+			fmt.Errorf("patch node state failed"), nil)
 		defer resetMock(mockWrite, mockPatchNode, mockNode)
 		err := utKubeClient.AnnotationReset()
 		convey.So(err.Error(), convey.ShouldEqual, "patch node state failed")
 	})
 	convey.Convey("annotation reset with get node failed", t, func() {
-		mockWrite, mockPatchNode, mockNode := annotationResetMock(nil, nil, errors.New("get node failed"))
+		mockWrite, mockPatchNode, mockNode := annotationResetMock(nil, nil, fmt.Errorf("get node failed"))
 		defer resetMock(mockWrite, mockPatchNode, mockNode)
 		err := utKubeClient.AnnotationReset()
 		convey.So(err.Error(), convey.ShouldEqual, "get node failed")
@@ -99,7 +99,7 @@ func TestGetNodeServerID(t *testing.T) {
 	convey.Convey("get node server id without get node", t, func() {
 		mockNode := gomonkey.ApplyMethod(reflect.TypeOf(new(ClientK8s)), "GetNode",
 			func(_ *ClientK8s) (*v1.Node, error) {
-				return nil, errors.New("failed to get node")
+				return nil, fmt.Errorf("failed to get node")
 			})
 		defer mockNode.Reset()
 		_, err := utKubeClient.GetNodeServerID()
@@ -127,7 +127,7 @@ func TestGetPodsUsedNpu(t *testing.T) {
 	convey.Convey("get used npu on pods without get pod list", t, func() {
 		mockPodList := gomonkey.ApplyMethod(reflect.TypeOf(new(ClientK8s)), "GetPodList",
 			func(_ *ClientK8s) (*v1.PodList, error) {
-				return nil, errors.New("failed to get pod list")
+				return nil, fmt.Errorf("failed to get pod list")
 			})
 		defer mockPodList.Reset()
 		useNpu := utKubeClient.GetPodsUsedNpu(common.Ascend310)
@@ -156,7 +156,7 @@ func TestWriteDeviceInfoDataIntoCM(t *testing.T) {
 	convey.Convey("write device info (cm) when get cm failed", t, func() {
 		mockGetCM := gomonkey.ApplyMethod(reflect.TypeOf(new(ClientK8s)), "GetConfigMap",
 			func(_ *ClientK8s) (*v1.ConfigMap, error) {
-				return nil, errors.New("test function errors")
+				return nil, fmt.Errorf("test function errors")
 			})
 		defer mockGetCM.Reset()
 		_, err := utKubeClient.WriteDeviceInfoDataIntoCM(getDeviceInfo(common.HuaweiAscend310P, npuChip310PPhyID0))
@@ -182,11 +182,11 @@ func TestTryUpdatePodAnnotation(t *testing.T) {
 	testPod := getMockPod(common.HuaweiAscend910, npuChip910PhyID0)
 	mockUpdatePod := gomonkey.ApplyMethod(reflect.TypeOf(new(ClientK8s)), "UpdatePod",
 		func(_ *ClientK8s, _ *v1.Pod) (*v1.Pod, error) {
-			return nil, errors.New("test function errors")
+			return nil, fmt.Errorf("test function errors")
 		})
 	defer mockUpdatePod.Reset()
 	convey.Convey("try update pod annotation when get pod failed", t, func() {
-		mockGetPod := mockGetPodOpr(nil, errors.New("get pod failed"))
+		mockGetPod := mockGetPodOpr(nil, fmt.Errorf("get pod failed"))
 		defer mockGetPod.Reset()
 		err := utKubeClient.TryUpdatePodAnnotation(testPod, nil)
 		convey.So(err.Error(), convey.ShouldEqual, "exceeded max number of retries")
@@ -233,7 +233,7 @@ func TestNewKubeClient(t *testing.T) {
 	})
 	convey.Convey("create new kubernetes client when get client failed", t, func() {
 		mockK8s := gomonkey.ApplyFunc(k8stool.K8sClientFor, func(string, string) (*kubernetes.Clientset, error) {
-			return nil, errors.New("get kubernetes client failed")
+			return nil, fmt.Errorf("get kubernetes client failed")
 		})
 		defer mockK8s.Reset()
 		_, err := NewClientK8s(common.ParamOption.KubeConfig)
@@ -393,7 +393,7 @@ func getContainers(devType string) []v1.Container {
 func mockCMOpr(updateCM *v1.ConfigMap) (*gomonkey.Patches, *gomonkey.Patches, *gomonkey.Patches) {
 	mockCreateCM := gomonkey.ApplyMethod(reflect.TypeOf(new(ClientK8s)), "CreateConfigMap",
 		func(_ *ClientK8s, _ *v1.ConfigMap) (*v1.ConfigMap, error) {
-			return nil, errors.New("already exists")
+			return nil, fmt.Errorf("already exists")
 		})
 	mockUpdateCM := gomonkey.ApplyMethod(reflect.TypeOf(new(ClientK8s)), "UpdateConfigMap",
 		func(_ *ClientK8s, _ *v1.ConfigMap) (*v1.ConfigMap, error) {

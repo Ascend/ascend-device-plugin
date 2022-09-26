@@ -7,7 +7,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 
@@ -80,7 +79,7 @@ func initLogModule(ctx context.Context) error {
 		MaxAge:      *logMaxAge,
 	}
 	if err := hwlog.InitRunLogger(&hwLogConfig, ctx); err != nil {
-		fmt.Printf("hwlog init failed, error is %v", err)
+		fmt.Printf("hwlog init failed, error is %#v", err)
 		return err
 	}
 	return nil
@@ -137,7 +136,6 @@ func main() {
 
 // InitFunction init function
 func InitFunction() (*device.HwDevManager, error) {
-	var err error
 	devM, err := devmanager.AutoInit("")
 	if err != nil {
 		hwlog.RunLog.Errorf("init devmanager failed, err: %#v", err)
@@ -155,7 +153,7 @@ func InitFunction() (*device.HwDevManager, error) {
 	hdm := device.NewHwDevManager(devM, kubeClient)
 	if hdm == nil {
 		hwlog.RunLog.Error("init device manager failed")
-		return nil, errors.New("init device manager failed")
+		return nil, fmt.Errorf("init device manager failed")
 	}
 	hwlog.RunLog.Info("init device manager success")
 	return hdm, nil

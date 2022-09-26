@@ -63,7 +63,7 @@ func (ki *ClientK8s) createOrUpdateConfigMap(cm *v1.ConfigMap) (*v1.ConfigMap, e
 		}
 		// To reduce the cm write operations
 		if !ki.isConfigMapChanged(cm) {
-			hwlog.RunLog.Infof("configmap not changed, no need update")
+			hwlog.RunLog.Info("configmap not changed, no need update")
 			return cm, nil
 		}
 		if newCM, err = ki.UpdateConfigMap(cm); err != nil {
@@ -106,7 +106,6 @@ func (ki *ClientK8s) WriteDeviceInfoDataIntoCM(deviceInfo map[string]string) (*v
 
 // AnnotationReset reset annotation and device info
 func (ki *ClientK8s) AnnotationReset() error {
-	var err error
 	curNode, err := ki.GetNode()
 	if err != nil {
 		hwlog.RunLog.Errorf("failed to get node, nodeName: %s, err: %#v", ki.NodeName, err)
@@ -146,11 +145,11 @@ func (ki *ClientK8s) GetPodsUsedNpu(devType string) sets.String {
 	var useNpu []string
 	for _, pod := range podList.Items {
 		if err := common.CheckPodNameAndSpace(pod.Name, common.PodNameMaxLength); err != nil {
-			hwlog.RunLog.Warnf("pod name syntax illegal, %s", err.Error())
+			hwlog.RunLog.Warnf("pod name syntax illegal, %#v", err)
 			continue
 		}
 		if err := common.CheckPodNameAndSpace(pod.Namespace, common.PodNameSpaceMaxLength); err != nil {
-			hwlog.RunLog.Warnf("pod namespace syntax illegal, %s", err.Error())
+			hwlog.RunLog.Warnf("pod namespace syntax illegal, %#v", err)
 			continue
 		}
 		if pod.Status.Phase == v1.PodFailed || pod.Status.Phase == v1.PodSucceeded {
