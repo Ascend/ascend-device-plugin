@@ -25,6 +25,10 @@ const (
 	RetryUpdateCount = 3
 	// MaxDeviceNameLen max length of device name, like "Ascend310P-4c.3cpu-100-0"
 	MaxDeviceNameLen = 50
+	// MaxGRPCRecvMsgSize 4MB
+	MaxGRPCRecvMsgSize = 4 * 1024 * 1024
+	// MaxGRPCConcurrentStreams limit on the number of concurrent streams to each ServerTransport.
+	MaxGRPCConcurrentStreams = 64
 	// MaxVirtualDeviceNum max num of virtual device
 	MaxVirtualDeviceNum = 1024
 
