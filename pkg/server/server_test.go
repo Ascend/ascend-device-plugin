@@ -255,6 +255,6 @@ func TestPluginServerStartPart5(t *testing.T) {
 		socketWatcher, err := common.NewFileWatch()
 		convey.So(err, convey.ShouldBeNil)
 		err = ps.Start(socketWatcher)
-		convey.So(err.Error(), convey.ShouldEqual, "check kubelet socket file path failed")
+		convey.So(err, convey.ShouldNotBeNil)
 	})
 }

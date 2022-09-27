@@ -156,9 +156,13 @@ func createNetListener(socketWatcher *common.FileWatch, deviceType string) (net.
 
 	if err = os.Chmod(pluginSocketPath, common.SocketChmod); err != nil {
 		hwlog.RunLog.Errorf("change file: %s mode error", path.Base(pluginSocketPath))
+		return nil, err
 	}
 
+	if err = os.Lchown(pluginSocketPath, common.RootUID, common.RootGID); err != nil {
+		hwlog.RunLog.Errorf("change file: %s owner error", path.Base(pluginSocketPath))
+		return nil, err
+	}
 	netListen = common.NewLimiter(netListen)
-
-	return netListen, err
+	return netListen, nil
 }
