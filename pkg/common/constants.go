@@ -33,6 +33,8 @@ const (
 	MaxVirtualDeviceNum = 1024
 	// CMDataMaxMemory configMap max data size 1MB
 	CMDataMaxMemory = 1024 * 1024
+	// PodAnnotationMaxMemory pod annotation max data size 1MB
+	PodAnnotationMaxMemory = 1024 * 1024
 
 	// DeviceInfoCMNameSpace namespace of device info configmap
 	DeviceInfoCMNameSpace = "kube-system"

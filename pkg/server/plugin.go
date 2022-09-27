@@ -177,6 +177,10 @@ func getPredicateTimeFromPodAnnotation(pod *v1.Pod) uint64 {
 		hwlog.RunLog.Warnf("volcano not write timestamp, pod Name: %s", pod.Name)
 		return math.MaxUint64
 	}
+	if len(assumeTimeStr) > common.PodAnnotationMaxMemory {
+		hwlog.RunLog.Warnf("timestamp fmt invalid, pod Name: %s", pod.Name)
+		return math.MaxUint64
+	}
 	predicateTime, err := strconv.ParseUint(assumeTimeStr, common.BaseDec, common.BitSize)
 	if err != nil {
 		hwlog.RunLog.Errorf("parse timestamp failed, %#v", err)

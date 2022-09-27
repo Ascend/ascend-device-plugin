@@ -157,7 +157,7 @@ func (ki *ClientK8s) GetPodsUsedNpu(devType string) sets.String {
 		}
 		annotationTag := fmt.Sprintf("%s%s", common.ResourceNamePrefix, devType)
 		tmpNpu, ok := pod.Annotations[annotationTag]
-		if !ok || len(tmpNpu) == 0 {
+		if !ok || len(tmpNpu) == 0 || len(tmpNpu) > common.PodAnnotationMaxMemory {
 			continue
 		}
 		tmpNpuList := strings.Split(tmpNpu, common.CommaSepDev)
