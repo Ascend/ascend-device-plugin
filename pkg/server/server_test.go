@@ -4,7 +4,7 @@
 package server
 
 import (
-	"errors"
+	"fmt"
 	"net"
 	"os"
 	"reflect"
@@ -74,7 +74,7 @@ func TestPluginServerStartPart1(t *testing.T) {
 
 		watchStub := gomonkey.ApplyMethod(reflect.TypeOf(new(common.FileWatch)),
 			"WatchFile", func(_ *common.FileWatch, _ string) error {
-				return errors.New("watch file failed")
+				return fmt.Errorf("watch file failed")
 			})
 		defer watchStub.Reset()
 
@@ -110,7 +110,7 @@ func TestPluginServerStartPart2(t *testing.T) {
 		defer statStub.Reset()
 
 		removeStub := gomonkey.ApplyFunc(os.Remove, func(name string) error {
-			return errors.New("remove file failed")
+			return fmt.Errorf("remove file failed")
 		})
 		defer removeStub.Reset()
 
@@ -141,12 +141,12 @@ func TestPluginServerStartPart3(t *testing.T) {
 		defer watchStub.Reset()
 
 		statStub := gomonkey.ApplyFunc(os.Stat, func(name string) (os.FileInfo, error) {
-			return nil, errors.New("not exist")
+			return nil, fmt.Errorf("not exist")
 		})
 		defer statStub.Reset()
 
 		listenStub := gomonkey.ApplyFunc(net.Listen, func(network, address string) (net.Listener, error) {
-			return nil, errors.New("create listener failed")
+			return nil, fmt.Errorf("create listener failed")
 		})
 		defer listenStub.Reset()
 
@@ -177,7 +177,7 @@ func TestPluginServerStartPart4(t *testing.T) {
 		defer watchStub.Reset()
 
 		statStub := gomonkey.ApplyFunc(os.Stat, func(name string) (os.FileInfo, error) {
-			return nil, errors.New("not exist")
+			return nil, fmt.Errorf("not exist")
 		})
 		defer statStub.Reset()
 
@@ -187,7 +187,7 @@ func TestPluginServerStartPart4(t *testing.T) {
 		defer listenStub.Reset()
 
 		modStub := gomonkey.ApplyFunc(os.Chmod, func(name string, mode os.FileMode) error {
-			return errors.New("change file mode failed")
+			return fmt.Errorf("change file mode failed")
 		})
 		defer modStub.Reset()
 
@@ -221,7 +221,7 @@ func TestPluginServerStartPart5(t *testing.T) {
 		defer watchStub.Reset()
 
 		statStub := gomonkey.ApplyFunc(os.Stat, func(name string) (os.FileInfo, error) {
-			return nil, errors.New("not exist")
+			return nil, fmt.Errorf("not exist")
 		})
 		defer statStub.Reset()
 

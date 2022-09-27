@@ -31,6 +31,8 @@ const (
 	MaxGRPCConcurrentStreams = 64
 	// MaxVirtualDeviceNum max num of virtual device
 	MaxVirtualDeviceNum = 1024
+	// CMDataMaxMemory configMap max data size 1MB
+	CMDataMaxMemory = 1024 * 1024
 
 	// DeviceInfoCMNameSpace namespace of device info configmap
 	DeviceInfoCMNameSpace = "kube-system"
@@ -50,8 +52,6 @@ const (
 	PodRealAlloc = ResourceNamePrefix + "AscendReal"
 	// Pod910DeviceKey pod annotation key, for generate 910 hccl rank table
 	Pod910DeviceKey = "ascend.kubectl.kubernetes.io/ascend-910-configuration"
-	// Pod310PDeviceKey pod annotation key, for generate 310P hccl rank table
-	Pod310PDeviceKey = "ascend.kubectl.kubernetes.io/ascend-310P-configuration"
 
 	// PodResourceSeverKey for pod resource key
 	PodResourceSeverKey = "podResource"

@@ -33,12 +33,12 @@ func (pr *PodResource) Start(socketWatcher *common.FileWatch) error {
 	}
 	var err error
 	if err = socketWatcher.WatchFile(realKubeletSockPath); err != nil {
-		hwlog.RunLog.Errorf("failed to create file watcher, err: %s", err.Error())
+		hwlog.RunLog.Errorf("failed to create file watcher, err: %#v", err)
 		return err
 	}
 	if pr.client, pr.conn, err = podresources.GetClient("unix://"+realKubeletSockPath, callTimeout,
 		defaultPodResourcesMaxSize); err != nil {
-		hwlog.RunLog.Errorf("get pod resource client failed, %s", err.Error())
+		hwlog.RunLog.Errorf("get pod resource client failed, %#v", err)
 		return err
 	}
 	hwlog.RunLog.Info("pod resource client init success.")
@@ -118,7 +118,7 @@ func (pr *PodResource) GetPodResource() (map[string]PodDevice, error) {
 	defer cancel()
 	resp, err := pr.client.List(ctx, &v1alpha1.ListPodResourcesRequest{})
 	if err != nil {
-		return nil, fmt.Errorf("list pod resource failed: %s", err.Error())
+		return nil, fmt.Errorf("list pod resource failed, err: %#v", err)
 	}
 	if resp == nil {
 		return nil, fmt.Errorf("invalid list response")
@@ -133,11 +133,11 @@ func (pr *PodResource) GetPodResource() (map[string]PodDevice, error) {
 			continue
 		}
 		if err := common.CheckPodNameAndSpace(pod.Name, common.PodNameMaxLength); err != nil {
-			hwlog.RunLog.Warnf("pod name syntax illegal, %s", err.Error())
+			hwlog.RunLog.Warnf("pod name syntax illegal, err: %#v", err)
 			continue
 		}
 		if err := common.CheckPodNameAndSpace(pod.Namespace, common.PodNameSpaceMaxLength); err != nil {
-			hwlog.RunLog.Warnf("pod namespace syntax illegal, %s", err.Error())
+			hwlog.RunLog.Warnf("pod namespace syntax illegal, err: %#v", err)
 			continue
 		}
 		resourceName, podDevice, err := pr.getDeviceFromPod(pod)
@@ -160,7 +160,7 @@ func (pr *PodResource) Stop() {
 	}
 	if pr.conn != nil {
 		if err := pr.conn.Close(); err != nil {
-			hwlog.RunLog.Errorf("stop connect failed, %s", err.Error())
+			hwlog.RunLog.Errorf("stop connect failed, err: %#v", err)
 		}
 		pr.conn = nil
 		pr.client = nil
