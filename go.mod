@@ -11,6 +11,7 @@ require (
 	huawei.com/mindx/common/k8stool v0.0.0
 	huawei.com/mindx/common/utils v0.0.0
 	huawei.com/mindx/common/x509 v0.0.0
+	huawei.com/mindx/common/limiter v0.0.0
 	huawei.com/npu-exporter v0.2.18
 	k8s.io/api v0.19.4
 	k8s.io/apimachinery v0.19.4

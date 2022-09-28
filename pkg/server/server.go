@@ -13,6 +13,7 @@ import (
 
 	"google.golang.org/grpc"
 	"huawei.com/mindx/common/hwlog"
+	"huawei.com/mindx/common/limiter"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/pkg/common"
@@ -163,6 +164,7 @@ func createNetListener(socketWatcher *common.FileWatch, deviceType string) (net.
 		hwlog.RunLog.Errorf("change file: %s owner error", path.Base(pluginSocketPath))
 		return nil, err
 	}
-	netListen = common.NewLimiter(netListen)
-	return netListen, nil
+
+	return limiter.LimitListener(netListen, common.MaxConcurrentLimit, common.MaxIPConnectionLimit,
+		common.CacheSize)
 }
