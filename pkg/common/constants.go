@@ -29,6 +29,12 @@ const (
 	MaxGRPCRecvMsgSize = 4 * 1024 * 1024
 	// MaxGRPCConcurrentStreams limit on the number of concurrent streams to each ServerTransport.
 	MaxGRPCConcurrentStreams = 64
+	// MaxConcurrentLimit limit over listener
+	MaxConcurrentLimit = 64
+	// MaxIPConnectionLimit limit over ip
+	MaxIPConnectionLimit = 64
+	// CacheSize cache for ip
+	CacheSize = 128
 	// MaxVirtualDeviceNum max num of virtual device
 	MaxVirtualDeviceNum = 1024
 	// CMDataMaxMemory configMap max data size 1MB
