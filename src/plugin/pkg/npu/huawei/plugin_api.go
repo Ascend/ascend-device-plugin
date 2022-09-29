@@ -567,6 +567,9 @@ func (s *pluginAPI) updatePod(pod *v1.Pod, podDeviceValue string) (*v1.Pod, erro
 		hwlog.Errorf("query pod info failed, err: %v", err)
 		return nil, fmt.Errorf("query pod info failed,%v", err)
 	}
+	if pod1.Annotations == nil {
+		pod1.Annotations = make(map[string]string, 2)
+	}
 	pod1.Annotations[podPredicateTime] = strconv.FormatUint(math.MaxUint64, 10)
 	pod1.Annotations[podDeviceKey] = podDeviceValue
 	pod2, err := s.hps.kubeInteractor.clientset.CoreV1().Pods(pod.Namespace).Update(pod1)
