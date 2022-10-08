@@ -153,14 +153,18 @@ func GetDefaultDevices(getFdFlag bool) ([]string, error) {
 // set200SocDefaultDevices set 200 soc defaults devices
 func set200SocDefaultDevices() ([]string, error) {
 	var socDefaultDevices = []string{
-		Atlas200SocXSMEM,
+		Atlas200ISocXSMEM,
+		Atlas200ISocVPC,
+		Atlas200ISocVDEC,
+		Atlas200ISocSYS,
+		Atlas200ISocSpiSmbus,
+		Atlas200ISocUserConfig,
 		HiAi200RCEventSched,
-		Atlas200SocVPC,
-		Atlas200SocVDEC,
-		Atlas200SocSYS,
 		HiAi200RCTsAisle,
 		HiAi200RCSVM0,
 		HiAi200RCLog,
+		HiAi200RCMemoryBandwidth,
+		HiAi200RCUpgrade,
 	}
 	for _, devPath := range socDefaultDevices {
 		if _, err := os.Stat(devPath); err != nil {

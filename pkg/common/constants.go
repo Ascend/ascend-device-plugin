@@ -195,14 +195,18 @@ const (
 const (
 	// Atlas200ISoc 200 soc env
 	Atlas200ISoc = "Atlas 200I SoC A1"
-	// Atlas200SocXSMEM is xsmem_dev
-	Atlas200SocXSMEM = "/dev/xsmem_dev"
-	// Atlas200SocSYS is sys
-	Atlas200SocSYS = "/dev/sys"
-	// Atlas200SocVDEC is vdec
-	Atlas200SocVDEC = "/dev/vdec"
-	// Atlas200SocVPC is vpc
-	Atlas200SocVPC = "/dev/vpc"
+	// Atlas200ISocXSMEM is xsmem_dev
+	Atlas200ISocXSMEM = "/dev/xsmem_dev"
+	// Atlas200ISocSYS is sys
+	Atlas200ISocSYS = "/dev/sys"
+	// Atlas200ISocVDEC is vdec
+	Atlas200ISocVDEC = "/dev/vdec"
+	// Atlas200ISocVPC is vpc
+	Atlas200ISocVPC = "/dev/vpc"
+	// Atlas200ISocSpiSmbus is spi_smbus
+	Atlas200ISocSpiSmbus = "/dev/spi_smbus"
+	// Atlas200ISocUserConfig is user_config
+	Atlas200ISocUserConfig = "/dev/user_config"
 )
 
 const (
