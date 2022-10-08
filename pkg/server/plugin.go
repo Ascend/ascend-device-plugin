@@ -303,7 +303,7 @@ func mountDevice(resp *v1beta1.ContainerAllocateResponse, devices []string, asce
 		resp.Devices = append(resp.Devices, &v1beta1.DeviceSpec{
 			HostPath:      hostPath,
 			ContainerPath: containerPath,
-			Permissions:   "r",
+			Permissions:   "rw",
 		})
 	}
 }
@@ -314,7 +314,7 @@ func mountDefaultDevice(resp *v1beta1.ContainerAllocateResponse, defaultDevs []s
 		resp.Devices = append(resp.Devices, &v1beta1.DeviceSpec{
 			HostPath:      d,
 			ContainerPath: d,
-			Permissions:   "r",
+			Permissions:   "rw",
 		})
 	}
 }
