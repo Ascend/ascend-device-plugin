@@ -18,7 +18,7 @@ import (
 const (
 	socketPath                 = "/var/lib/kubelet/pod-resources/kubelet.sock"
 	defaultPodResourcesMaxSize = 1024 * 1024 * 16
-	callTimeout                = time.Second
+	callTimeout                = 2 * time.Second
 )
 
 // Start starts the gRPC server, registers the pod resource with the Kubelet
@@ -53,6 +53,8 @@ func (pr *PodResource) getContainerResource(containerResource *v1alpha1.Containe
 		return "", nil, fmt.Errorf("the number of container device type %d exceeds the upper limit",
 			len(containerResource.Devices))
 	}
+	var deviceIds []string
+	resourceName := ""
 	for _, containerDevice := range containerResource.Devices {
 		if containerDevice == nil {
 			hwlog.RunLog.Warn("invalid container device")
@@ -64,16 +66,17 @@ func (pr *PodResource) getContainerResource(containerResource *v1alpha1.Containe
 		if len(containerDevice.DeviceIds) > common.MaxDevicesNum || len(containerDevice.DeviceIds) == 0 {
 			return "", nil, fmt.Errorf("container device num %d exceeds the upper limit", len(containerDevice.DeviceIds))
 		}
-		var deviceIds []string
+		if resourceName == "" {
+			resourceName = containerDevice.ResourceName
+		}
 		for _, id := range containerDevice.DeviceIds {
 			if len(id) > common.MaxDeviceNameLen {
 				return "", nil, fmt.Errorf("length of device name %d is invalid", len(id))
 			}
 			deviceIds = append(deviceIds, id)
 		}
-		return containerDevice.ResourceName, deviceIds, nil
 	}
-	return "", nil, nil
+	return resourceName, deviceIds, nil
 }
 
 func (pr *PodResource) getDeviceFromPod(podResources *v1alpha1.PodResources) (string, []string, error) {
