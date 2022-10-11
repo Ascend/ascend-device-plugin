@@ -345,3 +345,30 @@ func GetPodConfiguration(devices map[string]string, podName, serverID string) st
 	}
 	return string(instanceByte)
 }
+
+// CheckFileUserSameWithProcess to check whether the owner of the log file is the same as the uid
+func CheckFileUserSameWithProcess(loggerPath string) bool {
+	curUid := os.Getuid()
+	if curUid == RootUID {
+		return true
+	}
+	pathInfo, err := os.Lstat(loggerPath)
+	if err != nil {
+		path := filepath.Dir(loggerPath)
+		pathInfo, err = os.Lstat(path)
+		if err != nil {
+			fmt.Printf("get logger path stat failed, error is %#v\n", err)
+			return false
+		}
+	}
+	stat, ok := pathInfo.Sys().(*syscall.Stat_t)
+	if !ok {
+		fmt.Printf("get logger file stat failed\n")
+		return false
+	}
+	if int(stat.Uid) != curUid || int(stat.Gid) != curUid {
+		fmt.Printf("check log file failed, owner not right\n")
+		return false
+	}
+	return true
+}

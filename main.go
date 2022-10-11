@@ -9,7 +9,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-
 	"huawei.com/mindx/common/hwlog"
 	"huawei.com/npu-exporter/devmanager"
 
@@ -72,6 +71,9 @@ func initLogModule(ctx context.Context) error {
 	if *fdFlag {
 		loggerPath = *edgeLogFile
 	}
+	if !common.CheckFileUserSameWithProcess(loggerPath) {
+		return fmt.Errorf("check log file failed")
+	}
 	hwLogConfig := hwlog.LogConfig{
 		LogFileName: loggerPath,
 		LogLevel:    *logLevel,
@@ -79,7 +81,7 @@ func initLogModule(ctx context.Context) error {
 		MaxAge:      *logMaxAge,
 	}
 	if err := hwlog.InitRunLogger(&hwLogConfig, ctx); err != nil {
-		fmt.Printf("hwlog init failed, error is %#v", err)
+		fmt.Printf("hwlog init failed, error is %#v\n", err)
 		return err
 	}
 	return nil
