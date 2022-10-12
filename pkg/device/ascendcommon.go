@@ -305,8 +305,11 @@ func (tool *AscendTools) AddPodAnnotation(pod *v1.Pod, kltRequestDevices, dpResp
 		return fmt.Errorf("get ascend devices ip failed, err: %#v", err)
 	}
 	configuration := common.GetPodConfiguration(ascendVisibleDevices, pod.Name, serverID)
-	annotation := map[string]string{common.Pod2kl: strings.Join(kltRequestDevices, common.CommaSepDev),
-		common.PodRealAlloc: strings.Join(dpResponseDevices, common.CommaSepDev)}
+	annotation := make(map[string]string, 1)
+	if !common.IsVirtualDev(deviceType) {
+		annotation[common.Pod2kl] = strings.Join(kltRequestDevices, common.CommaSepDev)
+		annotation[common.PodRealAlloc] = strings.Join(dpResponseDevices, common.CommaSepDev)
+	}
 	if tool.name == common.Ascend910 {
 		annotation[common.Pod910DeviceKey] = configuration
 	}
