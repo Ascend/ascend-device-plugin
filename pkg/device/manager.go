@@ -389,7 +389,7 @@ func (hdm *HwDevManager) updateSpecTypePodAnnotation(podList *v1.PodList, device
 			serverID); err != nil {
 			hwlog.RunLog.Errorf("update pod %s annotation failed, %#v", podKey, err)
 		} else {
-			hwlog.RunLog.Infof("update pod %s annotation success", podKey)
+			hwlog.RunLog.Debugf("update pod %s annotation success", podKey)
 		}
 	}
 	return nil
