@@ -198,6 +198,9 @@ func getNPUResourceNumOfPod(pod *v1.Pod, deviceType string) int64 {
 }
 
 func isAscendAssignedPod(pod *v1.Pod, deviceType string) bool {
+	if IsVirtualDev(deviceType) {
+		return true
+	}
 	annotationTag := fmt.Sprintf("%s%s", ResourceNamePrefix, deviceType)
 	if _, ok := pod.ObjectMeta.Annotations[annotationTag]; !ok {
 		hwlog.RunLog.Debugf("no assigned flag, pod Name: %s, pod NameSpace: %s", pod.Name, pod.Namespace)

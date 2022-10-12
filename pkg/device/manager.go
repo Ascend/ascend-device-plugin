@@ -359,7 +359,9 @@ func (hdm *HwDevManager) updateSpecTypePodAnnotation(podList *v1.PodList, device
 			continue
 		}
 		hwlog.RunLog.Debugf("pods: %s, %s, %s", pod.Name, pod.Status.Phase, pod.UID)
-		if _, exist := pod.Annotations[common.PodRealAlloc]; exist {
+		_, existDeviceKey := pod.Annotations[common.Pod910DeviceKey]
+		_, existRealAlloc := pod.Annotations[common.PodRealAlloc]
+		if existDeviceKey || existRealAlloc {
 			continue
 		}
 		podKey := pod.Namespace + common.UnderLine + pod.Name
@@ -373,10 +375,15 @@ func (hdm *HwDevManager) updateSpecTypePodAnnotation(podList *v1.PodList, device
 				podResource.ResourceName, deviceType)
 			continue
 		}
-		volDeviceList, err := pluginServer.GetRealAllocateDevices(podResource.DeviceIds)
-		if err != nil {
-			hwlog.RunLog.Debugf("get device list %#v failed, %#v", podResource.DeviceIds, err)
-			continue
+		var volDeviceList []string
+		if !common.IsVirtualDev(deviceType) {
+			volDeviceList, err = pluginServer.GetRealAllocateDevices(podResource.DeviceIds)
+			if err != nil {
+				hwlog.RunLog.Debugf("get device list %#v failed, %#v", podResource.DeviceIds, err)
+				continue
+			}
+		} else {
+			volDeviceList = append(volDeviceList, podResource.DeviceIds...)
 		}
 		if err := hdm.manager.AddPodAnnotation(&pod, podResource.DeviceIds, volDeviceList, deviceType,
 			serverID); err != nil {
