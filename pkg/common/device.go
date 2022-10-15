@@ -32,24 +32,26 @@ func getDeviceID(deviceName string, ascendRuntimeOptions string) (string, string
 }
 
 // GetDeviceListID get device id by input device name
-func GetDeviceListID(devices []string, ascendRuntimeOptions string) ([]string, error) {
+func GetDeviceListID(devices []string, ascendRuntimeOptions string) (map[string]string, []string, error) {
 	if len(devices) > MaxDevicesNum {
-		return nil, fmt.Errorf("device num excceed max num, when get device list id")
+		return nil, nil, fmt.Errorf("device num excceed max num, when get device list id")
 	}
 	var ascendVisibleDevices []string
+	phyDevMapVirtualDev := make(map[string]string, MaxDevicesNum)
 	for _, id := range devices {
 		deviceID, virID, err := getDeviceID(id, ascendRuntimeOptions)
 		if err != nil {
 			hwlog.RunLog.Errorf("get device ID err: %#v", err)
-			return nil, err
+			return nil, nil, err
 		}
 		if ascendRuntimeOptions == VirtualDev {
 			ascendVisibleDevices = append(ascendVisibleDevices, virID)
+			phyDevMapVirtualDev[virID] = deviceID
 			continue
 		}
 		ascendVisibleDevices = append(ascendVisibleDevices, deviceID)
 	}
-	return ascendVisibleDevices, nil
+	return phyDevMapVirtualDev, ascendVisibleDevices, nil
 }
 
 // IsVirtualDev used to judge whether a physical device or a virtual device

@@ -331,7 +331,8 @@ func NewSignWatcher(osSigns ...os.Signal) chan os.Signal {
 }
 
 // GetPodConfiguration get annotation configuration of pod
-func GetPodConfiguration(devices map[string]string, podName, serverID string) string {
+func GetPodConfiguration(phyDevMapVirtualDev map[string]string, devices map[string]string, podName,
+	serverID string, deviceType string) string {
 	var sortDevicesKey []string
 	for deviceID := range devices {
 		sortDevicesKey = append(sortDevicesKey, deviceID)
@@ -339,7 +340,16 @@ func GetPodConfiguration(devices map[string]string, podName, serverID string) st
 	sort.Strings(sortDevicesKey)
 	instance := Instance{PodName: podName, ServerID: serverID}
 	for _, deviceID := range sortDevicesKey {
-		instance.Devices = append(instance.Devices, Device{DeviceID: deviceID, DeviceIP: devices[deviceID]})
+		if !IsVirtualDev(deviceType) {
+			instance.Devices = append(instance.Devices, Device{DeviceID: deviceID, DeviceIP: devices[deviceID]})
+			continue
+		}
+		phyID, exist := phyDevMapVirtualDev[deviceID]
+		if !exist {
+			hwlog.RunLog.Warn("virtual device not found phyid")
+			continue
+		}
+		instance.Devices = append(instance.Devices, Device{DeviceID: phyID, DeviceIP: devices[deviceID]})
 	}
 	instanceByte, err := json.Marshal(instance)
 	if err != nil {

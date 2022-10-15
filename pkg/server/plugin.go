@@ -338,7 +338,7 @@ func (ps *PluginServer) Allocate(ctx context.Context, requests *v1beta1.Allocate
 				return nil, err
 			}
 		}
-		ascendVisibleDevices, err := common.GetDeviceListID(allocateDevices, ps.ascendRuntimeOptions)
+		_, ascendVisibleDevices, err := common.GetDeviceListID(allocateDevices, ps.ascendRuntimeOptions)
 		if err != nil {
 			hwlog.RunLog.Error(err)
 			return nil, err
