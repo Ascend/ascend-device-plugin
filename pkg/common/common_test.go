@@ -425,18 +425,18 @@ func TestGetDeviceListID(t *testing.T) {
 	convey.Convey("TestGetDeviceListID", t, func() {
 		convey.Convey("device name is invalid", func() {
 			devices := []string{"Ascend910"}
-			_, ret := GetDeviceListID(devices, "")
+			_, _, ret := GetDeviceListID(devices, "")
 			convey.So(ret, convey.ShouldNotBeNil)
 		})
 		convey.Convey("physical device", func() {
 			devices := []string{"Ascend910-0"}
-			ascendVisibleDevices, ret := GetDeviceListID(devices, "")
+			_, ascendVisibleDevices, ret := GetDeviceListID(devices, "")
 			convey.So(ret, convey.ShouldBeNil)
 			convey.So(len(ascendVisibleDevices), convey.ShouldEqual, 1)
 		})
 		convey.Convey("virtual device", func() {
 			devices := []string{"Ascend910-2c-100-0"}
-			ascendVisibleDevices, ret := GetDeviceListID(devices, VirtualDev)
+			_, ascendVisibleDevices, ret := GetDeviceListID(devices, VirtualDev)
 			convey.So(ret, convey.ShouldBeNil)
 			convey.So(len(ascendVisibleDevices), convey.ShouldEqual, 1)
 		})
@@ -452,12 +452,16 @@ func TestGetPodConfiguration(t *testing.T) {
 			})
 			defer mockMarshal.Reset()
 			devices := map[string]string{"100": DefaultDeviceIP}
-			ret := GetPodConfiguration(devices, "pod-name", DefaultDeviceIP)
+			phyDevMapVirtualDev := map[string]string{"100": "0"}
+			deviceType := "Ascend910-2c"
+			ret := GetPodConfiguration(phyDevMapVirtualDev, devices, "pod-name", DefaultDeviceIP, deviceType)
 			convey.So(ret, convey.ShouldBeEmpty)
 		})
 		convey.Convey("Marshal ok", func() {
 			devices := map[string]string{"100": DefaultDeviceIP}
-			ret := GetPodConfiguration(devices, "pod-name", DefaultDeviceIP)
+			phyDevMapVirtualDev := map[string]string{"100": "0"}
+			deviceType := "Ascend910-2c"
+			ret := GetPodConfiguration(phyDevMapVirtualDev, devices, "pod-name", DefaultDeviceIP, deviceType)
 			convey.So(ret, convey.ShouldNotBeEmpty)
 		})
 	})

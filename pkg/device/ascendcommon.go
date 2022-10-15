@@ -272,7 +272,7 @@ func (tool *AscendTools) getDeviceListIP(devices []string, deviceType string) (m
 	if common.IsVirtualDev(deviceType) {
 		ascendRuntimeOptions = common.VirtualDev
 	}
-	ascendDevices, err := common.GetDeviceListID(devices, ascendRuntimeOptions)
+	_, ascendDevices, err := common.GetDeviceListID(devices, ascendRuntimeOptions)
 	if err != nil {
 		hwlog.RunLog.Errorf("get device list id err: %#v", err)
 		return nil, err
@@ -300,11 +300,21 @@ func (tool *AscendTools) getDeviceListIP(devices []string, deviceType string) (m
 // AddPodAnnotation get ip of device list
 func (tool *AscendTools) AddPodAnnotation(pod *v1.Pod, kltRequestDevices, dpResponseDevices []string,
 	deviceType, serverID string) error {
+	ascendRuntimeOptions := ""
+	if common.IsVirtualDev(deviceType) {
+		ascendRuntimeOptions = common.VirtualDev
+	}
+	phyDevMapVirtualDev, _, err := common.GetDeviceListID(dpResponseDevices, ascendRuntimeOptions)
+	if err != nil {
+		hwlog.RunLog.Errorf("get device list id err: %#v", err)
+		return err
+	}
 	ascendVisibleDevices, err := tool.getDeviceListIP(dpResponseDevices, deviceType)
 	if err != nil {
 		return fmt.Errorf("get ascend devices ip failed, err: %#v", err)
 	}
-	configuration := common.GetPodConfiguration(ascendVisibleDevices, pod.Name, serverID)
+	configuration := common.GetPodConfiguration(phyDevMapVirtualDev, ascendVisibleDevices, pod.Name, serverID,
+		deviceType)
 	annotation := make(map[string]string, 1)
 	if !common.IsVirtualDev(deviceType) {
 		annotation[common.Pod2kl] = strings.Join(kltRequestDevices, common.CommaSepDev)
