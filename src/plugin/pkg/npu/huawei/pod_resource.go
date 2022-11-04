@@ -46,6 +46,8 @@ func (s *pluginAPI) getContainerResource(containerResource *v1alpha1.ContainerRe
 		return "", nil, fmt.Errorf("the number of container device type %d exceeds the upper limit",
 			len(containerResource.Devices))
 	}
+	var deviceIds []string
+	resourceName := ""
 	for _, containerDevice := range containerResource.Devices {
 		if containerDevice == nil {
 			hwlog.Warn("invalid container device")
@@ -58,16 +60,17 @@ func (s *pluginAPI) getContainerResource(containerResource *v1alpha1.ContainerRe
 			return "", nil, fmt.Errorf("container device num %d exceeds the upper limit",
 				len(containerDevice.DeviceIds))
 		}
-		var deviceIds []string
+		if resourceName == "" {
+			resourceName = containerDevice.ResourceName
+		}
 		for _, id := range containerDevice.DeviceIds {
 			if len(id) > maxDeviceNameLen {
 				return "", nil, fmt.Errorf("length of device name %d is invalid", len(id))
 			}
 			deviceIds = append(deviceIds, id)
 		}
-		return containerDevice.ResourceName, deviceIds, nil
 	}
-	return "", nil, nil
+	return resourceName, deviceIds, nil
 }
 
 func (s *pluginAPI) getDeviceFromPod(podResources *v1alpha1.PodResources) (string, []string, error) {
