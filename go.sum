@@ -13,8 +13,8 @@ cloud.google.com/go/pubsub v1.0.1/go.mod h1:R0Gpsv3s54REJCy4fxDixWD93lHJMoZTyQ2k
 cloud.google.com/go/storage v1.0.0/go.mod h1:IhtSnM/ZTZV8YYJWCY8RULGVqBDmpoyjwiyrjsg+URw=
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/cache v0.0.2 h1:58Y5vqxy2ZV+A49k6jJTZDkhyAuaRZp9V2jqTpdDCDg=
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/cache v0.0.2/go.mod h1:a/qzEfXJRRkAxE8zKCdhxUJWY5Tyfynwwg0gv33BatQ=
-codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/hwlog v0.0.10 h1:tcrDanmdiFx2qbFyQ1UVTxvzCvPXt0BGvDELVXvSMQY=
-codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/hwlog v0.0.10/go.mod h1:gtLYXk/CXBMxk1nzUY3AQPkexl7ZtbUJ/hNwktiBSPc=
+codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/hwlog v0.10.1 h1:3ayeq72UTDMSVaWNaCjFE5rGBGSSFVW41s3HqyaJjSM=
+codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/hwlog v0.10.1/go.mod h1:gtLYXk/CXBMxk1nzUY3AQPkexl7ZtbUJ/hNwktiBSPc=
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/k8stool v0.0.3 h1:lkiDOfib7XNSgHkKIqavs9FbvDRunW4t1CP6NgitVK0=
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/k8stool v0.0.3/go.mod h1:kAMBM48/MSRuY/JXs5O9fS8Xj9IuDVfeyy3tY5x1Bcw=
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/kmc v0.0.9 h1:a2OGcQC28BoJ0CixJ5ySNmrV+0pkndW2kX/f969Gq1Q=
@@ -25,11 +25,11 @@ codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/rand v0.0
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/rand v0.0.1/go.mod h1:NrnaEzjRL3nWhGM4i2dfw7weQ6nt3Kk6qOQHBb0AeKE=
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/terminal v0.0.2 h1:as6gzKdfWK4AKdheC2RLQ5ieyvwwOWuEaUfHyscbh04=
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/terminal v0.0.2/go.mod h1:9gWEFhgvix/Au9YlEtrIepj3oLjfJRJtOWQY7L1S774=
-codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/tls v0.0.3/go.mod h1:fQIhOekm5xXXx9V2q1xIeCBsm9GCMayFHGvRlhEEAhI=
+codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/tls v0.0.4/go.mod h1:fQIhOekm5xXXx9V2q1xIeCBsm9GCMayFHGvRlhEEAhI=
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/utils v0.1.4 h1:a2fAvonvq9HJ91ANIP7BJRZhXr78lMgSYF12OMrkZxc=
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/utils v0.1.4/go.mod h1:gzaoiHwloaNTtm46GVe93KtXMcXVHJ8LBVqWEAjmh+0=
-codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/x509 v0.0.6 h1:NSC8+Qe1FynDJXGfSXvflR5iIx1IK+8MeLB9oE7ZI8g=
-codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/x509 v0.0.6/go.mod h1:coN56EHJ/BP51hHy5jtD5ob8L7r72KgMDOo0zAC5R4Y=
+codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/x509 v0.0.7 h1:Z7CL7mSZJvTjYZ1CIT4qwxeF950K4q5ihr6eUsovcAM=
+codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/x509 v0.0.7/go.mod h1:coN56EHJ/BP51hHy5jtD5ob8L7r72KgMDOo0zAC5R4Y=
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.2.18 h1:FUF+DJzyLC8ggsziOrwOkGnQUfWc2IZ5G9EAFf/Rw9g=
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.2.18/go.mod h1:DS1Bcmf//6uWisHzX+NTLtoSg6rmI2s3m1mVXJmm+xo=
 codehub-dg-y.huawei.com/OpenSourceCenter/kubernetes.git v1.19.4-h4 h1:X05D0Oi6fzBYyqXgnndyilTzhnsSqTQsPT0ezxewu3Q=
