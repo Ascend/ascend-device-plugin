@@ -29,6 +29,7 @@ const (
 	// minListWatchPeriod is the min listening device state's period
 	minListWatchPeriod = 3
 	maxRunModeLength   = 10
+	maxLogLineLength   = 1024
 )
 
 var (
@@ -75,10 +76,11 @@ func initLogModule(ctx context.Context) error {
 		return fmt.Errorf("check log file failed")
 	}
 	hwLogConfig := hwlog.LogConfig{
-		LogFileName: loggerPath,
-		LogLevel:    *logLevel,
-		MaxBackups:  *logMaxBackups,
-		MaxAge:      *logMaxAge,
+		LogFileName:   loggerPath,
+		LogLevel:      *logLevel,
+		MaxBackups:    *logMaxBackups,
+		MaxAge:        *logMaxAge,
+		MaxLineLength: maxLogLineLength,
 	}
 	if err := hwlog.InitRunLogger(&hwLogConfig, ctx); err != nil {
 		fmt.Printf("hwlog init failed, error is %#v\n", err)
