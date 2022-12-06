@@ -32,7 +32,7 @@ type AscendTools struct {
 	healthDevice sets.String
 }
 
-type devManager interface {
+type DevManager interface {
 	GetNPUs(*[]common.NpuDevice, *[]string) error
 	DoWithVolcanoListAndWatch(map[string][]*common.NpuDevice)
 	SetDmgr(devmanager.DeviceInterface)

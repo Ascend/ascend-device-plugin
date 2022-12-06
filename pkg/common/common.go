@@ -13,7 +13,9 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 
 	"github.com/fsnotify/fsnotify"
@@ -34,13 +36,22 @@ func GetPattern() map[string]string {
 	}
 }
 
-// GetPodPhaseBlackList get black list of pod phase
-func GetPodPhaseBlackList() map[v1.PodPhase]int {
-	return map[v1.PodPhase]int{v1.PodFailed: 0, v1.PodSucceeded: 0}
+var (
+	allDeviceInfoLock sync.Mutex
+)
+
+// LockAllDeviceInfo lock for device info status
+func LockAllDeviceInfo() {
+	allDeviceInfoLock.Lock()
+}
+
+// UnlockAllDeviceInfo unlock for device info status
+func UnlockAllDeviceInfo() {
+	allDeviceInfoLock.Unlock()
 }
 
 // SetAscendRuntimeEnv is to set ascend runtime environment
-func SetAscendRuntimeEnv(devices []string, ascendRuntimeOptions string,
+func SetAscendRuntimeEnv(devices []int, ascendRuntimeOptions string,
 	resp *v1beta1.ContainerAllocateResponse) {
 	if resp == nil {
 		hwlog.RunLog.Error("resp is nil")
@@ -49,7 +60,11 @@ func SetAscendRuntimeEnv(devices []string, ascendRuntimeOptions string,
 	if len((*resp).Envs) == 0 {
 		(*resp).Envs = make(map[string]string, runtimeEnvNum)
 	}
-	(*resp).Envs[ascendVisibleDevicesEnv] = strings.Join(devices, ",")
+	var deviceStr []string
+	for _, id := range devices {
+		deviceStr = append(deviceStr, strconv.Itoa(id))
+	}
+	(*resp).Envs[ascendVisibleDevicesEnv] = strings.Join(deviceStr, ",")
 	(*resp).Envs[ascendRuntimeOptionsEnv] = ascendRuntimeOptions
 
 	hwlog.RunLog.Infof("allocate resp env: %s; %s", (*resp).Envs[ascendVisibleDevicesEnv], ascendRuntimeOptions)
@@ -92,20 +107,29 @@ func MapDeepCopy(source map[string]string) map[string]string {
 	return dest
 }
 
-// GetDeviceFromPodAnnotation get devices from pod annotation
-func GetDeviceFromPodAnnotation(pod *v1.Pod, deviceType string) ([]string, error) {
+// GetPodAnnotationByDeviceType get pod annotation by device type
+func GetPodAnnotationByDeviceType(pod *v1.Pod, deviceType string) (string, error) {
 	if pod == nil {
-		return nil, fmt.Errorf("invalid pod")
+		return "", fmt.Errorf("invalid pod")
 	}
 	annotationTag := fmt.Sprintf("%s%s", ResourceNamePrefix, deviceType)
 	annotation, exist := pod.Annotations[annotationTag]
 	if !exist {
-		return nil, fmt.Errorf("cannot find the annotation")
+		return "", fmt.Errorf("cannot find the annotation")
 	}
 	if len(annotation) > PodAnnotationMaxMemory {
-		return nil, fmt.Errorf("pod annotation size out of memory")
+		return "", fmt.Errorf("pod annotation size out of memory")
 	}
-	return strings.Split(annotation, ","), nil
+	return annotation, nil
+}
+
+// GetDeviceFromPodAnnotation get devices from pod annotation
+func GetDeviceFromPodAnnotation(pod *v1.Pod, deviceType string) ([]string, error) {
+	annotation, err := GetPodAnnotationByDeviceType(pod, deviceType)
+	if err != nil {
+		return nil, err
+	}
+	return strings.Split(annotation, CommaSepDev), nil
 }
 
 func setDeviceByPathWhen200RC(defaultDevices []string) {
@@ -188,8 +212,8 @@ func getNPUResourceNumOfPod(pod *v1.Pod, deviceType string) int64 {
 			continue
 		}
 		limitsDevNum := val.Value()
-		if limitsDevNum < 0 || limitsDevNum > int64(MaxDevicesNum) {
-			hwlog.RunLog.Errorf("apply devices number should be in the range of [0, %d]", MaxDevicesNum)
+		if limitsDevNum < 0 || limitsDevNum > int64(MaxDevicesNum*MaxAICoreNum) {
+			hwlog.RunLog.Errorf("apply devices number should be in the range of [0, %d]", MaxDevicesNum*MaxAICoreNum)
 			return int64(0)
 		}
 		total += limitsDevNum
@@ -227,37 +251,20 @@ func isShouldDeletePod(pod *v1.Pod) bool {
 }
 
 // FilterPods get pods which meet the conditions
-func FilterPods(pods *v1.PodList, blackList map[v1.PodPhase]int, deviceType string,
-	conditionFunc func(pod *v1.Pod) bool) ([]v1.Pod, error) {
+func FilterPods(pods []v1.Pod, deviceType string, conditionFunc func(pod *v1.Pod) bool) []v1.Pod {
 	var res []v1.Pod
-	if pods == nil {
-		return res, fmt.Errorf("input pods variable is nil")
-	}
-	if len(pods.Items) >= MaxPodLimit {
-		return res, fmt.Errorf("filter the number of pods exceeds the upper limit")
-	}
-	for _, pod := range pods.Items {
-		if err := CheckPodNameAndSpace(pod.Name, PodNameMaxLength); err != nil {
-			hwlog.RunLog.Warnf("pod name syntax illegal, err: %#v", err)
-			continue
-		}
-		if err := CheckPodNameAndSpace(pod.Namespace, PodNameSpaceMaxLength); err != nil {
-			hwlog.RunLog.Warnf("pod namespace syntax illegal, err: %#v", err)
-			continue
-		}
+	for _, pod := range pods {
 		hwlog.RunLog.Debugf("pod: %s, %s", pod.Name, pod.Status.Phase)
-		if _, exist := blackList[pod.Status.Phase]; exist {
+		if getNPUResourceNumOfPod(&pod, deviceType) == 0 || !isAscendAssignedPod(&pod,
+			deviceType) || isShouldDeletePod(&pod) {
 			continue
 		}
 		if conditionFunc != nil && !conditionFunc(&pod) {
 			continue
 		}
-		if getNPUResourceNumOfPod(&pod, deviceType) > 0 && isAscendAssignedPod(&pod,
-			deviceType) && !isShouldDeletePod(&pod) {
-			res = append(res, pod)
-		}
+		res = append(res, pod)
 	}
-	return res, nil
+	return res
 }
 
 // VerifyPathAndPermission used to verify the validity of the path and permission and return resolved absolute path
@@ -331,13 +338,13 @@ func NewSignWatcher(osSigns ...os.Signal) chan os.Signal {
 }
 
 // GetPodConfiguration get annotation configuration of pod
-func GetPodConfiguration(phyDevMapVirtualDev map[string]string, devices map[string]string, podName,
+func GetPodConfiguration(phyDevMapVirtualDev map[int]int, devices map[int]string, podName,
 	serverID string, deviceType string) string {
-	var sortDevicesKey []string
+	var sortDevicesKey []int
 	for deviceID := range devices {
 		sortDevicesKey = append(sortDevicesKey, deviceID)
 	}
-	sort.Strings(sortDevicesKey)
+	sort.Ints(sortDevicesKey)
 	instance := Instance{PodName: podName, ServerID: serverID}
 	for _, deviceID := range sortDevicesKey {
 		if !IsVirtualDev(deviceType) {

@@ -1,9 +1,10 @@
 // Copyright (c) 2022. Huawei Technologies Co., Ltd. All rights reserved.
 
 // Package device a series of device function
-package device
+package server
 
 import (
+	"Ascend-device-plugin/pkg/device"
 	"fmt"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,7 +17,6 @@ import (
 
 	"Ascend-device-plugin/pkg/common"
 	"Ascend-device-plugin/pkg/kubeclient"
-	"Ascend-device-plugin/pkg/server"
 )
 
 func TestNewHwDevManager(t *testing.T) {
@@ -40,13 +40,13 @@ func TestNewHwDevManager(t *testing.T) {
 
 func TestStartAllServer(t *testing.T) {
 	convey.Convey("test startAllServer", t, func() {
-		mockStart := gomonkey.ApplyMethod(reflect.TypeOf(new(server.PluginServer)), "Start",
-			func(_ *server.PluginServer, socketWatcher *common.FileWatch) error {
+		mockStart := gomonkey.ApplyMethod(reflect.TypeOf(new(PluginServer)), "Start",
+			func(_ *PluginServer, socketWatcher *common.FileWatch) error {
 				return fmt.Errorf("error")
 			})
 		defer mockStart.Reset()
-		mockStart2 := gomonkey.ApplyMethod(reflect.TypeOf(new(server.PodResource)), "Start",
-			func(_ *server.PodResource, socketWatcher *common.FileWatch) error {
+		mockStart2 := gomonkey.ApplyMethod(reflect.TypeOf(new(PodResource)), "Start",
+			func(_ *PodResource, socketWatcher *common.FileWatch) error {
 				return fmt.Errorf("error")
 			})
 		defer mockStart.Reset()
@@ -69,21 +69,21 @@ func TestUpdatePodAnnotation1(t *testing.T) {
 		})
 		convey.Convey("type assertion failed", func() {
 			hdm := NewHwDevManager(&devmanager.DeviceManagerMock{}, &kubeclient.ClientK8s{})
-			hdm.ServerMap[common.PodResourceSeverKey] = &server.PluginServer{}
+			hdm.ServerMap[common.PodResourceSeverKey] = &PluginServer{}
 			err := hdm.updatePodAnnotation()
 			convey.So(err, convey.ShouldNotBeNil)
 		})
 		convey.Convey("GetPodResource failed", func() {
-			mockGetPodResource := gomonkey.ApplyMethod(reflect.TypeOf(new(server.PodResource)), "GetPodResource",
-				func(_ *server.PodResource) (map[string]server.PodDevice, error) { return nil, fmt.Errorf("err") })
+			mockGetPodResource := gomonkey.ApplyMethod(reflect.TypeOf(new(PodResource)), "GetPodResource",
+				func(_ *PodResource) (map[string]PodDevice, error) { return nil, fmt.Errorf("err") })
 			defer mockGetPodResource.Reset()
 			hdm := NewHwDevManager(&devmanager.DeviceManagerMock{}, &kubeclient.ClientK8s{})
 			err := hdm.updatePodAnnotation()
 			convey.So(err, convey.ShouldNotBeNil)
 		})
 		convey.Convey("GetPodList failed", func() {
-			mockGetPodResource := gomonkey.ApplyMethod(reflect.TypeOf(new(server.PodResource)), "GetPodResource",
-				func(_ *server.PodResource) (map[string]server.PodDevice, error) { return nil, nil })
+			mockGetPodResource := gomonkey.ApplyMethod(reflect.TypeOf(new(PodResource)), "GetPodResource",
+				func(_ *PodResource) (map[string]PodDevice, error) { return nil, nil })
 			defer mockGetPodResource.Reset()
 			mockGetPodList := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)), "GetPodList",
 				func(_ *kubeclient.ClientK8s) (*v1.PodList, error) { return nil, fmt.Errorf("err") })
@@ -93,8 +93,8 @@ func TestUpdatePodAnnotation1(t *testing.T) {
 			convey.So(err, convey.ShouldNotBeNil)
 		})
 		convey.Convey("GetNodeServerID failed", func() {
-			mockGetPodResource := gomonkey.ApplyMethod(reflect.TypeOf(new(server.PodResource)), "GetPodResource",
-				func(_ *server.PodResource) (map[string]server.PodDevice, error) { return nil, nil })
+			mockGetPodResource := gomonkey.ApplyMethod(reflect.TypeOf(new(PodResource)), "GetPodResource",
+				func(_ *PodResource) (map[string]PodDevice, error) { return nil, nil })
 			defer mockGetPodResource.Reset()
 			mockGetPodList := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)), "GetPodList",
 				func(_ *kubeclient.ClientK8s) (*v1.PodList, error) { return nil, nil })
@@ -112,8 +112,8 @@ func TestUpdatePodAnnotation1(t *testing.T) {
 // TestUpdatePodAnnotation2 for test the interface updatePodAnnotation, part 2
 func TestUpdatePodAnnotation2(t *testing.T) {
 	common.ParamOption.UseVolcanoType = true
-	mockGetPodResource := gomonkey.ApplyMethod(reflect.TypeOf(new(server.PodResource)), "GetPodResource",
-		func(_ *server.PodResource) (map[string]server.PodDevice, error) { return nil, nil })
+	mockGetPodResource := gomonkey.ApplyMethod(reflect.TypeOf(new(PodResource)), "GetPodResource",
+		func(_ *PodResource) (map[string]PodDevice, error) { return nil, nil })
 	defer mockGetPodResource.Reset()
 	mockGetPodList := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)), "GetPodList",
 		func(_ *kubeclient.ClientK8s) (*v1.PodList, error) { return nil, nil })
@@ -166,31 +166,31 @@ func TestUpdateSpecTypePodAnnotation(t *testing.T) {
 	podName := "pod-name"
 	mockPods = []v1.Pod{{ObjectMeta: metav1.ObjectMeta{Name: podName}}}
 	hdm := NewHwDevManager(&devmanager.DeviceManagerMock{}, &kubeclient.ClientK8s{})
-	podDevice := map[string]server.PodDevice{}
+	podDevice := map[string]PodDevice{}
 	convey.Convey("pod not in pod device", t, func() {
 		err := hdm.updateSpecTypePodAnnotation(nil, common.Ascend910, "", podDevice, nil)
 		convey.So(err, convey.ShouldBeNil)
 	})
 	convey.Convey("resource name not equal", t, func() {
-		podDevice[podName] = server.PodDevice{ResourceName: common.Ascend310, DeviceIds: []string{"Ascend310-0"}}
+		podDevice[podName] = PodDevice{ResourceName: common.Ascend310, DeviceIds: []string{"Ascend310-0"}}
 		err := hdm.updateSpecTypePodAnnotation(nil, common.Ascend910, "", podDevice, nil)
 		convey.So(err, convey.ShouldBeNil)
 	})
 	convey.Convey("GetRealAllocateDevices failed", t, func() {
-		mockGetNodeServerID := gomonkey.ApplyMethod(reflect.TypeOf(new(server.PluginServer)), "GetRealAllocateDevices",
-			func(_ *server.PluginServer, kltAllocate []string) ([]string, error) { return nil, fmt.Errorf("error") })
+		mockGetNodeServerID := gomonkey.ApplyMethod(reflect.TypeOf(new(PluginServer)), "GetRealAllocateDevices",
+			func(_ *PluginServer, kltAllocate []string) ([]string, error) { return nil, fmt.Errorf("error") })
 		defer mockGetNodeServerID.Reset()
-		podDevice[podName] = server.PodDevice{ResourceName: common.ResourceNamePrefix + common.Ascend910,
+		podDevice[podName] = PodDevice{ResourceName: common.ResourceNamePrefix + common.Ascend910,
 			DeviceIds: []string{"Ascend910-0"}}
 		err := hdm.updateSpecTypePodAnnotation(nil, common.Ascend910, "", podDevice, nil)
 		convey.So(err, convey.ShouldBeNil)
 	})
 	convey.Convey("AddPodAnnotation failed", t, func() {
-		mockGetNodeServerID := gomonkey.ApplyMethod(reflect.TypeOf(new(server.PluginServer)), "GetRealAllocateDevices",
-			func(_ *server.PluginServer, kltAllocate []string) ([]string, error) { return nil, nil })
+		mockGetNodeServerID := gomonkey.ApplyMethod(reflect.TypeOf(new(PluginServer)), "GetRealAllocateDevices",
+			func(_ *PluginServer, kltAllocate []string) ([]string, error) { return nil, nil })
 		defer mockGetNodeServerID.Reset()
-		mockAddPodAnnotation := gomonkey.ApplyMethod(reflect.TypeOf(new(AscendTools)), "AddPodAnnotation",
-			func(_ *AscendTools, pod *v1.Pod, kltRequestDevices, dpResponseDevices []string,
+		mockAddPodAnnotation := gomonkey.ApplyMethod(reflect.TypeOf(new(device.AscendTools)), "AddPodAnnotation",
+			func(_ *device.AscendTools, pod *v1.Pod, kltRequestDevices, dpResponseDevices []string,
 				deviceType, serverID string) error {
 				return fmt.Errorf("error")
 			})

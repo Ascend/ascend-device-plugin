@@ -10,11 +10,8 @@ import (
 	"flag"
 	"fmt"
 	"huawei.com/mindx/common/hwlog"
-	"huawei.com/npu-exporter/devmanager"
 
 	"Ascend-device-plugin/pkg/common"
-	"Ascend-device-plugin/pkg/device"
-	"Ascend-device-plugin/pkg/kubeclient"
 )
 
 const (
@@ -91,21 +88,21 @@ func initLogModule(ctx context.Context) error {
 
 func checkParam() bool {
 	if *listWatchPeriod < minListWatchPeriod || *listWatchPeriod > maxListWatchPeriod {
-		fmt.Printf("list and watch period %d out of range\n", *listWatchPeriod)
+		hwlog.RunLog.Errorf("list and watch period %d out of range", *listWatchPeriod)
 		return false
 	}
-	if !(*presetVirtualDevice) {
-		fmt.Println("presetVirtualDevice can be only set to true")
+	if !(*presetVirtualDevice) && !(*volcanoType) {
+		hwlog.RunLog.Error("presetVirtualDevice is false, volcanoType should be true")
 		return false
 	}
 	if len(*mode) > maxRunModeLength {
-		fmt.Println("run mode param length invalid")
+		hwlog.RunLog.Error("run mode param length invalid")
 		return false
 	}
 	switch *mode {
 	case common.RunMode310, common.RunMode910, common.RunMode310P, "":
 	default:
-		fmt.Printf("unSupport mode: %s\n", *mode)
+		hwlog.RunLog.Errorf("unSupport mode: %s", *mode)
 		return false
 	}
 	return true
@@ -117,50 +114,17 @@ func main() {
 		fmt.Printf("%s version: %s\n", BuildName, BuildVersion)
 		return
 	}
+	ctx, _ := context.WithCancel(context.Background())
+	if err := initLogModule(ctx); err != nil {
+		return
+	}
 	if !checkParam() {
 		return
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-
-	if err := initLogModule(ctx); err != nil {
-		return
-	}
 	hwlog.RunLog.Infof("ascend device plugin starting and the version is %s", BuildVersion)
 
 	setParameters()
-	hdm, err := InitFunction()
-	if err != nil {
-		return
-	}
-
-	go hdm.ListenDevice(ctx)
-	hdm.SignCatch(cancel)
-}
-
-// InitFunction init function
-func InitFunction() (*device.HwDevManager, error) {
-	devM, err := devmanager.AutoInit("")
-	if err != nil {
-		hwlog.RunLog.Errorf("init devmanager failed, err: %#v", err)
-		return nil, err
-	}
-	var kubeClient *kubeclient.ClientK8s
-	if common.ParamOption.UseVolcanoType {
-		kubeClient, err = kubeclient.NewClientK8s(common.ParamOption.KubeConfig)
-		if err != nil {
-			hwlog.RunLog.Errorf("init kubeclient failed err: %#v", err)
-			return nil, err
-		}
-		hwlog.RunLog.Info("init kube client success")
-	}
-	hdm := device.NewHwDevManager(devM, kubeClient)
-	if hdm == nil {
-		hwlog.RunLog.Error("init device manager failed")
-		return nil, fmt.Errorf("init device manager failed")
-	}
-	hwlog.RunLog.Info("init device manager success")
-	return hdm, nil
 }
 
 func setParameters() {

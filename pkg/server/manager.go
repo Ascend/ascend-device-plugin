@@ -1,7 +1,7 @@
 // Copyright (c) 2022. Huawei Technologies Co., Ltd. All rights reserved.
 
-// Package device a series of device function
-package device
+// Package server holds the implementation of registration to kubelet, k8s pod resource interface.
+package server
 
 import (
 	"context"
@@ -18,17 +18,17 @@ import (
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/pkg/common"
+	"Ascend-device-plugin/pkg/device"
 	"Ascend-device-plugin/pkg/kubeclient"
-	"Ascend-device-plugin/pkg/server"
 )
 
 // HwDevManager manages huawei device devices.
 type HwDevManager struct {
 	groupDevice map[string][]*common.NpuDevice
-	ServerMap   map[string]server.InterfaceServer
+	ServerMap   map[string]InterfaceServer
 	AllDevTypes []string
 	AllDevs     []common.NpuDevice
-	manager     devManager
+	manager     device.DevManager
 	RunMode     string
 }
 

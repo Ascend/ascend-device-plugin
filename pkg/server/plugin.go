@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
 
 	"huawei.com/mindx/common/hwlog"
 	"k8s.io/api/core/v1"
@@ -15,7 +16,7 @@ import (
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/pkg/common"
-	"Ascend-device-plugin/pkg/kubeclient"
+	"Ascend-device-plugin/pkg/device"
 )
 
 func (ps *PluginServer) stopListAndWatch() {
@@ -38,6 +39,58 @@ func (ps *PluginServer) Notify(devices []*common.NpuDevice) bool {
 	return false
 }
 
+// getUnhealthyAICore
+// for example:
+// aicore-0, aicore-22: Ascend310P-2c-100-0
+// if Ascend310P-0 is unhealthy, aicore-0, aicore-22 is unhealthy
+// Ascend310P-0 has 8 aicore, and should select 6 free aicore to be set unhealthy
+func (ps *PluginServer) getUnhealthyAICore() sets.String {
+	// get chip health status and all AICore devs
+	unhealthyPhyID := sets.Int{}
+	allAICore := make(sets.String, len(ps.cachedDevices))
+	for _, device := range ps.cachedDevices {
+		if device.Health == v1beta1.Unhealthy {
+			unhealthyPhyID.Insert(int(device.PhyID))
+		}
+		allAICore.Insert(device.DeviceName)
+	}
+	// if chip is unhealthy, the real device has same phyid is unhealthy, and the klt ai core is unhealthy
+	unhealthyAICore := sets.String{}
+	usedAICore := sets.String{}
+	for k, r := range ps.klt2RealDevMap {
+		phyID, _, err := common.GetDeviceID(r, "")
+		if err != nil {
+			hwlog.RunLog.Warn(err)
+			continue
+		}
+		if unhealthyPhyID.Has(phyID) {
+			unhealthyAICore.Insert(k)
+		}
+		usedAICore.Insert(k)
+	}
+	if unhealthyPhyID.Len() > math.MaxInt/int(ps.manager.GetChipAICore()) {
+		hwlog.RunLog.Errorf("the num of unhealthy device %d is invalid", unhealthyPhyID.Len())
+		return unhealthyAICore
+	}
+	leftUnhealthyAICoreNum := unhealthyPhyID.Len()*int(ps.manager.GetChipAICore()) - unhealthyAICore.Len()
+	if leftUnhealthyAICoreNum < 0 {
+		hwlog.RunLog.Errorf("num of left unhealthy ai core %d is less than 0", leftUnhealthyAICoreNum)
+		return unhealthyAICore
+	}
+	// get free ai core device
+	freeAICore := allAICore.Difference(usedAICore)
+	if freeAICore.Len() < leftUnhealthyAICoreNum {
+		hwlog.RunLog.Errorf("free ai core device num is %d, while need %d", freeAICore.Len(), leftUnhealthyAICoreNum)
+		return unhealthyAICore
+	}
+	// if unhealthy ai core dev is not enough, select free ai core device randomly
+	freeList := freeAICore.List()
+	for count := 0; count < leftUnhealthyAICoreNum; count++ {
+		unhealthyAICore.Insert(freeList[count])
+	}
+	return unhealthyAICore
+}
+
 func (ps *PluginServer) generateAllDeviceMap() map[string]string {
 	vol2kltMap := make(map[string]string, 1)
 	var notInVolDev []string
@@ -45,9 +98,13 @@ func (ps *PluginServer) generateAllDeviceMap() map[string]string {
 	klDev := sets.String{}
 	ps.allocMapLock.RLock()
 	ps.cachedLock.RLock()
+	vol2KlDevMap := make(map[string]string, len(ps.klt2RealDevMap))
+	for k, r := range ps.klt2RealDevMap {
+		vol2KlDevMap[r] = k
+	}
 	for _, dev := range ps.cachedDevices {
 		allDev.Insert(dev.DeviceName)
-		d, exist := ps.vol2KlDevMap[dev.DeviceName]
+		d, exist := vol2KlDevMap[dev.DeviceName]
 		if !exist {
 			notInVolDev = append(notInVolDev, dev.DeviceName)
 			continue
@@ -76,7 +133,18 @@ func sendToKubelet(stream v1beta1.DevicePlugin_ListAndWatchServer, resp *v1beta1
 func (ps *PluginServer) responseToKubelet() *v1beta1.ListAndWatchResponse {
 	resp := new(v1beta1.ListAndWatchResponse)
 	ps.cachedLock.RLock()
-	if common.ParamOption.UseVolcanoType && !common.IsVirtualDev(ps.deviceType) {
+	if !common.ParamOption.PresetVDevice {
+		unhealthyDev := ps.getUnhealthyAICore()
+		for _, device := range ps.cachedDevices {
+			if unhealthyDev.Has(device.DeviceName) {
+				device.Health = v1beta1.Unhealthy
+			} else {
+				device.Health = v1beta1.Healthy
+			}
+			hwlog.RunLog.Infof("ListAndWatch resp devices: %s %s", device.DeviceName, device.Health)
+			resp.Devices = append(resp.Devices, &v1beta1.Device{ID: device.DeviceName, Health: device.Health})
+		}
+	} else if common.ParamOption.UseVolcanoType && !common.IsVirtualDev(ps.deviceType) {
 		vol2kltMap := ps.generateAllDeviceMap()
 		for _, device := range ps.cachedDevices {
 			d, exist := vol2kltMap[device.DeviceName]
@@ -148,7 +216,7 @@ func (ps *PluginServer) checkAllocateRequest(requests *v1beta1.AllocateRequest) 
 			len(requests.ContainerRequests))
 	}
 	for _, rqt := range requests.ContainerRequests {
-		if len(rqt.DevicesIDs) > common.MaxDevicesNum {
+		if len(rqt.DevicesIDs) > common.MaxDevicesNum*common.MaxChipAICore {
 			return fmt.Errorf("the devices can't bigger than %d", common.MaxDevicesNum)
 		}
 		for _, deviceName := range rqt.DevicesIDs {
@@ -203,7 +271,7 @@ func (ps *PluginServer) getOldestPod(pods []v1.Pod) *v1.Pod {
 	hwlog.RunLog.Debugf("oldest pod %#v, predicate time: %#v", oldest.Name,
 		oldest.Annotations[common.PodPredicateTime])
 	annotation := map[string]string{common.PodPredicateTime: strconv.FormatUint(math.MaxUint64, common.BaseDec)}
-	if err := ps.kubeClient.TryUpdatePodAnnotation(&oldest, annotation); err != nil {
+	if err := ps.manager.GetKubeClient().TryUpdatePodAnnotation(&oldest, annotation); err != nil {
 		hwlog.RunLog.Errorf("update pod %s failed, err: %#v", oldest.Name, err)
 		return nil
 	}
@@ -211,20 +279,76 @@ func (ps *PluginServer) getOldestPod(pods []v1.Pod) *v1.Pod {
 }
 
 func (ps *PluginServer) updateAllocMap(realAlloc, kltAlloc []string) {
+	if common.ParamOption.PresetVDevice {
+		ps.updatePresetAllocMap(realAlloc, kltAlloc)
+	} else {
+		ps.updateDynamicAllocMap(realAlloc, kltAlloc)
+	}
+}
+
+func (ps *PluginServer) updateDynamicAllocMap(realAlloc, kltAlloc []string) {
+	// real device exist, delete
+	if len(realAlloc) == 0 {
+		hwlog.RunLog.Warn("not allocate any device")
+		return
+	}
+	// delete klt allocate device in key
+	for _, id := range kltAlloc {
+		if _, exist := ps.klt2RealDevMap[id]; exist {
+			delete(ps.klt2RealDevMap, id)
+		}
+	}
+	// delete real allocate device in value
+	for _, id := range realAlloc {
+		for k, v := range ps.klt2RealDevMap {
+			if v == id {
+				delete(ps.klt2RealDevMap, k)
+			}
+		}
+	}
+	isVirtualDev := common.IsVirtualDev(realAlloc[0])
+	if isVirtualDev && len(realAlloc) > 1 {
+		hwlog.RunLog.Warnf("virtual device only support allocate one, %v", realAlloc)
+		return
+	}
+	// for virtual device, N ai core : 1 real device
+	// aicore-0, aicore-1 : Ascend910-2c-100-0
+	if isVirtualDev {
+		for _, id := range kltAlloc {
+			ps.klt2RealDevMap[id] = realAlloc[0]
+		}
+		return
+	}
+	// for physical device, M ai core : N real device
+	// aicore-0,..., aicore-31 : Ascend910-0
+	// aicore-32,..., aicore-63 : Ascend910-1
+	chipAICore := ps.manager.GetChipAICore()
+	if int(chipAICore)*len(realAlloc) != len(kltAlloc) {
+		hwlog.RunLog.Warnf("klt allocate core not equal real allocate %v", realAlloc)
+		return
+	}
+	realIdx := 0
+	for kltIdx, id := range kltAlloc {
+		ps.klt2RealDevMap[id] = realAlloc[realIdx]
+		if ((kltIdx + 1) % int(chipAICore)) == 0 {
+			realIdx++
+		}
+	}
+}
+
+func (ps *PluginServer) updatePresetAllocMap(realAlloc, kltAlloc []string) {
 	if len(realAlloc) != len(kltAlloc) {
 		hwlog.RunLog.Error("number of devices of klt allocate not equal real allocate")
 		return
 	}
 	ps.allocMapLock.Lock()
 	for _, id := range kltAlloc {
-		for k, v := range ps.vol2KlDevMap {
-			if v == id {
-				delete(ps.vol2KlDevMap, k)
-			}
+		if _, exist := ps.klt2RealDevMap[id]; exist {
+			delete(ps.klt2RealDevMap, id)
 		}
 	}
-	for i, id := range realAlloc {
-		ps.vol2KlDevMap[id] = kltAlloc[i]
+	for i, id := range kltAlloc {
+		ps.klt2RealDevMap[id] = realAlloc[i]
 	}
 	ps.allocMapLock.Unlock()
 }
@@ -236,42 +360,183 @@ func (ps *PluginServer) GetRealAllocateDevices(kltAllocate []string) ([]string, 
 	}
 	ps.allocMapLock.RLock()
 	defer ps.allocMapLock.RUnlock()
-	klt2vol := make(map[string]string, len(ps.vol2KlDevMap))
-	for k, v := range ps.vol2KlDevMap {
-		klt2vol[v] = k
-	}
-	var realAllocate []string
+	realAllocate := sets.String{}
 	for _, id := range kltAllocate {
-		realID, exist := klt2vol[id]
+		realID, exist := ps.klt2RealDevMap[id]
 		if !exist {
 			return nil, fmt.Errorf("cannot found real allocate device by %s", id)
 		}
-		realAllocate = append(realAllocate, realID)
+		realAllocate.Insert(realID)
 	}
-	return realAllocate, nil
+	return realAllocate.List(), nil
 }
 
-func (ps *PluginServer) doWithVolcanoSchedule(requestDevices []string) ([]string, error) {
-	conditionFunc := func(pod *v1.Pod) bool {
-		allocateDevice, err := common.GetDeviceFromPodAnnotation(pod, ps.deviceType)
+// GetKltAndRealAllocateDev get kubelet and real allocate device of pod
+func (ps *PluginServer) GetKltAndRealAllocateDev() ([]PodDeviceInfo, error) {
+	podList, err := ps.manager.GetKubeClient().GetActivePodList()
+	if err != nil {
+		return nil, err
+	}
+	prClient := NewPodResource()
+	podDevice, err := prClient.GetPodResource()
+	if err != nil {
+		return nil, fmt.Errorf("get pod resource failed, %#v", err)
+	}
+	var podDeviceInfo []PodDeviceInfo
+	for _, pod := range podList {
+		podKey := pod.Namespace + common.UnderLine + pod.Name
+		podResource, exist := podDevice[podKey]
+		if !exist {
+			continue
+		}
+		if podResource.ResourceName != common.ResourceNamePrefix+ps.deviceType {
+			hwlog.RunLog.Errorf("podKey %s resource name %s not equal device type %s", podKey,
+				podResource.ResourceName, ps.deviceType)
+			continue
+		}
+
+		realDeviceList, err := ps.GetRealAllocateDevices(podResource.DeviceIds)
+		if err != nil {
+			realDevice, exist := pod.Annotations[common.ResourceNamePrefix+common.PodRealAlloc]
+			if exist {
+				realDeviceList = strings.Split(realDevice, common.CommaSepDev)
+				ps.updateAllocMap(realDeviceList, podResource.DeviceIds)
+			} else {
+				hwlog.RunLog.Warnf("%s not found real allocate device", podKey)
+				continue
+			}
+		}
+		podDeviceInfo = append(podDeviceInfo, PodDeviceInfo{Pod: pod, KltDevice: podResource.DeviceIds,
+			RealDevice: realDeviceList})
+	}
+	return podDeviceInfo, nil
+}
+
+// DestroyNotUsedVNPU destroy not used virtual device
+func (ps *PluginServer) DestroyNotUsedVNPU() error {
+	allDevInfo, err := ps.manager.GetNPUs()
+	if err != nil {
+		return err
+	}
+	podDeviceInfo, err := ps.GetKltAndRealAllocateDev()
+	if err != nil {
+		return err
+	}
+	usedDevice := sets.String{}
+	for _, deviceInfo := range podDeviceInfo {
+		usedDevice.Insert(deviceInfo.RealDevice...)
+	}
+	var needToDestroy []string
+	for _, dev := range allDevInfo.AllDevs {
+		if !usedDevice.Has(dev.DeviceName) {
+			needToDestroy = append(needToDestroy, dev.DeviceName)
+		}
+	}
+	for _, dev := range needToDestroy {
+		if !common.IsVirtualDev(dev) {
+			continue
+		}
+		if err = ps.manager.DestroyVirtualDevice(dev); err == nil {
+			hwlog.RunLog.Infof("destroy virtual device %s success", dev)
+		} else {
+			hwlog.RunLog.Infof("destroy virtual device %s failed, %v", dev, err)
+		}
+	}
+	return nil
+}
+
+func checkAnnotationAllocateValid(requestDevices []string, deviceType string, pod *v1.Pod, chipAICore int32) bool {
+	if common.ParamOption.PresetVDevice {
+		allocateDevice, err := common.GetDeviceFromPodAnnotation(pod, deviceType)
 		if err != nil {
 			return false
 		}
 		return len(allocateDevice) == len(requestDevices)
 	}
-	allPods, err := ps.kubeClient.GetPodList()
+	// for dynamic segment
+	annotation, err := common.GetPodAnnotationByDeviceType(pod, deviceType)
+	if err != nil {
+		hwlog.RunLog.Warn(err)
+		return false
+	}
+	deviceInfos := strings.Split(annotation, common.MiddelLine)
+	// for vnpu, like huawei.com/ascend-core:0-vir02
+	if len(deviceInfos) > 1 {
+		_, template, err := common.GetVNPUSegmentInfo(deviceInfos)
+		if err != nil {
+			hwlog.RunLog.Warn(err)
+			return false
+		}
+		aiCore, err := common.GetAICore(template)
+		if err != nil {
+			hwlog.RunLog.Warn(err)
+			return false
+		}
+		return len(requestDevices) == aiCore
+	}
+	// for physical npu, huawei.com/ascend-core:0,1,2,3
+	phyDevices := strings.Split(deviceInfos[0], common.CommaSepDev)
+	return len(requestDevices) == len(phyDevices)*int(chipAICore)
+}
+
+// getAICoreFromPodAnnotation get ai core count from pod annotation
+// Annotation
+// huawei.com/ascend-core:0,1,2,3
+// huawei.com/ascend-core:0-vir02
+func (ps *PluginServer) getAICoreFromPodAnnotation(pod *v1.Pod, deviceType string) ([]string, error) {
+	if err := ps.DestroyNotUsedVNPU(); err != nil {
+		return nil, err
+	}
+
+	annotation, err := common.GetPodAnnotationByDeviceType(pod, deviceType)
 	if err != nil {
 		return nil, err
 	}
-	pods, err := common.FilterPods(allPods, common.GetPodPhaseBlackList(), ps.deviceType, conditionFunc)
+	deviceInfos := strings.Split(annotation, common.MiddelLine)
+	if len(deviceInfos) > 1 {
+		phyID, templateName, err := common.GetVNPUSegmentInfo(deviceInfos)
+		if err != nil {
+			return nil, err
+		}
+		deviceName, err := ps.manager.CreateVirtualDevice(phyID, templateName)
+		if err != nil {
+			return nil, err
+		}
+		ps.ascendRuntimeOptions = common.VirtualDev
+		// like Ascend910-2c-100-0
+		return []string{deviceName}, nil
+	}
+	ps.ascendRuntimeOptions = ""
+	var phyDevs []string
+	ids := strings.Split(deviceInfos[0], common.CommaSepDev)
+	for _, id := range ids {
+		phyDevs = append(phyDevs, fmt.Sprintf("%s-%s", ps.manager.GetName(), id))
+	}
+	// like Ascend910-0,Ascend910-1,Ascend910-2,Ascend910-3
+	return phyDevs, nil
+}
+
+func (ps *PluginServer) doWithVolcanoSchedule(requestDevices []string) ([]string, error) {
+	conditionFunc := func(pod *v1.Pod) bool {
+		return checkAnnotationAllocateValid(requestDevices, ps.deviceType, pod, ps.manager.GetChipAICore())
+	}
+	allPods, err := ps.manager.GetKubeClient().GetActivePodList()
 	if err != nil {
 		return nil, err
 	}
+	pods := common.FilterPods(allPods, ps.deviceType, conditionFunc)
 	oldestPod := ps.getOldestPod(pods)
 	if oldestPod == nil {
 		return nil, fmt.Errorf("not get valid pod")
 	}
-	allocateDevices, err := common.GetDeviceFromPodAnnotation(oldestPod, ps.deviceType)
+	var allocateDevices []string
+	if !common.ParamOption.PresetVDevice {
+		common.LockAllDeviceInfo()
+		allocateDevices, err = ps.getAICoreFromPodAnnotation(oldestPod, ps.deviceType)
+		common.UnlockAllDeviceInfo()
+	} else {
+		allocateDevices, err = common.GetDeviceFromPodAnnotation(oldestPod, ps.deviceType)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -297,9 +562,9 @@ func getDevPath(id, ascendRuntimeOptions string) (string, string) {
 	return containerPath, hostPath
 }
 
-func mountDevice(resp *v1beta1.ContainerAllocateResponse, devices []string, ascendRuntimeOptions string) {
+func mountDevice(resp *v1beta1.ContainerAllocateResponse, devices []int, ascendRuntimeOptions string) {
 	for _, deviceID := range devices {
-		containerPath, hostPath := getDevPath(fmt.Sprintf("%s", deviceID), ascendRuntimeOptions)
+		containerPath, hostPath := getDevPath(fmt.Sprintf("%d", deviceID), ascendRuntimeOptions)
 		resp.Devices = append(resp.Devices, &v1beta1.DeviceSpec{
 			HostPath:      hostPath,
 			ContainerPath: containerPath,
@@ -330,7 +595,11 @@ func (ps *PluginServer) Allocate(ctx context.Context, requests *v1beta1.Allocate
 	for _, rqt := range requests.ContainerRequests {
 		var err error
 		allocateDevices := rqt.DevicesIDs
-		hwlog.RunLog.Infof("request: %#v", rqt.DevicesIDs)
+		if !common.ParamOption.PresetVDevice {
+			hwlog.RunLog.Infof("request num: %d", len(rqt.DevicesIDs))
+		} else {
+			hwlog.RunLog.Infof("request: %#v", rqt.DevicesIDs)
+		}
 		if common.ParamOption.UseVolcanoType {
 			allocateDevices, err = ps.useVolcano(rqt.DevicesIDs)
 			if err != nil {
@@ -375,17 +644,17 @@ func (ps *PluginServer) PreStartContainer(ctx context.Context,
 }
 
 // NewPluginServer returns an initialized PluginServer
-func NewPluginServer(client *kubeclient.ClientK8s, deviceType string,
-	devices []*common.NpuDevice, defaultDevs []string) *PluginServer {
+func NewPluginServer(deviceType string, devices []*common.NpuDevice, defaultDevs []string,
+	manager device.DevManager) *PluginServer {
 	ps := &PluginServer{
-		restart:      true,
-		reciChan:     make(chan interface{}),
-		kubeClient:   client,
-		deviceType:   deviceType,
-		defaultDevs:  defaultDevs,
-		stop:         make(chan interface{}),
-		vol2KlDevMap: make(map[string]string, common.MaxDevicesNum),
-		isRunning:    common.NewAtomicBool(false),
+		restart:        true,
+		reciChan:       make(chan interface{}),
+		deviceType:     deviceType,
+		defaultDevs:    defaultDevs,
+		stop:           make(chan interface{}),
+		klt2RealDevMap: make(map[string]string, common.MaxDevicesNum),
+		isRunning:      common.NewAtomicBool(false),
+		manager:        manager,
 	}
 	ps.deepCopyDevice(devices)
 	return ps

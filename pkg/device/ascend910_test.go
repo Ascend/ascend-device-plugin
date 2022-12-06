@@ -17,10 +17,11 @@ import (
 
 	"Ascend-device-plugin/pkg/common"
 	"Ascend-device-plugin/pkg/kubeclient"
+	"Ascend-device-plugin/pkg/server"
 )
 
-func createFake910Manager() *HwDevManager {
-	hdm := &HwDevManager{}
+func createFake910Manager() *server.HwDevManager {
+	hdm := &server.HwDevManager{}
 	hdm.manager = NewHwAscend910Manager()
 	hdm.manager.SetDmgr(&devmanager.DeviceManagerMock{})
 	return hdm
