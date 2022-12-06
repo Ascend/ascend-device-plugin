@@ -19,6 +19,7 @@ import (
 
 	"Ascend-device-plugin/pkg/common"
 	"Ascend-device-plugin/pkg/kubeclient"
+	"Ascend-device-plugin/pkg/server"
 )
 
 func init() {
@@ -28,8 +29,8 @@ func init() {
 	hwlog.InitRunLogger(&hwLogConfig, context.Background())
 }
 
-func createFake310Manager(fdFlag, useAscendDocker bool) *HwDevManager {
-	hdm := &HwDevManager{}
+func createFake310Manager(fdFlag, useAscendDocker bool) *server.HwDevManager {
+	hdm := &server.HwDevManager{}
 	common.ParamOption = common.Option{
 		GetFdFlag:       fdFlag,
 		UseAscendDocker: useAscendDocker,

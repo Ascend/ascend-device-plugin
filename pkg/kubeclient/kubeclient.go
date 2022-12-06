@@ -80,12 +80,37 @@ func (ki *ClientK8s) UpdatePod(pod *v1.Pod) (*v1.Pod, error) {
 	return ki.Clientset.CoreV1().Pods(pod.Namespace).Update(context.Background(), pod, metav1.UpdateOptions{})
 }
 
-// GetPodList is to get pod list
-func (ki *ClientK8s) GetPodList() (*v1.PodList, error) {
-	selector := fields.SelectorFromSet(fields.Set{"spec.nodeName": ki.NodeName})
-	return ki.Clientset.CoreV1().Pods(v1.NamespaceAll).List(context.Background(), metav1.ListOptions{
-		FieldSelector: selector.String(),
-	})
+// GetActivePodList is to get active pod list
+func (ki *ClientK8s) GetActivePodList() ([]v1.Pod, error) {
+	fieldSelector, err := fields.ParseSelector("spec.nodeName=" + ki.NodeName + "," +
+		"status.phase!=" + string(v1.PodSucceeded) + ",status.phase!=" + string(v1.PodFailed))
+	if err != nil {
+		return nil, err
+	}
+	podList, err := ki.Clientset.CoreV1().Pods(v1.NamespaceAll).List(context.Background(), metav1.ListOptions{
+		FieldSelector: fieldSelector.String()})
+	if err != nil {
+		return nil, err
+	}
+	if podList == nil {
+		return nil, fmt.Errorf("pod list is invalid")
+	}
+	if len(podList.Items) >= common.MaxPodLimit {
+		return nil, fmt.Errorf("the number of pods exceeds the upper limit")
+	}
+	var pods []v1.Pod
+	for _, pod := range podList.Items {
+		if err := common.CheckPodNameAndSpace(pod.Name, common.PodNameMaxLength); err != nil {
+			hwlog.RunLog.Warnf("pod name syntax illegal, err: %#v", err)
+			continue
+		}
+		if err := common.CheckPodNameAndSpace(pod.Namespace, common.PodNameSpaceMaxLength); err != nil {
+			hwlog.RunLog.Warnf("pod namespace syntax illegal, err: %#v", err)
+			continue
+		}
+		pods = append(pods, pod)
+	}
+	return pods, nil
 }
 
 // CreateConfigMap create device info, which is cm
@@ -108,6 +133,7 @@ func (ki *ClientK8s) resetNodeAnnotations(node *v1.Node) {
 	for k := range common.GetAllDeviceInfoTypeList() {
 		delete(node.Annotations, k)
 	}
+
 	if common.ParamOption.AutoStowingDevs {
 		delete(node.Labels, common.HuaweiRecoverAscend910)
 		delete(node.Labels, common.HuaweiNetworkRecoverAscend910)
