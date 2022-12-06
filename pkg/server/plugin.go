@@ -216,7 +216,7 @@ func (ps *PluginServer) checkAllocateRequest(requests *v1beta1.AllocateRequest) 
 			len(requests.ContainerRequests))
 	}
 	for _, rqt := range requests.ContainerRequests {
-		if len(rqt.DevicesIDs) > common.MaxDevicesNum*common.MaxChipAICore {
+		if len(rqt.DevicesIDs) > common.MaxDevicesNum*common.MinAICoreNum {
 			return fmt.Errorf("the devices can't bigger than %d", common.MaxDevicesNum)
 		}
 		for _, deviceName := range rqt.DevicesIDs {

@@ -32,25 +32,27 @@ func NewHwAscend310Manager() *HwAscend310Manager {
 }
 
 // GetNPUs Discovers all HUAWEI Ascend310 devices by call devmanager interface
-func (hnm *HwAscend310Manager) GetNPUs(allDevices *[]common.NpuDevice, allDeviceTypes *[]string) error {
+func (hnm *HwAscend310Manager) GetNPUs() (common.NpuAllInfo, error) {
 	devNum, devList, err := hnm.dmgr.GetDeviceList()
 	if err != nil {
-		return err
+		return common.NpuAllInfo{}, err
 	}
 	if devNum > hnm.devCount {
-		return fmt.Errorf("invalid device num: %d", devNum)
+		return common.NpuAllInfo{}, fmt.Errorf("invalid device num: %d", devNum)
 	}
+	var allDevices []common.NpuDevice
+	var allDeviceTypes []string
 	for i := int32(0); i < devNum; i++ {
 		phyID, err := hnm.dmgr.GetPhysicIDFromLogicID(devList[i])
 		if err != nil {
-			return err
+			return common.NpuAllInfo{}, err
 		}
 		deviceName := fmt.Sprintf("%s-%d", hnm.name, phyID)
 		device := hnm.assembleNpuDeviceStruct(hnm.name, deviceName, devList[i], phyID)
-		*allDevices = append(*allDevices, device)
+		allDevices = append(allDevices, device)
 	}
-	*allDeviceTypes = append(*allDeviceTypes, hnm.name)
-	return nil
+	allDeviceTypes = append(allDeviceTypes, hnm.name)
+	return common.NpuAllInfo{AllDevs: allDevices, AllDevTypes: allDeviceTypes}, nil
 }
 
 // DoWithVolcanoListAndWatch ascend310 watch device

@@ -9,9 +9,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
+
 	"huawei.com/mindx/common/hwlog"
+	"huawei.com/npu-exporter/devmanager"
 
 	"Ascend-device-plugin/pkg/common"
+	"Ascend-device-plugin/pkg/kubeclient"
+	"Ascend-device-plugin/pkg/server"
 )
 
 const (
@@ -114,7 +118,7 @@ func main() {
 		fmt.Printf("%s version: %s\n", BuildName, BuildVersion)
 		return
 	}
-	ctx, _ := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
 	if err := initLogModule(ctx); err != nil {
 		return
 	}
@@ -125,6 +129,38 @@ func main() {
 	hwlog.RunLog.Infof("ascend device plugin starting and the version is %s", BuildVersion)
 
 	setParameters()
+	hdm, err := InitFunction()
+	if err != nil {
+		return
+	}
+
+	go hdm.ListenDevice(ctx)
+	hdm.SignCatch(cancel)
+}
+
+// InitFunction init function
+func InitFunction() (*server.HwDevManager, error) {
+	devM, err := devmanager.AutoInit("")
+	if err != nil {
+		hwlog.RunLog.Errorf("init devmanager failed, err: %#v", err)
+		return nil, err
+	}
+	var kubeClient *kubeclient.ClientK8s
+	if common.ParamOption.UseVolcanoType {
+		kubeClient, err = kubeclient.NewClientK8s(common.ParamOption.KubeConfig)
+		if err != nil {
+			hwlog.RunLog.Errorf("init kubeclient failed err: %#v", err)
+			return nil, err
+		}
+		hwlog.RunLog.Info("init kube client success")
+	}
+	hdm := server.NewHwDevManager(devM, kubeClient)
+	if hdm == nil {
+		hwlog.RunLog.Error("init device manager failed")
+		return nil, fmt.Errorf("init device manager failed")
+	}
+	hwlog.RunLog.Info("init device manager success")
+	return hdm, nil
 }
 
 func setParameters() {
