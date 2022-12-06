@@ -30,11 +30,10 @@ func TestIsDeviceStatusChange(t *testing.T) {
 	tool := AscendTools{name: common.Ascend910, client: &kubeclient.ClientK8s{},
 		dmgr: &devmanager.DeviceManagerMock{}}
 	convey.Convey("test IsDeviceStatusChange true", t, func() {
-		devices := []*common.NpuDevice{{
-			Health: v1beta1.Healthy,
-		}}
-		res := tool.IsDeviceStatusChange(devices, common.Ascend910)
-		convey.So(res, convey.ShouldBeTrue)
+		devices := map[string][]*common.NpuDevice{common.Ascend910: {{Health: v1beta1.Healthy}}}
+		aiCoreDevice := []*common.NpuDevice{{Health: v1beta1.Healthy}}
+		res := tool.IsDeviceStatusChange(devices, aiCoreDevice, common.Ascend910)
+		convey.So(res, convey.ShouldNotBeNil)
 	})
 }
 
@@ -46,9 +45,8 @@ func TestAssembleVirtualDevices(t *testing.T) {
 		var device []common.NpuDevice
 		var deivceType []string
 		davinCiDev := common.DavinCiDev{
-			PhyID:        phyIDNum,
-			LogicID:      logicIDNum,
-			TemplateName: map[string]string{"vir16": common.Ascend910c16},
+			PhyID:   phyIDNum,
+			LogicID: logicIDNum,
 		}
 
 		QueryInfo := npuCommon.CgoVDevQueryInfo{

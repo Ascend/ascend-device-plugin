@@ -21,15 +21,7 @@ import (
 
 // TestPodResourceStart1 for test the interface Start part 2
 func TestPodResourceStart1(t *testing.T) {
-	convey.Convey("invalid interface receiver", t, func() {
-		var pr *PodResource
-		convey.So(pr.Start(nil), convey.ShouldNotBeNil)
-	})
 	pr := NewPodResource()
-	socketWatcher, err := common.NewFileWatch()
-	if err != nil {
-		t.Fatal(err)
-	}
 	convey.Convey("test start", t, func() {
 		convey.Convey("VerifyPath failed", func() {
 			mockVerifyPath := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(verifyPath string) (string,
@@ -37,19 +29,16 @@ func TestPodResourceStart1(t *testing.T) {
 				return "", false
 			})
 			defer mockVerifyPath.Reset()
-			convey.So(pr.Start(socketWatcher), convey.ShouldNotBeNil)
+			convey.So(pr.start(), convey.ShouldNotBeNil)
 		})
-		mockVerifyPath := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(verifyPath string) (string,
-			bool) {
-			return "", true
-		})
-		defer mockVerifyPath.Reset()
-		convey.Convey("WatchFile failed", func() {
-			mockWatchFile := gomonkey.ApplyMethod(reflect.TypeOf(new(common.FileWatch)), "WatchFile",
-				func(_ *common.FileWatch, fileName string) error { return fmt.Errorf("err") })
-			defer mockWatchFile.Reset()
-			err := pr.Start(socketWatcher)
-			convey.So(err, convey.ShouldNotBeNil)
+		convey.Convey("VerifyPath ok", func() {
+			mockVerifyPath := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(verifyPath string) (string,
+				bool) {
+				return "", true
+			})
+			defer mockVerifyPath.Reset()
+			err := pr.start()
+			convey.So(err, convey.ShouldBeNil)
 		})
 	})
 }
@@ -57,14 +46,7 @@ func TestPodResourceStart1(t *testing.T) {
 // TestPodResourceStart2 for test the interface Start part 2
 func TestPodResourceStart2(t *testing.T) {
 	pr := NewPodResource()
-	socketWatcher, err := common.NewFileWatch()
-	if err != nil {
-		t.Fatal(err)
-	}
 	convey.Convey("test start", t, func() {
-		mockWatchFile := gomonkey.ApplyMethod(reflect.TypeOf(new(common.FileWatch)), "WatchFile",
-			func(_ *common.FileWatch, fileName string) error { return nil })
-		defer mockWatchFile.Reset()
 		convey.Convey("GetClient failed", func() {
 			mockGetClient := gomonkey.ApplyFunc(podresources.GetClient, func(socket string,
 				connectionTimeout time.Duration, maxMsgSize int) (v1alpha1.PodResourcesListerClient,
@@ -72,7 +54,7 @@ func TestPodResourceStart2(t *testing.T) {
 				return nil, nil, fmt.Errorf("err")
 			})
 			defer mockGetClient.Reset()
-			convey.So(pr.Start(socketWatcher), convey.ShouldNotBeNil)
+			convey.So(pr.start(), convey.ShouldNotBeNil)
 		})
 		convey.Convey("start ok", func() {
 			mockGetClient := gomonkey.ApplyFunc(podresources.GetClient, func(socket string,
@@ -84,7 +66,7 @@ func TestPodResourceStart2(t *testing.T) {
 			funcStub := gomonkey.ApplyFunc(common.VerifyPathAndPermission,
 				func(verifyPathAndPermission string) (string, bool) { return verifyPathAndPermission, true })
 			defer funcStub.Reset()
-			convey.So(pr.Start(socketWatcher), convey.ShouldBeNil)
+			convey.So(pr.start(), convey.ShouldBeNil)
 		})
 	})
 }
@@ -97,7 +79,7 @@ func TestPodResourceStop(t *testing.T) {
 			mockClose := gomonkey.ApplyMethod(reflect.TypeOf(new(grpc.ClientConn)), "Close",
 				func(_ *grpc.ClientConn) error { return fmt.Errorf("err") })
 			defer mockClose.Reset()
-			pr.Stop()
+			pr.stop()
 			convey.So(pr.conn, convey.ShouldBeNil)
 		})
 		convey.Convey("close ok", func() {
@@ -105,26 +87,9 @@ func TestPodResourceStop(t *testing.T) {
 			mockClose := gomonkey.ApplyMethod(reflect.TypeOf(new(grpc.ClientConn)), "Close",
 				func(_ *grpc.ClientConn) error { return nil })
 			defer mockClose.Reset()
-			pr.Stop()
+			pr.stop()
 			convey.So(pr.conn, convey.ShouldBeNil)
 		})
-	})
-}
-
-// TestPodResourceGetRestartFlag for test the interface GetRestartFlag
-func TestPodResourceGetRestartFlag(t *testing.T) {
-	convey.Convey("test GetRestartFlag", t, func() {
-		pr := &PodResource{conn: &grpc.ClientConn{}, restart: false}
-		convey.So(pr.GetRestartFlag(), convey.ShouldNotBeNil)
-	})
-}
-
-// TestPodResourceSetRestartFlag for test the interface SetRestartFlag
-func TestPodResourceSetRestartFlag(t *testing.T) {
-	convey.Convey("test GetRestartFlag", t, func() {
-		pr := &PodResource{conn: &grpc.ClientConn{}, restart: false}
-		pr.SetRestartFlag(true)
-		convey.So(pr.restart, convey.ShouldBeTrue)
 	})
 }
 

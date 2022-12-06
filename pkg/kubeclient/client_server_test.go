@@ -125,8 +125,8 @@ func TestGetPodsUsedNpu(t *testing.T) {
 	}
 	podList := getMockPodList(common.HuaweiAscend310, npuChip310PhyID0)
 	convey.Convey("get used npu on pods without get pod list", t, func() {
-		mockPodList := gomonkey.ApplyMethod(reflect.TypeOf(new(ClientK8s)), "GetPodList",
-			func(_ *ClientK8s) (*v1.PodList, error) {
+		mockPodList := gomonkey.ApplyMethod(reflect.TypeOf(new(ClientK8s)), "GetActivePodList",
+			func(_ *ClientK8s) ([]v1.Pod, error) {
 				return nil, fmt.Errorf("failed to get pod list")
 			})
 		defer mockPodList.Reset()
@@ -134,8 +134,8 @@ func TestGetPodsUsedNpu(t *testing.T) {
 		convey.So(useNpu, convey.ShouldEqual, sets.String{})
 	})
 	convey.Convey("get used npu on pods", t, func() {
-		mockPodList := gomonkey.ApplyMethod(reflect.TypeOf(new(ClientK8s)), "GetPodList",
-			func(_ *ClientK8s) (*v1.PodList, error) {
+		mockPodList := gomonkey.ApplyMethod(reflect.TypeOf(new(ClientK8s)), "GetActivePodList",
+			func(_ *ClientK8s) ([]v1.Pod, error) {
 				return podList, nil
 			})
 		defer mockPodList.Reset()
@@ -189,20 +189,20 @@ func TestTryUpdatePodAnnotation(t *testing.T) {
 		mockGetPod := mockGetPodOpr(nil, fmt.Errorf("get pod failed"))
 		defer mockGetPod.Reset()
 		err := utKubeClient.TryUpdatePodAnnotation(testPod, nil)
-		convey.So(err.Error(), convey.ShouldEqual, "exceeded max number of retries")
+		convey.So(err.Error(), convey.ShouldEqual, "update pod annotation failed, exceeded max number of retries")
 	})
 	convey.Convey("try update pod annotation when get pod is nil", t, func() {
 		mockGetPod := mockGetPodOpr(nil, nil)
 		defer mockGetPod.Reset()
 		err := utKubeClient.TryUpdatePodAnnotation(testPod, nil)
-		convey.So(err.Error(), convey.ShouldEqual, "exceeded max number of retries")
+		convey.So(err.Error(), convey.ShouldEqual, "update pod annotation failed, exceeded max number of retries")
 	})
 	convey.Convey("try update pod annotation when get pod is nil", t, func() {
 		mockGetPod := mockGetPodOpr(testPod, nil)
 		defer mockGetPod.Reset()
 		err := utKubeClient.TryUpdatePodAnnotation(testPod,
 			getDeviceInfo(common.HuaweiAscend310P, npuChip310PPhyID0))
-		convey.So(err.Error(), convey.ShouldEqual, "exceeded max number of retries")
+		convey.So(err.Error(), convey.ShouldEqual, "update pod annotation failed, exceeded max number of retries")
 	})
 }
 
@@ -317,18 +317,15 @@ func getAddresses() []v1.NodeAddress {
 	}
 }
 
-func getMockPodList(devType, ascendValue string) *v1.PodList {
+func getMockPodList(devType, ascendValue string) []v1.Pod {
 	annotations := make(map[string]string, 1)
 	annotations[devType] = ascendValue
 	annotations[common.PodPredicateTime] = strconv.FormatUint(math.MaxUint64, common.BaseDec)
 	containers := getContainers(devType)
-	podList := []v1.Pod{
+	return []v1.Pod{
 		getPodUTOne(annotations, containers),
 		getPodUTTwo(annotations),
 		getPodUTThree(),
-	}
-	return &v1.PodList{
-		Items: podList,
 	}
 }
 
