@@ -46,34 +46,44 @@ func NewHwAscend910Manager() *HwAscend910Manager {
 // physical npu sets corresponding to the deviTypes, and vNPU is vDeviTypes
 // vDeviTypes may is: [Ascend910-4c, Ascend910-4c, Ascend910-8c], also deviTypes may is: [Ascend910, Ascend910]
 // one class deviType will generate a socket file, like ascend910-4c.sock or Ascend910.sock, so we deduplicate
-func (hnm *HwAscend910Manager) GetNPUs(allDevices *[]common.NpuDevice, allDeviceTypes *[]string) error {
+func (hnm *HwAscend910Manager) GetNPUs() (common.NpuAllInfo, error) {
 	devNum, devList, err := hnm.dmgr.GetDeviceList()
 	if err != nil {
-		return err
+		return common.NpuAllInfo{}, err
 	}
 	if devNum > hnm.devCount {
-		return fmt.Errorf("invalid device num: %d", devNum)
+		return common.NpuAllInfo{}, fmt.Errorf("invalid device num: %d", devNum)
 	}
+	var allDevices []common.NpuDevice
+	var aiCoreDevices []*common.NpuDevice
+	var allDeviceTypes []string
 	for i := int32(0); i < devNum; i++ {
-		davinCiDev, err := hnm.getDavinCiDev(devList[i], hnm.getTemplateName2DeviceTypeMap())
+		davinCiDev, err := hnm.getDavinCiDev(devList[i])
 		if err != nil {
-			return err
+			return common.NpuAllInfo{}, err
 		}
 		vDevInfos, err := hnm.getVirtualDevice(devList[i])
 		if err != nil {
 			hwlog.RunLog.Errorf("The virtual device is considered not exist, please check the error: %#v", err)
 		}
 		if vDevInfos.TotalResource.VDevNum > common.MaxVirtualDeviceNum {
-			return fmt.Errorf("invalid virtual device count")
+			return common.NpuAllInfo{}, fmt.Errorf("invalid virtual device count")
+		}
+		if !common.ParamOption.PresetVDevice {
+			hnm.chipAICore = int32(vDevInfos.TotalResource.Computing.Aic)
+			if hnm.chipAICore < common.MinAICoreNum || hnm.chipAICore > common.MaxAICoreNum {
+				return common.NpuAllInfo{}, fmt.Errorf("invalid ai core num %d", hnm.chipAICore)
+			}
+			common.FakeAiCoreDevice(davinCiDev, hnm.chipAICore, &aiCoreDevices)
 		}
 		if vDevInfos.TotalResource.VDevNum == 0 {
-			hnm.assemblePhyDevices(davinCiDev, allDevices, allDeviceTypes)
+			hnm.assemblePhyDevices(davinCiDev, &allDevices, &allDeviceTypes)
 			continue
 		}
-		hnm.assembleVirtualDevices(davinCiDev, vDevInfos, allDevices, allDeviceTypes)
+		hnm.assembleVirtualDevices(davinCiDev, vDevInfos, &allDevices, &allDeviceTypes)
 	}
-	*allDeviceTypes = hnm.removeDuplicate(allDeviceTypes)
-	return nil
+	allDeviceTypes = hnm.removeDuplicate(&allDeviceTypes)
+	return common.NpuAllInfo{AllDevs: allDevices, AICoreDevs: aiCoreDevices, AllDevTypes: allDeviceTypes}, nil
 }
 
 // DoWithVolcanoListAndWatch ascend910 affinity scheduling
@@ -84,27 +94,19 @@ func (hnm *HwAscend910Manager) DoWithVolcanoListAndWatch(classifyDevs map[string
 	}
 }
 
-func (hnm *AscendTools) getDeviceNetworkState(logicID int32, device *common.NpuDevice) (string, error) {
+func (hnm *AscendTools) getDeviceNetworkState(logicID int32) string {
 	healthCode, err := hnm.dmgr.GetDeviceNetWorkHealth(logicID)
 	if err != nil {
-		return "", err
+		hwlog.RunLog.Warnf("get logicID %d network health failed, error code is %d", logicID, healthCode)
+		return v1beta1.Unhealthy
 	}
 
 	switch healthCode {
 	case networkDetectOK, networkDetectInit:
-		return v1beta1.Healthy, nil
+		return v1beta1.Healthy
 	default:
-		hwlog.RunLog.Debugf("%s network status is unhealthy, error code is %d", device.DeviceName, healthCode)
-		return v1beta1.Unhealthy, nil
-	}
-}
-
-func (hnm *HwAscend910Manager) getTemplateName2DeviceTypeMap() map[string]string {
-	return map[string]string{
-		"vir16": common.Ascend910c16,
-		"vir08": common.Ascend910c8,
-		"vir04": common.Ascend910c4,
-		"vir02": common.Ascend910c2,
+		hwlog.RunLog.Debugf("%d network status is unhealthy, health code is %d", logicID, healthCode)
+		return v1beta1.Unhealthy
 	}
 }
 
@@ -241,21 +243,4 @@ func (hnm *HwAscend910Manager) toStandardDeviceFmt(devices sets.String) sets.Str
 	}
 
 	return standardSets
-}
-
-// check device network health status
-// only for Ascend910 and Non-virtual device
-func (tool *AscendTools) checkDeviceNetworkHealthStatus(devices []*common.NpuDevice) bool {
-	var isNetStateChange = false
-	for idx, device := range devices {
-		healthStatus, err := tool.getDeviceNetworkState(device.LogicID, device)
-		if err != nil {
-			healthStatus = v1beta1.Unhealthy
-		}
-		if healthStatus != device.NetworkHealth {
-			isNetStateChange = true
-			devices[idx].NetworkHealth = healthStatus
-		}
-	}
-	return isNetStateChange
 }

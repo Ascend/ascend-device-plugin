@@ -157,20 +157,6 @@ func (ki *ClientK8s) GetPodsUsedNpu(devType string) sets.String {
 	return sets.NewString(useNpu...)
 }
 
-// GetAllocateDevice get allocate device
-func (ki *ClientK8s) GetAllocateDevice() sets.String {
-	usedNpu := ki.GetPodsUsedNpu(common.PodRealAlloc)
-	realUsedNpu := sets.String{}
-	for npu := range usedNpu {
-		// for vnpu, remove vgroup id info
-		if common.IsVirtualDev(npu) {
-			npu = strings.Split(npu, common.UnderLine)[0]
-		}
-		realUsedNpu.Insert(npu)
-	}
-	return realUsedNpu
-}
-
 // GetNodeServerID Get Node Server ID
 func (ki *ClientK8s) GetNodeServerID() (string, error) {
 	node, err := ki.GetNode()

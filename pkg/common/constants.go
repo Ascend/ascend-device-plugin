@@ -71,8 +71,6 @@ const (
 	VirDeviceLen = 4
 	// MaxDevicesNum max device num
 	MaxDevicesNum = 64
-	// MaxChipAICore max ai core of a chip
-	MaxChipAICore = 32
 	// MaxCardNum max card num
 	MaxCardNum = 64
 	// MaxDevNumInCard max device num in card
@@ -167,7 +165,7 @@ const (
 	HuaweiRecoverAscend910 = ResourceNamePrefix + Ascend910 + "-Recover"
 
 	// AiCoreResourceName resource name for virtual device
-	AiCoreResourceName = "Ascend-core"
+	AiCoreResourceName = "npu-core"
 
 	// Core1 1 core
 	Core1 = "1c"
@@ -219,8 +217,8 @@ const (
 
 	// ServerTypeLabelKey the node label key of server type
 	ServerTypeLabelKey = "servertype"
-	// ServerTypeInfoLen the len of server type split data
-	ServerTypeInfoLen = 3
+	// ServerTypeInfoMinLen the min len of server type split data
+	ServerTypeInfoMinLen = 2
 )
 
 const (

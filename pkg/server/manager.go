@@ -8,13 +8,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"huawei.com/mindx/common/hwlog"
 	"huawei.com/npu-exporter/devmanager"
-	"k8s.io/api/core/v1"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/pkg/common"
@@ -24,21 +24,16 @@ import (
 
 // HwDevManager manages huawei device devices.
 type HwDevManager struct {
-	groupDevice map[string][]*common.NpuDevice
-	ServerMap   map[string]InterfaceServer
-	AllDevTypes []string
-	AllDevs     []common.NpuDevice
-	manager     device.DevManager
-	RunMode     string
+	groupDevice     map[string][]*common.NpuDevice
+	ServerMap       map[string]InterfaceServer
+	allInfo         common.NpuAllInfo
+	manager         device.DevManager
+	RunMode         string
 }
 
 // NewHwDevManager function is used to new a dev manager.
 func NewHwDevManager(devM devmanager.DeviceInterface, client *kubeclient.ClientK8s) *HwDevManager {
 	var hdm HwDevManager
-	if err := hdm.setRunMode(devM.GetDevType()); err != nil {
-		hwlog.RunLog.Errorf("set runmode failed, err: %#v", err)
-		return nil
-	}
 	if err := hdm.setAscendManager(devM, client); err != nil {
 		hwlog.RunLog.Errorf("init hw dev manager failed, err: %#v", err)
 		return nil
@@ -47,38 +42,27 @@ func NewHwDevManager(devM devmanager.DeviceInterface, client *kubeclient.ClientK
 		hwlog.RunLog.Errorf("set all device and type failed, err: %#v", err)
 		return nil
 	}
-	if err := hdm.initPluginServer(client); err != nil {
+	if err := hdm.initPluginServer(); err != nil {
 		hwlog.RunLog.Errorf("init plugin server failed, err: %#v", err)
 		return nil
-	}
-	if common.ParamOption.UseVolcanoType {
-		hdm.ServerMap[common.PodResourceSeverKey] = server.NewPodResource()
 	}
 	return &hdm
 }
 
-func (hdm *HwDevManager) setRunMode(devType string) error {
-	switch devType {
-	case common.Ascend310:
-		hdm.RunMode = common.RunMode310
-	case common.Ascend310P:
-		hdm.RunMode = common.RunMode310P
-	case common.Ascend910:
-		hdm.RunMode = common.RunMode910
-	default:
-		return fmt.Errorf("an unsupported device type")
-	}
-	return nil
-}
-
 func (hdm *HwDevManager) setAscendManager(dmgr devmanager.DeviceInterface, client *kubeclient.ClientK8s) error {
-	switch hdm.RunMode {
-	case common.RunMode310:
-		hdm.manager = NewHwAscend310Manager()
-	case common.RunMode910:
-		hdm.manager = NewHwAscend910Manager()
-	case common.RunMode310P:
-		hdm.manager = NewHwAscend310PManager()
+	switch dmgr.GetDevType() {
+	case common.Ascend310:
+		if !common.ParamOption.PresetVDevice {
+			return fmt.Errorf("only 310p and 910 support dynamic virtual instance")
+		}
+		hdm.RunMode = common.Ascend310
+		hdm.manager = device.NewHwAscend310Manager()
+	case common.Ascend910:
+		hdm.RunMode = common.Ascend910
+		hdm.manager = device.NewHwAscend910Manager()
+	case common.Ascend310P:
+		hdm.RunMode = common.Ascend310P
+		hdm.manager = device.NewHwAscend310PManager()
 	default:
 		hwlog.RunLog.Error("found an unsupported device type")
 		return fmt.Errorf("an unsupported device type")
@@ -96,27 +80,76 @@ func (hdm *HwDevManager) setAscendManager(dmgr devmanager.DeviceInterface, clien
 }
 
 func (hdm *HwDevManager) setAllDeviceAndType() error {
-	if err := hdm.manager.GetNPUs(&hdm.AllDevs, &hdm.AllDevTypes); err != nil {
+	var err error
+	if hdm.allInfo, err = hdm.manager.GetNPUs(); err != nil {
 		return err
 	}
-	if len(hdm.AllDevTypes) == 0 {
+	if len(hdm.allInfo.AllDevTypes) == 0 {
 		return fmt.Errorf("no devices type found")
 	}
 	return nil
 }
 
-func (hdm *HwDevManager) initPluginServer(client *kubeclient.ClientK8s) error {
-	hdm.ServerMap = make(map[string]server.InterfaceServer, len(hdm.AllDevTypes))
-	hdm.groupDevice = ClassifyDevices(hdm.AllDevs, hdm.AllDevTypes)
+func (hdm *HwDevManager) initPluginServer() error {
+	hdm.ServerMap = make(map[string]InterfaceServer, len(hdm.allInfo.AllDevTypes))
+	hdm.groupDevice = device.ClassifyDevices(hdm.allInfo.AllDevs, hdm.allInfo.AllDevTypes)
 	defaultDevices, err := common.GetDefaultDevices(common.ParamOption.GetFdFlag)
 	if err != nil {
 		hwlog.RunLog.Error("get default device error")
 		return err
 	}
-	for _, deviceType := range hdm.AllDevTypes {
-		hdm.ServerMap[deviceType] = server.NewPluginServer(client, deviceType,
-			hdm.groupDevice[deviceType], defaultDevices)
+	if !common.ParamOption.PresetVDevice {
+		hdm.ServerMap[common.AiCoreResourceName] = NewPluginServer(common.AiCoreResourceName,
+			hdm.allInfo.AICoreDevs, defaultDevices, hdm.manager)
+		return nil
 	}
+	for _, deviceType := range hdm.allInfo.AllDevTypes {
+		hdm.ServerMap[deviceType] = NewPluginServer(deviceType, hdm.groupDevice[deviceType], defaultDevices,
+			hdm.manager)
+	}
+	return nil
+}
+
+// GetNPUs will set device default health, actually, it should be based on the last status if exist
+func (hdm *HwDevManager) updateDeviceHealth(curAllDevs []common.NpuDevice) {
+	lastAllDevs := make(map[string]int, len(hdm.allInfo.AllDevs))
+	for index, dev := range hdm.allInfo.AllDevs {
+		lastAllDevs[dev.DeviceName] = index
+	}
+	for i, dev := range curAllDevs {
+		if index, exist := lastAllDevs[dev.DeviceName]; exist && index < len(hdm.allInfo.AllDevs) {
+			curAllDevs[i].Health = hdm.allInfo.AllDevs[index].Health
+			curAllDevs[i].NetworkHealth = hdm.allInfo.AllDevs[index].NetworkHealth
+		}
+	}
+}
+
+func (hdm *HwDevManager) updateDevice() error {
+	if common.ParamOption.PresetVDevice {
+		return nil
+	}
+	element, exist := hdm.ServerMap[common.AiCoreResourceName]
+	if !exist {
+		return fmt.Errorf("not found %s plugin server", common.AiCoreResourceName)
+	}
+	pluginServer, ok := element.(*PluginServer)
+	if !ok {
+		return fmt.Errorf("serverMap convert %s failed", common.AiCoreResourceName)
+	}
+	err := pluginServer.DestroyNotUsedVNPU()
+	if err != nil {
+		return err
+	}
+	allInfo, err := hdm.manager.GetNPUs()
+	if err != nil {
+		return err
+	}
+	if err := hdm.manager.CheckDeviceTypeLabel(); err != nil {
+		hwlog.RunLog.Warnf("device type label may not correct, %v", err)
+	}
+	hdm.updateDeviceHealth(allInfo.AllDevs)
+	hdm.groupDevice = device.ClassifyDevices(allInfo.AllDevs, allInfo.AllDevTypes)
+	hdm.allInfo = allInfo
 	return nil
 }
 
@@ -134,34 +167,46 @@ func (hdm *HwDevManager) ListenDevice(ctx context.Context) {
 			return
 		default:
 			time.Sleep(time.Duration(common.ParamOption.ListAndWatchPeriod) * time.Second)
+			common.LockAllDeviceInfo()
+			if err := hdm.updateDevice(); err != nil {
+				hwlog.RunLog.Error(err)
+				common.UnlockAllDeviceInfo()
+				continue
+			}
 			hdm.notifyToK8s()
 			hdm.useVolcanoNotify()
+			common.UnlockAllDeviceInfo()
 		}
 	}
 }
 
-func (hdm *HwDevManager) notifyToK8s() {
-	for _, devType := range hdm.AllDevTypes {
-		classifyDev := hdm.groupDevice[devType]
-		isDevStateChange := hdm.manager.IsDeviceStatusChange(classifyDev, devType)
-		if !isDevStateChange {
-			continue
-		}
-		// if any device state or network state change, sure notify k8s
-		serverMap, ok := hdm.ServerMap[devType]
-		if !ok {
-			hwlog.RunLog.Warnf("server map (%s) not exist", devType)
-			continue
-		}
-		pluginServer, ok := serverMap.(*server.PluginServer)
-		if !ok {
-			hwlog.RunLog.Warnf("pluginServer (%s) not ok", devType)
-			continue
-		}
-		if !pluginServer.Notify(classifyDev) {
-			hwlog.RunLog.Warnf("deviceType(%s) notify failed, server may not start, please check", devType)
-		}
+func (hdm *HwDevManager) pluginNotify(classifyDev []*common.NpuDevice, devType string) {
+	serverMap, ok := hdm.ServerMap[devType]
+	if !ok {
+		hwlog.RunLog.Warnf("server map (%s) not exist", devType)
+		return
+	}
+	pluginServer, ok := serverMap.(*PluginServer)
+	if !ok {
+		hwlog.RunLog.Warnf("pluginServer (%s) not ok", devType)
+		return
+	}
+	if !pluginServer.Notify(classifyDev) {
+		hwlog.RunLog.Warnf("deviceType(%s) notify failed, server may not start, please check", devType)
+	}
+}
 
+func (hdm *HwDevManager) notifyToK8s() {
+	isDevStateChange := hdm.manager.IsDeviceStatusChange(hdm.groupDevice, hdm.allInfo.AICoreDevs, hdm.RunMode)
+	for devType, isChanged := range isDevStateChange {
+		if !isChanged {
+			continue
+		}
+		if !common.ParamOption.PresetVDevice {
+			hdm.pluginNotify(hdm.allInfo.AICoreDevs, common.AiCoreResourceName)
+			return
+		}
+		hdm.pluginNotify(hdm.groupDevice[devType], devType)
 	}
 }
 
@@ -174,10 +219,10 @@ func (hdm *HwDevManager) useVolcanoNotify() {
 			hwlog.RunLog.Warn("device plugin first reset annotation and config map error")
 		}
 	})
-	hdm.manager.DoWithVolcanoListAndWatch(hdm.groupDevice)
 	if err := hdm.updatePodAnnotation(); err != nil {
 		hwlog.RunLog.Error(err)
 	}
+	hdm.manager.DoWithVolcanoListAndWatch(hdm.groupDevice)
 }
 
 // SignCatch stop system sign catch
@@ -304,92 +349,57 @@ func (hdm *HwDevManager) handleDeleteEvent(deleteFile string) {
 }
 
 func (hdm *HwDevManager) updatePodAnnotation() error {
-	element, exist := hdm.ServerMap[common.PodResourceSeverKey]
-	if !exist {
-		return fmt.Errorf("not found pod resource client")
-	}
-	prClient, ok := element.(*server.PodResource)
-	if !ok {
-		return fmt.Errorf("serverMap convert pod resource client failed")
-	}
-	podResource, err := prClient.GetPodResource()
-	if err != nil {
-		return fmt.Errorf("get pod resource failed, %#v", err)
-	}
-	podList, err := hdm.manager.GetKubeClient().GetPodList()
-	if err != nil {
-		return err
-	}
-	if podList == nil {
-		return fmt.Errorf("get invalid pod list")
-	}
 	serverID, err := hdm.manager.GetKubeClient().GetNodeServerID()
 	if err != nil {
 		return fmt.Errorf("get node server id failed: %#v", err)
 	}
-	for _, devType := range hdm.AllDevTypes {
-		element, exist := hdm.ServerMap[devType]
-		if !exist {
-			return fmt.Errorf("not found %s plugin server", devType)
+	if !common.ParamOption.PresetVDevice {
+		return hdm.updateSpecTypePodAnnotation(common.AiCoreResourceName, serverID)
+	}
+	for _, devType := range hdm.allInfo.AllDevTypes {
+		// for 310P vnpu no need update
+		if common.IsVirtualDev(devType) && !strings.HasPrefix(devType, common.Ascend910) {
+			continue
 		}
-		ps, ok := element.(*server.PluginServer)
-		if !ok {
-			return fmt.Errorf("serverMap convert %s failed", devType)
-		}
-		if err := hdm.updateSpecTypePodAnnotation(podList, devType, serverID, podResource, ps); err != nil {
-			return err
+		if err := hdm.updateSpecTypePodAnnotation(devType, serverID); err != nil {
+			hwlog.RunLog.Warnf("update pod annotation failed, %#v", err)
 		}
 	}
 	return nil
 }
 
-func (hdm *HwDevManager) updateSpecTypePodAnnotation(podList *v1.PodList, deviceType, serverID string,
-	podDevice map[string]server.PodDevice, pluginServer *server.PluginServer) error {
-	pods, err := common.FilterPods(podList, common.GetPodPhaseBlackList(), deviceType, nil)
+func (hdm *HwDevManager) updateSpecTypePodAnnotation(deviceType, serverID string) error {
+	element, exist := hdm.ServerMap[deviceType]
+	if !exist {
+		return fmt.Errorf("not found %s plugin server", deviceType)
+	}
+	pluginServer, ok := element.(*PluginServer)
+	if !ok {
+		return fmt.Errorf("serverMap convert %s failed", deviceType)
+	}
+	podDeviceInfo, err := pluginServer.GetKltAndRealAllocateDev()
 	if err != nil {
 		return err
 	}
-	for _, pod := range pods {
-		if err := common.CheckPodNameAndSpace(pod.Name, common.PodNameMaxLength); err != nil {
-			hwlog.RunLog.Warnf("pod name syntax illegal, %#v", err)
-			continue
-		}
-		if err := common.CheckPodNameAndSpace(pod.Namespace, common.PodNameSpaceMaxLength); err != nil {
-			hwlog.RunLog.Warnf("pod namespace syntax illegal, %#v", err)
-			continue
-		}
-		hwlog.RunLog.Debugf("pods: %s, %s, %s", pod.Name, pod.Status.Phase, pod.UID)
-		_, existDeviceKey := pod.Annotations[common.Pod910DeviceKey]
-		_, existRealAlloc := pod.Annotations[common.PodRealAlloc]
+	for _, deviceInfo := range podDeviceInfo {
+		hwlog.RunLog.Debugf("pods: %s, %s, %s", deviceInfo.Pod.Name, deviceInfo.Pod.Status.Phase, deviceInfo.Pod.UID)
+		_, existDeviceKey := deviceInfo.Pod.Annotations[common.Pod910DeviceKey]
+		_, existRealAlloc := deviceInfo.Pod.Annotations[common.ResourceNamePrefix+common.PodRealAlloc]
 		if existDeviceKey || existRealAlloc {
 			continue
 		}
-		podKey := pod.Namespace + common.UnderLine + pod.Name
-		podResource, exist := podDevice[podKey]
-		if !exist {
-			hwlog.RunLog.Debugf("get %s klt device list failed, not in pod resource", podKey)
+		if len(deviceInfo.KltDevice) == 0 || len(deviceInfo.RealDevice) == 0 {
+			hwlog.RunLog.Warnf("%s %s klt device or real device is empty", deviceInfo.Pod.Namespace,
+				deviceInfo.Pod.Name)
 			continue
 		}
-		if podResource.ResourceName != common.ResourceNamePrefix+deviceType {
-			hwlog.RunLog.Debugf("podKey %s resource name %s not equal device type %s", podKey,
-				podResource.ResourceName, deviceType)
-			continue
-		}
-		var volDeviceList []string
-		if !common.IsVirtualDev(deviceType) {
-			volDeviceList, err = pluginServer.GetRealAllocateDevices(podResource.DeviceIds)
-			if err != nil {
-				hwlog.RunLog.Debugf("get device list %#v failed, %#v", podResource.DeviceIds, err)
-				continue
-			}
+		hwlog.RunLog.Debugf("%s, %d, %v", deviceInfo.Pod.Name, len(deviceInfo.KltDevice), deviceInfo.RealDevice)
+		if err := hdm.manager.AddPodAnnotation(&deviceInfo.Pod, deviceInfo.KltDevice, deviceInfo.RealDevice,
+			deviceType, serverID); err != nil {
+			hwlog.RunLog.Errorf("update pod %s_%s annotation failed, %#v", deviceInfo.Pod.Namespace,
+				deviceInfo.Pod.Name, err)
 		} else {
-			volDeviceList = append(volDeviceList, podResource.DeviceIds...)
-		}
-		if err := hdm.manager.AddPodAnnotation(&pod, podResource.DeviceIds, volDeviceList, deviceType,
-			serverID); err != nil {
-			hwlog.RunLog.Errorf("update pod %s annotation failed, %#v", podKey, err)
-		} else {
-			hwlog.RunLog.Debugf("update pod %s annotation success", podKey)
+			hwlog.RunLog.Infof("update pod %s_%s annotation success", deviceInfo.Pod.Namespace, deviceInfo.Pod.Name)
 		}
 	}
 	return nil
