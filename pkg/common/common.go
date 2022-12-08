@@ -108,14 +108,14 @@ func GetDeviceFromPodAnnotation(pod *v1.Pod, deviceType string) ([]string, error
 	return strings.Split(annotation, ","), nil
 }
 
-func setDeviceByPathWhen200RC(defaultDevices []string) {
-	setDeviceByPath(&defaultDevices, HiAi200RCEventSched)
-	setDeviceByPath(&defaultDevices, HiAi200RCHiDvpp)
-	setDeviceByPath(&defaultDevices, HiAi200RCLog)
-	setDeviceByPath(&defaultDevices, HiAi200RCMemoryBandwidth)
-	setDeviceByPath(&defaultDevices, HiAi200RCSVM0)
-	setDeviceByPath(&defaultDevices, HiAi200RCTsAisle)
-	setDeviceByPath(&defaultDevices, HiAi200RCUpgrade)
+func setDeviceByPathWhen200RC(defaultDevices *[]string) {
+	setDeviceByPath(defaultDevices, HiAi200RCEventSched)
+	setDeviceByPath(defaultDevices, HiAi200RCHiDvpp)
+	setDeviceByPath(defaultDevices, HiAi200RCLog)
+	setDeviceByPath(defaultDevices, HiAi200RCMemoryBandwidth)
+	setDeviceByPath(defaultDevices, HiAi200RCSVM0)
+	setDeviceByPath(defaultDevices, HiAi200RCTsAisle)
+	setDeviceByPath(defaultDevices, HiAi200RCUpgrade)
 }
 
 func setDeviceByPath(defaultDevices *[]string, device string) {
@@ -136,7 +136,7 @@ func GetDefaultDevices(getFdFlag bool) ([]string, error) {
 	setDeviceByPath(&defaultDevices, HiAIHDCDevice)
 	setDeviceByPath(&defaultDevices, HiAISVMDevice)
 	if getFdFlag {
-		setDeviceByPathWhen200RC(defaultDevices)
+		setDeviceByPathWhen200RC(&defaultDevices)
 	}
 	if ParamOption.ProductType != Atlas200ISoc {
 		return defaultDevices, nil
