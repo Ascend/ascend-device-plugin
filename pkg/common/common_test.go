@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"syscall"
 	"testing"
 
@@ -30,22 +31,14 @@ func init() {
 	hwlog.InitRunLogger(&hwLogConfig, context.Background())
 }
 
-// TestGetPodPhaseBlackList for test GetPodPhaseBlackList
-func TestGetPodPhaseBlackList(t *testing.T) {
-	convey.Convey("test GetPodPhaseBlackList", t, func() {
-		ret := GetPodPhaseBlackList()
-		convey.So(ret, convey.ShouldNotBeNil)
-	})
-}
-
 // TestSetAscendRuntimeEnv for test SetAscendRuntimeEnv
 func TestSetAscendRuntimeEnv(t *testing.T) {
 	convey.Convey("test SetAscendRuntimeEnv", t, func() {
-		id := "100"
-		devices := []string{id}
+		id := 100
+		devices := []int{id}
 		resp := v1beta1.ContainerAllocateResponse{}
 		SetAscendRuntimeEnv(devices, "", &resp)
-		convey.So(resp.Envs[ascendVisibleDevicesEnv], convey.ShouldEqual, id)
+		convey.So(resp.Envs[ascendVisibleDevicesEnv], convey.ShouldEqual, strconv.Itoa(id))
 	})
 }
 
@@ -168,174 +161,90 @@ func TestGetDefaultDevices(t *testing.T) {
 	t.Logf("TestGetDefaultDevices Run Pass")
 }
 
-// TestFilterPods1 for test FilterPods part 1
 func TestFilterPods1(t *testing.T) {
-	convey.Convey("test FilterPods", t, func() {
-		convey.Convey("pods is nil", func() {
-			_, err := FilterPods(nil, nil, Ascend910, nil)
-			convey.So(err, convey.ShouldNotBeNil)
+	convey.Convey("test FilterPods part1", t, func() {
+		convey.Convey("The number of container exceeds the upper limit", func() {
+			pods := []v1.Pod{{Spec: v1.PodSpec{Containers: make([]v1.Container, MaxContainerLimit+1)}}}
+			res := FilterPods(pods, Ascend910, nil)
+			convey.So(res, convey.ShouldBeEmpty)
 		})
-		convey.Convey("pod number exceeds the upper limit", func() {
-			pods := v1.PodList{Items: make([]v1.Pod, MaxPodLimit+1)}
-			_, err := FilterPods(&pods, nil, Ascend910, nil)
-			convey.So(err, convey.ShouldNotBeNil)
+		convey.Convey("annotationTag not exist", func() {
+			pods := []v1.Pod{{Spec: v1.PodSpec{Containers: []v1.Container{{Resources: v1.
+				ResourceRequirements{Limits: v1.ResourceList{}}}}}}}
+			res := FilterPods(pods, Ascend910, nil)
+			convey.So(res, convey.ShouldBeEmpty)
 		})
-		convey.Convey("check pod name too long", func() {
-			podName := make([]byte, PodNameMaxLength+1)
-			pods := v1.PodList{Items: []v1.Pod{{ObjectMeta: metav1.ObjectMeta{Name: string(podName)}}}}
-			ret, err := FilterPods(&pods, nil, Ascend910, nil)
-			convey.So(err, convey.ShouldBeNil)
-			convey.So(len(ret), convey.ShouldEqual, 0)
+		convey.Convey("annotationTag exist, device is virtual", func() {
+			limits := resource.NewQuantity(1, resource.DecimalExponent)
+			pods := []v1.Pod{{Spec: v1.PodSpec{Containers: []v1.Container{{Resources: v1.
+				ResourceRequirements{Limits: v1.ResourceList{ResourceNamePrefix + Ascend910c2: *limits}}}}}}}
+			res := FilterPods(pods, Ascend910c2, nil)
+			convey.So(len(res), convey.ShouldEqual, 1)
 		})
-		convey.Convey("check pod name not match", func() {
-			podName := make([]byte, PodNameMaxLength)
-			podName[0] = '$'
-			pods := v1.PodList{Items: []v1.Pod{{ObjectMeta: metav1.ObjectMeta{Name: string(podName)}}}}
-			ret, err := FilterPods(&pods, nil, Ascend910, nil)
-			convey.So(err, convey.ShouldBeNil)
-			convey.So(len(ret), convey.ShouldEqual, 0)
+		convey.Convey("limitsDevNum exceeds the upper limit", func() {
+			limits := resource.NewQuantity(MaxDevicesNum*MaxAICoreNum+1, resource.DecimalExponent)
+			pods := []v1.Pod{{Spec: v1.PodSpec{Containers: []v1.Container{{Resources: v1.
+				ResourceRequirements{Limits: v1.ResourceList{ResourceNamePrefix + Ascend910c2: *limits}}}}}}}
+			res := FilterPods(pods, Ascend910c2, nil)
+			convey.So(res, convey.ShouldBeEmpty)
 		})
-		convey.Convey("check pod namespace too long", func() {
-			podNamespace := make([]byte, PodNameMaxLength+1)
-			pods := v1.PodList{Items: []v1.Pod{{ObjectMeta: metav1.ObjectMeta{Name: "pod-name",
-				Namespace: string(podNamespace)}}}}
-			ret, err := FilterPods(&pods, nil, Ascend910, nil)
-			convey.So(err, convey.ShouldBeNil)
-			convey.So(len(ret), convey.ShouldEqual, 0)
+		convey.Convey("no assigned flag", func() {
+			limits := resource.NewQuantity(1, resource.DecimalExponent)
+			pods := []v1.Pod{
+				{Spec: v1.PodSpec{Containers: []v1.Container{{Resources: v1.ResourceRequirements{Limits: v1.
+					ResourceList{ResourceNamePrefix + Ascend910: *limits}}}}}}}
+			res := FilterPods(pods, Ascend910, nil)
+			convey.So(res, convey.ShouldBeEmpty)
 		})
-		convey.Convey("check pod namespace not match", func() {
-			podNamespace := make([]byte, PodNameSpaceMaxLength)
-			podNamespace[0] = '$'
-			pods := v1.PodList{Items: []v1.Pod{{ObjectMeta: metav1.ObjectMeta{Name: "pod-name",
-				Namespace: string(podNamespace)}}}}
-			ret, err := FilterPods(&pods, nil, Ascend910, nil)
-			convey.So(err, convey.ShouldBeNil)
-			convey.So(len(ret), convey.ShouldEqual, 0)
+		convey.Convey("had assigned flag", func() {
+			limits := resource.NewQuantity(1, resource.DecimalExponent)
+			pods := []v1.Pod{
+				{Spec: v1.PodSpec{Containers: []v1.Container{{Resources: v1.ResourceRequirements{Limits: v1.
+					ResourceList{HuaweiAscend910: *limits}}}}},
+					ObjectMeta: metav1.ObjectMeta{Name: "test3", Namespace: "test3",
+						Annotations: map[string]string{PodPredicateTime: "1", HuaweiAscend910: "Ascend910-1"}},
+				},
+			}
+			res := FilterPods(pods, Ascend910, nil)
+			convey.So(len(res), convey.ShouldEqual, 1)
 		})
 	})
 }
 
-// TestFilterPods2 for test FilterPods part 2
 func TestFilterPods2(t *testing.T) {
-	convey.Convey("test FilterPods", t, func() {
-		convey.Convey("container number exceeds the upper limit", func() {
-			pods := v1.PodList{Items: []v1.Pod{{ObjectMeta: metav1.ObjectMeta{Name: "pod-name",
-				Namespace: "pod-namespace"}, Status: v1.PodStatus{Phase: v1.PodRunning},
-				Spec: v1.PodSpec{Containers: make([]v1.Container, MaxContainerLimit+1)}}}}
-			ret, err := FilterPods(&pods, nil, Ascend910, nil)
-			convey.So(err, convey.ShouldBeNil)
-			convey.So(len(ret), convey.ShouldEqual, 0)
-		})
-		convey.Convey("Limits is invalid", func() {
-			pods := v1.PodList{Items: []v1.Pod{{ObjectMeta: metav1.ObjectMeta{Name: "pod-name",
-				Namespace: "pod-namespace"}, Status: v1.PodStatus{Phase: v1.PodRunning},
-				Spec: v1.PodSpec{Containers: []v1.Container{{Resources: v1.ResourceRequirements{
-					Limits: v1.ResourceList{
-						ResourceNamePrefix + Ascend910: *resource.NewQuantity(MaxDevicesNum+1, "")}}}}}}}}
-			ret, err := FilterPods(&pods, nil, Ascend910, nil)
-			convey.So(err, convey.ShouldBeNil)
-			convey.So(len(ret), convey.ShouldEqual, 0)
-		})
-		convey.Convey("pod Annotations has no ascend tag", func() {
-			pods := v1.PodList{Items: []v1.Pod{{ObjectMeta: metav1.ObjectMeta{Name: "pod-name",
-				Namespace: "pod-namespace"}, Status: v1.PodStatus{Phase: v1.PodRunning},
-				Spec: v1.PodSpec{Containers: []v1.Container{{Resources: v1.ResourceRequirements{
-					Limits: v1.ResourceList{
-						ResourceNamePrefix + Ascend910: *resource.NewQuantity(1, "")}}}}}}}}
-			ret, err := FilterPods(&pods, nil, Ascend910, nil)
-			convey.So(err, convey.ShouldBeNil)
-			convey.So(len(ret), convey.ShouldEqual, 0)
-		})
-		convey.Convey("deletionTimestamp is no nil", func() {
-			pods := v1.PodList{Items: []v1.Pod{{
-				ObjectMeta: metav1.ObjectMeta{Name: "pod-name", Namespace: "pod-namespace",
-					Annotations:       map[string]string{ResourceNamePrefix + Ascend910: Ascend910 + "-0"},
+	convey.Convey("test FilterPods part2", t, func() {
+		limits := resource.NewQuantity(1, resource.DecimalExponent)
+		pods := []v1.Pod{
+			{Spec: v1.PodSpec{Containers: []v1.Container{{Resources: v1.ResourceRequirements{Limits: v1.
+			ResourceList{HuaweiAscend910: *limits}}}}},
+				ObjectMeta: metav1.ObjectMeta{Name: "test3", Namespace: "test3",
+					Annotations: map[string]string{PodPredicateTime: "1", HuaweiAscend910: "Ascend910-1"},
 					DeletionTimestamp: &metav1.Time{}},
-				Status: v1.PodStatus{Phase: v1.PodRunning}, Spec: v1.PodSpec{Containers: []v1.
-					Container{{Resources: v1.ResourceRequirements{Limits: v1.ResourceList{
-					ResourceNamePrefix + Ascend910: *resource.NewQuantity(1, "")}}}}}}}}
-			ret, err := FilterPods(&pods, nil, Ascend910, nil)
-			convey.So(err, convey.ShouldBeNil)
-			convey.So(len(ret), convey.ShouldEqual, 0)
+				Status: v1.PodStatus{ContainerStatuses: make([]v1.ContainerStatus, 1),
+					Reason: "UnexpectedAdmissionError"},
+			},
+		}
+		convey.Convey("DeletionTimestamp is not nil", func() {
+			res := FilterPods(pods, Ascend910, nil)
+			convey.So(res, convey.ShouldBeEmpty)
 		})
-	})
-}
-
-// TestFilterPods3 for test FilterPods part 3
-func TestFilterPods3(t *testing.T) {
-	convey.Convey("test FilterPods", t, func() {
-		convey.Convey("containerStatus number exceeds the upper limit", func() {
-			pods := v1.PodList{Items: []v1.Pod{{
-				ObjectMeta: metav1.ObjectMeta{Name: "pod-name", Namespace: "pod-namespace",
-					Annotations: map[string]string{ResourceNamePrefix + Ascend910: Ascend910 + "-0"}},
-				Status: v1.PodStatus{
-					Phase: v1.PodRunning, ContainerStatuses: make([]v1.ContainerStatus, MaxContainerLimit+1)},
-				Spec: v1.PodSpec{Containers: []v1.Container{{Resources: v1.ResourceRequirements{
-					Limits: v1.ResourceList{
-						ResourceNamePrefix + Ascend910: *resource.NewQuantity(1, "")}}}}}}}}
-			ret, err := FilterPods(&pods, nil, Ascend910, nil)
-			convey.So(err, convey.ShouldBeNil)
-			convey.So(len(ret), convey.ShouldEqual, 0)
+		pods[0].DeletionTimestamp = nil
+		convey.Convey("The number of container status exceeds the upper limit", func() {
+			pods[0].Status.ContainerStatuses = make([]v1.ContainerStatus, 1)
+			res := FilterPods(pods, Ascend910, nil)
+			convey.So(res, convey.ShouldBeEmpty)
 		})
-		convey.Convey("PreStartContainer check failed", func() {
-			pods := v1.PodList{Items: []v1.Pod{{
-				ObjectMeta: metav1.ObjectMeta{Name: "pod-name", Namespace: "pod-namespace",
-					Annotations: map[string]string{ResourceNamePrefix + Ascend910: Ascend910 + "-0"}},
-				Status: v1.PodStatus{
-					Phase: v1.PodRunning, ContainerStatuses: []v1.ContainerStatus{{
-						State: v1.ContainerState{Waiting: &v1.ContainerStateWaiting{
-							Message: "PreStartContainer check failed"}}}}},
-				Spec: v1.PodSpec{Containers: []v1.Container{{Resources: v1.ResourceRequirements{
-					Limits: v1.ResourceList{
-						ResourceNamePrefix + Ascend910: *resource.NewQuantity(1, "")}}}}}}}}
-			ret, err := FilterPods(&pods, nil, Ascend910, nil)
-			convey.So(err, convey.ShouldBeNil)
-			convey.So(len(ret), convey.ShouldEqual, 0)
+		convey.Convey("Waiting.Message is not nil", func() {
+			pods[0].Status.ContainerStatuses = []v1.ContainerStatus{{State: v1.ContainerState{Waiting: &v1.
+				ContainerStateWaiting{Message: "PreStartContainer check failed"}}}}
+			res := FilterPods(pods, Ascend910, nil)
+			convey.So(res, convey.ShouldBeEmpty)
 		})
-		convey.Convey("resource is UnexpectedAdmissionError", func() {
-			pods := v1.PodList{Items: []v1.Pod{{
-				ObjectMeta: metav1.ObjectMeta{Name: "pod-name", Namespace: "pod-namespace",
-					Annotations: map[string]string{ResourceNamePrefix + Ascend910: Ascend910 + "-0"}},
-				Status: v1.PodStatus{Phase: v1.PodRunning, Reason: "UnexpectedAdmissionError"},
-				Spec: v1.PodSpec{Containers: []v1.Container{{Resources: v1.ResourceRequirements{
-					Limits: v1.ResourceList{
-						ResourceNamePrefix + Ascend910: *resource.NewQuantity(1, "")}}}}}}}}
-			ret, err := FilterPods(&pods, nil, Ascend910, nil)
-			convey.So(err, convey.ShouldBeNil)
-			convey.So(len(ret), convey.ShouldEqual, 0)
-		})
-	})
-}
-
-// TestFilterPods4 for test FilterPods part 4
-func TestFilterPods4(t *testing.T) {
-	convey.Convey("test FilterPods", t, func() {
-		convey.Convey("pod not meet condition", func() {
-			conditionFunc := func(pod *v1.Pod) bool { return pod.Status.Phase == v1.PodRunning }
-			pods := v1.PodList{Items: []v1.Pod{{ObjectMeta: metav1.ObjectMeta{Name: "pod-name",
-				Namespace: "pod-namespace"}, Status: v1.PodStatus{Phase: v1.PodSucceeded}}}}
-			ret, err := FilterPods(&pods, nil, Ascend910, conditionFunc)
-			convey.So(err, convey.ShouldBeNil)
-			convey.So(len(ret), convey.ShouldEqual, 0)
-		})
-		convey.Convey("get valid pod", func() {
-			pods := v1.PodList{Items: []v1.Pod{{
-				ObjectMeta: metav1.ObjectMeta{Name: "pod-name", Namespace: "pod-namespace",
-					Annotations: map[string]string{ResourceNamePrefix + Ascend910: Ascend910 + "-0"}},
-				Status: v1.PodStatus{Phase: v1.PodRunning, Reason: ""},
-				Spec: v1.PodSpec{Containers: []v1.Container{{Resources: v1.ResourceRequirements{
-					Limits: v1.ResourceList{
-						ResourceNamePrefix + Ascend910: *resource.NewQuantity(1, "")}}}}}}}}
-			ret, err := FilterPods(&pods, nil, Ascend910, nil)
-			convey.So(err, convey.ShouldBeNil)
-			convey.So(len(ret), convey.ShouldEqual, 1)
-		})
-		convey.Convey("pod in black list", func() {
-			pods := v1.PodList{Items: []v1.Pod{{ObjectMeta: metav1.ObjectMeta{Name: "pod-name",
-				Namespace: "pod-namespace"}, Status: v1.PodStatus{Phase: v1.PodSucceeded}}}}
-			ret, err := FilterPods(&pods, GetPodPhaseBlackList(), Ascend910, nil)
-			convey.So(err, convey.ShouldBeNil)
-			convey.So(len(ret), convey.ShouldEqual, 0)
+		convey.Convey("pod.Status.Reason is UnexpectedAdmissionError", func() {
+			pods[0].Status = v1.PodStatus{ContainerStatuses: []v1.ContainerStatus{},
+				Reason: "UnexpectedAdmissionError"}
+			res := FilterPods(pods, Ascend910, nil)
+			convey.So(res, convey.ShouldBeEmpty)
 		})
 	})
 }
@@ -423,6 +332,11 @@ func TestWatchFile(t *testing.T) {
 // TestGetDeviceListID for test GetDeviceListID
 func TestGetDeviceListID(t *testing.T) {
 	convey.Convey("TestGetDeviceListID", t, func() {
+		convey.Convey("device num excceed max num", func() {
+			devices := make([]string, MaxDevicesNum+1)
+			_, _, ret := GetDeviceListID(devices, "")
+			convey.So(ret, convey.ShouldNotBeNil)
+		})
 		convey.Convey("device name is invalid", func() {
 			devices := []string{"Ascend910"}
 			_, _, ret := GetDeviceListID(devices, "")
@@ -451,15 +365,15 @@ func TestGetPodConfiguration(t *testing.T) {
 				return nil, fmt.Errorf("err")
 			})
 			defer mockMarshal.Reset()
-			devices := map[string]string{"100": DefaultDeviceIP}
-			phyDevMapVirtualDev := map[string]string{"100": "0"}
+			devices := map[int]string{100: DefaultDeviceIP}
+			phyDevMapVirtualDev := map[int]int{100: 0}
 			deviceType := "Ascend910-2c"
 			ret := GetPodConfiguration(phyDevMapVirtualDev, devices, "pod-name", DefaultDeviceIP, deviceType)
 			convey.So(ret, convey.ShouldBeEmpty)
 		})
 		convey.Convey("Marshal ok", func() {
-			devices := map[string]string{"100": DefaultDeviceIP}
-			phyDevMapVirtualDev := map[string]string{"100": "0"}
+			devices := map[int]string{100: DefaultDeviceIP}
+			phyDevMapVirtualDev := map[int]int{100: 0}
 			deviceType := "Ascend910-2c"
 			ret := GetPodConfiguration(phyDevMapVirtualDev, devices, "pod-name", DefaultDeviceIP, deviceType)
 			convey.So(ret, convey.ShouldNotBeEmpty)

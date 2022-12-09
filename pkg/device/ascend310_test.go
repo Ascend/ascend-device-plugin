@@ -19,7 +19,6 @@ import (
 
 	"Ascend-device-plugin/pkg/common"
 	"Ascend-device-plugin/pkg/kubeclient"
-	"Ascend-device-plugin/pkg/server"
 )
 
 func init() {
@@ -29,46 +28,46 @@ func init() {
 	hwlog.InitRunLogger(&hwLogConfig, context.Background())
 }
 
-func createFake310Manager(fdFlag, useAscendDocker bool) *server.HwDevManager {
-	hdm := &server.HwDevManager{}
+func createFake310Manager(fdFlag, useAscendDocker bool) *HwAscend310Manager {
 	common.ParamOption = common.Option{
 		GetFdFlag:       fdFlag,
 		UseAscendDocker: useAscendDocker,
+		PresetVDevice:   true,
 	}
-	hdm.manager = NewHwAscend310Manager()
-	hdm.manager.SetDmgr(&devmanager.DeviceManagerMock{})
-	return hdm
+	manager := NewHwAscend310Manager()
+	manager.SetDmgr(&devmanager.DeviceManagerMock{})
+	return manager
 }
 
 func TestHwAscend310ManagerGetNPUs(t *testing.T) {
 	convey.Convey("test GetNPUs", t, func() {
 		convey.Convey("310 get npu", func() {
-			hdm := createFake310Manager(false, false)
-			err := hdm.manager.GetNPUs(&hdm.AllDevs, &hdm.AllDevTypes)
+			manager := createFake310Manager(false, false)
+			allInfo, err := manager.GetNPUs()
 			convey.So(err, convey.ShouldBeNil)
-			convey.So(hdm.AllDevTypes[0], convey.ShouldEqual, common.Ascend310)
-			convey.So(hdm.AllDevs[0].DeviceName, convey.ShouldEqual,
-				fmt.Sprintf("%s-%d", common.Ascend310, hdm.AllDevs[0].PhyID))
+			convey.So(allInfo.AllDevTypes[0], convey.ShouldEqual, common.Ascend310)
+			convey.So(allInfo.AllDevs[0].DeviceName, convey.ShouldEqual,
+				fmt.Sprintf("%s-%d", common.Ascend310, allInfo.AllDevs[0].PhyID))
 		})
 		convey.Convey("310 get npu use fd", func() {
-			hdm := createFake310Manager(true, false)
-			err := hdm.manager.GetNPUs(&hdm.AllDevs, &hdm.AllDevTypes)
+			manager := createFake310Manager(true, false)
+			allInfo, err := manager.GetNPUs()
 			convey.So(err, convey.ShouldBeNil)
-			convey.So(hdm.AllDevTypes[0], convey.ShouldEqual, common.AscendfdPrefix)
-			convey.So(hdm.AllDevs[0].DeviceName, convey.ShouldEqual,
-				fmt.Sprintf("%s-%d", common.AscendfdPrefix, hdm.AllDevs[0].PhyID))
+			convey.So(allInfo.AllDevTypes[0], convey.ShouldEqual, common.AscendfdPrefix)
+			convey.So(allInfo.AllDevs[0].DeviceName, convey.ShouldEqual,
+				fmt.Sprintf("%s-%d", common.AscendfdPrefix, allInfo.AllDevs[0].PhyID))
 		})
 	})
 }
 
 func TestDoWithVolcanoListAndWatch310(t *testing.T) {
 	convey.Convey("310 test DoWithVolcanoListAndWatch", t, func() {
-		hdm := createFake310Manager(false, true)
+		manager := createFake310Manager(false, true)
 		fakeKubeInteractor := &kubeclient.ClientK8s{Clientset: nil, NodeName: "NODE_NAME"}
-		hdm.manager.SetKubeClient(fakeKubeInteractor)
-		err := hdm.manager.GetNPUs(&hdm.AllDevs, &hdm.AllDevTypes)
+		manager.SetKubeClient(fakeKubeInteractor)
+		allInfo, err := manager.GetNPUs()
 		convey.So(err, convey.ShouldBeNil)
-		hdm.groupDevice = ClassifyDevices(hdm.AllDevs, hdm.AllDevTypes)
+		groupDevice := ClassifyDevices(allInfo.AllDevs, allInfo.AllDevTypes)
 
 		mockGetPodsUsedNpu := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)),
 			"GetPodsUsedNpu", func(_ *kubeclient.ClientK8s, devType string) sets.String {
@@ -100,6 +99,6 @@ func TestDoWithVolcanoListAndWatch310(t *testing.T) {
 			mockCreateConfigMap.Reset()
 		}()
 
-		hdm.manager.DoWithVolcanoListAndWatch(hdm.groupDevice)
+		manager.DoWithVolcanoListAndWatch(groupDevice)
 	})
 }

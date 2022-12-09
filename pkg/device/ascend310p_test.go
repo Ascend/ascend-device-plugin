@@ -17,35 +17,33 @@ import (
 
 	"Ascend-device-plugin/pkg/common"
 	"Ascend-device-plugin/pkg/kubeclient"
-	"Ascend-device-plugin/pkg/server"
 )
 
-func createFake310pManager() *server.HwDevManager {
-	hdm := &server.HwDevManager{}
-	hdm.manager = NewHwAscend310PManager()
-	hdm.manager.SetDmgr(&devmanager.DeviceManagerMock{})
-	return hdm
+func createFake310pManager() *HwAscend310PManager {
+	manager := NewHwAscend310PManager()
+	manager.SetDmgr(&devmanager.DeviceManagerMock{})
+	return manager
 }
 
 func TestHwAscend310PManagerGetNPUs(t *testing.T) {
 	convey.Convey("310p get npu", t, func() {
-		hdm := createFake310pManager()
-		err := hdm.manager.GetNPUs(&hdm.AllDevs, &hdm.AllDevTypes)
+		manager := createFake310pManager()
+		allInfo, err := manager.GetNPUs()
 		convey.So(err, convey.ShouldBeNil)
-		convey.So(hdm.AllDevTypes[0], convey.ShouldEqual, common.Ascend310P)
-		convey.So(hdm.AllDevs[0].DeviceName, convey.ShouldEqual,
-			fmt.Sprintf("%s-%d", common.Ascend310P, hdm.AllDevs[0].PhyID))
+		convey.So(allInfo.AllDevTypes[0], convey.ShouldEqual, common.Ascend310P)
+		convey.So(allInfo.AllDevs[0].DeviceName, convey.ShouldEqual,
+			fmt.Sprintf("%s-%d", common.Ascend310P, allInfo.AllDevs[0].PhyID))
 	})
 }
 
 func TestDoWithVolcanoListAndWatch310p(t *testing.T) {
 	convey.Convey("310p DoWithVolcanoListAndWatch", t, func() {
-		hdm := createFake310pManager()
+		manager := createFake310pManager()
 		fakeKubeInteractor := &kubeclient.ClientK8s{Clientset: nil, NodeName: "NODE_NAME"}
-		hdm.manager.SetKubeClient(fakeKubeInteractor)
-		err := hdm.manager.GetNPUs(&hdm.AllDevs, &hdm.AllDevTypes)
+		manager.SetKubeClient(fakeKubeInteractor)
+		allInfo, err := manager.GetNPUs()
 		convey.So(err, convey.ShouldBeNil)
-		hdm.groupDevice = ClassifyDevices(hdm.AllDevs, hdm.AllDevTypes)
+		groupDevice := ClassifyDevices(allInfo.AllDevs, allInfo.AllDevTypes)
 
 		mockGetPodsUsedNpu := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)),
 			"GetPodsUsedNpu", func(_ *kubeclient.ClientK8s, devType string) sets.String {
@@ -77,6 +75,6 @@ func TestDoWithVolcanoListAndWatch310p(t *testing.T) {
 			mockCreateConfigMap.Reset()
 		}()
 
-		hdm.manager.DoWithVolcanoListAndWatch(hdm.groupDevice)
+		manager.DoWithVolcanoListAndWatch(groupDevice)
 	})
 }
