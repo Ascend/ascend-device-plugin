@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -24,11 +25,11 @@ import (
 
 // HwDevManager manages huawei device devices.
 type HwDevManager struct {
-	groupDevice     map[string][]*common.NpuDevice
-	ServerMap       map[string]InterfaceServer
-	allInfo         common.NpuAllInfo
-	manager         device.DevManager
-	RunMode         string
+	groupDevice map[string][]*common.NpuDevice
+	ServerMap   map[string]InterfaceServer
+	allInfo     common.NpuAllInfo
+	manager     device.DevManager
+	RunMode     string
 }
 
 // NewHwDevManager function is used to new a dev manager.
@@ -76,7 +77,39 @@ func (hdm *HwDevManager) setAscendManager(dmgr devmanager.DeviceInterface, clien
 		return err
 	}
 	common.ParamOption.ProductType = productType
-	return nil
+	return hdm.updateServerType()
+}
+
+func (hdm *HwDevManager) updateServerType() error {
+	if hdm.RunMode != common.Ascend310P || common.ParamOption.PresetVDevice || !common.ParamOption.UseVolcanoType {
+		return nil
+	}
+	aiCoreCount, err := hdm.manager.GetChipAiCoreCount()
+	if err != nil {
+		hwlog.RunLog.Errorf("get chip aicore count failed, err: %#v", err)
+		return err
+	}
+	common.ParamOption.AiCoreCount = aiCoreCount
+	oldNode, err := hdm.manager.GetKubeClient().GetNode()
+	if err != nil {
+		hwlog.RunLog.Errorf("failed to get node, err: %#v", err)
+		return err
+	}
+	if oldNode == nil {
+		hwlog.RunLog.Error("invalid node")
+		return fmt.Errorf("invalid node")
+	}
+	newNode := oldNode.DeepCopy()
+	newNode.Labels[common.ServerTypeLabelKey] = hdm.RunMode + common.MiddelLine + strconv.Itoa(int(aiCoreCount))
+	for i := 0; i < common.RetryUpdateCount; i++ {
+		if _, _, err = hdm.manager.GetKubeClient().PatchNodeState(oldNode, newNode); err == nil {
+			hwlog.RunLog.Infof("update server type success")
+			return nil
+		}
+		hwlog.RunLog.Warnf("failed to patch server type to node, retry count:%d", i+1)
+		time.Sleep(time.Second)
+	}
+	return fmt.Errorf("update server type to node label failed")
 }
 
 func (hdm *HwDevManager) setAllDeviceAndType() error {

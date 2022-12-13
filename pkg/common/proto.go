@@ -82,6 +82,7 @@ type Option struct {
 	KubeConfig         string
 	PresetVDevice      bool
 	ProductType        string
+	AiCoreCount        int32 // found by dcmi interface
 }
 
 // GetAllDeviceInfoTypeList Get All Device Info Type List

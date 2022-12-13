@@ -52,11 +52,7 @@ func (hnm *HwAscend310PManager) GetNPUs() (common.NpuAllInfo, error) {
 			return common.NpuAllInfo{}, fmt.Errorf("invalid virtual device count")
 		}
 		if !common.ParamOption.PresetVDevice {
-			hnm.chipAICore = int32(vDevInfos.TotalResource.Computing.Aic)
-			if hnm.chipAICore < common.MinAICoreNum || hnm.chipAICore > common.MaxAICoreNum {
-				return common.NpuAllInfo{}, fmt.Errorf("invalid ai core num %d", hnm.chipAICore)
-			}
-			common.FakeAiCoreDevice(davinCiDev, hnm.chipAICore, &aiCoreDevices)
+			common.FakeAiCoreDevice(davinCiDev, &aiCoreDevices)
 		}
 		if vDevInfos.TotalResource.VDevNum == 0 {
 			hnm.assemblePhyDevices(davinCiDev, &allDevices, &allDeviceTypes)

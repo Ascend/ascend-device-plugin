@@ -140,9 +140,9 @@ func GetAICore(templateName string) (int, error) {
 }
 
 // FakeAiCoreDevice fake ai core devices
-func FakeAiCoreDevice(dev DavinCiDev, aiCoreNum int32, aiCoreDevices *[]*NpuDevice) {
+func FakeAiCoreDevice(dev DavinCiDev, aiCoreDevices *[]*NpuDevice) {
 	aiCoreDevCount := len(*aiCoreDevices)
-	for core := int32(0); core < aiCoreNum; core++ {
+	for core := int32(0); core < ParamOption.AiCoreCount; core++ {
 		*aiCoreDevices = append(*aiCoreDevices, &NpuDevice{
 			DevType:       AiCoreResourceName,
 			DeviceName:    fmt.Sprintf("%s-%d", AiCoreResourceName, aiCoreDevCount),

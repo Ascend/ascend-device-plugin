@@ -30,7 +30,6 @@ type AscendTools struct {
 	unHealthyKey string
 	devCount     int32
 	healthDevice sets.String
-	chipAICore   int32
 }
 
 // DevManager interface for manager device
@@ -49,6 +48,7 @@ type DevManager interface {
 	CheckDeviceTypeLabel() error
 	CreateVirtualDevice(int32, string) (string, error)
 	DestroyVirtualDevice(string) error
+	GetChipAiCoreCount() (int32, error)
 }
 
 // SetDmgr set devmanager
@@ -73,7 +73,7 @@ func (tool *AscendTools) GetKubeClient() *kubeclient.ClientK8s {
 
 // GetChipAICore get ai core
 func (tool *AscendTools) GetChipAICore() int32 {
-	return tool.chipAICore
+	return common.ParamOption.AiCoreCount
 }
 
 // GetName get chip name
@@ -515,8 +515,8 @@ func (tool *AscendTools) CheckDeviceTypeLabel() error {
 	if err != nil {
 		return fmt.Errorf("covert label ai core failed, error is %v", err)
 	}
-	if aiCore != int(tool.chipAICore) {
-		return fmt.Errorf("label ai core %d is not equal real chip ai core %d", aiCore, tool.chipAICore)
+	if aiCore != int(common.ParamOption.AiCoreCount) {
+		return fmt.Errorf("label ai core %d not equal real chip ai core %d", aiCore, common.ParamOption.AiCoreCount)
 	}
 	return nil
 }
@@ -562,4 +562,32 @@ func (tool *AscendTools) DestroyVirtualDevice(deviceName string) error {
 		time.Sleep(time.Second)
 	}
 	return err
+}
+
+// GetChipAiCoreCount get chip aicore count
+func (tool *AscendTools) GetChipAiCoreCount() (int32, error) {
+	_, logicIDs, err := tool.dmgr.GetDeviceList()
+	if err != nil {
+		return 0, err
+	}
+	if len(logicIDs) < 1 {
+		return 0, fmt.Errorf("not found logicIDs")
+	}
+	for _, logicID := range logicIDs {
+		cgoVDevInfo, err := tool.dmgr.GetVirtualDeviceInfo(logicID)
+		if err != nil {
+			hwlog.RunLog.Debug(err)
+			continue
+		}
+		return tool.getAiCoreCount(cgoVDevInfo)
+	}
+	return 0, fmt.Errorf("not get aicore count")
+}
+
+func (tool *AscendTools) getAiCoreCount(cgoVDevInfo npuCommon.VirtualDevInfo) (int32, error) {
+	chipAICore := cgoVDevInfo.TotalResource.Computing.Aic
+	if chipAICore < common.MinAICoreNum || chipAICore > common.MaxAICoreNum {
+		return 0, fmt.Errorf("invalid ai core num %f", chipAICore)
+	}
+	return int32(chipAICore), nil
 }
