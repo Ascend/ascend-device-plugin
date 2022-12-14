@@ -15,6 +15,7 @@ import (
 	"huawei.com/npu-exporter/devmanager"
 )
 
+// TestTestNewHwDevManager for testTestNewHwDevManager
 func TestNewHwDevManager(t *testing.T) {
 	convey.Convey("test NewHwDevManager", t, func() {
 		convey.Convey("init HwDevManager", func() {
@@ -34,6 +35,7 @@ func TestNewHwDevManager(t *testing.T) {
 	})
 }
 
+// TestStartAllServer for testStartAllServer
 func TestStartAllServer(t *testing.T) {
 	convey.Convey("test startAllServer", t, func() {
 		mockStart := gomonkey.ApplyMethod(reflect.TypeOf(new(PluginServer)), "Start",

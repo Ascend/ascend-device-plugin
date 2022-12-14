@@ -62,3 +62,40 @@ func TestIsVirtualDev(t *testing.T) {
 		})
 	})
 }
+
+// TestGetVNPUSegmentInfo for testGetVNPUSegmentInfo
+func TestGetVNPUSegmentInfo(t *testing.T) {
+	deviceInfos := []string{"0", "vir02"}
+	convey.Convey("test GetVNPUSegmentInfo", t, func() {
+		convey.Convey("GetVNPUSegmentInfo success", func() {
+			_, _, err := GetVNPUSegmentInfo(deviceInfos)
+			convey.So(err, convey.ShouldBeNil)
+		})
+		deviceInfos = []string{"65", "vir02"}
+		convey.Convey("GetVNPUSegmentInfo failed with upper limit id", func() {
+			_, _, err := GetVNPUSegmentInfo(deviceInfos)
+			convey.So(err, convey.ShouldNotBeNil)
+		})
+		deviceInfos = []string{"x", "vir02"}
+		convey.Convey("GetVNPUSegmentInfo failed with invalid id", func() {
+			_, _, err := GetVNPUSegmentInfo(deviceInfos)
+			convey.So(err, convey.ShouldNotBeNil)
+		})
+	})
+}
+
+// TestFakeAiCoreDevice for testFakeAiCoreDevice
+func TestFakeAiCoreDevice(t *testing.T) {
+	dev := DavinCiDev{
+		LogicID: 0,
+		PhyID:   0,
+	}
+	aiCoreDevices := make([]*NpuDevice, 0)
+	ParamOption.AiCoreCount = MinAICoreNum
+	convey.Convey("test FakeAiCoreDevice", t, func() {
+		convey.Convey("FakeAiCoreDevice success", func() {
+			FakeAiCoreDevice(dev, &aiCoreDevices)
+			convey.So(len(aiCoreDevices), convey.ShouldEqual, MinAICoreNum)
+		})
+	})
+}

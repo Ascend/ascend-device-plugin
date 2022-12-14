@@ -460,7 +460,7 @@ func checkAnnotationAllocateValid(requestDevices []string, deviceType string, po
 		return false
 	}
 	deviceInfos := strings.Split(annotation, common.MiddelLine)
-	// for vnpu, like huawei.com/ascend-core:0-vir02
+	// for vnpu, like huawei.com/npu-core:0-vir02
 	if len(deviceInfos) > 1 {
 		_, template, err := common.GetVNPUSegmentInfo(deviceInfos)
 		if err != nil {
@@ -474,15 +474,15 @@ func checkAnnotationAllocateValid(requestDevices []string, deviceType string, po
 		}
 		return len(requestDevices) == aiCore
 	}
-	// for physical npu, huawei.com/ascend-core:0,1,2,3
+	// for physical npu, huawei.com/npu-core:0,1,2,3
 	phyDevices := strings.Split(deviceInfos[0], common.CommaSepDev)
 	return len(requestDevices) == len(phyDevices)*int(chipAICore)
 }
 
 // getAICoreFromPodAnnotation get ai core count from pod annotation
 // Annotation
-// huawei.com/ascend-core:0,1,2,3
-// huawei.com/ascend-core:0-vir02
+// huawei.com/npu-core:0,1,2,3
+// huawei.com/npu-core:0-vir02
 func (ps *PluginServer) getAICoreFromPodAnnotation(pod *v1.Pod, deviceType string) ([]string, error) {
 	if err := ps.DestroyNotUsedVNPU(); err != nil {
 		return nil, err
