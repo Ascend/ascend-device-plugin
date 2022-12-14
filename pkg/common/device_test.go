@@ -38,7 +38,7 @@ func TestConvertDevListToSets(t *testing.T) {
 		})
 		convey.Convey("match Ascend910", func() {
 			devices := "Ascend910-0.Ascend910-1.Ascend910-2"
-			ret := ConvertDevListToSets(devices, "")
+			ret := ConvertDevListToSets(devices, DotSepDev)
 			convey.So(ret.Len(), convey.ShouldEqual, 0)
 		})
 		convey.Convey("not match Ascend910", func() {

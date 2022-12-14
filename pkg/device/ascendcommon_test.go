@@ -13,6 +13,7 @@ import (
 	"huawei.com/npu-exporter/devmanager"
 	npuCommon "huawei.com/npu-exporter/devmanager/common"
 	"k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/pkg/common"
@@ -20,12 +21,15 @@ import (
 )
 
 const (
-	phyIDNum   = 1
-	logicIDNum = 2
-	vDevIDNum  = 3
-	aiCoreNum  = 4
+	phyIDNum    = 1
+	logicIDNum  = 2
+	vDevIDNum   = 3
+	aiCoreNum   = 4
+	aiCoreCount = 8
+	vDevChipID  = 100
 )
 
+// TestIsDeviceStatusChange testIsDeviceStatusChange
 func TestIsDeviceStatusChange(t *testing.T) {
 	tool := AscendTools{name: common.Ascend910, client: &kubeclient.ClientK8s{},
 		dmgr: &devmanager.DeviceManagerMock{}}
@@ -35,8 +39,17 @@ func TestIsDeviceStatusChange(t *testing.T) {
 		res := tool.IsDeviceStatusChange(devices, aiCoreDevice, common.Ascend910)
 		convey.So(res, convey.ShouldNotBeNil)
 	})
+	tool = AscendTools{name: common.Ascend310P, client: &kubeclient.ClientK8s{},
+		dmgr: &devmanager.DeviceManagerMockErr{}}
+	convey.Convey("test IsDeviceStatusChange which chip is unhealthy ", t, func() {
+		devices := map[string][]*common.NpuDevice{common.Ascend310P: {{Health: v1beta1.Unhealthy}}}
+		aiCoreDevice := []*common.NpuDevice{{Health: v1beta1.Unhealthy}}
+		res := tool.IsDeviceStatusChange(devices, aiCoreDevice, common.Ascend310P)
+		convey.So(res, convey.ShouldNotBeNil)
+	})
 }
 
+// TestAssembleVirtualDevices testAssembleVirtualDevices
 func TestAssembleVirtualDevices(t *testing.T) {
 	convey.Convey("test assembleVirtualDevices", t, func() {
 		tool := AscendTools{name: common.Ascend910, client: &kubeclient.ClientK8s{},
@@ -146,4 +159,164 @@ func TestAddPodAnnotation2(t *testing.T) {
 			convey.So(err, convey.ShouldBeNil)
 		})
 	})
+}
+
+// TestCreateVirtualDevice testCreateVirtualDevice
+func TestCreateVirtualDevice(t *testing.T) {
+	tool := AscendTools{name: common.Ascend310P, client: &kubeclient.ClientK8s{},
+		dmgr: &devmanager.DeviceManagerMock{}}
+	convey.Convey("test CreateVirtualDevice", t, func() {
+		convey.Convey("CreateVirtualDevice success", func() {
+			mockGetLogicIDFromPhysicID := gomonkey.ApplyMethod(reflect.TypeOf(new(devmanager.DeviceManagerMock)),
+				"GetLogicIDFromPhysicID", func(_ *devmanager.DeviceManagerMock, physicID int32) (int32, error) {
+					return 0, nil
+				})
+			mockCreate := gomonkey.ApplyMethod(reflect.TypeOf(new(devmanager.DeviceManagerMock)),
+				"CreateVirtualDevice", func(_ *devmanager.DeviceManagerMock, logicID int32,
+					vDevInfo npuCommon.CgoCreateVDevRes) (npuCommon.CgoCreateVDevOut, error) {
+					return npuCommon.CgoCreateVDevOut{}, nil
+				})
+			defer mockCreate.Reset()
+			defer mockGetLogicIDFromPhysicID.Reset()
+			_, err := tool.CreateVirtualDevice(0, "vir01")
+			convey.So(err, convey.ShouldBeNil)
+		})
+	})
+}
+
+// TestDestroyVirtualDevice testDestroyVirtualDevice
+func TestDestroyVirtualDevice(t *testing.T) {
+	tool := AscendTools{name: common.Ascend310P, client: &kubeclient.ClientK8s{},
+		dmgr: &devmanager.DeviceManagerMock{}}
+	convey.Convey("test DestroyVirtualDevice", t, func() {
+		convey.Convey("DestroyVirtualDevice success", func() {
+			mockGetLogicIDFromPhysicID := gomonkey.ApplyMethod(reflect.TypeOf(new(devmanager.DeviceManagerMock)),
+				"GetLogicIDFromPhysicID", func(_ *devmanager.DeviceManagerMock, physicID int32) (int32, error) {
+					return 0, nil
+				})
+			mockDestroy := gomonkey.ApplyMethod(reflect.TypeOf(new(devmanager.DeviceManagerMock)),
+				"DestroyVirtualDevice", func(_ *devmanager.DeviceManagerMock, _ int32, _ uint32) error {
+					return nil
+				})
+			defer mockDestroy.Reset()
+			defer mockGetLogicIDFromPhysicID.Reset()
+			err := tool.DestroyVirtualDevice("Ascend310P-1c-100-0")
+			convey.So(err, convey.ShouldBeNil)
+		})
+	})
+}
+
+// TestGetChipAiCoreCount testGetChipAiCoreCount
+func TestGetChipAiCoreCount(t *testing.T) {
+	tool := AscendTools{name: common.Ascend310P, client: &kubeclient.ClientK8s{},
+		dmgr: &devmanager.DeviceManagerMock{}}
+	res := getVirtualDevInfo(aiCoreNum)
+	mockLogicIDs := gomonkey.ApplyMethod(reflect.TypeOf(new(devmanager.DeviceManagerMock)),
+		"GetDeviceList", func(_ *devmanager.DeviceManagerMock) (int32, []int32, error) {
+			return 1, []int32{0}, nil
+		})
+	mockVirtual := gomonkey.ApplyMethod(reflect.TypeOf(new(devmanager.DeviceManagerMock)),
+		"GetVirtualDeviceInfo", func(_ *devmanager.DeviceManagerMock, _ int32) (
+			npuCommon.VirtualDevInfo, error) {
+			return res, nil
+		})
+	defer mockVirtual.Reset()
+	defer mockLogicIDs.Reset()
+	convey.Convey("test GetChipAiCoreCount 1", t, func() {
+		convey.Convey("GetChipAiCoreCount failed", func() {
+			_, err := tool.GetChipAiCoreCount()
+			convey.So(err, convey.ShouldNotBeNil)
+		})
+	})
+	res = getVirtualDevInfo(aiCoreCount)
+	convey.Convey("test GetChipAiCoreCount 2", t, func() {
+		convey.Convey("GetChipAiCoreCount success", func() {
+			_, err := tool.GetChipAiCoreCount()
+			convey.So(err, convey.ShouldBeNil)
+		})
+	})
+}
+
+func getVirtualDevInfo(aic float32) npuCommon.VirtualDevInfo {
+	return npuCommon.VirtualDevInfo{
+		TotalResource: npuCommon.CgoSocTotalResource{
+			Computing: npuCommon.CgoComputingResource{
+				Aic: aic,
+			},
+		},
+		VDevInfo: []npuCommon.CgoVDevQueryStru{
+			{
+				VDevID: vDevChipID,
+			},
+		},
+	}
+}
+
+// TestAppendVGroupInfo testAppendVGroupInfo
+func TestAppendVGroupInfo(t *testing.T) {
+	tool := AscendTools{name: common.Ascend310P, client: &kubeclient.ClientK8s{},
+		dmgr: &devmanager.DeviceManagerMock{}}
+	res := getVirtualDevInfo(aiCoreCount)
+	convey.Convey("test AppendVGroupInfo", t, func() {
+		convey.Convey("AppendVGroupInfo success", func() {
+			mockGetLogicIDFromPhysicID := gomonkey.ApplyMethod(reflect.TypeOf(new(devmanager.DeviceManagerMock)),
+				"GetLogicIDFromPhysicID", func(_ *devmanager.DeviceManagerMock, physicID int32) (int32, error) {
+					return 0, nil
+				})
+			mockVirtual := gomonkey.ApplyMethod(reflect.TypeOf(new(devmanager.DeviceManagerMock)),
+				"GetVirtualDeviceInfo", func(_ *devmanager.DeviceManagerMock, _ int32) (
+					npuCommon.VirtualDevInfo, error) {
+					return res, nil
+				})
+			defer mockVirtual.Reset()
+			defer mockGetLogicIDFromPhysicID.Reset()
+			allocateDevice := []string{
+				"Ascend310P-1c-100-0",
+			}
+			tool.AppendVGroupInfo(allocateDevice)
+			convey.So(len(allocateDevice), convey.ShouldEqual, 1)
+		})
+	})
+}
+
+// TestCheckDeviceTypeLabel testCheckDeviceTypeLabel
+func TestCheckDeviceTypeLabel(t *testing.T) {
+	tool := AscendTools{name: common.Ascend310P, client: &kubeclient.ClientK8s{},
+		dmgr: &devmanager.DeviceManagerMock{}}
+	node := getMockNode()
+	convey.Convey("test CheckDeviceTypeLabel", t, func() {
+		convey.Convey("CheckDeviceTypeLabel get node failed", func() {
+			mockNode := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)), "GetNode",
+				func(_ *kubeclient.ClientK8s) (*v1.Node, error) {
+					return nil, fmt.Errorf("failed to get node")
+				})
+			defer mockNode.Reset()
+			err := tool.CheckDeviceTypeLabel()
+			convey.So(err, convey.ShouldNotBeNil)
+		})
+		convey.Convey("CheckDeviceTypeLabel success", func() {
+			mockNode := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)), "GetNode",
+				func(_ *kubeclient.ClientK8s) (*v1.Node, error) {
+					return node, nil
+				})
+			defer mockNode.Reset()
+			delete(node.Labels, common.ServerTypeLabelKey)
+			err := tool.CheckDeviceTypeLabel()
+			convey.So(err, convey.ShouldNotBeNil)
+			common.ParamOption.AiCoreCount = aiCoreCount
+			node.Labels[common.ServerTypeLabelKey] = "Ascend310P-8"
+			err = tool.CheckDeviceTypeLabel()
+			convey.So(err, convey.ShouldBeNil)
+		})
+	})
+}
+
+func getMockNode() *v1.Node {
+	labels := make(map[string]string, 1)
+	labels[common.ServerTypeLabelKey] = "Ascend310P-8"
+	return &v1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: labels,
+		},
+	}
 }

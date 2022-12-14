@@ -95,10 +95,12 @@ func TestPodResourceStop(t *testing.T) {
 
 // TestPodResourceGetPodResource1 for test the interface GetPodResource part 1
 func TestPodResourceGetPodResource1(t *testing.T) {
-	pr := &PodResource{client: &FakeClient{}, restart: false}
+	pr := &PodResource{
+		client: &FakeClient{},
+	}
 	convey.Convey("conn is nil", t, func() {
 		_, err := pr.GetPodResource()
-		convey.So(err, convey.ShouldNotBeNil)
+		convey.So(err, convey.ShouldBeNil)
 	})
 	pr.conn = &grpc.ClientConn{}
 	podResourceResponse := v1alpha1.ListPodResourcesResponse{}
@@ -108,9 +110,12 @@ func TestPodResourceGetPodResource1(t *testing.T) {
 				opts ...grpc.CallOption) (*v1alpha1.ListPodResourcesResponse, error) {
 				return &podResourceResponse, fmt.Errorf("error")
 			})
+		mockClose := gomonkey.ApplyMethod(reflect.TypeOf(new(grpc.ClientConn)), "Close",
+			func(_ *grpc.ClientConn) error { return nil })
+		defer mockClose.Reset()
 		defer mockList.Reset()
 		_, err := pr.GetPodResource()
-		convey.So(err, convey.ShouldNotBeNil)
+		convey.So(err, convey.ShouldBeNil)
 	})
 	mockList := gomonkey.ApplyMethod(reflect.TypeOf(new(FakeClient)), "List",
 		func(_ *FakeClient, ctx context.Context, in *v1alpha1.ListPodResourcesRequest,
@@ -122,7 +127,7 @@ func TestPodResourceGetPodResource1(t *testing.T) {
 	convey.Convey("the number of pods exceeds the upper limit", t, func() {
 		podResourceResponse.PodResources = make([]*v1alpha1.PodResources, common.MaxPodLimit+1)
 		_, err := pr.GetPodResource()
-		convey.So(err, convey.ShouldNotBeNil)
+		convey.So(err, convey.ShouldBeNil)
 	})
 	convey.Convey("pod name syntax illegal", t, func() {
 		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "invalid_name",
@@ -146,13 +151,16 @@ func TestPodResourceGetPodResource1(t *testing.T) {
 
 // TestPodResourceGetPodResource2 for test the interface GetPodResource part 2
 func TestPodResourceGetPodResource2(t *testing.T) {
-	pr := &PodResource{conn: &grpc.ClientConn{}, client: &FakeClient{}, restart: false}
+	pr := &PodResource{conn: &grpc.ClientConn{}, client: &FakeClient{}}
 	podResourceResponse := v1alpha1.ListPodResourcesResponse{}
 	mockList := gomonkey.ApplyMethod(reflect.TypeOf(new(FakeClient)), "List",
 		func(_ *FakeClient, ctx context.Context, in *v1alpha1.ListPodResourcesRequest,
 			opts ...grpc.CallOption) (*v1alpha1.ListPodResourcesResponse, error) {
 			return &podResourceResponse, nil
 		})
+	mockClose := gomonkey.ApplyMethod(reflect.TypeOf(new(grpc.ClientConn)), "Close",
+		func(_ *grpc.ClientConn) error { return nil })
+	defer mockClose.Reset()
 	defer mockList.Reset()
 	convey.Convey("the number of containers device type exceeds the upper limit", t, func() {
 		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "pod-name", Namespace: "pod-namespace",
@@ -193,13 +201,16 @@ func TestPodResourceGetPodResource2(t *testing.T) {
 
 // TestPodResourceGetPodResource3 for test the interface GetPodResource part 3
 func TestPodResourceGetPodResource3(t *testing.T) {
-	pr := &PodResource{conn: &grpc.ClientConn{}, client: &FakeClient{}, restart: false}
+	pr := &PodResource{conn: &grpc.ClientConn{}, client: &FakeClient{}}
 	podResourceResponse := v1alpha1.ListPodResourcesResponse{}
 	mockList := gomonkey.ApplyMethod(reflect.TypeOf(new(FakeClient)), "List",
 		func(_ *FakeClient, ctx context.Context, in *v1alpha1.ListPodResourcesRequest,
 			opts ...grpc.CallOption) (*v1alpha1.ListPodResourcesResponse, error) {
 			return &podResourceResponse, nil
 		})
+	mockClose := gomonkey.ApplyMethod(reflect.TypeOf(new(grpc.ClientConn)), "Close",
+		func(_ *grpc.ClientConn) error { return nil })
+	defer mockClose.Reset()
 	defer mockList.Reset()
 	convey.Convey("get valid pod resource", t, func() {
 		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "pod-name", Namespace: "pod-namespace",
