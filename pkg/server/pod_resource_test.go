@@ -18,6 +18,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -30,6 +31,24 @@ import (
 
 	"Ascend-device-plugin/pkg/common"
 )
+
+const (
+	sockMode = 0755
+)
+
+func init() {
+	if _, err := os.Stat(socketPath); err == nil {
+		return
+	}
+	if _, err := os.OpenFile(socketPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, sockMode); err != nil {
+		fmt.Errorf("err: %#v", err)
+		return
+	}
+	if err := os.Chmod(socketPath, os.ModeSocket); err != nil {
+		fmt.Errorf("err: %#v", err)
+		return
+	}
+}
 
 // TestPodResourceStart1 for test the interface Start part 2
 func TestPodResourceStart1(t *testing.T) {
@@ -102,146 +121,6 @@ func TestPodResourceStop(t *testing.T) {
 			pr.stop()
 			convey.So(pr.conn, convey.ShouldBeNil)
 		})
-	})
-}
-
-// TestPodResourceGetPodResource1 for test the interface GetPodResource part 1
-func TestPodResourceGetPodResource1(t *testing.T) {
-	pr := &PodResource{
-		client: &FakeClient{},
-	}
-	convey.Convey("conn is nil", t, func() {
-		_, err := pr.GetPodResource()
-		convey.So(err, convey.ShouldBeNil)
-	})
-	pr.conn = &grpc.ClientConn{}
-	podResourceResponse := v1alpha1.ListPodResourcesResponse{}
-	convey.Convey("podResourceList failed", t, func() {
-		mockList := gomonkey.ApplyMethod(reflect.TypeOf(new(FakeClient)), "List",
-			func(_ *FakeClient, ctx context.Context, in *v1alpha1.ListPodResourcesRequest,
-				opts ...grpc.CallOption) (*v1alpha1.ListPodResourcesResponse, error) {
-				return &podResourceResponse, fmt.Errorf("error")
-			})
-		mockClose := gomonkey.ApplyMethod(reflect.TypeOf(new(grpc.ClientConn)), "Close",
-			func(_ *grpc.ClientConn) error { return nil })
-		defer mockClose.Reset()
-		defer mockList.Reset()
-		_, err := pr.GetPodResource()
-		convey.So(err, convey.ShouldBeNil)
-	})
-	mockList := gomonkey.ApplyMethod(reflect.TypeOf(new(FakeClient)), "List",
-		func(_ *FakeClient, ctx context.Context, in *v1alpha1.ListPodResourcesRequest,
-			opts ...grpc.CallOption) (*v1alpha1.ListPodResourcesResponse,
-			error) {
-			return &podResourceResponse, nil
-		})
-	defer mockList.Reset()
-	convey.Convey("the number of pods exceeds the upper limit", t, func() {
-		podResourceResponse.PodResources = make([]*v1alpha1.PodResources, common.MaxPodLimit+1)
-		_, err := pr.GetPodResource()
-		convey.So(err, convey.ShouldBeNil)
-	})
-	convey.Convey("pod name syntax illegal", t, func() {
-		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "invalid_name",
-			Containers: make([]*v1alpha1.ContainerResources, common.MaxContainerLimit+1)}}
-		_, err := pr.GetPodResource()
-		convey.So(err, convey.ShouldBeNil)
-	})
-	convey.Convey("pod name syntax illegal", t, func() {
-		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "pod-name", Namespace: "invalid_namespace",
-			Containers: make([]*v1alpha1.ContainerResources, common.MaxContainerLimit+1)}}
-		_, err := pr.GetPodResource()
-		convey.So(err, convey.ShouldBeNil)
-	})
-	convey.Convey("the number of containers exceeds the upper limit", t, func() {
-		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "pod-name", Namespace: "pod-namespace",
-			Containers: make([]*v1alpha1.ContainerResources, common.MaxContainerLimit+1)}}
-		_, err := pr.GetPodResource()
-		convey.So(err, convey.ShouldBeNil)
-	})
-}
-
-// TestPodResourceGetPodResource2 for test the interface GetPodResource part 2
-func TestPodResourceGetPodResource2(t *testing.T) {
-	pr := &PodResource{conn: &grpc.ClientConn{}, client: &FakeClient{}}
-	podResourceResponse := v1alpha1.ListPodResourcesResponse{}
-	mockList := gomonkey.ApplyMethod(reflect.TypeOf(new(FakeClient)), "List",
-		func(_ *FakeClient, ctx context.Context, in *v1alpha1.ListPodResourcesRequest,
-			opts ...grpc.CallOption) (*v1alpha1.ListPodResourcesResponse, error) {
-			return &podResourceResponse, nil
-		})
-	mockClose := gomonkey.ApplyMethod(reflect.TypeOf(new(grpc.ClientConn)), "Close",
-		func(_ *grpc.ClientConn) error { return nil })
-	defer mockClose.Reset()
-	defer mockList.Reset()
-	convey.Convey("the number of containers device type exceeds the upper limit", t, func() {
-		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "pod-name", Namespace: "pod-namespace",
-			Containers: []*v1alpha1.ContainerResources{{Devices: make([]*v1alpha1.ContainerDevices,
-				common.MaxDevicesNum+1)}}}}
-		_, err := pr.GetPodResource()
-		convey.So(err, convey.ShouldBeNil)
-	})
-	convey.Convey("containerDevice is nil", t, func() {
-		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "pod-name", Namespace: "pod-namespace",
-			Containers: []*v1alpha1.ContainerResources{{Devices: []*v1alpha1.ContainerDevices{nil}}}}}
-		_, err := pr.GetPodResource()
-		convey.So(err, convey.ShouldBeNil)
-	})
-	convey.Convey("not huawei resource", t, func() {
-		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "pod-name", Namespace: "pod-namespace",
-			Containers: []*v1alpha1.ContainerResources{{Devices: []*v1alpha1.ContainerDevices{{ResourceName: ""}}}}}}
-		_, err := pr.GetPodResource()
-		convey.So(err, convey.ShouldBeNil)
-	})
-	convey.Convey("the number of container device exceeds the upper limit", t, func() {
-		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "pod-name", Namespace: "pod-namespace",
-			Containers: []*v1alpha1.ContainerResources{{Devices: []*v1alpha1.ContainerDevices{{
-				ResourceName: common.ResourceNamePrefix + common.Ascend910,
-				DeviceIds:    make([]string, common.MaxDevicesNum+1)}}}}}}
-		_, err := pr.GetPodResource()
-		convey.So(err, convey.ShouldBeNil)
-	})
-	convey.Convey("length of device name is invalid", t, func() {
-		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "pod-name", Namespace: "pod-namespace",
-			Containers: []*v1alpha1.ContainerResources{{Devices: []*v1alpha1.ContainerDevices{{
-				ResourceName: common.ResourceNamePrefix + common.Ascend910,
-				DeviceIds:    []string{string(make([]byte, common.MaxDeviceNameLen+1))}}}}}}}
-		_, err := pr.GetPodResource()
-		convey.So(err, convey.ShouldBeNil)
-	})
-}
-
-// TestPodResourceGetPodResource3 for test the interface GetPodResource part 3
-func TestPodResourceGetPodResource3(t *testing.T) {
-	pr := &PodResource{conn: &grpc.ClientConn{}, client: &FakeClient{}}
-	podResourceResponse := v1alpha1.ListPodResourcesResponse{}
-	mockList := gomonkey.ApplyMethod(reflect.TypeOf(new(FakeClient)), "List",
-		func(_ *FakeClient, ctx context.Context, in *v1alpha1.ListPodResourcesRequest,
-			opts ...grpc.CallOption) (*v1alpha1.ListPodResourcesResponse, error) {
-			return &podResourceResponse, nil
-		})
-	mockClose := gomonkey.ApplyMethod(reflect.TypeOf(new(grpc.ClientConn)), "Close",
-		func(_ *grpc.ClientConn) error { return nil })
-	defer mockClose.Reset()
-	defer mockList.Reset()
-	convey.Convey("get valid pod resource", t, func() {
-		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "pod-name", Namespace: "pod-namespace",
-			Containers: []*v1alpha1.ContainerResources{{Devices: []*v1alpha1.ContainerDevices{{
-				ResourceName: common.ResourceNamePrefix + common.Ascend910,
-				DeviceIds:    []string{common.Ascend910 + "-0"}}}}}}}
-		_, err := pr.GetPodResource()
-		convey.So(err, convey.ShouldBeNil)
-	})
-	convey.Convey("multi resource", t, func() {
-		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "pod-name", Namespace: "pod-namespace",
-			Containers: []*v1alpha1.ContainerResources{{Devices: []*v1alpha1.ContainerDevices{{
-				ResourceName: common.ResourceNamePrefix + common.Ascend910,
-				DeviceIds:    []string{common.Ascend910 + "-0"}}}},
-				{Devices: []*v1alpha1.ContainerDevices{{
-					ResourceName: common.ResourceNamePrefix + common.Ascend310,
-					DeviceIds:    []string{common.Ascend310 + "-0"}}}}}}}
-		_, err := pr.GetPodResource()
-		convey.So(err, convey.ShouldBeNil)
 	})
 }
 

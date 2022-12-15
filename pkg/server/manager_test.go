@@ -69,15 +69,15 @@ func TestStartAllServer(t *testing.T) {
 // TestUpdatePodAnnotation for testUpdatePodAnnotation
 func TestUpdatePodAnnotation(t *testing.T) {
 	node := getMockNode(common.Ascend310P)
-	podDeviceInfo := []PodDeviceInfo {
+	podDeviceInfo := []PodDeviceInfo{
 		{
-			Pod: getMockPod(),
-			KltDevice: []string{},
+			Pod:        getMockPod(),
+			KltDevice:  []string{},
 			RealDevice: []string{},
 		},
 		{
-			Pod: getMockPod(),
-			KltDevice: []string{""},
+			Pod:        getMockPod(),
+			KltDevice:  []string{""},
 			RealDevice: []string{""},
 		},
 	}
@@ -133,8 +133,8 @@ func TestUpdateDevice(t *testing.T) {
 func getMockPod() v1.Pod {
 	return v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        "mindx-dls-npu-1p-default-2p-0",
-			Namespace:   "btg-test",
+			Name:      "mindx-dls-npu-1p-default-2p-0",
+			Namespace: "btg-test",
 		},
 		Spec: v1.PodSpec{
 			Containers: []v1.Container{
