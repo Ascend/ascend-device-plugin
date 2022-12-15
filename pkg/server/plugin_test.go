@@ -30,6 +30,7 @@ import (
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/pkg/common"
+	"Ascend-device-plugin/pkg/device"
 	"Ascend-device-plugin/pkg/kubeclient"
 )
 
@@ -62,11 +63,12 @@ func init() {
 		OnlyToStdout: true,
 	}
 	hwlog.InitRunLogger(&hwLogConfig, context.Background())
+	common.ParamOption.PresetVDevice = true
 }
 
 // TestListAndWatch for test the interface ListAndWatch
 func TestListAndWatch(t *testing.T) {
-	ps := NewPluginServer(nil, common.Ascend910, nil, nil)
+	ps := NewPluginServer(common.Ascend910, nil, nil, nil)
 	convey.Convey("test ListAndWatch", t, func() {
 		mockSend := gomonkey.ApplyFunc(sendToKubelet, func(stream v1beta1.DevicePlugin_ListAndWatchServer,
 			resp *v1beta1.ListAndWatchResponse) error {
@@ -94,41 +96,41 @@ func TestListAndWatch(t *testing.T) {
 
 // TestUpdateAllocMap for test the updateAllocMap
 func TestUpdateAllocMap(t *testing.T) {
-	ps := NewPluginServer(nil, common.Ascend910, devices, nil)
+	ps := NewPluginServer(common.Ascend910, devices, nil, nil)
 	convey.Convey("length no equal", t, func() {
 		realAlloc := []string{"Ascend910-0", "Ascend910-2", "Ascend910-1"}
 		kltAlloc := []string{"Ascend910-2", "Ascend910-7", "Ascend910-0", "Ascend910-1"}
 		ps.updateAllocMap(realAlloc, kltAlloc)
-		convey.So(len(ps.vol2KlDevMap), convey.ShouldEqual, 0)
+		convey.So(len(ps.klt2RealDevMap), convey.ShouldEqual, 0)
 	})
 	convey.Convey("update map", t, func() {
 		realAlloc := []string{"Ascend910-0", "Ascend910-2", "Ascend910-1", "Ascend910-3"}
 		kltAlloc := []string{"Ascend910-2", "Ascend910-7", "Ascend910-0", "Ascend910-1"}
 		ps.updateAllocMap(realAlloc, kltAlloc)
-		convey.So(len(ps.vol2KlDevMap), convey.ShouldEqual, len(realAlloc))
-		for i, id := range realAlloc {
-			v, exist := ps.vol2KlDevMap[id]
+		convey.So(len(ps.klt2RealDevMap), convey.ShouldEqual, len(realAlloc))
+		for i, id := range kltAlloc {
+			v, exist := ps.klt2RealDevMap[id]
 			convey.So(exist, convey.ShouldBeTrue)
-			convey.So(v, convey.ShouldEqual, kltAlloc[i])
+			convey.So(v, convey.ShouldEqual, realAlloc[i])
 		}
 	})
 	convey.Convey("update duplicate device", t, func() {
-		lastLength := len(ps.vol2KlDevMap)
+		lastLength := len(ps.klt2RealDevMap)
 		realAlloc := []string{"Ascend910-4"}
 		kltAlloc := []string{"Ascend910-2"}
 		ps.updateAllocMap(realAlloc, kltAlloc)
-		convey.So(len(ps.vol2KlDevMap), convey.ShouldEqual, lastLength)
-		for i, id := range realAlloc {
-			v, exist := ps.vol2KlDevMap[id]
+		convey.So(len(ps.klt2RealDevMap), convey.ShouldEqual, lastLength)
+		for i, id := range kltAlloc {
+			v, exist := ps.klt2RealDevMap[id]
 			convey.So(exist, convey.ShouldBeTrue)
-			convey.So(v, convey.ShouldEqual, kltAlloc[i])
+			convey.So(v, convey.ShouldEqual, realAlloc[i])
 		}
 	})
 }
 
 // TestGenerateAllDeviceMap for test the generateAllDeviceMap
 func TestGenerateAllDeviceMap(t *testing.T) {
-	ps := NewPluginServer(nil, common.Ascend910, devices, nil)
+	ps := NewPluginServer(common.Ascend910, devices, nil, nil)
 	convey.Convey("length no equal", t, func() {
 		ps.deepCopyDevice(devices)
 		realAlloc := []string{"Ascend910-0", "Ascend910-2", "Ascend910-1", "Ascend910-3"}
@@ -139,7 +141,7 @@ func TestGenerateAllDeviceMap(t *testing.T) {
 			"Ascend910-7": "Ascend910-6",
 		}
 		actualMap := ps.generateAllDeviceMap()
-		convey.So(len(ps.vol2KlDevMap), convey.ShouldEqual, len(expectMap))
+		convey.So(len(ps.klt2RealDevMap), convey.ShouldEqual, len(expectMap))
 		for k, v := range expectMap {
 			id, exist := actualMap[k]
 			convey.So(exist, convey.ShouldBeTrue)
@@ -150,20 +152,20 @@ func TestGenerateAllDeviceMap(t *testing.T) {
 
 // TestResponseToKubelet for test the responseToKubelet
 func TestResponseToKubelet(t *testing.T) {
-	ps := NewPluginServer(nil, common.Ascend910, devices, nil)
+	ps := NewPluginServer(common.Ascend910, devices, nil, nil)
 	convey.Convey("use volcano", t, func() {
 		common.ParamOption.UseVolcanoType = true
 		ps.deepCopyDevice(devices)
-		ps.vol2KlDevMap = map[string]string{
+		ps.klt2RealDevMap = map[string]string{
 			"Ascend910-4": "Ascend910-3", "Ascend910-5": "Ascend910-4", "Ascend910-6": "Ascend910-5",
-			"Ascend910-7": "Ascend910-6", "Ascend910-0": "Ascend910-3", "Ascend910-1": "Ascend910-2",
+			"Ascend910-7": "Ascend910-6", "Ascend910-0": "Ascend910-7", "Ascend910-1": "Ascend910-2",
 			"Ascend910-2": "Ascend910-1", "Ascend910-3": "Ascend910-0",
 		}
 		resp := ps.responseToKubelet()
 		convey.So(resp, convey.ShouldNotBeNil)
 		convey.So(len(resp.Devices), convey.ShouldEqual, len(ps.cachedDevices))
-		for i, id := range resp.Devices {
-			convey.So(id.ID, convey.ShouldEqual, ps.vol2KlDevMap[ps.cachedDevices[i].DeviceName])
+		for i, id := range ps.cachedDevices {
+			convey.So(id.DeviceName, convey.ShouldEqual, ps.klt2RealDevMap[resp.Devices[i].ID])
 			convey.So(id.Health, convey.ShouldEqual, ps.cachedDevices[i].Health)
 		}
 	})
@@ -171,7 +173,7 @@ func TestResponseToKubelet(t *testing.T) {
 
 // TestAllocateRequestPhysicalDevice for test the Allocate request physical device
 func TestAllocateRequestPhysicalDevice(t *testing.T) {
-	ps := NewPluginServer(nil, common.Ascend910, devices, nil)
+	ps := NewPluginServer(common.Ascend910, devices, nil, nil)
 	common.ParamOption.UseVolcanoType = false
 	var requests v1beta1.AllocateRequest
 	convey.Convey("invalid request", t, func() {
@@ -200,7 +202,7 @@ func TestAllocateRequestPhysicalDevice(t *testing.T) {
 			ps.deepCopyDevice(devices)
 			deviceID := "1"
 			requests.ContainerRequests = []*v1beta1.
-				ContainerAllocateRequest{{DevicesIDs: []string{"Ascend910-" + deviceID}}}
+			ContainerAllocateRequest{{DevicesIDs: []string{"Ascend910-" + deviceID}}}
 			resp, err := ps.Allocate(context.Background(), &requests)
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(resp, convey.ShouldNotBeNil)
@@ -214,30 +216,30 @@ func TestAllocateRequestPhysicalDevice(t *testing.T) {
 // TestAllocateRequestVirtualDevice for test the Allocate request virtual device
 func TestAllocateRequestVirtualDevice(t *testing.T) {
 	common.ParamOption.UseVolcanoType = false
-	ps := NewPluginServer(nil, common.Ascend910c2, devices, nil)
+	ps := NewPluginServer(common.Ascend910c2, devices, nil, nil)
 	var requests v1beta1.AllocateRequest
 	convey.Convey("invalid request", t, func() {
 		convey.Convey("request more than 1 virtual device", func() {
 			ps.cachedDevices = []common.NpuDevice{{DevType: common.Ascend910c2, DeviceName: "Ascend910-2c-100-0"}}
 			requests.ContainerRequests = []*v1beta1.
-				ContainerAllocateRequest{{DevicesIDs: []string{"Ascend910-2c-100-0", "Ascend910-2c-100-1"}}}
+			ContainerAllocateRequest{{DevicesIDs: []string{"Ascend910-2c-100-0", "Ascend910-2c-100-1"}}}
 			_, err := ps.Allocate(context.Background(), &requests)
 			convey.So(err, convey.ShouldNotBeNil)
 		})
 		convey.Convey("request virtual device not exist", func() {
 			ps.cachedDevices = []common.NpuDevice{{DevType: common.Ascend910c2, DeviceName: "Ascend910-2c-100-0"}}
 			requests.ContainerRequests = []*v1beta1.
-				ContainerAllocateRequest{{DevicesIDs: []string{"Ascend910-2c-100-1"}}}
+			ContainerAllocateRequest{{DevicesIDs: []string{"Ascend910-2c-100-1"}}}
 			_, err := ps.Allocate(context.Background(), &requests)
 			convey.So(err, convey.ShouldNotBeNil)
 		})
 		convey.Convey("request virtual device exist", func() {
 			deviceID := "100"
-			ps := NewPluginServer(nil, common.Ascend910c2, devices, nil)
+			ps := NewPluginServer(common.Ascend910c2, devices, nil, nil)
 			ps.cachedDevices = []common.NpuDevice{{DevType: common.Ascend910c2,
 				DeviceName: "Ascend910-2c-" + deviceID + "-0"}}
 			requests.ContainerRequests = []*v1beta1.
-				ContainerAllocateRequest{{DevicesIDs: []string{"Ascend910-2c-" + deviceID + "-0"}}}
+			ContainerAllocateRequest{{DevicesIDs: []string{"Ascend910-2c-" + deviceID + "-0"}}}
 			resp, err := ps.Allocate(context.Background(), &requests)
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(resp, convey.ShouldNotBeNil)
@@ -250,39 +252,25 @@ func TestAllocateRequestVirtualDevice(t *testing.T) {
 
 // TestAllocateWithVolcano1 for test the Allocate request physical device with volcano, not get valid oldest pod
 func TestAllocateWithVolcano1(t *testing.T) {
-	ps := NewPluginServer(&kubeclient.ClientK8s{}, common.Ascend910, devices, nil)
+	ps := NewPluginServer(common.Ascend910, devices, nil, device.NewHwAscend910Manager())
 	common.ParamOption.UseVolcanoType = true
 	var requests v1beta1.AllocateRequest
 	requests.ContainerRequests = []*v1beta1.ContainerAllocateRequest{{DevicesIDs: []string{"Ascend910-0"}}}
 	convey.Convey("with volcano", t, func() {
 		convey.Convey("GetPodList failed", func() {
-			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)), "GetPodList",
-				func(_ *kubeclient.ClientK8s) (*v1.PodList, error) { return nil, fmt.Errorf("err") })
+			mock := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)), "GetActivePodList",
+				func(_ *kubeclient.ClientK8s) ([]v1.Pod, error) { return nil, fmt.Errorf("err") })
 			defer mock.Reset()
 			_, err := ps.Allocate(context.Background(), &requests)
 			convey.So(err, convey.ShouldNotBeNil)
 		})
-		convey.Convey("common.FilterPods failed", func() {
-			mockGetPodList := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)), "GetPodList",
-				func(_ *kubeclient.ClientK8s) (*v1.PodList, error) { return &v1.PodList{}, nil })
-			defer mockGetPodList.Reset()
-			mockFilter := gomonkey.ApplyFunc(common.FilterPods, func(pods *v1.PodList,
-				blackList map[v1.PodPhase]int, deviceType string, conditionFunc func(pod *v1.Pod) bool) ([]v1.Pod,
-				error) {
-				return nil, fmt.Errorf("err")
-			})
-			defer mockFilter.Reset()
-			_, err := ps.Allocate(context.Background(), &requests)
-			convey.So(err, convey.ShouldNotBeNil)
-		})
 		convey.Convey("oldestPod is nil", func() {
-			mockGetPodList := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)), "GetPodList",
-				func(_ *kubeclient.ClientK8s) (*v1.PodList, error) { return &v1.PodList{}, nil })
+			mockGetPodList := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)), "GetActivePodList",
+				func(_ *kubeclient.ClientK8s) ([]v1.Pod, error) { return mockPods, nil })
 			defer mockGetPodList.Reset()
-			mockFilter := gomonkey.ApplyFunc(common.FilterPods, func(pods *v1.PodList,
-				blackList map[v1.PodPhase]int, deviceType string, conditionFunc func(pod *v1.Pod) bool) ([]v1.Pod,
-				error) {
-				return nil, nil
+			mockFilter := gomonkey.ApplyFunc(common.FilterPods, func(pods []v1.Pod, deviceType string,
+				conditionFunc func(pod *v1.Pod) bool) []v1.Pod {
+				return nil
 			})
 			defer mockFilter.Reset()
 			_, err := ps.Allocate(context.Background(), &requests)
@@ -293,21 +281,20 @@ func TestAllocateWithVolcano1(t *testing.T) {
 
 // TestAllocateWithVolcano2 for test the Allocate request physical device with volcano, get oldest pod
 func TestAllocateWithVolcano2(t *testing.T) {
-	ps := NewPluginServer(&kubeclient.ClientK8s{}, common.Ascend910, devices,
-		[]string{common.HiAIManagerDevice})
+	ps := NewPluginServer(common.Ascend910, devices, []string{common.HiAIManagerDevice},
+		device.NewHwAscend910Manager())
 	common.ParamOption.UseVolcanoType = true
 	var requests v1beta1.AllocateRequest
 	requests.ContainerRequests = []*v1beta1.ContainerAllocateRequest{{DevicesIDs: []string{"Ascend910-0"}}}
 	convey.Convey("test AllocateWithVolcano", t, func() {
-		mockGetPodList := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)), "GetPodList",
-			func(_ *kubeclient.ClientK8s) (*v1.PodList, error) { return &v1.PodList{}, nil })
+		mockGetPodList := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)), "GetActivePodList",
+			func(_ *kubeclient.ClientK8s) ([]v1.Pod, error) { return mockPods, nil })
 		defer mockGetPodList.Reset()
-		mockFilter := gomonkey.ApplyFunc(common.FilterPods, func(pods *v1.PodList,
-			blackList map[v1.PodPhase]int, deviceType string, conditionFunc func(pod *v1.Pod) bool) ([]v1.Pod,
-			error) {
+		mockFilter := gomonkey.ApplyFunc(common.FilterPods, func(pods []v1.Pod, deviceType string,
+			conditionFunc func(pod *v1.Pod) bool) []v1.Pod {
 			return []v1.Pod{{ObjectMeta: metav1.ObjectMeta{Name: "test",
 				Annotations: map[string]string{common.PodPredicateTime: "5",
-					common.HuaweiAscend910: "Ascend910-0"}}}}, nil
+					common.HuaweiAscend910: "Ascend910-0"}}}}
 		})
 		defer mockFilter.Reset()
 		convey.Convey("TryUpdatePodAnnotation failed", func() {
@@ -325,12 +312,11 @@ func TestAllocateWithVolcano2(t *testing.T) {
 					return nil
 				})
 			defer mockTryUpdatePodAnnotation.Reset()
-			mockFilter := gomonkey.ApplyFunc(common.FilterPods, func(pods *v1.PodList,
-				blackList map[v1.PodPhase]int, deviceType string, conditionFunc func(pod *v1.Pod) bool) ([]v1.Pod,
-				error) {
+			mockFilter := gomonkey.ApplyFunc(common.FilterPods, func(pods []v1.Pod, deviceType string,
+				conditionFunc func(pod *v1.Pod) bool) []v1.Pod {
 				return []v1.Pod{{ObjectMeta: metav1.ObjectMeta{Name: "test",
 					Annotations: map[string]string{common.PodPredicateTime: "5",
-						common.ResourceNamePrefix + common.Ascend910c2: "Ascend910-2c-180-3"}}}}, nil
+						common.ResourceNamePrefix + common.Ascend910c2: "Ascend910-2c-180-3"}}}}
 			})
 			defer mockFilter.Reset()
 			_, err := ps.Allocate(context.Background(), &requests)
@@ -341,14 +327,14 @@ func TestAllocateWithVolcano2(t *testing.T) {
 
 // TestAllocateWithVolcano3 for test the Allocate request physical device with volcano, part 3
 func TestAllocateWithVolcano3(t *testing.T) {
-	ps := NewPluginServer(&kubeclient.ClientK8s{}, common.Ascend910, devices,
-		[]string{common.HiAIManagerDevice})
+	ps := NewPluginServer(common.Ascend910, devices, []string{common.HiAIManagerDevice},
+		device.NewHwAscend910Manager())
 	common.ParamOption.UseVolcanoType = true
 	var requests v1beta1.AllocateRequest
 	requests.ContainerRequests = []*v1beta1.ContainerAllocateRequest{{DevicesIDs: []string{"Ascend910-0"}}}
 	convey.Convey("test AllocateWithVolcano", t, func() {
-		mockGetPodList := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)), "GetPodList",
-			func(_ *kubeclient.ClientK8s) (*v1.PodList, error) { return &v1.PodList{}, nil })
+		mockGetPodList := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)), "GetActivePodList",
+			func(_ *kubeclient.ClientK8s) ([]v1.Pod, error) { return mockPods, nil })
 		defer mockGetPodList.Reset()
 		mockTryUpdatePodAnnotation := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)),
 			"TryUpdatePodAnnotation", func(_ *kubeclient.ClientK8s, _ *v1.Pod, _ map[string]string) error {
@@ -356,22 +342,20 @@ func TestAllocateWithVolcano3(t *testing.T) {
 			})
 		defer mockTryUpdatePodAnnotation.Reset()
 		convey.Convey("with volcano GetDeviceListID failed", func() {
-			mockFilter := gomonkey.ApplyFunc(common.FilterPods, func(pods *v1.PodList,
-				blackList map[v1.PodPhase]int, deviceType string, conditionFunc func(pod *v1.Pod) bool) ([]v1.Pod,
-				error) {
+			mockFilter := gomonkey.ApplyFunc(common.FilterPods, func(pods []v1.Pod, deviceType string,
+				conditionFunc func(pod *v1.Pod) bool) []v1.Pod {
 				return []v1.Pod{{ObjectMeta: metav1.ObjectMeta{Name: "test",
 					Annotations: map[string]string{common.PodPredicateTime: "5",
-						common.HuaweiAscend910: "Ascend910"}}}}, nil
+						common.HuaweiAscend910: "Ascend910"}}}}
 			})
 			defer mockFilter.Reset()
 			_, err := ps.Allocate(context.Background(), &requests)
 			convey.So(err, convey.ShouldNotBeNil)
 		})
 		convey.Convey("with volcano run ok", func() {
-			mockFilter := gomonkey.ApplyFunc(common.FilterPods, func(pods *v1.PodList,
-				blackList map[v1.PodPhase]int, deviceType string, conditionFunc func(pod *v1.Pod) bool) ([]v1.Pod,
-				error) {
-				return mockPods, nil
+			mockFilter := gomonkey.ApplyFunc(common.FilterPods, func(pods []v1.Pod, deviceType string,
+				conditionFunc func(pod *v1.Pod) bool) []v1.Pod {
+				return mockPods
 			})
 			defer mockFilter.Reset()
 			resp, err := ps.Allocate(context.Background(), &requests)

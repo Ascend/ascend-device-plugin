@@ -50,7 +50,7 @@ func TestConvertDevListToSets(t *testing.T) {
 		})
 		convey.Convey("match Ascend910", func() {
 			devices := "Ascend910-0.Ascend910-1.Ascend910-2"
-			ret := ConvertDevListToSets(devices, "")
+			ret := ConvertDevListToSets(devices, DotSepDev)
 			convey.So(ret.Len(), convey.ShouldEqual, 0)
 		})
 		convey.Convey("not match Ascend910", func() {
@@ -71,6 +71,43 @@ func TestIsVirtualDev(t *testing.T) {
 		convey.Convey("physical device", func() {
 			ret := IsVirtualDev("Ascend910-2c-100-0")
 			convey.So(ret, convey.ShouldBeTrue)
+		})
+	})
+}
+
+// TestGetVNPUSegmentInfo for testGetVNPUSegmentInfo
+func TestGetVNPUSegmentInfo(t *testing.T) {
+	deviceInfos := []string{"0", "vir02"}
+	convey.Convey("test GetVNPUSegmentInfo", t, func() {
+		convey.Convey("GetVNPUSegmentInfo success", func() {
+			_, _, err := GetVNPUSegmentInfo(deviceInfos)
+			convey.So(err, convey.ShouldBeNil)
+		})
+		deviceInfos = []string{"65", "vir02"}
+		convey.Convey("GetVNPUSegmentInfo failed with upper limit id", func() {
+			_, _, err := GetVNPUSegmentInfo(deviceInfos)
+			convey.So(err, convey.ShouldNotBeNil)
+		})
+		deviceInfos = []string{"x", "vir02"}
+		convey.Convey("GetVNPUSegmentInfo failed with invalid id", func() {
+			_, _, err := GetVNPUSegmentInfo(deviceInfos)
+			convey.So(err, convey.ShouldNotBeNil)
+		})
+	})
+}
+
+// TestFakeAiCoreDevice for testFakeAiCoreDevice
+func TestFakeAiCoreDevice(t *testing.T) {
+	dev := DavinCiDev{
+		LogicID: 0,
+		PhyID:   0,
+	}
+	aiCoreDevices := make([]*NpuDevice, 0)
+	ParamOption.AiCoreCount = MinAICoreNum
+	convey.Convey("test FakeAiCoreDevice", t, func() {
+		convey.Convey("FakeAiCoreDevice success", func() {
+			FakeAiCoreDevice(dev, &aiCoreDevices)
+			convey.So(len(aiCoreDevices), convey.ShouldEqual, MinAICoreNum)
 		})
 	})
 }

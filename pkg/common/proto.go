@@ -41,6 +41,19 @@ type NodeDeviceInfo struct {
 	UpdateTime int64
 }
 
+// DeviceHealth health status of device
+type DeviceHealth struct {
+	Health        string
+	NetworkHealth string
+}
+
+// NpuAllInfo all npu infos
+type NpuAllInfo struct {
+	AllDevTypes []string
+	AllDevs     []NpuDevice
+	AICoreDevs  []*NpuDevice
+}
+
 // NpuDevice npu device description
 type NpuDevice struct {
 	DevType       string
@@ -54,14 +67,13 @@ type NpuDevice struct {
 
 // DavinCiDev davinci device
 type DavinCiDev struct {
-	TemplateName map[string]string
-	LogicID      int32
-	PhyID        int32
+	LogicID int32
+	PhyID   int32
 }
 
 // Device id for Instcance
 type Device struct { // Device
-	DeviceID string `json:"device_id"` // device id
+	DeviceID int    `json:"device_id"` // device id
 	DeviceIP string `json:"device_ip"` // device ip
 }
 
@@ -82,6 +94,7 @@ type Option struct {
 	KubeConfig         string
 	PresetVDevice      bool
 	ProductType        string
+	AiCoreCount        int32 // found by dcmi interface
 }
 
 // GetAllDeviceInfoTypeList Get All Device Info Type List
@@ -94,7 +107,7 @@ func GetAllDeviceInfoTypeList() map[string]struct{} {
 		ResourceNamePrefix + Ascend310Pc2: {}, ResourceNamePrefix + Ascend310Pc4: {},
 		ResourceNamePrefix + Ascend310Pc2Cpu1: {}, ResourceNamePrefix + Ascend310Pc4Cpu3: {},
 		ResourceNamePrefix + Ascend310Pc4Cpu3Ndvpp: {}, ResourceNamePrefix + Ascend310Pc4Cpu4Dvpp: {},
-		HuaweiUnHealthAscend310P: {}, HuaweiUnHealthAscend310: {}}
+		HuaweiUnHealthAscend310P: {}, HuaweiUnHealthAscend310: {}, ResourceNamePrefix + AiCoreResourceName: {}}
 }
 
 // FileWatch is used to watch sock file

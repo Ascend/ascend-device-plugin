@@ -33,15 +33,7 @@ import (
 
 // TestPodResourceStart1 for test the interface Start part 2
 func TestPodResourceStart1(t *testing.T) {
-	convey.Convey("invalid interface receiver", t, func() {
-		var pr *PodResource
-		convey.So(pr.Start(nil), convey.ShouldNotBeNil)
-	})
 	pr := NewPodResource()
-	socketWatcher, err := common.NewFileWatch()
-	if err != nil {
-		t.Fatal(err)
-	}
 	convey.Convey("test start", t, func() {
 		convey.Convey("VerifyPath failed", func() {
 			mockVerifyPath := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(verifyPath string) (string,
@@ -49,19 +41,16 @@ func TestPodResourceStart1(t *testing.T) {
 				return "", false
 			})
 			defer mockVerifyPath.Reset()
-			convey.So(pr.Start(socketWatcher), convey.ShouldNotBeNil)
+			convey.So(pr.start(), convey.ShouldNotBeNil)
 		})
-		mockVerifyPath := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(verifyPath string) (string,
-			bool) {
-			return "", true
-		})
-		defer mockVerifyPath.Reset()
-		convey.Convey("WatchFile failed", func() {
-			mockWatchFile := gomonkey.ApplyMethod(reflect.TypeOf(new(common.FileWatch)), "WatchFile",
-				func(_ *common.FileWatch, fileName string) error { return fmt.Errorf("err") })
-			defer mockWatchFile.Reset()
-			err := pr.Start(socketWatcher)
-			convey.So(err, convey.ShouldNotBeNil)
+		convey.Convey("VerifyPath ok", func() {
+			mockVerifyPath := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(verifyPath string) (string,
+				bool) {
+				return "", true
+			})
+			defer mockVerifyPath.Reset()
+			err := pr.start()
+			convey.So(err, convey.ShouldBeNil)
 		})
 	})
 }
@@ -69,14 +58,7 @@ func TestPodResourceStart1(t *testing.T) {
 // TestPodResourceStart2 for test the interface Start part 2
 func TestPodResourceStart2(t *testing.T) {
 	pr := NewPodResource()
-	socketWatcher, err := common.NewFileWatch()
-	if err != nil {
-		t.Fatal(err)
-	}
 	convey.Convey("test start", t, func() {
-		mockWatchFile := gomonkey.ApplyMethod(reflect.TypeOf(new(common.FileWatch)), "WatchFile",
-			func(_ *common.FileWatch, fileName string) error { return nil })
-		defer mockWatchFile.Reset()
 		convey.Convey("GetClient failed", func() {
 			mockGetClient := gomonkey.ApplyFunc(podresources.GetClient, func(socket string,
 				connectionTimeout time.Duration, maxMsgSize int) (v1alpha1.PodResourcesListerClient,
@@ -84,7 +66,7 @@ func TestPodResourceStart2(t *testing.T) {
 				return nil, nil, fmt.Errorf("err")
 			})
 			defer mockGetClient.Reset()
-			convey.So(pr.Start(socketWatcher), convey.ShouldNotBeNil)
+			convey.So(pr.start(), convey.ShouldNotBeNil)
 		})
 		convey.Convey("start ok", func() {
 			mockGetClient := gomonkey.ApplyFunc(podresources.GetClient, func(socket string,
@@ -96,7 +78,7 @@ func TestPodResourceStart2(t *testing.T) {
 			funcStub := gomonkey.ApplyFunc(common.VerifyPathAndPermission,
 				func(verifyPathAndPermission string) (string, bool) { return verifyPathAndPermission, true })
 			defer funcStub.Reset()
-			convey.So(pr.Start(socketWatcher), convey.ShouldBeNil)
+			convey.So(pr.start(), convey.ShouldBeNil)
 		})
 	})
 }
@@ -109,7 +91,7 @@ func TestPodResourceStop(t *testing.T) {
 			mockClose := gomonkey.ApplyMethod(reflect.TypeOf(new(grpc.ClientConn)), "Close",
 				func(_ *grpc.ClientConn) error { return fmt.Errorf("err") })
 			defer mockClose.Reset()
-			pr.Stop()
+			pr.stop()
 			convey.So(pr.conn, convey.ShouldBeNil)
 		})
 		convey.Convey("close ok", func() {
@@ -117,35 +99,20 @@ func TestPodResourceStop(t *testing.T) {
 			mockClose := gomonkey.ApplyMethod(reflect.TypeOf(new(grpc.ClientConn)), "Close",
 				func(_ *grpc.ClientConn) error { return nil })
 			defer mockClose.Reset()
-			pr.Stop()
+			pr.stop()
 			convey.So(pr.conn, convey.ShouldBeNil)
 		})
 	})
 }
 
-// TestPodResourceGetRestartFlag for test the interface GetRestartFlag
-func TestPodResourceGetRestartFlag(t *testing.T) {
-	convey.Convey("test GetRestartFlag", t, func() {
-		pr := &PodResource{conn: &grpc.ClientConn{}, restart: false}
-		convey.So(pr.GetRestartFlag(), convey.ShouldNotBeNil)
-	})
-}
-
-// TestPodResourceSetRestartFlag for test the interface SetRestartFlag
-func TestPodResourceSetRestartFlag(t *testing.T) {
-	convey.Convey("test GetRestartFlag", t, func() {
-		pr := &PodResource{conn: &grpc.ClientConn{}, restart: false}
-		pr.SetRestartFlag(true)
-		convey.So(pr.restart, convey.ShouldBeTrue)
-	})
-}
-
 // TestPodResourceGetPodResource1 for test the interface GetPodResource part 1
 func TestPodResourceGetPodResource1(t *testing.T) {
-	pr := &PodResource{client: &FakeClient{}, restart: false}
+	pr := &PodResource{
+		client: &FakeClient{},
+	}
 	convey.Convey("conn is nil", t, func() {
 		_, err := pr.GetPodResource()
-		convey.So(err, convey.ShouldNotBeNil)
+		convey.So(err, convey.ShouldBeNil)
 	})
 	pr.conn = &grpc.ClientConn{}
 	podResourceResponse := v1alpha1.ListPodResourcesResponse{}
@@ -155,9 +122,12 @@ func TestPodResourceGetPodResource1(t *testing.T) {
 				opts ...grpc.CallOption) (*v1alpha1.ListPodResourcesResponse, error) {
 				return &podResourceResponse, fmt.Errorf("error")
 			})
+		mockClose := gomonkey.ApplyMethod(reflect.TypeOf(new(grpc.ClientConn)), "Close",
+			func(_ *grpc.ClientConn) error { return nil })
+		defer mockClose.Reset()
 		defer mockList.Reset()
 		_, err := pr.GetPodResource()
-		convey.So(err, convey.ShouldNotBeNil)
+		convey.So(err, convey.ShouldBeNil)
 	})
 	mockList := gomonkey.ApplyMethod(reflect.TypeOf(new(FakeClient)), "List",
 		func(_ *FakeClient, ctx context.Context, in *v1alpha1.ListPodResourcesRequest,
@@ -169,7 +139,7 @@ func TestPodResourceGetPodResource1(t *testing.T) {
 	convey.Convey("the number of pods exceeds the upper limit", t, func() {
 		podResourceResponse.PodResources = make([]*v1alpha1.PodResources, common.MaxPodLimit+1)
 		_, err := pr.GetPodResource()
-		convey.So(err, convey.ShouldNotBeNil)
+		convey.So(err, convey.ShouldBeNil)
 	})
 	convey.Convey("pod name syntax illegal", t, func() {
 		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "invalid_name",
@@ -193,13 +163,16 @@ func TestPodResourceGetPodResource1(t *testing.T) {
 
 // TestPodResourceGetPodResource2 for test the interface GetPodResource part 2
 func TestPodResourceGetPodResource2(t *testing.T) {
-	pr := &PodResource{conn: &grpc.ClientConn{}, client: &FakeClient{}, restart: false}
+	pr := &PodResource{conn: &grpc.ClientConn{}, client: &FakeClient{}}
 	podResourceResponse := v1alpha1.ListPodResourcesResponse{}
 	mockList := gomonkey.ApplyMethod(reflect.TypeOf(new(FakeClient)), "List",
 		func(_ *FakeClient, ctx context.Context, in *v1alpha1.ListPodResourcesRequest,
 			opts ...grpc.CallOption) (*v1alpha1.ListPodResourcesResponse, error) {
 			return &podResourceResponse, nil
 		})
+	mockClose := gomonkey.ApplyMethod(reflect.TypeOf(new(grpc.ClientConn)), "Close",
+		func(_ *grpc.ClientConn) error { return nil })
+	defer mockClose.Reset()
 	defer mockList.Reset()
 	convey.Convey("the number of containers device type exceeds the upper limit", t, func() {
 		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "pod-name", Namespace: "pod-namespace",
@@ -240,13 +213,16 @@ func TestPodResourceGetPodResource2(t *testing.T) {
 
 // TestPodResourceGetPodResource3 for test the interface GetPodResource part 3
 func TestPodResourceGetPodResource3(t *testing.T) {
-	pr := &PodResource{conn: &grpc.ClientConn{}, client: &FakeClient{}, restart: false}
+	pr := &PodResource{conn: &grpc.ClientConn{}, client: &FakeClient{}}
 	podResourceResponse := v1alpha1.ListPodResourcesResponse{}
 	mockList := gomonkey.ApplyMethod(reflect.TypeOf(new(FakeClient)), "List",
 		func(_ *FakeClient, ctx context.Context, in *v1alpha1.ListPodResourcesRequest,
 			opts ...grpc.CallOption) (*v1alpha1.ListPodResourcesResponse, error) {
 			return &podResourceResponse, nil
 		})
+	mockClose := gomonkey.ApplyMethod(reflect.TypeOf(new(grpc.ClientConn)), "Close",
+		func(_ *grpc.ClientConn) error { return nil })
+	defer mockClose.Reset()
 	defer mockList.Reset()
 	convey.Convey("get valid pod resource", t, func() {
 		podResourceResponse.PodResources = []*v1alpha1.PodResources{{Name: "pod-name", Namespace: "pod-namespace",

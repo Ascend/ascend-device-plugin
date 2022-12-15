@@ -19,10 +19,11 @@ import (
 	"sync"
 
 	"google.golang.org/grpc"
+	"k8s.io/api/core/v1"
 	"k8s.io/kubernetes/pkg/kubelet/apis/podresources/v1alpha1"
 
 	"Ascend-device-plugin/pkg/common"
-	"Ascend-device-plugin/pkg/kubeclient"
+	"Ascend-device-plugin/pkg/device"
 )
 
 // InterfaceServer interface for object that keeps running for providing service
@@ -35,7 +36,7 @@ type InterfaceServer interface {
 
 // PluginServer implements the interface of DevicePluginServer; manages the registration and lifecycle of grpc server
 type PluginServer struct {
-	kubeClient           *kubeclient.ClientK8s
+	manager              device.DevManager
 	grpcServer           *grpc.Server
 	isRunning            *common.AtomicBool
 	cachedDevices        []common.NpuDevice
@@ -46,7 +47,7 @@ type PluginServer struct {
 	cachedLock           sync.RWMutex
 	reciChan             chan interface{}
 	stop                 chan interface{}
-	vol2KlDevMap         map[string]string
+	klt2RealDevMap       map[string]string
 	restart              bool
 }
 
@@ -58,7 +59,13 @@ type PodDevice struct {
 
 // PodResource implements the get pod resource info
 type PodResource struct {
-	conn    *grpc.ClientConn
-	client  v1alpha1.PodResourcesListerClient
-	restart bool
+	conn   *grpc.ClientConn
+	client v1alpha1.PodResourcesListerClient
+}
+
+// PodDeviceInfo define device info of pod, include kubelet allocate and real allocate device
+type PodDeviceInfo struct {
+	Pod        v1.Pod
+	KltDevice  []string
+	RealDevice []string
 }
