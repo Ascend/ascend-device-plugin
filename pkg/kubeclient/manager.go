@@ -14,4 +14,3 @@
 
 // Package server holds the implementation of registration to kubelet, k8s pod resource interface.
 package kubeclient
-
