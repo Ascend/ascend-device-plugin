@@ -44,15 +44,23 @@ type AscendTools struct {
 	healthDevice sets.String
 }
 
-type devManager interface {
-	GetNPUs(*[]common.NpuDevice, *[]string) error
+// DevManager interface for manager device
+type DevManager interface {
+	GetNPUs() (common.NpuAllInfo, error)
 	DoWithVolcanoListAndWatch(map[string][]*common.NpuDevice)
 	SetDmgr(devmanager.DeviceInterface)
 	GetDmgr() devmanager.DeviceInterface
+	GetChipAICore() int32
+	GetName() string
 	SetKubeClient(*kubeclient.ClientK8s)
 	GetKubeClient() *kubeclient.ClientK8s
-	IsDeviceStatusChange([]*common.NpuDevice, string) bool
+	IsDeviceStatusChange(map[string][]*common.NpuDevice, []*common.NpuDevice, string) map[string]bool
 	AddPodAnnotation(*v1.Pod, []string, []string, string, string) error
+	AppendVGroupInfo([]string)
+	CheckDeviceTypeLabel() error
+	CreateVirtualDevice(int32, string) (string, error)
+	DestroyVirtualDevice(string) error
+	GetChipAiCoreCount() (int32, error)
 }
 
 // SetDmgr set devmanager
@@ -73,6 +81,16 @@ func (tool *AscendTools) SetKubeClient(client *kubeclient.ClientK8s) {
 // GetKubeClient get ClientK8s
 func (tool *AscendTools) GetKubeClient() *kubeclient.ClientK8s {
 	return tool.client
+}
+
+// GetChipAICore get ai core
+func (tool *AscendTools) GetChipAICore() int32 {
+	return common.ParamOption.AiCoreCount
+}
+
+// GetName get chip name
+func (tool *AscendTools) GetName() string {
+	return tool.name
 }
 
 // UpdateNodeDeviceInfo update device info
@@ -113,7 +131,7 @@ func (tool *AscendTools) delVirDevInfo(newDeviceList map[string]string) {
 }
 
 func (tool *AscendTools) assembleNpuDeviceStruct(deviType, deviceName string, logicID, phyID int32) common.NpuDevice {
-	hwlog.RunLog.Infof("Found Huawei Ascend, deviceType: %s, deviceName: %s", deviType, deviceName)
+	hwlog.RunLog.Debugf("Found Huawei Ascend, deviceType: %s, deviceName: %s", deviType, deviceName)
 	return common.NpuDevice{
 		DevType:       deviType,
 		DeviceName:    deviceName,
@@ -135,8 +153,7 @@ func (tool *AscendTools) assemblePhyDevices(davinCiDev common.DavinCiDev, device
 func (tool *AscendTools) assembleVirtualDevices(davinCiDev common.DavinCiDev, vDevInfos npuCommon.VirtualDevInfo,
 	devices *[]common.NpuDevice, vDeviceTypes *[]string) {
 	for _, subVDevInfo := range vDevInfos.VDevInfo {
-		vDeviType, deviceName, err := tool.assembleSpecVirtualDevice(davinCiDev.PhyID, subVDevInfo,
-			davinCiDev.TemplateName)
+		vDeviType, deviceName, err := tool.assembleSpecVirtualDevice(davinCiDev.PhyID, subVDevInfo)
 		if err != nil {
 			hwlog.RunLog.Error(err)
 			continue
@@ -147,16 +164,17 @@ func (tool *AscendTools) assembleVirtualDevices(davinCiDev common.DavinCiDev, vD
 	}
 }
 
-func (tool *AscendTools) assembleSpecVirtualDevice(phyID int32, vDevInfo npuCommon.CgoVDevQueryStru,
-	templateList map[string]string) (string, string, error) {
+func (tool *AscendTools) assembleSpecVirtualDevice(phyID int32, vDevInfo npuCommon.CgoVDevQueryStru) (string,
+	string, error) {
 	coreNum := int32(vDevInfo.QueryInfo.Computing.Aic)
 	if coreNum <= 0 {
 		return "", "", fmt.Errorf("invalid vdev info, ai core is 0")
 	}
-	vDeviType, exist := templateList[vDevInfo.QueryInfo.Name]
+	vDeviType, exist := common.GetTemplateName2DeviceTypeMap()[vDevInfo.QueryInfo.Name]
 	if !exist {
 		return "", "", fmt.Errorf("check templatename failed, templatename is %s", vDevInfo.QueryInfo.Name)
 	}
+	vDeviType = fmt.Sprintf("%s-%s", tool.name, vDeviType)
 	devID := fmt.Sprintf("%s-%d-%d", vDeviType, vDevInfo.VDevID, phyID)
 	return vDeviType, devID, nil
 }
@@ -203,13 +221,36 @@ func getDeviceInfoData(deviceInfo *v1.ConfigMap) (map[string]string, error) {
 	return nodeDeviceInfo.DeviceInfo.DeviceList, nil
 }
 
+func (tool *AscendTools) getRealUsedDevices() sets.String {
+	podList, err := tool.client.GetActivePodList()
+	if err != nil {
+		hwlog.RunLog.Warn(err)
+		return sets.String{}
+	}
+	usedDevice := sets.String{}
+	for _, pod := range podList {
+		realDevice, exist := pod.Annotations[common.ResourceNamePrefix+common.PodRealAlloc]
+		if !exist {
+			continue
+		}
+		usedDevice.Insert(strings.Split(realDevice, common.CommaSepDev)...)
+	}
+	return usedDevice
+}
+
 func (tool *AscendTools) getDevStatesDevSet(classifyDevs map[string][]*common.NpuDevice) common.DevStatusSet {
 	totalFreeDevices := make(map[string]sets.String, len(classifyDevs))
-	totalUHDevices, totalNetUHDevices := sets.String{}, sets.String{}
+	totalUHDevices, totalNetUHDevices, allTypeUsedDevice := sets.String{}, sets.String{}, sets.String{}
+	if !common.ParamOption.PresetVDevice {
+		allTypeUsedDevice = tool.getRealUsedDevices()
+	}
 	for devType, classifyDev := range classifyDevs {
 		healthDevices, uhDevices, netUnHDevices := tool.groupDevsByStatus(classifyDev, tool.name)
 		usedDevices := tool.client.GetPodsUsedNpu(devType)
 		totalFreeDevices[devType] = healthDevices.Difference(usedDevices)
+		if !common.ParamOption.PresetVDevice {
+			totalFreeDevices[devType] = totalFreeDevices[devType].Difference(allTypeUsedDevice)
+		}
 		totalUHDevices = totalUHDevices.Union(uhDevices)
 		totalNetUHDevices = totalNetUHDevices.Union(netUnHDevices)
 	}
@@ -246,15 +287,14 @@ func (tool *AscendTools) groupDevsByStatus(subClassDevices []*common.NpuDevice, 
 	return healthDevice, totalUHDevices, totalNetworkUHDevices
 }
 
-func (tool *AscendTools) getDavinCiDev(logicID int32, templateName map[string]string) (common.DavinCiDev, error) {
+func (tool *AscendTools) getDavinCiDev(logicID int32) (common.DavinCiDev, error) {
 	phyID, err := tool.dmgr.GetPhysicIDFromLogicID(logicID)
 	if err != nil {
 		return common.DavinCiDev{}, err
 	}
 	return common.DavinCiDev{
-		TemplateName: templateName,
-		LogicID:      logicID,
-		PhyID:        phyID,
+		LogicID: logicID,
+		PhyID:   phyID,
 	}, nil
 }
 
@@ -266,20 +306,15 @@ func (tool *AscendTools) getVirtualDevice(logicID int32) (npuCommon.VirtualDevIn
 	return virtualDevInfos, nil
 }
 
-func (tool *AscendTools) getDeviceIP(phyID string) (string, error) {
-	transPhyID, err := strconv.ParseInt(phyID, common.BaseDec, common.BitSize32)
+func (tool *AscendTools) getDeviceIP(phyID int) (string, error) {
+	logicID, err := tool.dmgr.GetLogicIDFromPhysicID(int32(phyID))
 	if err != nil {
-		hwlog.RunLog.Errorf(" Device id transform failed, DeviceName: %s", phyID)
-		return "", err
-	}
-	logicID, err := tool.dmgr.GetLogicIDFromPhysicID(int32(transPhyID))
-	if err != nil {
-		return "", fmt.Errorf("transfor phyID %s to logicID failed, err: %#v", phyID, err)
+		return "", fmt.Errorf("transfor phyID %d to logicID failed, err: %#v", phyID, err)
 	}
 	return tool.dmgr.GetDeviceIPAddress(logicID)
 }
 
-func (tool *AscendTools) getDeviceListIP(devices []string, deviceType string) (map[string]string, error) {
+func (tool *AscendTools) getDeviceListIP(devices []string, deviceType string) (map[int]string, error) {
 	ascendRuntimeOptions := ""
 	if common.IsVirtualDev(deviceType) {
 		ascendRuntimeOptions = common.VirtualDev
@@ -289,7 +324,7 @@ func (tool *AscendTools) getDeviceListIP(devices []string, deviceType string) (m
 		hwlog.RunLog.Errorf("get device list id err: %#v", err)
 		return nil, err
 	}
-	devicesWithIP := make(map[string]string, len(devices))
+	devicesWithIP := make(map[int]string, len(devices))
 	for _, id := range ascendDevices {
 		if ascendRuntimeOptions == common.VirtualDev {
 			devicesWithIP[id] = common.DefaultDeviceIP
@@ -301,7 +336,7 @@ func (tool *AscendTools) getDeviceListIP(devices []string, deviceType string) (m
 		}
 		deviceIP, err := tool.getDeviceIP(id)
 		if err != nil {
-			hwlog.RunLog.Errorf("get device %s ip err: %#v", id, err)
+			hwlog.RunLog.Errorf("get device %d ip err: %#v", id, err)
 			return nil, err
 		}
 		devicesWithIP[id] = deviceIP
@@ -327,10 +362,13 @@ func (tool *AscendTools) AddPodAnnotation(pod *v1.Pod, kltRequestDevices, dpResp
 	}
 	configuration := common.GetPodConfiguration(phyDevMapVirtualDev, ascendVisibleDevices, pod.Name, serverID,
 		deviceType)
+	if !common.ParamOption.PresetVDevice {
+		tool.AppendVGroupInfo(dpResponseDevices)
+	}
 	annotation := make(map[string]string, 1)
 	if !common.IsVirtualDev(deviceType) {
-		annotation[common.Pod2kl] = strings.Join(kltRequestDevices, common.CommaSepDev)
-		annotation[common.PodRealAlloc] = strings.Join(dpResponseDevices, common.CommaSepDev)
+		annotation[common.ResourceNamePrefix+common.Pod2kl] = strings.Join(kltRequestDevices, common.CommaSepDev)
+		annotation[common.ResourceNamePrefix+common.PodRealAlloc] = strings.Join(dpResponseDevices, common.CommaSepDev)
 	}
 	if tool.name == common.Ascend910 {
 		annotation[common.Pod910DeviceKey] = configuration
@@ -339,24 +377,46 @@ func (tool *AscendTools) AddPodAnnotation(pod *v1.Pod, kltRequestDevices, dpResp
 }
 
 // IsDeviceStatusChange is device status change
-func (tool *AscendTools) IsDeviceStatusChange(devices []*common.NpuDevice, devType string) bool {
-	isStateChange := false
-	devStateMap := make(map[int32]string, len(devices))
-	for idx, device := range devices {
-		state, ok := devStateMap[device.PhyID]
-		if !ok {
-			state = tool.getDevState(device.LogicID)
-			devStateMap[device.PhyID] = state
-		}
-		if state != device.Health {
-			isStateChange = true
-			devices[idx].Health = state
+func (tool *AscendTools) IsDeviceStatusChange(groupDevice map[string][]*common.NpuDevice,
+	aiCoreDevs []*common.NpuDevice, runMode string) map[string]bool {
+	// get all chip by logic id
+	healthStatus := make(map[int32]common.DeviceHealth, 1)
+	for _, devices := range groupDevice {
+		for _, device := range devices {
+			healthStatus[device.LogicID] = common.DeviceHealth{Health: v1beta1.Healthy, NetworkHealth: v1beta1.Healthy}
 		}
 	}
-	if devType == common.Ascend910 {
-		isStateChange = tool.checkDeviceNetworkHealthStatus(devices) || isStateChange
+	// get all chip's health
+	for logicID := range healthStatus {
+		if runMode == common.Ascend910 {
+			healthStatus[logicID] = common.DeviceHealth{Health: tool.getDevState(logicID),
+				NetworkHealth: tool.getDeviceNetworkState(logicID)}
+		} else {
+			healthStatus[logicID] = common.DeviceHealth{Health: tool.getDevState(logicID)}
+		}
 	}
 
+	// update all device's health
+	isStateChange := make(map[string]bool, len(groupDevice))
+	for devType, devices := range groupDevice {
+		for idx, device := range devices {
+			if healthStatus[device.LogicID].Health != device.Health {
+				isStateChange[devType] = true
+				devices[idx].Health = healthStatus[device.LogicID].Health
+			}
+			if runMode == common.Ascend910 {
+				devices[idx].NetworkHealth = healthStatus[device.LogicID].NetworkHealth
+			}
+		}
+	}
+	if common.ParamOption.PresetVDevice {
+		return isStateChange
+	}
+	// update all ai core device's health
+	for _, device := range aiCoreDevs {
+		device.Health = healthStatus[device.LogicID].Health
+		device.NetworkHealth = healthStatus[device.LogicID].NetworkHealth
+	}
 	return isStateChange
 }
 
@@ -407,4 +467,139 @@ func (tool *AscendTools) unhealthyState(healthyState uint32, logicID int32) erro
 	}
 	hwlog.RunLog.Errorf("device logicID: %d, phyID: %d, state is %d", logicID, phyID, healthyState)
 	return nil
+}
+
+func (tool *AscendTools) getVGroupID(device string) (uint32, error) {
+	phyID, virID, err := common.GetDeviceID(device, common.VirtualDev)
+	if err != nil {
+		return 0, err
+	}
+	logicID, err := tool.dmgr.GetLogicIDFromPhysicID(int32(phyID))
+	if err != nil {
+		return 0, err
+	}
+	virtualDevInfos, err := tool.dmgr.GetVirtualDeviceInfo(logicID)
+	if err != nil {
+		return 0, fmt.Errorf("query virtual device info failure: %s", err)
+	}
+	for _, vDevInfo := range virtualDevInfos.VDevInfo {
+		if vDevInfo.VDevID == uint32(virID) {
+			return vDevInfo.QueryInfo.Base.VfgID, nil
+		}
+	}
+	return 0, fmt.Errorf("not found virutal device info, %s", device)
+}
+
+// AppendVGroupInfo append virtual group id info after device name
+func (tool *AscendTools) AppendVGroupInfo(allocateDevice []string) {
+	hwlog.RunLog.Debugf("allocateDevice:%v", allocateDevice)
+	for i, device := range allocateDevice {
+		if !common.IsVirtualDev(device) {
+			continue
+		}
+		vGroupID, err := tool.getVGroupID(device)
+		if err != nil {
+			hwlog.RunLog.Warn(err)
+			continue
+		}
+		allocateDevice[i] = fmt.Sprintf("%s%s%d", device, common.UnderLine, vGroupID)
+	}
+}
+
+// CheckDeviceTypeLabel check device type label
+func (tool *AscendTools) CheckDeviceTypeLabel() error {
+	curNode, err := tool.client.GetNode()
+	if err != nil {
+		return err
+	}
+	deviceType, exist := curNode.Labels[common.ServerTypeLabelKey]
+	if !exist {
+		return fmt.Errorf("label of %s not exist", common.ServerTypeLabelKey)
+	}
+	deviceTypeInfos := strings.Split(deviceType, common.MiddelLine)
+	if len(deviceTypeInfos) < common.ServerTypeInfoMinLen {
+		return fmt.Errorf("length of device type info %d is invalid", len(deviceTypeInfos))
+	}
+	if deviceTypeInfos[0] != tool.name {
+		return fmt.Errorf("label chip name %s is not meet real chip name %s", deviceTypeInfos[0], tool.name)
+	}
+	aiCore, err := strconv.Atoi(deviceTypeInfos[1])
+	if err != nil {
+		return fmt.Errorf("covert label ai core failed, error is %v", err)
+	}
+	if aiCore != int(common.ParamOption.AiCoreCount) {
+		return fmt.Errorf("label ai core %d not equal real chip ai core %d", aiCore, common.ParamOption.AiCoreCount)
+	}
+	return nil
+}
+
+// CreateVirtualDevice create virtual device
+func (tool *AscendTools) CreateVirtualDevice(phyID int32, templateName string) (string, error) {
+	createInfo := npuCommon.CgoCreateVDevRes{
+		VDevID:       common.DefaultIDForCreateVNPU,
+		VfgID:        common.DefaultIDForCreateVNPU,
+		TemplateName: templateName,
+	}
+	logicID, err := tool.dmgr.GetLogicIDFromPhysicID(phyID)
+	if err != nil {
+		return "", err
+	}
+	createOut, err := tool.dmgr.CreateVirtualDevice(logicID, createInfo)
+	if err != nil {
+		return "", err
+	}
+	hwlog.RunLog.Infof("create %s from device %d success", createInfo.TemplateName, phyID)
+	vDevType, exist := common.GetTemplateName2DeviceTypeMap()[templateName]
+	if !exist {
+		return "", fmt.Errorf("check templatename failed, templatename is %s", templateName)
+	}
+	vDevName := fmt.Sprintf("%s-%s-%d-%d", tool.name, vDevType, createOut.VDevID, phyID)
+	return vDevName, nil
+}
+
+// DestroyVirtualDevice destroy virtual device
+func (tool *AscendTools) DestroyVirtualDevice(deviceName string) error {
+	phyID, virID, err := common.GetDeviceID(deviceName, common.VirtualDev)
+	if err != nil {
+		return fmt.Errorf("get device id failed, %v", err)
+	}
+	logicID, err := tool.dmgr.GetLogicIDFromPhysicID(int32(phyID))
+	if err != nil {
+		return err
+	}
+	for i := 0; i < common.RetryUpdateCount; i++ {
+		if err = tool.dmgr.DestroyVirtualDevice(logicID, uint32(virID)); err == nil {
+			break
+		}
+		time.Sleep(time.Second)
+	}
+	return err
+}
+
+// GetChipAiCoreCount get chip aicore count
+func (tool *AscendTools) GetChipAiCoreCount() (int32, error) {
+	_, logicIDs, err := tool.dmgr.GetDeviceList()
+	if err != nil {
+		return 0, err
+	}
+	if len(logicIDs) < 1 {
+		return 0, fmt.Errorf("not found logicIDs")
+	}
+	for _, logicID := range logicIDs {
+		cgoVDevInfo, err := tool.dmgr.GetVirtualDeviceInfo(logicID)
+		if err != nil {
+			hwlog.RunLog.Debug(err)
+			continue
+		}
+		return tool.getAiCoreCount(cgoVDevInfo)
+	}
+	return 0, fmt.Errorf("not get aicore count")
+}
+
+func (tool *AscendTools) getAiCoreCount(cgoVDevInfo npuCommon.VirtualDevInfo) (int32, error) {
+	chipAICore := cgoVDevInfo.TotalResource.Computing.Aic
+	if chipAICore < common.MinAICoreNum || chipAICore > common.MaxAICoreNum {
+		return 0, fmt.Errorf("invalid ai core num %f", chipAICore)
+	}
+	return int32(chipAICore), nil
 }

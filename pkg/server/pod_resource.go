@@ -33,27 +33,20 @@ const (
 	callTimeout                = 2 * time.Second
 )
 
-// Start starts the gRPC server, registers the pod resource with the Kubelet
-func (pr *PodResource) Start(socketWatcher *common.FileWatch) error {
-	if pr == nil {
-		return fmt.Errorf("invalid interface receiver")
-	}
-	pr.Stop()
+// start starts the gRPC server, registers the pod resource with the Kubelet
+func (pr *PodResource) start() error {
+	pr.stop()
 	realKubeletSockPath, isOk := common.VerifyPathAndPermission(socketPath)
 	if !isOk {
 		return fmt.Errorf("check kubelet socket file path failed")
 	}
 	var err error
-	if err = socketWatcher.WatchFile(realKubeletSockPath); err != nil {
-		hwlog.RunLog.Errorf("failed to create file watcher, err: %#v", err)
-		return err
-	}
 	if pr.client, pr.conn, err = podresources.GetClient("unix://"+realKubeletSockPath, callTimeout,
 		defaultPodResourcesMaxSize); err != nil {
 		hwlog.RunLog.Errorf("get pod resource client failed, %#v", err)
 		return err
 	}
-	hwlog.RunLog.Info("pod resource client init success.")
+	hwlog.RunLog.Debug("pod resource client init success.")
 	return nil
 }
 
@@ -61,7 +54,7 @@ func (pr *PodResource) getContainerResource(containerResource *v1alpha1.Containe
 	if containerResource == nil {
 		return "", nil, fmt.Errorf("invalid container resource")
 	}
-	if len(containerResource.Devices) > common.MaxDevicesNum {
+	if len(containerResource.Devices) > common.MaxDevicesNum*common.MaxAICoreNum {
 		return "", nil, fmt.Errorf("the number of container device type %d exceeds the upper limit",
 			len(containerResource.Devices))
 	}
@@ -75,7 +68,8 @@ func (pr *PodResource) getContainerResource(containerResource *v1alpha1.Containe
 		if _, exist := common.GetAllDeviceInfoTypeList()[containerDevice.ResourceName]; !exist {
 			continue
 		}
-		if len(containerDevice.DeviceIds) > common.MaxDevicesNum || len(containerDevice.DeviceIds) == 0 {
+		if len(containerDevice.DeviceIds) > common.MaxDevicesNum*common.MaxAICoreNum || len(containerDevice.
+			DeviceIds) == 0 {
 			return "", nil, fmt.Errorf("container device num %d exceeds the upper limit", len(containerDevice.DeviceIds))
 		}
 		if resourceName == "" {
@@ -113,7 +107,7 @@ func (pr *PodResource) getDeviceFromPod(podResources *v1alpha1.PodResources) (st
 			resourceName = containerResourceName
 		}
 		total += len(containerDevices)
-		if total > common.MaxDevicesNum {
+		if total > common.MaxDevicesNum*common.MaxDevicesNum {
 			return "", nil, fmt.Errorf("pod device num exceeds the upper limit")
 		}
 		podDevice = append(podDevice, containerDevices...)
@@ -123,6 +117,14 @@ func (pr *PodResource) getDeviceFromPod(podResources *v1alpha1.PodResources) (st
 
 // GetPodResource call pod resource List interface, get pod resource info
 func (pr *PodResource) GetPodResource() (map[string]PodDevice, error) {
+	if err := pr.start(); err != nil {
+		return nil, err
+	}
+	defer pr.stop()
+	return pr.assemblePodResource()
+}
+
+func (pr *PodResource) assemblePodResource() (map[string]PodDevice, error) {
 	if pr == nil {
 		return nil, fmt.Errorf("invalid interface receiver")
 	}
@@ -167,8 +169,8 @@ func (pr *PodResource) GetPodResource() (map[string]PodDevice, error) {
 	return device, nil
 }
 
-// Stop the connection
-func (pr *PodResource) Stop() {
+// stop the connection
+func (pr *PodResource) stop() {
 	if pr == nil {
 		hwlog.RunLog.Error("invalid interface receiver")
 		return
@@ -182,25 +184,7 @@ func (pr *PodResource) Stop() {
 	}
 }
 
-// GetRestartFlag get restart flag
-func (pr *PodResource) GetRestartFlag() bool {
-	if pr == nil {
-		hwlog.RunLog.Error("invalid interface receiver")
-		return false
-	}
-	return pr.restart
-}
-
-// SetRestartFlag set restart flag
-func (pr *PodResource) SetRestartFlag(flag bool) {
-	if pr == nil {
-		hwlog.RunLog.Error("invalid interface receiver")
-		return
-	}
-	pr.restart = flag
-}
-
 // NewPodResource returns an initialized PodResource
 func NewPodResource() *PodResource {
-	return &PodResource{restart: true}
+	return &PodResource{}
 }

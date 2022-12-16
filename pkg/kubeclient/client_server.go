@@ -52,10 +52,10 @@ func (ki *ClientK8s) TryUpdatePodAnnotation(pod *v1.Pod, annotation map[string]s
 		if _, err = ki.UpdatePod(podNew); err == nil {
 			return nil
 		}
-		hwlog.RunLog.Errorf("update pod annotation failed, times: %d, error is %#v", i+1, err)
+		hwlog.RunLog.Warnf("update pod annotation failed, times: %d, error is %#v", i+1, err)
 		time.Sleep(time.Second)
 	}
-	return fmt.Errorf("exceeded max number of retries")
+	return fmt.Errorf("update pod annotation failed, exceeded max number of retries")
 }
 
 func (ki *ClientK8s) isConfigMapChanged(cm *v1.ConfigMap) bool {
@@ -145,28 +145,13 @@ func (ki *ClientK8s) AnnotationReset() error {
 
 // GetPodsUsedNpu get npu by status
 func (ki *ClientK8s) GetPodsUsedNpu(devType string) sets.String {
-	podList, err := ki.GetPodList()
+	podList, err := ki.GetActivePodList()
 	if err != nil {
-		hwlog.RunLog.Errorf("nodeName: %s, err: %#v", ki.NodeName, err)
-		return sets.String{}
-	}
-	if len(podList.Items) >= common.MaxPodLimit {
-		hwlog.RunLog.Error("The number of pods exceeds the upper limit")
+		hwlog.RunLog.Errorf("get pod list failed, err: %#v", err)
 		return sets.String{}
 	}
 	var useNpu []string
-	for _, pod := range podList.Items {
-		if err := common.CheckPodNameAndSpace(pod.Name, common.PodNameMaxLength); err != nil {
-			hwlog.RunLog.Warnf("pod name syntax illegal, %#v", err)
-			continue
-		}
-		if err := common.CheckPodNameAndSpace(pod.Namespace, common.PodNameSpaceMaxLength); err != nil {
-			hwlog.RunLog.Warnf("pod namespace syntax illegal, %#v", err)
-			continue
-		}
-		if pod.Status.Phase == v1.PodFailed || pod.Status.Phase == v1.PodSucceeded {
-			continue
-		}
+	for _, pod := range podList {
 		annotationTag := fmt.Sprintf("%s%s", common.ResourceNamePrefix, devType)
 		tmpNpu, ok := pod.Annotations[annotationTag]
 		if !ok || len(tmpNpu) == 0 || len(tmpNpu) > common.PodAnnotationMaxMemory {

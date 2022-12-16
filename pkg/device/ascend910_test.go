@@ -31,32 +31,31 @@ import (
 	"Ascend-device-plugin/pkg/kubeclient"
 )
 
-func createFake910Manager() *HwDevManager {
-	hdm := &HwDevManager{}
-	hdm.manager = NewHwAscend910Manager()
-	hdm.manager.SetDmgr(&devmanager.DeviceManagerMock{})
-	return hdm
+func createFake910Manager() *HwAscend910Manager {
+	manager := NewHwAscend910Manager()
+	manager.SetDmgr(&devmanager.DeviceManagerMock{})
+	return manager
 }
 
 func TestHwAscend910ManagerGetNPUs(t *testing.T) {
 	convey.Convey("910 test GetNPUs", t, func() {
-		hdm := createFake910Manager()
-		err := hdm.manager.GetNPUs(&hdm.AllDevs, &hdm.AllDevTypes)
+		manager := createFake910Manager()
+		allInfo, err := manager.GetNPUs()
 		convey.So(err, convey.ShouldBeNil)
-		convey.So(hdm.AllDevTypes[0], convey.ShouldEqual, common.Ascend910)
-		convey.So(hdm.AllDevs[0].DeviceName, convey.ShouldEqual,
-			fmt.Sprintf("%s-%d", common.Ascend910, hdm.AllDevs[0].PhyID))
+		convey.So(allInfo.AllDevTypes[0], convey.ShouldEqual, common.Ascend910)
+		convey.So(allInfo.AllDevs[0].DeviceName, convey.ShouldEqual,
+			fmt.Sprintf("%s-%d", common.Ascend910, allInfo.AllDevs[0].PhyID))
 	})
 }
 
 func TestDoWithVolcanoListAndWatch910(t *testing.T) {
 	convey.Convey("910 test DoWithVolcanoListAndWatch", t, func() {
-		hdm := createFake910Manager()
+		manager := createFake910Manager()
 		fakeKubeInteractor := &kubeclient.ClientK8s{Clientset: nil, NodeName: "NODE_NAME"}
-		hdm.manager.SetKubeClient(fakeKubeInteractor)
-		err := hdm.manager.GetNPUs(&hdm.AllDevs, &hdm.AllDevTypes)
+		manager.SetKubeClient(fakeKubeInteractor)
+		allInfo, err := manager.GetNPUs()
 		convey.So(err, convey.ShouldBeNil)
-		hdm.groupDevice = ClassifyDevices(hdm.AllDevs, hdm.AllDevTypes)
+		groupDevice := ClassifyDevices(allInfo.AllDevs, allInfo.AllDevTypes)
 
 		mockGetPodsUsedNpu := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)),
 			"GetPodsUsedNpu", func(_ *kubeclient.ClientK8s, devType string) sets.String {
@@ -97,7 +96,7 @@ func TestDoWithVolcanoListAndWatch910(t *testing.T) {
 			mockNodeBack.Reset()
 		}()
 
-		hdm.manager.DoWithVolcanoListAndWatch(hdm.groupDevice)
+		manager.DoWithVolcanoListAndWatch(groupDevice)
 
 	})
 }

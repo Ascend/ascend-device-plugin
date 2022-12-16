@@ -67,9 +67,9 @@ const (
 	// PodPredicateTime pod predicate time
 	PodPredicateTime = "predicate-time"
 	// Pod2kl pod annotation key, means kubelet allocate device
-	Pod2kl = ResourceNamePrefix + "kltDev"
+	Pod2kl = "kltDev"
 	// PodRealAlloc pod annotation key, means pod real mount device
-	PodRealAlloc = ResourceNamePrefix + "AscendReal"
+	PodRealAlloc = "AscendReal"
 	// Pod910DeviceKey pod annotation key, for generate 910 hccl rank table
 	Pod910DeviceKey = "ascend.kubectl.kubernetes.io/ascend-910-configuration"
 
@@ -127,32 +127,32 @@ const (
 	// Ascend310P 310p
 	Ascend310P = "Ascend310P"
 	// Ascend310Pc1 Ascend310P 1 core
-	Ascend310Pc1 = "Ascend310P-1c"
+	Ascend310Pc1 = Ascend310P + "-" + Core1
 	// Ascend310Pc2 Ascend310P 2 core
-	Ascend310Pc2 = "Ascend310P-2c"
+	Ascend310Pc2 = Ascend310P + "-" + Core2
 	// Ascend310Pc4 Ascend310P 4 core
-	Ascend310Pc4 = "Ascend310P-4c"
+	Ascend310Pc4 = Ascend310P + "-" + Core4
 	// Ascend310Pc4Cpu3 Ascend310P 4core 3cpu
-	Ascend310Pc4Cpu3 = "Ascend310P-4c.3cpu"
+	Ascend310Pc4Cpu3 = Ascend310P + "-" + Core4Cpu3
 	// Ascend310Pc2Cpu1 Ascend310P 2core 1cpu
-	Ascend310Pc2Cpu1 = "Ascend310P-2c.1cpu"
+	Ascend310Pc2Cpu1 = Ascend310P + "-" + Core2Cpu1
 	// Ascend310Pc4Cpu4Dvpp Ascend310P 4core 4cpu dvpp
-	Ascend310Pc4Cpu4Dvpp = "Ascend310P-4c.4cpu.dvpp"
+	Ascend310Pc4Cpu4Dvpp = Ascend310P + "-" + Core4Cpu4Dvpp
 	// Ascend310Pc4Cpu3Ndvpp Ascend310P 4core 3cpu ndvpp
-	Ascend310Pc4Cpu3Ndvpp = "Ascend310P-4c.3cpu.ndvpp"
+	Ascend310Pc4Cpu3Ndvpp = Ascend310P + "-" + Core4Cpu3Ndvpp
 	// HuaweiAscend310P with prefix
 	HuaweiAscend310P = ResourceNamePrefix + Ascend310P
 
 	// Ascend910 910
 	Ascend910 = "Ascend910"
 	// Ascend910c2  Ascend910 2core
-	Ascend910c2 = "Ascend910-2c"
+	Ascend910c2 = Ascend910 + "-" + Core2
 	// Ascend910c4 Ascend910 4core
-	Ascend910c4 = "Ascend910-4c"
+	Ascend910c4 = Ascend910 + "-" + Core4
 	// Ascend910c8 Ascend910 8core
-	Ascend910c8 = "Ascend910-8c"
+	Ascend910c8 = Ascend910 + "-" + Core8
 	// Ascend910c16 Ascend910 16core
-	Ascend910c16 = "Ascend910-16c"
+	Ascend910c16 = Ascend910 + "-" + Core16
 	// HuaweiAscend910 with prefix
 	HuaweiAscend910 = ResourceNamePrefix + Ascend910
 
@@ -165,16 +165,72 @@ const (
 
 	// HuaweiNetworkUnHealthAscend910 910 network unhealthy
 	HuaweiNetworkUnHealthAscend910 = ResourceNamePrefix + "Ascend910-NetworkUnhealthy"
-	// HuaweiUnHealthAscend910 unhealth
-	HuaweiUnHealthAscend910 = ResourceNamePrefix + "Ascend910-Unhealthy"
+	// HuaweiUnHealthAscend910 unhealthy
+	HuaweiUnHealthAscend910 = ResourceNamePrefix + Ascend910 + "-Unhealthy"
 	// HuaweiUnHealthAscend310P 310p unhealthy
-	HuaweiUnHealthAscend310P = ResourceNamePrefix + "Ascend310P-Unhealthy"
+	HuaweiUnHealthAscend310P = ResourceNamePrefix + Ascend310P + "-Unhealthy"
 	// HuaweiUnHealthAscend310 310 unhealthy
-	HuaweiUnHealthAscend310 = ResourceNamePrefix + "Ascend310-Unhealthy"
+	HuaweiUnHealthAscend310 = ResourceNamePrefix + Ascend310 + "-Unhealthy"
 	// HuaweiNetworkRecoverAscend910 910 network recover
-	HuaweiNetworkRecoverAscend910 = ResourceNamePrefix + "Ascend910-NetworkRecover"
+	HuaweiNetworkRecoverAscend910 = ResourceNamePrefix + Ascend910 + "-NetworkRecover"
 	// HuaweiRecoverAscend910 910 recover
-	HuaweiRecoverAscend910 = ResourceNamePrefix + "Ascend910-Recover"
+	HuaweiRecoverAscend910 = ResourceNamePrefix + Ascend910 + "-Recover"
+
+	// AiCoreResourceName resource name for virtual device
+	AiCoreResourceName = "npu-core"
+
+	// Core1 1 core
+	Core1 = "1c"
+	// Core2 2 core
+	Core2 = "2c"
+	// Core4 4 core
+	Core4 = "4c"
+	// Core8 8 core
+	Core8 = "8c"
+	// Core16 16 core
+	Core16 = "16c"
+	// Core4Cpu3 4core 3cpu
+	Core4Cpu3 = "4c.3cpu"
+	// Core2Cpu1 2core 1cpu
+	Core2Cpu1 = "2c.1cpu"
+	// Core4Cpu4Dvpp 4core 4cpu dvpp
+	Core4Cpu4Dvpp = "4c.4cpu.dvpp"
+	// Core4Cpu3Ndvpp 4core 3cpu ndvpp
+	Core4Cpu3Ndvpp = "4c.3cpu.ndvpp"
+
+	// Vir01 template name vir01
+	Vir01 = "vir01"
+	// Vir02 template name vir02
+	Vir02 = "vir02"
+	// Vir04 template name vir04
+	Vir04 = "vir04"
+	// Vir08 template name vir08
+	Vir08 = "vir08"
+	// Vir16 template name vir16
+	Vir16 = "vir16"
+	// Vir04C3 template name vir04_3c
+	Vir04C3 = "vir04_3c"
+	// Vir02C1 template name vir02_1c
+	Vir02C1 = "vir02_1c"
+	// Vir04C4Dvpp template name vir04_4c_dvpp
+	Vir04C4Dvpp = "vir04_4c_dvpp"
+	// Vir04C3Ndvpp template name vir04_3c_ndvpp
+	Vir04C3Ndvpp = "vir04_3c_ndvpp"
+
+	// AnnotationVNPUInfoSplitLen length of pod annotation for allocate vnpu info
+	AnnotationVNPUInfoSplitLen = 2
+
+	// MaxAICoreNum max ai core num
+	MaxAICoreNum = 32
+	// MinAICoreNum min ai core num
+	MinAICoreNum = 8
+	// DefaultIDForCreateVNPU default id for creating vnpu
+	DefaultIDForCreateVNPU = 0xFFFFFFFF
+
+	// ServerTypeLabelKey the node label key of server type
+	ServerTypeLabelKey = "servertype"
+	// ServerTypeInfoMinLen the min len of server type split data
+	ServerTypeInfoMinLen = 2
 )
 
 const (
