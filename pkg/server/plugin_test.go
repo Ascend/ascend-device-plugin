@@ -372,3 +372,89 @@ func TestAllocateWithVolcano3(t *testing.T) {
 		})
 	})
 }
+
+// TestGetUnhealthyAICore for testGetUnhealthyAICore
+func TestGetUnhealthyAICore(t *testing.T) {
+	ps := NewPluginServer(common.Ascend910, devices, []string{common.HiAIManagerDevice},
+		device.NewHwAscend910Manager())
+	ps.klt2RealDevMap["Ascend910-0"] = "Ascend910-0"
+	common.ParamOption.AiCoreCount = common.MinAICoreNum
+	convey.Convey("test GetUnhealthyAICore", t, func() {
+		convey.Convey("GetUnhealthyAICore success", func() {
+			unhealthyDev := ps.getUnhealthyAICore()
+			convey.So(len(unhealthyDev), convey.ShouldEqual, 0)
+		})
+	})
+}
+
+// TestDestroyNotUsedVNPU for testDestroyNotUsedVNPU
+func TestDestroyNotUsedVNPU(t *testing.T) {
+	ps := NewPluginServer(common.Ascend910, devices, []string{common.HiAIManagerDevice},
+		device.NewHwAscend910Manager())
+	ps.klt2RealDevMap["Ascend910-0"] = "Ascend910-0"
+	common.ParamOption.AiCoreCount = common.MinAICoreNum
+	mockGetNPUs := gomonkey.ApplyMethod(reflect.TypeOf(new(device.HwAscend910Manager)), "GetNPUs",
+		func(_ *device.HwAscend910Manager) (common.NpuAllInfo, error) {
+			return common.NpuAllInfo{}, nil
+		})
+	mockDestroy := gomonkey.ApplyMethod(reflect.TypeOf(new(device.AscendTools)), "DestroyVirtualDevice",
+		func(_ *device.AscendTools, _ string) error {
+			return nil
+		})
+	mockAllocateDev := gomonkey.ApplyMethod(reflect.TypeOf(new(PluginServer)), "GetKltAndRealAllocateDev",
+		func(_ *PluginServer) ([]PodDeviceInfo, error) {
+			return []PodDeviceInfo{}, nil
+		})
+	defer mockDestroy.Reset()
+	defer mockAllocateDev.Reset()
+	defer mockGetNPUs.Reset()
+	convey.Convey("test DestroyNotUsedVNPU", t, func() {
+		convey.Convey("DestroyNotUsedVNPU success", func() {
+			err := ps.DestroyNotUsedVNPU()
+			convey.So(err, convey.ShouldBeNil)
+		})
+	})
+}
+
+// TestDoWithVolcanoSchedule for testDoWithVolcanoSchedule
+func TestDoWithVolcanoSchedule(t *testing.T) {
+	ps := NewPluginServer(common.Ascend910, devices, []string{common.HiAIManagerDevice},
+		device.NewHwAscend910Manager())
+	devicesIDs := []string{""}
+	podList := getMockPodList()
+	common.ParamOption.PresetVDevice = false
+	mockActivePodList := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)),
+		"GetActivePodList", func(_ *kubeclient.ClientK8s) ([]v1.Pod, error) {
+			return podList, nil
+		})
+	mockUpdatePod := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)),
+		"TryUpdatePodAnnotation", func(_ *kubeclient.ClientK8s, pod *v1.Pod,
+			annotation map[string]string) error {
+			return nil
+		})
+	mockDestroy := gomonkey.ApplyMethod(reflect.TypeOf(new(PluginServer)), "DestroyNotUsedVNPU",
+		func(_ *PluginServer) error {
+			return nil
+		})
+	mockCreate := gomonkey.ApplyMethod(reflect.TypeOf(new(device.AscendTools)),
+		"CreateVirtualDevice", func(_ *device.AscendTools, phyID int32, templateName string) (string, error) {
+			return "Ascend910-2c-100-0", nil
+		})
+	defer mockCreate.Reset()
+	defer mockDestroy.Reset()
+	defer mockUpdatePod.Reset()
+	defer mockActivePodList.Reset()
+	convey.Convey("test DoWithVolcanoSchedule", t, func() {
+		convey.Convey("DoWithVolcanoSchedule success", func() {
+			_, err := ps.useVolcano(devicesIDs)
+			convey.So(err, convey.ShouldBeNil)
+		})
+	})
+	common.ParamOption.PresetVDevice = true
+}
+
+func getMockPodList() []v1.Pod {
+	return []v1.Pod{
+		getMockPod(),
+	}
+}
