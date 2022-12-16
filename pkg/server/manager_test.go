@@ -32,6 +32,11 @@ import (
 	"Ascend-device-plugin/pkg/kubeclient"
 )
 
+const (
+	serverNum  = 2
+	rqtTaskNum = 4
+)
+
 // TestTestNewHwDevManager for testTestNewHwDevManager
 func TestNewHwDevManager(t *testing.T) {
 	convey.Convey("test NewHwDevManager", t, func() {
@@ -130,23 +135,45 @@ func TestUpdateDevice(t *testing.T) {
 	})
 }
 
+// TestNotifyToK8s for testNotifyToK8s
+func TestNotifyToK8s(t *testing.T) {
+	convey.Convey("test NotifyToK8s", t, func() {
+		convey.Convey("NotifyToK8s success", func() {
+			mockChange := gomonkey.ApplyMethod(reflect.TypeOf(new(device.AscendTools)), "IsDeviceStatusChange",
+				func(_ *device.AscendTools, _ map[string][]*common.NpuDevice, _ []*common.NpuDevice, _ string) map[string]bool {
+					return map[string]bool{common.Ascend310P: true, common.Ascend310: false}
+				})
+			defer mockChange.Reset()
+			hdm := NewHwDevManager(&devmanager.DeviceManagerMock{}, &kubeclient.ClientK8s{})
+			hdm.ServerMap[common.AiCoreResourceName] = NewPluginServer(common.Ascend310P, nil, nil, nil)
+			hdm.notifyToK8s()
+			convey.So(len(hdm.ServerMap), convey.ShouldEqual, serverNum)
+		})
+	})
+}
+
 func getMockPod() v1.Pod {
+	limitValue := v1.ResourceList{
+		common.HuaweiAscend910: *resource.NewQuantity(rqtTaskNum, resource.BinarySI),
+	}
+	annotation := map[string]string{
+		common.HuaweiAscend910: "0-vir01",
+	}
 	return v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "mindx-dls-npu-1p-default-2p-0",
-			Namespace: "btg-test",
+			Name:        "mindx-dls-npu-1p-default-2p-0",
+			Namespace:   "btg-test",
+			Annotations: annotation,
 		},
 		Spec: v1.PodSpec{
 			Containers: []v1.Container{
 				{Resources: v1.ResourceRequirements{
-					Limits: v1.ResourceList{
-						common.HuaweiAscend910: resource.Quantity{},
-					},
+					Limits: limitValue,
 				}},
 			},
 		},
 		Status: v1.PodStatus{
-			Reason: "UnexpectedAdmissionError",
+			Reason: "UnexpectedAdmissionError1",
 			ContainerStatuses: []v1.ContainerStatus{
 				{State: v1.ContainerState{
 					Waiting: &v1.ContainerStateWaiting{},
