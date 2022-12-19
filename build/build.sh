@@ -80,10 +80,30 @@ function change_mod() {
     chmod 500 "${TOP_DIR}/output/${output_name}"
 }
 
+function modify_version() {
+    cd "${TOP_DIR}"
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$CUR_DIR"/ascendplugin-910.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$CUR_DIR"/ascendplugin-volcano.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$CUR_DIR"/ascendplugin-310.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$CUR_DIR"/ascendplugin-310-volcano.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$CUR_DIR"/ascendplugin-310P.yaml
+    sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$CUR_DIR"/ascendplugin-310P-volcano.yaml
+    cp "$CUR_DIR"/Dockerfile "$TOP_DIR"/output/
+    cp "$CUR_DIR"/ascendplugin-910.yaml "$TOP_DIR"/output/device-plugin-910-"${build_version}".yaml
+    cp "$CUR_DIR"/ascendplugin-volcano.yaml "$TOP_DIR"/output/device-plugin-volcano-"${build_version}".yaml
+    cp "$CUR_DIR"/ascendplugin-310.yaml "$TOP_DIR"/output/device-plugin-310-"${build_version}".yaml
+    cp "$CUR_DIR"/ascendplugin-310-volcano.yaml "$TOP_DIR"/output/device-plugin-310-volcano-"${build_version}".yaml
+    cp "$CUR_DIR"/ascendplugin-310P.yaml "$TOP_DIR"/output/device-plugin-310P-"${build_version}".yaml
+    cp "$CUR_DIR"/ascendplugin-310P-volcano.yaml "$TOP_DIR"/output/device-plugin-310P-volcano-"${build_version}".yaml
+
+    sed -i "s#output/device-plugin#device-plugin#" "$TOP_DIR"/output/Dockerfile
+}
+
 function main() {
   clean
   build_plugin
   mv_file
+  modify_version
   change_mod
   if [ "$1" != nokmc ]; then
    copy_kmc_files
