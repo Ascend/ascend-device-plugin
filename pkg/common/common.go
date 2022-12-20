@@ -360,7 +360,10 @@ func GetPodConfiguration(phyDevMapVirtualDev map[int]int, devices map[int]string
 	instance := Instance{PodName: podName, ServerID: serverID}
 	for _, deviceID := range sortDevicesKey {
 		if !IsVirtualDev(deviceType) {
-			instance.Devices = append(instance.Devices, Device{DeviceID: deviceID, DeviceIP: devices[deviceID]})
+			instance.Devices = append(instance.Devices, Device{
+				DeviceID: fmt.Sprintf("%d", deviceID),
+				DeviceIP: devices[deviceID],
+			})
 			continue
 		}
 		phyID, exist := phyDevMapVirtualDev[deviceID]
@@ -368,7 +371,10 @@ func GetPodConfiguration(phyDevMapVirtualDev map[int]int, devices map[int]string
 			hwlog.RunLog.Warn("virtual device not found phyid")
 			continue
 		}
-		instance.Devices = append(instance.Devices, Device{DeviceID: phyID, DeviceIP: devices[deviceID]})
+		instance.Devices = append(instance.Devices, Device{
+			DeviceID: fmt.Sprintf("%d", phyID),
+			DeviceIP: devices[deviceID],
+		})
 	}
 	instanceByte, err := json.Marshal(instance)
 	if err != nil {
