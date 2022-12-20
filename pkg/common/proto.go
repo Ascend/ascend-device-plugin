@@ -73,7 +73,7 @@ type DavinCiDev struct {
 
 // Device id for Instcance
 type Device struct { // Device
-	DeviceID int    `json:"device_id"` // device id
+	DeviceID string `json:"device_id"` // device id
 	DeviceIP string `json:"device_ip"` // device ip
 }
 
