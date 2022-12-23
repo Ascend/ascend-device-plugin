@@ -183,8 +183,8 @@ func (ps *PluginServer) deepCopyDevice(cachedDevices []*common.NpuDevice) {
 	for _, dev := range cachedDevices {
 		ps.cachedDevices = append(ps.cachedDevices, common.NpuDevice{
 			DeviceName: dev.DeviceName,
-			Health: dev.Health,
-			PhyID: dev.PhyID,
+			Health:     dev.Health,
+			PhyID:      dev.PhyID,
 		})
 	}
 	ps.cachedLock.Unlock()
