@@ -546,7 +546,8 @@ func (tool *AscendTools) CreateVirtualDevice(phyID int32, templateName string) (
 	}
 	createOut, err := tool.dmgr.CreateVirtualDevice(logicID, createInfo)
 	if err != nil {
-		return "", err
+		hwlog.RunLog.Error(err)
+		return "", fmt.Errorf(common.NPUSegmentFailed)
 	}
 	hwlog.RunLog.Infof("create %s from device %d success", createInfo.TemplateName, phyID)
 	vDevType, exist := common.GetTemplateName2DeviceTypeMap()[templateName]
