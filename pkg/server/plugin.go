@@ -181,7 +181,11 @@ func (ps *PluginServer) deepCopyDevice(cachedDevices []*common.NpuDevice) {
 	ps.cachedLock.Lock()
 	ps.cachedDevices = ps.cachedDevices[:0]
 	for _, dev := range cachedDevices {
-		ps.cachedDevices = append(ps.cachedDevices, common.NpuDevice{DeviceName: dev.DeviceName, Health: dev.Health})
+		ps.cachedDevices = append(ps.cachedDevices, common.NpuDevice{
+			DeviceName: dev.DeviceName,
+			Health: dev.Health,
+			PhyID: dev.PhyID,
+		})
 	}
 	ps.cachedLock.Unlock()
 }
@@ -499,7 +503,6 @@ func (ps *PluginServer) getAICoreFromPodAnnotation(pod *v1.Pod, deviceType strin
 	if err := ps.DestroyNotUsedVNPU(); err != nil {
 		return nil, err
 	}
-
 	annotation, err := common.GetPodAnnotationByDeviceType(pod, deviceType)
 	if err != nil {
 		return nil, err
@@ -524,8 +527,33 @@ func (ps *PluginServer) getAICoreFromPodAnnotation(pod *v1.Pod, deviceType strin
 	for _, id := range ids {
 		phyDevs = append(phyDevs, fmt.Sprintf("%s-%s", ps.manager.GetName(), id))
 	}
+	inValidIDList := ps.isValidRequestID(ids)
+	if len(inValidIDList) != 0 {
+		hwlog.RunLog.Errorf("volcano allocated id %s is invalid", inValidIDList)
+		return nil, fmt.Errorf(common.NoNPUResource)
+	}
 	// like Ascend910-0,Ascend910-1,Ascend910-2,Ascend910-3
 	return phyDevs, nil
+}
+
+func (ps *PluginServer) isValidRequestID(phyDevs []string) []string {
+	var inValidIDList []string
+	for _, phyID := range phyDevs {
+		if ps.isValidPhyID(phyID) {
+			continue
+		}
+		inValidIDList = append(inValidIDList, phyID)
+	}
+	return inValidIDList
+}
+
+func (ps *PluginServer) isValidPhyID(phyID string) bool {
+	for _, cacheDev := range ps.cachedDevices {
+		if phyID == strconv.Itoa(int(cacheDev.PhyID)) {
+			return true
+		}
+	}
+	return false
 }
 
 func (ps *PluginServer) doWithVolcanoSchedule(requestDevices []string) ([]string, error) {

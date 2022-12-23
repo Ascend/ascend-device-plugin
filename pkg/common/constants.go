@@ -292,4 +292,9 @@ const (
 	MiddelLine = "-"
 	// UnderLine the separator between ids
 	UnderLine = "_"
+
+	// NoNPUResource means allocated some devices that don't exist
+	NoNPUResource = "NoNPUResource"
+	// NPUSegmentFailed means create vnpu device failed
+	NPUSegmentFailed = "NPUSegmentFailed"
 )
