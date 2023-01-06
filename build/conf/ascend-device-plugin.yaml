@@ -51,6 +51,14 @@ compile:
             option: "-i"
             srcstr: 's/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:{{version}}/'
             curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/build/ascendplugin-310P-volcano.yaml'
+        - sed:
+            option: "-i"
+            srcstr: "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:{{version}}/"
+            curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/build/ascendplugin-310P-1usoc.yaml'
+        - sed:
+            option: "-i"
+            srcstr: 's/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:{{version}}/'
+            curfile: '{{ systemEnv.workspace }}/ascend-device-plugin/build/ascendplugin-310P-1usoc-volcano.yaml'
         - copy:
             src:
               - '{{ systemEnv.workspace }}/ascend-device-plugin/build/ascendplugin-910.yaml'
@@ -83,7 +91,25 @@ compile:
             rename: True
         - copy:
             src:
+              - '{{ systemEnv.workspace }}/ascend-device-plugin/build/ascendplugin-310P-1usoc.yaml'
+            des: "{{ systemEnv.workspace }}/{{ component}}/output/device-plugin-310P-1usoc-{{version}}.yaml"
+            rename: True
+        - copy:
+            src:
+              - '{{ systemEnv.workspace }}/ascend-device-plugin/build/ascendplugin-310P-1usoc-volcano.yaml'
+            des: "{{ systemEnv.workspace }}/{{ component}}/output/device-plugin-310P-1usoc-volcano-{{version}}.yaml"
+            rename: True
+        - copy:
+            src:
               - "{{ systemEnv.workspace }}/ascend-device-plugin/build/Dockerfile"
+            des: "{{ systemEnv.workspace }}/{{ component}}/output/"
+        - copy:
+            src:
+              - "{{ systemEnv.workspace }}/ascend-device-plugin/build/Dockerfile-310P-1usoc"
+            des: "{{ systemEnv.workspace }}/{{ component}}/output/"
+        - copy:
+            src:
+              - "{{ systemEnv.workspace }}/ascend-device-plugin/build/run_for_310P_1usoc.sh"
             des: "{{ systemEnv.workspace }}/{{ component}}/output/"
         - sed:
             option: "-i"
@@ -96,6 +122,10 @@ compile:
         - mode:
             src:
               - "{{ systemEnv.workspace }}/{{ component}}/output/device-plugin"
+            mode: 500
+        - mode:
+            src:
+              - "{{ systemEnv.workspace }}/{{ component}}/output/run_for_310P_1usoc.sh"
             mode: 500
         - commands:
             - command: "if [ -d '{{systemEnv.workspace }}/npu-exporter' ];
