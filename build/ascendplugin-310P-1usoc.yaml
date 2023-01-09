@@ -53,12 +53,6 @@ spec:
               readOnly: true
             - name: log-path
               mountPath: /var/log/mindx-dl/devicePlugin
-            - name: kmckeystore
-              mountPath: /etc/mindx-dl/kmc_primary_store
-            - name: kmckeybak
-              mountPath: /etc/mindx-dl/.config
-            - name: kmc-deviceplugin
-              mountPath: /etc/mindx-dl/device-plugin
             - name: pod-resource
               mountPath: /var/lib/kubelet/pod-resources
             - name: tmp
@@ -91,15 +85,6 @@ spec:
           hostPath:
             path: /var/log/mindx-dl/devicePlugin
             type: Directory
-        - name: kmckeystore
-          hostPath:
-            path: /etc/mindx-dl/kmc_primary_store
-        - name: kmckeybak
-          hostPath:
-            path: /etc/mindx-dl/.config
-        - name: kmc-deviceplugin
-          hostPath:
-            path: /etc/mindx-dl/device-plugin
         - name: pod-resource
           hostPath:
             path: /var/lib/kubelet/pod-resources
