@@ -24,8 +24,8 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
-	"huawei.com/mindx/common/hwlog"
-	"huawei.com/mindx/common/limiter"
+	"huawei.com/npu-exporter/common-utils/hwlog"
+	"huawei.com/npu-exporter/common-utils/limiter"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/pkg/common"

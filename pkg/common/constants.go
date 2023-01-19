@@ -254,10 +254,6 @@ const (
 	HiAi200RCMemoryBandwidth = "/dev/memory_bandwidth"
 	// HiAi200RCTsAisle ts_aisle
 	HiAi200RCTsAisle = "/dev/ts_aisle"
-	// DefaultKubeConfig is default k8s config file
-	DefaultKubeConfig = "/etc/mindx-dl/device-plugin/.config/config6"
-	// DefaultKubeConfigBkp is default k8s config bake up file
-	DefaultKubeConfigBkp = "/etc/mindx-dl/device-plugin/.config6"
 )
 
 const (

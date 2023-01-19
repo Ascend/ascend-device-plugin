@@ -1,6 +1,6 @@
 #!/bin/bash
 # Perform  build ascend-device-plugin
-# Copyright(C) Huawei Technologies Co.,Ltd. 2020-2022. All rights reserved.
+# Copyright(C) Huawei Technologies Co.,Ltd. 2020-2023. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -63,14 +63,6 @@ function build_plugin() {
     fi
 }
 
-function copy_kmc_files() {
-    cp -rf "${npu_exporter_folder}/lib" "${TOP_DIR}"/output
-    cp -rf "${npu_exporter_folder}/cert-importer" "${TOP_DIR}"/output
-    chmod 550 "${TOP_DIR}"/output/lib
-    chmod 500 "${TOP_DIR}"/output/lib/*
-    chmod 500 "${TOP_DIR}/output/cert-importer"
-}
-
 function mv_file() {
     mv "${TOP_DIR}/${output_name}"   "${TOP_DIR}"/output
 }
@@ -111,9 +103,6 @@ function main() {
   mv_file
   modify_version
   change_mod
-  if [ "$1" != nokmc ]; then
-   copy_kmc_files
-  fi
 }
 
 

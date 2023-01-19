@@ -21,15 +21,13 @@ import (
 	"os"
 	"regexp"
 
-	"huawei.com/mindx/common/hwlog"
-	"huawei.com/mindx/common/k8stool"
-	"huawei.com/mindx/common/utils"
-	"huawei.com/mindx/common/x509"
+	"huawei.com/npu-exporter/common-utils/hwlog"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/kubernetes/pkg/util/node"
 
 	"Ascend-device-plugin/pkg/common"
@@ -42,27 +40,22 @@ type ClientK8s struct {
 	DeviceInfoName string
 }
 
-// NewClientK8s create ClientK8s
-func NewClientK8s(kubeConfig string) (*ClientK8s, error) {
-	if kubeConfig == "" && (utils.IsExist(common.DefaultKubeConfig) || utils.IsExist(common.DefaultKubeConfigBkp)) {
-		// if default path kubeConfig file is not exist means use serverAccount
-		cfgInstance, err := x509.NewBKPInstance(nil, common.DefaultKubeConfig, common.DefaultKubeConfigBkp)
-		if err != nil {
-			return nil, err
-		}
-		cfgBytes, err := cfgInstance.ReadFromDisk(utils.FileMode, true)
-		if err != nil || cfgBytes == nil {
-			return nil, fmt.Errorf("no kubeConfig file Found")
-		}
-		kubeConfig = common.DefaultKubeConfig
-	}
-	client, err := k8stool.K8sClientFor(kubeConfig, common.Component)
+// NewClientK8s create k8s client
+func NewClientK8s() (*ClientK8s, error) {
+	clientCfg, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create kube client: %v", err)
+		hwlog.RunLog.Errorf("build client config err: %#v", err)
+		return nil, err
+	}
+
+	client, err := kubernetes.NewForConfig(clientCfg)
+	if err != nil {
+		hwlog.RunLog.Errorf("get client err: %#v", err)
+		return nil, err
 	}
 	nodeName, err := getNodeNameFromEnv()
 	if err != nil {
-		return nil, fmt.Errorf("get node name failed: %v", err)
+		return nil, err
 	}
 
 	return &ClientK8s{
@@ -169,6 +162,9 @@ func getNodeNameFromEnv() (string, error) {
 }
 
 func checkNodeName(nodeName string) error {
+	if len(nodeName) == 0 {
+		return fmt.Errorf("the env variable whose key is NODE_NAME must be set")
+	}
 	if len(nodeName) > common.KubeEnvMaxLength {
 		return fmt.Errorf("node name length %d is bigger than %d", len(nodeName), common.KubeEnvMaxLength)
 	}
