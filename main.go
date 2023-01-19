@@ -20,7 +20,7 @@ import (
 	"flag"
 	"fmt"
 
-	"huawei.com/mindx/common/hwlog"
+	"huawei.com/npu-exporter/common-utils/hwlog"
 	"huawei.com/npu-exporter/devmanager"
 
 	"Ascend-device-plugin/pkg/common"
@@ -64,8 +64,6 @@ var (
 		"The log file path, if the file size exceeds 20MB, will be rotate")
 	logMaxBackups = flag.Int("maxBackups", common.MaxBackups,
 		"Maximum number of backup log files, range is (0, 30]")
-	kubeconfig = flag.String("kubeConfig", "", "Path to a kubeconfig. "+
-		"Only required if out-of-cluster.")
 	presetVirtualDevice = flag.Bool("presetVirtualDevice", true, "Open the static of "+
 		"computing power splitting function, only support Ascend910 and Ascend310P")
 )
@@ -157,7 +155,7 @@ func InitFunction() (*server.HwDevManager, error) {
 	}
 	var kubeClient *kubeclient.ClientK8s
 	if common.ParamOption.UseVolcanoType {
-		kubeClient, err = kubeclient.NewClientK8s(common.ParamOption.KubeConfig)
+		kubeClient, err = kubeclient.NewClientK8s()
 		if err != nil {
 			hwlog.RunLog.Errorf("init kubeclient failed err: %#v", err)
 			return nil, err
@@ -180,7 +178,6 @@ func setParameters() {
 		UseVolcanoType:     *volcanoType,
 		AutoStowingDevs:    *autoStowing,
 		ListAndWatchPeriod: *listWatchPeriod,
-		KubeConfig:         *kubeconfig,
 		PresetVDevice:      *presetVirtualDevice,
 	}
 }

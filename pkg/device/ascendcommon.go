@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"huawei.com/mindx/common/hwlog"
+	"huawei.com/npu-exporter/common-utils/hwlog"
 	"huawei.com/npu-exporter/devmanager"
 	npuCommon "huawei.com/npu-exporter/devmanager/common"
 	"k8s.io/api/core/v1"

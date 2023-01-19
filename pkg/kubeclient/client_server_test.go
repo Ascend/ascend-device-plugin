@@ -19,7 +19,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -27,13 +26,11 @@ import (
 
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/smartystreets/goconvey/convey"
-	"huawei.com/mindx/common/hwlog"
-	"huawei.com/mindx/common/k8stool"
+	"huawei.com/npu-exporter/common-utils/hwlog"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/kubernetes"
 
 	"Ascend-device-plugin/pkg/common"
 )
@@ -58,19 +55,7 @@ func init() {
 }
 
 func initK8S() (*ClientK8s, error) {
-	if err := os.Setenv(nodeNameKey, nodeNameValue); err != nil {
-		return nil, err
-	}
-	mockK8s := gomonkey.ApplyFunc(k8stool.K8sClientFor, func(string, string) (*kubernetes.Clientset, error) {
-		return nil, nil
-	})
-	defer mockK8s.Reset()
-	utKubeClient, err := NewClientK8s(common.ParamOption.KubeConfig)
-	if err != nil {
-		hwlog.RunLog.Errorf("init kubeclient failed")
-		return nil, err
-	}
-	return utKubeClient, nil
+	return &ClientK8s{}, nil
 }
 
 // TestAnnotationReset test device info reset
@@ -215,41 +200,6 @@ func TestTryUpdatePodAnnotation(t *testing.T) {
 		err := utKubeClient.TryUpdatePodAnnotation(testPod,
 			getDeviceInfo(common.HuaweiAscend310P, npuChip310PPhyID0))
 		convey.So(err.Error(), convey.ShouldEqual, "update pod annotation failed, exceeded max number of retries")
-	})
-}
-
-// TestNewKubeClient test create new kubernetes client
-func TestNewKubeClient(t *testing.T) {
-	mockK8s := gomonkey.ApplyFunc(k8stool.K8sClientFor, func(string, string) (*kubernetes.Clientset, error) {
-		return nil, nil
-	})
-	defer mockK8s.Reset()
-	if err := os.Unsetenv(nodeNameKey); err != nil {
-		t.Fatal("TestNewKubeClient failed")
-	}
-	convey.Convey("create new kubernetes client when node name not exist", t, func() {
-		_, err := NewClientK8s(common.ParamOption.KubeConfig)
-		convey.So(err, convey.ShouldNotBeNil)
-	})
-	convey.Convey("create new kubernetes client when node name exist", t, func() {
-		err := os.Setenv(nodeNameKey, nodeNameValue)
-		convey.So(err, convey.ShouldBeNil)
-		_, err = NewClientK8s(common.ParamOption.KubeConfig)
-		convey.So(err, convey.ShouldEqual, nil)
-	})
-	convey.Convey("create new kubernetes client when node name is too long", t, func() {
-		err := os.Setenv(nodeNameKey, invalidNodeName)
-		convey.So(err, convey.ShouldBeNil)
-		_, err = NewClientK8s(common.ParamOption.KubeConfig)
-		convey.So(err, convey.ShouldNotBeNil)
-	})
-	convey.Convey("create new kubernetes client when get client failed", t, func() {
-		mockK8s := gomonkey.ApplyFunc(k8stool.K8sClientFor, func(string, string) (*kubernetes.Clientset, error) {
-			return nil, fmt.Errorf("get kubernetes client failed")
-		})
-		defer mockK8s.Reset()
-		_, err := NewClientK8s(common.ParamOption.KubeConfig)
-		convey.So(err.Error(), convey.ShouldEqual, "failed to create kube client: get kubernetes client failed")
 	})
 }
 

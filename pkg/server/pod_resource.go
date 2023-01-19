@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"time"
 
-	"huawei.com/mindx/common/hwlog"
+	"huawei.com/npu-exporter/common-utils/hwlog"
 	"k8s.io/kubernetes/pkg/kubelet/apis/podresources"
 	"k8s.io/kubernetes/pkg/kubelet/apis/podresources/v1alpha1"
 

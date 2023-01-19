@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"huawei.com/mindx/common/hwlog"
+	"huawei.com/npu-exporter/common-utils/hwlog"
 	"huawei.com/npu-exporter/devmanager"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 

@@ -91,7 +91,6 @@ type Option struct {
 	UseVolcanoType     bool
 	ListAndWatchPeriod int  // set listening device state period
 	AutoStowingDevs    bool // auto stowing fixes devices or not
-	KubeConfig         string
 	PresetVDevice      bool
 	ProductType        string
 	AiCoreCount        int32 // found by dcmi interface
