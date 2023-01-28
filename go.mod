@@ -18,7 +18,7 @@ require (
 replace (
 	github.com/containernetworking/cni => github.com/containernetworking/cni v0.8.1
 	github.com/gorilla/websocket => github.com/gorilla/websocket v1.4.2
-	huawei.com/npu-exporter => codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.3.0
+	huawei.com/npu-exporter => gitee.com/ascend/ascend-npu-exporter v0.3.0
 	k8s.io/api => k8s.io/api v0.19.4
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.19.4
 	k8s.io/apimachinery => k8s.io/apimachinery v0.19.4
