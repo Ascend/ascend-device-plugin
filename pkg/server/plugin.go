@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"strings"
 
-	"huawei.com/npu-exporter/common-utils/hwlog"
+	"huawei.com/npu-exporter/v3/common-utils/hwlog"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"

@@ -31,7 +31,7 @@ import (
 	"syscall"
 
 	"github.com/fsnotify/fsnotify"
-	"huawei.com/npu-exporter/common-utils/hwlog"
+	"huawei.com/npu-exporter/v3/common-utils/hwlog"
 	"k8s.io/api/core/v1"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
