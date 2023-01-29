@@ -7,7 +7,7 @@ require (
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/smartystreets/goconvey v1.7.2
 	google.golang.org/grpc v1.41.0
-	huawei.com/npu-exporter v0.3.0
+	huawei.com/npu-exporter/v3 v3.0.0
 	k8s.io/api v0.19.4
 	k8s.io/apimachinery v0.19.4
 	k8s.io/client-go v0.19.4
@@ -18,7 +18,7 @@ require (
 replace (
 	github.com/containernetworking/cni => github.com/containernetworking/cni v0.8.1
 	github.com/gorilla/websocket => github.com/gorilla/websocket v1.4.2
-	huawei.com/npu-exporter => gitee.com/ascend/ascend-npu-exporter v0.3.0
+	huawei.com/npu-exporter/v3 => gitee.com/ascend/ascend-npu-exporter/v3 v3.0.0
 	k8s.io/api => k8s.io/api v0.19.4
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.19.4
 	k8s.io/apimachinery => k8s.io/apimachinery v0.19.4

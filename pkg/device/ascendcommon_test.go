@@ -22,8 +22,8 @@ import (
 
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/smartystreets/goconvey/convey"
-	"huawei.com/npu-exporter/devmanager"
-	npuCommon "huawei.com/npu-exporter/devmanager/common"
+	"huawei.com/npu-exporter/v3/devmanager"
+	npuCommon "huawei.com/npu-exporter/v3/devmanager/common"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
