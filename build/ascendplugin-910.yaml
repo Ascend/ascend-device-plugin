@@ -31,7 +31,7 @@ spec:
       nodeSelector:
         accelerator: huawei-Ascend910
       containers:
-      - image: ascend-k8sdeviceplugin:v3.0.RC3
+      - image: ascend-k8sdeviceplugin:v3.0.0
         name: device-plugin-01
         resources:
           requests:
