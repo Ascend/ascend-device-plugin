@@ -1,14 +1,12 @@
-# Ascend Device Plugin.zh
+# Ascend Device Plugin
 
--   **[组件介绍](#组件介绍.md)**
+-   **[组件介绍](#组件介绍)**
+-   **[编译Ascend Device Plugin](#编译Ascend-Device-Plugin)**
+-   **[组件安装](#组件安装)**
+-   **[说明](#说明)**
+-   **[更新日志](#更新日志)**
 
--   **[编译Ascend Device Plugin](#编译Ascend-Device-Plugin.md)**
-
--   **[组件安装](#组件安装.md)** 
-
--   **[更新日志](#更新日志.md)**  
-
-<h2 id="组件介绍.md">组件介绍</h2>
+# 组件介绍
 
 设备管理插件拥有以下功能：
 
@@ -16,15 +14,15 @@
 -   健康检查：支持检测昇腾设备的健康状态，当设备处于不健康状态时，上报到Kubernetes系统中，Kubernetes系统会自动将不健康设备从可用列表中剔除。虚拟设备健康状态由拆分这些虚拟设备的物理设备决定。
 -   设备分配：支持在Kubernetes系统中分配昇腾设备；支持NPU设备重调度功能，设备故障后会自动拉起新容器，挂载健康设备，并重建训练任务。
 
-<h2 id="编译Ascend-Device-Plugin.md">编译Ascend Device Plugin</h2>
+# 编译Ascend-Device-Plugin
 
-1.  下载源码包，获得ascend-device-plugin。
+1.  通过git拉取源码，并切换sync-dev分支，获得ascend-device-plugin。
 
     示例：源码放在/home/test/ascend-device-plugin目录下
 
 2.  执行以下命令，进入构建目录，执行构建脚本，在“output“目录下生成二进制device-plugin、yaml文件和Dockerfile等文件。
 
-    **cd **_/home/test/_**ascend-device-plugin/build/**
+    **cd** _/home/test/_**ascend-device-plugin/build/**
 
     **chmod +x build.sh**
 
@@ -32,7 +30,7 @@
 
 3.  执行以下命令，查看**output**生成的软件列表。
 
-    **ll **_/home/test/_**ascend-device-plugin/output**
+    **ll** _/home/test/_**ascend-device-plugin/output**
 
     ```
     drwxr-xr-x  2 root root     4096 Jan 18 17:04 ./
@@ -54,13 +52,16 @@
     >![](doc/figures/icon-note.gif) **说明：** 
     >“ascend-device-plugin/build“目录下的**ascendplugin-910.yaml**文件在“ascend-device-plugin/output/“下生成的对应文件为**device-plugin-910-v3.0.0.yaml**，作用是更新版本号。
 
-<h2 id="组件安装.md">组件安装</h2>
-
+# 组件安装
 
 1.  请参考《MindX DL用户指南》(https://www.hiascend.com/software/mindx-dl)
     中的“集群调度用户指南 > 安装部署指导 \> 安装集群调度组件 \> 典型安装场景 \> 集群调度场景”进行。
 
-<h2 id="更新日志.md">更新日志</h2>
+# 说明
+
+1. 当前容器方式部署本组件，本组件的认证鉴权方式为ServiceAccount， 该认证鉴权方式为ServiceAccount的token明文显示，如果需要加密保存，请自行修改
+
+# 更新日志
 
 <a name="table7854542104414"></a>
 <table><thead align="left"><tr id="zh-cn_topic_0280467800_row785512423445"><th class="cellrowborder" valign="top" width="33.33333333333333%" id="mcps1.1.4.1.1"><p id="zh-cn_topic_0280467800_p19856144274419"><a name="zh-cn_topic_0280467800_p19856144274419"></a><a name="zh-cn_topic_0280467800_p19856144274419"></a>版本</p>
@@ -80,4 +81,5 @@
 </tr>
 </tbody>
 </table>
+
 
