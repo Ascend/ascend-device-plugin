@@ -19,6 +19,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
 
 	"huawei.com/npu-exporter/v3/common-utils/hwlog"
 	"huawei.com/npu-exporter/v3/devmanager"
@@ -41,14 +42,17 @@ const (
 	minListWatchPeriod = 3
 	maxRunModeLength   = 10
 	maxLogLineLength   = 1024
+	// Atlas200ISoc 200 soc env
+	Atlas200ISoc = "Atlas 200I SoC A1"
 )
 
 var (
 	mode = flag.String("mode", "", "Device plugin running mode: ascend310, ascend310P, "+
 		"ascend910. This parameter will be deprecated in future versions")
 	fdFlag          = flag.Bool("fdFlag", false, "Whether to use fd system to manage device (default false)")
-	useAscendDocker = flag.Bool("useAscendDocker", true, "Whether to use ascend docker")
-	volcanoType     = flag.Bool("volcanoType", false,
+	useAscendDocker = flag.Bool("useAscendDocker", true, "Whether to use ascend docker. "+
+		"This parameter will be deprecated in future versions")
+	volcanoType = flag.Bool("volcanoType", false,
 		"Specifies whether to use volcano for scheduling when the chip type is Ascend310 or Ascend910 (default false)")
 	version     = flag.Bool("version", false, "Output version information")
 	edgeLogFile = flag.String("edgeLogFile", "/var/alog/AtlasEdge_log/devicePlugin.log",
@@ -141,6 +145,7 @@ func main() {
 	if err != nil {
 		return
 	}
+	setUseAscendDocker()
 
 	go hdm.ListenDevice(ctx)
 	hdm.SignCatch(cancel)
@@ -180,4 +185,22 @@ func setParameters() {
 		ListAndWatchPeriod: *listWatchPeriod,
 		PresetVDevice:      *presetVirtualDevice,
 	}
+}
+
+func setUseAscendDocker() {
+	*useAscendDocker = true
+	ascendDocker := os.Getenv("ASCEND_DOCKER_RUNTIME")
+	if ascendDocker != "True" {
+		*useAscendDocker = false
+		hwlog.RunLog.Debugf("get ASCEND_DOCKER_RUNTIME from env is: %#v", ascendDocker)
+	}
+
+	deviceType := common.ParamOption.ProductType
+	if deviceType == Atlas200ISoc {
+		*useAscendDocker = false
+		hwlog.RunLog.Debugf("your device-type is: %v", deviceType)
+	}
+
+	common.ParamOption.UseAscendDocker = *useAscendDocker
+	hwlog.RunLog.Infof("device-plugin set ascend docker as: %v", *useAscendDocker)
 }
