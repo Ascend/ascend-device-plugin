@@ -1,0 +1,26 @@
+FROM ubuntu:18.04 as build
+
+RUN useradd -d /home/hwMindX -u 9000 -m -s /usr/sbin/nologin hwMindX &&\
+    groupadd -g 1000 HwHiAiUser && useradd -u 1000 -g HwHiAiUser -d /home/HwHiAiUser -m HwHiAiUser &&\
+    groupadd -g 1002 HwDmUser && useradd -u 1002 -g HwDmUser -d /home/HwDmUser -m HwDmUser &&\
+    groupadd -g 1003 HwBaseUser && useradd -u 1003 -g HwBaseUser -d /home/HwBaseUser -m HwBaseUser &&\
+    usermod -a -G HwBaseUser HwHiAiUser &&\
+    usermod -a -G HwDmUser HwHiAiUser &&\
+    usermod -a -G HwBaseUser HwDmUser &&\
+    usermod -a -G HwHiAiUser HwDmUser &&\
+    usermod root -s /usr/sbin/nologin
+
+ENV USE_ASCEND_DOCKER true
+
+ENV LD_LIBRARY_PATH  /usr/local/Ascend/driver/lib64/driver:/usr/local/Ascend/driver/lib64/common
+
+ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/Ascend/driver/lib64
+
+COPY ./device-plugin /usr/local/bin/
+COPY ./run_for_310P_1usoc.sh /
+RUN chmod 550 /usr/local/bin/device-plugin &&\
+    chmod 550 /usr/local/bin &&\
+    chmod 750 /home/HwHiAiUser &&\
+    chmod 500 /run_for_310P_1usoc.sh &&\
+    echo 'umask 027' >> /etc/profile &&\
+    echo 'source /etc/profile' >> ~/.bashrc
