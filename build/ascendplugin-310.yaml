@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: ascend-device-plugin2-daemonset
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      name: ascend-device-plugin-ds
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ""
+        seccomp.security.alpha.kubernetes.io/pod: runtime/default
+      labels:
+        name: ascend-device-plugin-ds
+    spec:
+      tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - key: huawei.com/Ascend310
+          operator: Exists
+          effect: NoSchedule
+        - key: "device-plugin"
+          operator: "Equal"
+          value: "v2"
+          effect: NoSchedule
+      priorityClassName: "system-node-critical"
+      nodeSelector:
+        accelerator: huawei-Ascend310
+      containers:
+      - image: ascend-k8sdeviceplugin:v3.0.0
+        name: device-plugin-01
+        resources:
+          requests:
+            memory: 500Mi
+            cpu: 500m
+          limits:
+            memory: 500Mi
+            cpu: 500m
+        command: [ "/bin/bash", "-c", "--"]
+        args: [ "device-plugin  -useAscendDocker=true
+                 -logFile=/var/log/mindx-dl/devicePlugin/devicePlugin.log -logLevel=0" ]
+        securityContext:
+          privileged: true
+          readOnlyRootFilesystem: true
+        imagePullPolicy: Never
+        volumeMounts:
+          - name: device-plugin
+            mountPath: /var/lib/kubelet/device-plugins
+          - name: hiai-driver
+            mountPath: /usr/local/Ascend/driver
+            readOnly: true
+          - name: log-path
+            mountPath: /var/log/mindx-dl/devicePlugin
+          - name: tmp
+            mountPath: /tmp
+      volumes:
+        - name: device-plugin
+          hostPath:
+            path: /var/lib/kubelet/device-plugins
+        - name: hiai-driver
+          hostPath:
+            path: /usr/local/Ascend/driver
+        - name: log-path
+          hostPath:
+            path: /var/log/mindx-dl/devicePlugin
+            type: Directory
+        - name: tmp
+          hostPath:
+            path: /tmp
