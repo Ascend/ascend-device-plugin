@@ -25,7 +25,7 @@ version_file="${TOP_DIR}"/service_config.ini
 if  [ -f "$version_file" ]; then
   line=$(sed -n '1p' "$version_file" 2>&1)
   #cut the chars after ':' and add char 'v', the final example is v3.0.0
-  build_version="v"${line#*:}
+  build_version="v"${line#*=}
 fi
 
 output_name="device-plugin"
