@@ -24,7 +24,6 @@ import (
 	"huawei.com/npu-exporter/v3/devmanager"
 
 	"Ascend-device-plugin/pkg/common"
-	"Ascend-device-plugin/pkg/kubeclient"
 	"Ascend-device-plugin/pkg/server"
 )
 
@@ -133,9 +132,7 @@ func main() {
 	if !checkParam() {
 		return
 	}
-
 	hwlog.RunLog.Infof("ascend device plugin starting and the version is %s", BuildVersion)
-
 	setParameters()
 	hdm, err := InitFunction()
 	if err != nil {
@@ -153,16 +150,7 @@ func InitFunction() (*server.HwDevManager, error) {
 		hwlog.RunLog.Errorf("init devmanager failed, err: %#v", err)
 		return nil, err
 	}
-	var kubeClient *kubeclient.ClientK8s
-	if common.ParamOption.UseVolcanoType {
-		kubeClient, err = kubeclient.NewClientK8s()
-		if err != nil {
-			hwlog.RunLog.Errorf("init kubeclient failed err: %#v", err)
-			return nil, err
-		}
-		hwlog.RunLog.Info("init kube client success")
-	}
-	hdm := server.NewHwDevManager(devM, kubeClient)
+	hdm := server.NewHwDevManager(devM)
 	if hdm == nil {
 		hwlog.RunLog.Error("init device manager failed")
 		return nil, fmt.Errorf("init device manager failed")
