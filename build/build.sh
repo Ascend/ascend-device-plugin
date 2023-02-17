@@ -20,14 +20,13 @@ set -e
 CUR_DIR=$(dirname "$(readlink -f "$0")")
 TOP_DIR=$(realpath "${CUR_DIR}"/..)
 
-build_version="v3.0.0"
+build_version="v5.0.RC1"
 version_file="${TOP_DIR}"/service_config.ini
 if  [ -f "$version_file" ]; then
-  line=$(sed -n '4p' "$version_file" 2>&1)
-  #cut the chars after ':'
-  build_version=${line#*:}
+  line=$(sed -n '1p' "$version_file" 2>&1)
+  #cut the chars after ':' and add char 'v', the final example is v3.0.0
+  build_version="v"${line#*:}
 fi
-npu_exporter_folder="${TOP_DIR}/npu-exporter"
 
 output_name="device-plugin"
 os_type=$(arch)
