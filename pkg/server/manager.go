@@ -17,6 +17,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -28,6 +29,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"huawei.com/npu-exporter/v3/common-utils/hwlog"
 	"huawei.com/npu-exporter/v3/devmanager"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/pkg/common"
@@ -45,9 +47,9 @@ type HwDevManager struct {
 }
 
 // NewHwDevManager function is used to new a dev manager.
-func NewHwDevManager(devM devmanager.DeviceInterface, client *kubeclient.ClientK8s) *HwDevManager {
+func NewHwDevManager(devM devmanager.DeviceInterface) *HwDevManager {
 	var hdm HwDevManager
-	if err := hdm.setAscendManager(devM, client); err != nil {
+	if err := hdm.setAscendManager(devM); err != nil {
 		hwlog.RunLog.Errorf("init hw dev manager failed, err: %#v", err)
 		return nil
 	}
@@ -62,7 +64,7 @@ func NewHwDevManager(devM devmanager.DeviceInterface, client *kubeclient.ClientK
 	return &hdm
 }
 
-func (hdm *HwDevManager) setAscendManager(dmgr devmanager.DeviceInterface, client *kubeclient.ClientK8s) error {
+func (hdm *HwDevManager) setAscendManager(dmgr devmanager.DeviceInterface) error {
 	switch dmgr.GetDevType() {
 	case common.Ascend310:
 		if !common.ParamOption.PresetVDevice {
@@ -81,9 +83,6 @@ func (hdm *HwDevManager) setAscendManager(dmgr devmanager.DeviceInterface, clien
 		return fmt.Errorf("an unsupported device type")
 	}
 	hdm.manager.SetDmgr(dmgr)
-	if common.ParamOption.UseVolcanoType && client != nil {
-		hdm.manager.SetKubeClient(client)
-	}
 	productType, err := hdm.manager.GetDmgr().GetProductType()
 	if err != nil {
 		return err
@@ -93,15 +92,35 @@ func (hdm *HwDevManager) setAscendManager(dmgr devmanager.DeviceInterface, clien
 }
 
 func (hdm *HwDevManager) updateServerType() error {
-	if hdm.RunMode != common.Ascend310P || common.ParamOption.PresetVDevice || !common.ParamOption.UseVolcanoType {
+	kubeClient, err := kubeclient.NewClientK8s()
+	if err != nil {
+		isNotFoundKubeCfg := strings.Contains(err.Error(), clientcmd.ErrEmptyConfig.Error())
+		if !isNotFoundKubeCfg {
+			hwlog.RunLog.Errorf("init kubeclient failed err: %#v", err)
+			return err
+		}
+		if common.ParamOption.UseVolcanoType {
+			hwlog.RunLog.Warnf("not exist kube config, maybe it's edge scene")
+			return errors.New("using volcano need kubeConfig, but not found")
+		}
 		return nil
 	}
+	if kubeClient == nil {
+		return errors.New("kube client is nil")
+	}
+	hdm.manager.SetKubeClient(kubeClient)
+	hwlog.RunLog.Info("init kube client success")
 	aiCoreCount, err := hdm.manager.GetChipAiCoreCount()
 	if err != nil {
 		hwlog.RunLog.Errorf("get chip aicore count failed, err: %#v", err)
 		return err
 	}
 	common.ParamOption.AiCoreCount = aiCoreCount
+	return hdm.updateNodeServerType(aiCoreCount)
+
+}
+
+func (hdm *HwDevManager) updateNodeServerType(aiCoreCount int32) error {
 	oldNode, err := hdm.manager.GetKubeClient().GetNode()
 	if err != nil {
 		hwlog.RunLog.Errorf("failed to get node, err: %#v", err)

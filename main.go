@@ -19,12 +19,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
 
 	"huawei.com/npu-exporter/v3/common-utils/hwlog"
 	"huawei.com/npu-exporter/v3/devmanager"
 
 	"Ascend-device-plugin/pkg/common"
-	"Ascend-device-plugin/pkg/kubeclient"
 	"Ascend-device-plugin/pkg/server"
 )
 
@@ -41,14 +41,17 @@ const (
 	minListWatchPeriod = 3
 	maxRunModeLength   = 10
 	maxLogLineLength   = 1024
+	// Atlas200ISoc 200 soc env
+	Atlas200ISoc = "Atlas 200I SoC A1"
 )
 
 var (
 	mode = flag.String("mode", "", "Device plugin running mode: ascend310, ascend310P, "+
 		"ascend910. This parameter will be deprecated in future versions")
 	fdFlag          = flag.Bool("fdFlag", false, "Whether to use fd system to manage device (default false)")
-	useAscendDocker = flag.Bool("useAscendDocker", true, "Whether to use ascend docker")
-	volcanoType     = flag.Bool("volcanoType", false,
+	useAscendDocker = flag.Bool("useAscendDocker", true, "Whether to use ascend docker. "+
+		"This parameter will be deprecated in future versions")
+	volcanoType = flag.Bool("volcanoType", false,
 		"Specifies whether to use volcano for scheduling when the chip type is Ascend310 or Ascend910 (default false)")
 	version     = flag.Bool("version", false, "Output version information")
 	edgeLogFile = flag.String("edgeLogFile", "/var/alog/AtlasEdge_log/devicePlugin.log",
@@ -133,14 +136,13 @@ func main() {
 	if !checkParam() {
 		return
 	}
-
 	hwlog.RunLog.Infof("ascend device plugin starting and the version is %s", BuildVersion)
-
 	setParameters()
 	hdm, err := InitFunction()
 	if err != nil {
 		return
 	}
+	setUseAscendDocker()
 
 	go hdm.ListenDevice(ctx)
 	hdm.SignCatch(cancel)
@@ -153,16 +155,7 @@ func InitFunction() (*server.HwDevManager, error) {
 		hwlog.RunLog.Errorf("init devmanager failed, err: %#v", err)
 		return nil, err
 	}
-	var kubeClient *kubeclient.ClientK8s
-	if common.ParamOption.UseVolcanoType {
-		kubeClient, err = kubeclient.NewClientK8s()
-		if err != nil {
-			hwlog.RunLog.Errorf("init kubeclient failed err: %#v", err)
-			return nil, err
-		}
-		hwlog.RunLog.Info("init kube client success")
-	}
-	hdm := server.NewHwDevManager(devM, kubeClient)
+	hdm := server.NewHwDevManager(devM)
 	if hdm == nil {
 		hwlog.RunLog.Error("init device manager failed")
 		return nil, fmt.Errorf("init device manager failed")
@@ -180,4 +173,22 @@ func setParameters() {
 		ListAndWatchPeriod: *listWatchPeriod,
 		PresetVDevice:      *presetVirtualDevice,
 	}
+}
+
+func setUseAscendDocker() {
+	*useAscendDocker = true
+	ascendDocker := os.Getenv("ASCEND_DOCKER_RUNTIME")
+	if ascendDocker != "True" {
+		*useAscendDocker = false
+		hwlog.RunLog.Debugf("get ASCEND_DOCKER_RUNTIME from env is: %#v", ascendDocker)
+	}
+
+	deviceType := common.ParamOption.ProductType
+	if deviceType == Atlas200ISoc {
+		*useAscendDocker = false
+		hwlog.RunLog.Debugf("your device-type is: %v", deviceType)
+	}
+
+	common.ParamOption.UseAscendDocker = *useAscendDocker
+	hwlog.RunLog.Infof("device-plugin set ascend docker as: %v", *useAscendDocker)
 }
