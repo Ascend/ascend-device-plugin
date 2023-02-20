@@ -88,10 +88,11 @@ func (hdm *HwDevManager) setAscendManager(dmgr devmanager.DeviceInterface) error
 		return err
 	}
 	common.ParamOption.ProductType = productType
-	return hdm.updateServerType()
+	return hdm.UpdateServerType()
 }
 
-func (hdm *HwDevManager) updateServerType() error {
+// UpdateServerType update server type, like Ascend910-32
+func (hdm *HwDevManager) UpdateServerType() error {
 	kubeClient, err := kubeclient.NewClientK8s()
 	if err != nil {
 		isNotFoundKubeCfg := strings.Contains(err.Error(), clientcmd.ErrEmptyConfig.Error())
