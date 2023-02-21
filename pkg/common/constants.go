@@ -294,3 +294,8 @@ const (
 	// NPUSegmentFailed means create vnpu device failed
 	NPUSegmentFailed = "NPUSegmentFailed"
 )
+
+// Special scene for invoking the dcmi interface
+const (
+	DeviceNotSupport = 8255
+)

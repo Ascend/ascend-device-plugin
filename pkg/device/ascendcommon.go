@@ -588,6 +588,9 @@ func (tool *AscendTools) GetChipAiCoreCount() (int32, error) {
 	}
 	for _, logicID := range logicIDs {
 		cgoVDevInfo, err := tool.dmgr.GetVirtualDeviceInfo(logicID)
+		if err != nil && strings.Contains(err.Error(), strconv.Itoa(common.DeviceNotSupport)) {
+			return common.DeviceNotSupport, nil
+		}
 		if err != nil {
 			hwlog.RunLog.Debug(err)
 			continue
