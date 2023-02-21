@@ -90,8 +90,8 @@ function modify_version() {
     cp "$CUR_DIR"/ascendplugin-310-volcano.yaml "$TOP_DIR"/output/device-plugin-310-volcano-"${build_version}".yaml
     cp "$CUR_DIR"/ascendplugin-310P.yaml "$TOP_DIR"/output/device-plugin-310P-"${build_version}".yaml
     cp "$CUR_DIR"/ascendplugin-310P-volcano.yaml "$TOP_DIR"/output/device-plugin-310P-volcano-"${build_version}".yaml
-    cp "$CUR_DIR"/ascendplugin-310P.yaml "$TOP_DIR"/output/device-plugin-310P-1usoc-"${build_version}".yaml
-    cp "$CUR_DIR"/ascendplugin-310P-volcano.yaml "$TOP_DIR"/output/device-plugin-310P-1usoc-volcano-"${build_version}".yaml
+    cp "$CUR_DIR"/ascendplugin-310P-1usoc.yaml "$TOP_DIR"/output/device-plugin-310P-1usoc-"${build_version}".yaml
+    cp "$CUR_DIR"/ascendplugin-310P-1usoc-volcano.yaml "$TOP_DIR"/output/device-plugin-310P-1usoc-volcano-"${build_version}".yaml
 
     sed -i "s#output/device-plugin#device-plugin#" "$TOP_DIR"/output/Dockerfile
 }
