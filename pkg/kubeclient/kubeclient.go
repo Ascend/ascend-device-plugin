@@ -22,6 +22,7 @@ import (
 	"regexp"
 
 	"huawei.com/npu-exporter/v3/common-utils/hwlog"
+	"huawei.com/npu-exporter/v3/common-utils/utils"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -42,7 +43,17 @@ type ClientK8s struct {
 
 // NewClientK8s create k8s client
 func NewClientK8s() (*ClientK8s, error) {
-	clientCfg, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
+	var realPath string
+	kubeConfigPath := os.Getenv("KUBECONFIG")
+	if len(kubeConfigPath) != 0 {
+		var err error
+		realPath, err = utils.RealFileChecker(kubeConfigPath, false, false, 1)
+		if err != nil {
+			hwlog.RunLog.Errorf("env KUBECONFIG check failed, err: %#v", err)
+			return nil, err
+		}
+	}
+	clientCfg, err := clientcmd.BuildConfigFromFlags("", realPath)
 	if err != nil {
 		hwlog.RunLog.Errorf("build client config err: %#v", err)
 		return nil, err
