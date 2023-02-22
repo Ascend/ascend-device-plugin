@@ -40,9 +40,14 @@ const (
 // TestTestNewHwDevManager for testTestNewHwDevManager
 func TestNewHwDevManager(t *testing.T) {
 	convey.Convey("test NewHwDevManager", t, func() {
+		mockGetDevType := gomonkey.ApplyMethod(reflect.TypeOf(new(HwDevManager)), "UpdateServerType",
+			func(_ *HwDevManager) error {
+				return nil
+			})
+		defer mockGetDevType.Reset()
 		convey.Convey("init HwDevManager", func() {
 			common.ParamOption.UseVolcanoType = true
-			res := NewHwDevManager(&devmanager.DeviceManagerMock{}, &kubeclient.ClientK8s{})
+			res := NewHwDevManager(&devmanager.DeviceManagerMock{})
 			convey.So(res, convey.ShouldNotBeNil)
 		})
 		convey.Convey("init HwDevManager get device type failed", func() {
@@ -51,7 +56,7 @@ func TestNewHwDevManager(t *testing.T) {
 					return "errorType"
 				})
 			defer mockGetDevType.Reset()
-			res := NewHwDevManager(&devmanager.DeviceManagerMock{}, &kubeclient.ClientK8s{})
+			res := NewHwDevManager(&devmanager.DeviceManagerMock{})
 			convey.So(res, convey.ShouldBeNil)
 		})
 	})
@@ -59,13 +64,18 @@ func TestNewHwDevManager(t *testing.T) {
 
 // TestStartAllServer for testStartAllServer
 func TestStartAllServer(t *testing.T) {
+	mockGetDevType := gomonkey.ApplyMethod(reflect.TypeOf(new(HwDevManager)), "UpdateServerType",
+		func(_ *HwDevManager) error {
+			return nil
+		})
+	defer mockGetDevType.Reset()
 	convey.Convey("test startAllServer", t, func() {
 		mockStart := gomonkey.ApplyMethod(reflect.TypeOf(new(PluginServer)), "Start",
 			func(_ *PluginServer, socketWatcher *common.FileWatch) error {
 				return fmt.Errorf("error")
 			})
 		defer mockStart.Reset()
-		hdm := NewHwDevManager(&devmanager.DeviceManagerMock{}, &kubeclient.ClientK8s{})
+		hdm := NewHwDevManager(&devmanager.DeviceManagerMock{})
 		res := hdm.startAllServer(&common.FileWatch{})
 		convey.So(res, convey.ShouldBeFalse)
 	})
@@ -86,6 +96,11 @@ func TestUpdatePodAnnotation(t *testing.T) {
 			RealDevice: []string{""},
 		},
 	}
+	mockGetDevType := gomonkey.ApplyMethod(reflect.TypeOf(new(HwDevManager)), "UpdateServerType",
+		func(_ *HwDevManager) error {
+			return nil
+		})
+	defer mockGetDevType.Reset()
 	convey.Convey("test updatePodAnnotation", t, func() {
 		convey.Convey("updatePodAnnotation success", func() {
 			mockNode := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)), "GetNode",
@@ -103,7 +118,7 @@ func TestUpdatePodAnnotation(t *testing.T) {
 			defer mockManager.Reset()
 			defer mockNode.Reset()
 			defer mockPodDeviceInfo.Reset()
-			hdm := NewHwDevManager(&devmanager.DeviceManagerMock{}, &kubeclient.ClientK8s{})
+			hdm := NewHwDevManager(&devmanager.DeviceManagerMock{})
 			err := hdm.updatePodAnnotation()
 			convey.So(err, convey.ShouldBeNil)
 		})
@@ -112,6 +127,11 @@ func TestUpdatePodAnnotation(t *testing.T) {
 
 // TestUpdateDevice for testUpdateDevice
 func TestUpdateDevice(t *testing.T) {
+	mockGetDevType := gomonkey.ApplyMethod(reflect.TypeOf(new(HwDevManager)), "UpdateServerType",
+		func(_ *HwDevManager) error {
+			return nil
+		})
+	defer mockGetDevType.Reset()
 	convey.Convey("test UpdateDevice", t, func() {
 		convey.Convey("UpdateDevice success", func() {
 			mockCheckLabel := gomonkey.ApplyMethod(reflect.TypeOf(new(device.AscendTools)),
@@ -126,7 +146,7 @@ func TestUpdateDevice(t *testing.T) {
 			defer mockDestroy.Reset()
 			defer mockCheckLabel.Reset()
 			common.ParamOption.PresetVDevice = false
-			hdm := NewHwDevManager(&devmanager.DeviceManagerMock{}, &kubeclient.ClientK8s{})
+			hdm := NewHwDevManager(&devmanager.DeviceManagerMock{})
 			hdm.ServerMap[common.AiCoreResourceName] = NewPluginServer(common.Ascend310P, nil, nil, nil)
 			err := hdm.updateDevice()
 			convey.So(err, convey.ShouldBeNil)
@@ -137,6 +157,11 @@ func TestUpdateDevice(t *testing.T) {
 
 // TestNotifyToK8s for testNotifyToK8s
 func TestNotifyToK8s(t *testing.T) {
+	mockGetDevType := gomonkey.ApplyMethod(reflect.TypeOf(new(HwDevManager)), "UpdateServerType",
+		func(_ *HwDevManager) error {
+			return nil
+		})
+	defer mockGetDevType.Reset()
 	convey.Convey("test NotifyToK8s", t, func() {
 		convey.Convey("NotifyToK8s success", func() {
 			mockChange := gomonkey.ApplyMethod(reflect.TypeOf(new(device.AscendTools)), "IsDeviceStatusChange",
@@ -144,7 +169,7 @@ func TestNotifyToK8s(t *testing.T) {
 					return map[string]bool{common.Ascend310P: true, common.Ascend310: false}
 				})
 			defer mockChange.Reset()
-			hdm := NewHwDevManager(&devmanager.DeviceManagerMock{}, &kubeclient.ClientK8s{})
+			hdm := NewHwDevManager(&devmanager.DeviceManagerMock{})
 			hdm.ServerMap[common.AiCoreResourceName] = NewPluginServer(common.Ascend310P, nil, nil, nil)
 			hdm.notifyToK8s()
 			convey.So(len(hdm.ServerMap), convey.ShouldEqual, serverNum)
