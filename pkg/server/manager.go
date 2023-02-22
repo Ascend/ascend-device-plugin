@@ -39,11 +39,12 @@ import (
 
 // HwDevManager manages huawei device devices.
 type HwDevManager struct {
-	groupDevice map[string][]*common.NpuDevice
-	ServerMap   map[string]InterfaceServer
-	allInfo     common.NpuAllInfo
-	manager     device.DevManager
-	RunMode     string
+	groupDevice       map[string][]*common.NpuDevice
+	ServerMap         map[string]InterfaceServer
+	allInfo           common.NpuAllInfo
+	manager           device.DevManager
+	RunMode           string
+	isEmptyKubeCfgErr bool
 }
 
 // NewHwDevManager function is used to new a dev manager.
@@ -95,8 +96,8 @@ func (hdm *HwDevManager) setAscendManager(dmgr devmanager.DeviceInterface) error
 func (hdm *HwDevManager) UpdateServerType() error {
 	kubeClient, err := kubeclient.NewClientK8s()
 	if err != nil {
-		isNotFoundKubeCfg := strings.Contains(err.Error(), clientcmd.ErrEmptyConfig.Error())
-		if !isNotFoundKubeCfg {
+		hdm.isEmptyKubeCfgErr = strings.Contains(err.Error(), clientcmd.ErrEmptyConfig.Error())
+		if !hdm.isEmptyKubeCfgErr {
 			hwlog.RunLog.Errorf("init kubeclient failed err: %#v", err)
 			return err
 		}
@@ -130,6 +131,9 @@ func (hdm *HwDevManager) updateNodeServerType(aiCoreCount int32) error {
 	if oldNode == nil {
 		hwlog.RunLog.Error("invalid node")
 		return fmt.Errorf("invalid node")
+	}
+	if _, ok := oldNode.Labels[common.ServerTypeLabelKey]; ok {
+		return nil
 	}
 	newNode := oldNode.DeepCopy()
 	newNode.Labels[common.ServerTypeLabelKey] = hdm.RunMode + common.MiddelLine + strconv.Itoa(int(aiCoreCount))
@@ -276,7 +280,7 @@ func (hdm *HwDevManager) notifyToK8s() {
 }
 
 func (hdm *HwDevManager) useVolcanoNotify() {
-	if !common.ParamOption.UseVolcanoType {
+	if hdm.isEmptyKubeCfgErr {
 		return
 	}
 	common.DpStartReset.Do(func() {
@@ -286,6 +290,9 @@ func (hdm *HwDevManager) useVolcanoNotify() {
 	})
 	if err := hdm.updatePodAnnotation(); err != nil {
 		hwlog.RunLog.Error(err)
+	}
+	if !common.ParamOption.UseVolcanoType {
+		return
 	}
 	hdm.manager.DoWithVolcanoListAndWatch(hdm.groupDevice)
 }

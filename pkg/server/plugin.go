@@ -377,6 +377,9 @@ func (ps *PluginServer) GetRealAllocateDevices(kltAllocate []string) ([]string, 
 	ps.allocMapLock.RLock()
 	defer ps.allocMapLock.RUnlock()
 	realAllocate := sets.String{}
+	if !common.ParamOption.UseVolcanoType {
+		return kltAllocate, nil
+	}
 	for _, id := range kltAllocate {
 		realID, exist := ps.klt2RealDevMap[id]
 		if !exist {

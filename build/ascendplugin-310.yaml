@@ -10,11 +10,17 @@ metadata:
   name: pods-node-ascend-device-plugin-role-310
 rules:
   - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "update"]
+  - apiGroups: [""]
     resources: ["nodes"]
     verbs: ["get", "patch"]
   - apiGroups: [""]
     resources: ["nodes/status"]
     verbs: ["get", "patch"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "create", "update"]
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -82,6 +88,8 @@ spec:
         volumeMounts:
           - name: device-plugin
             mountPath: /var/lib/kubelet/device-plugins
+          - name: pod-resource
+            mountPath: /var/lib/kubelet/pod-resources
           - name: hiai-driver
             mountPath: /usr/local/Ascend/driver
             readOnly: true
@@ -98,6 +106,9 @@ spec:
         - name: device-plugin
           hostPath:
             path: /var/lib/kubelet/device-plugins
+        - name: pod-resource
+          hostPath:
+            path: /var/lib/kubelet/pod-resources
         - name: hiai-driver
           hostPath:
             path: /usr/local/Ascend/driver
