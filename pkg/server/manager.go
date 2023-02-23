@@ -45,6 +45,7 @@ type HwDevManager struct {
 	manager           device.DevManager
 	RunMode           string
 	isEmptyKubeCfgErr bool
+	RealCardType      string
 }
 
 // NewHwDevManager function is used to new a dev manager.
@@ -72,12 +73,15 @@ func (hdm *HwDevManager) setAscendManager(dmgr devmanager.DeviceInterface) error
 			return fmt.Errorf("only 310p and 910 support dynamic virtual instance")
 		}
 		hdm.RunMode = common.Ascend310
+		hdm.RealCardType = common.Ascend310
 		hdm.manager = device.NewHwAscend310Manager()
-	case common.Ascend910:
+	case common.Ascend910, common.Ascend910B:
 		hdm.RunMode = common.Ascend910
+		hdm.RealCardType = dmgr.GetDevType()
 		hdm.manager = device.NewHwAscend910Manager()
 	case common.Ascend310P:
 		hdm.RunMode = common.Ascend310P
+		hdm.RealCardType = common.Ascend310P
 		hdm.manager = device.NewHwAscend310PManager()
 	default:
 		hwlog.RunLog.Error("found an unsupported device type")
@@ -136,7 +140,7 @@ func (hdm *HwDevManager) updateNodeServerType(aiCoreCount int32) error {
 		return nil
 	}
 	newNode := oldNode.DeepCopy()
-	newNode.Labels[common.ServerTypeLabelKey] = hdm.RunMode + common.MiddelLine + strconv.Itoa(int(aiCoreCount))
+	newNode.Labels[common.ServerTypeLabelKey] = hdm.RealCardType + common.MiddelLine + strconv.Itoa(int(aiCoreCount))
 	for i := 0; i < common.RetryUpdateCount; i++ {
 		if _, _, err = hdm.manager.GetKubeClient().PatchNodeState(oldNode, newNode); err == nil {
 			hwlog.RunLog.Infof("update server type success")
