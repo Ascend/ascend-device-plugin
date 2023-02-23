@@ -41,8 +41,6 @@ const (
 	minListWatchPeriod = 3
 	maxRunModeLength   = 10
 	maxLogLineLength   = 1024
-	// Atlas200ISoc 200 soc env
-	Atlas200ISoc = "Atlas 200I SoC A1"
 )
 
 var (
@@ -69,6 +67,8 @@ var (
 		"Maximum number of backup log files, range is (0, 30]")
 	presetVirtualDevice = flag.Bool("presetVirtualDevice", true, "Open the static of "+
 		"computing power splitting function, only support Ascend910 and Ascend310P")
+	use310PMixedInsert = flag.Bool("use310PMixedInsert", false, "Whether to use mixed insert "+
+		"ascend310P-V, ascend310P-VPro, ascend310P-IPro card mode")
 )
 
 var (
@@ -112,6 +112,10 @@ func checkParam() bool {
 	}
 	if len(*mode) > maxRunModeLength {
 		hwlog.RunLog.Error("run mode param length invalid")
+		return false
+	}
+	if *use310PMixedInsert && *volcanoType {
+		hwlog.RunLog.Error("use310PMixedInsert is ture, volcanoType should be false")
 		return false
 	}
 	switch *mode {
@@ -172,6 +176,7 @@ func setParameters() {
 		AutoStowingDevs:    *autoStowing,
 		ListAndWatchPeriod: *listWatchPeriod,
 		PresetVDevice:      *presetVirtualDevice,
+		Use310PMixedInsert: *use310PMixedInsert,
 	}
 }
 
@@ -182,11 +187,13 @@ func setUseAscendDocker() {
 		*useAscendDocker = false
 		hwlog.RunLog.Debugf("get ASCEND_DOCKER_RUNTIME from env is: %#v", ascendDocker)
 	}
-
-	deviceType := common.ParamOption.ProductType
-	if deviceType == Atlas200ISoc {
+	if common.ParamOption.Use310PMixedInsert {
 		*useAscendDocker = false
-		hwlog.RunLog.Debugf("your device-type is: %v", deviceType)
+		hwlog.RunLog.Debugf("310P mixed insert mode do not use ascend docker")
+	}
+	if len(common.ParamOption.ProductTypes) == 1 && common.ParamOption.ProductTypes[0] == common.Atlas200ISoc {
+		*useAscendDocker = false
+		hwlog.RunLog.Debugf("your device-type is: %v", common.Atlas200ISoc)
 	}
 
 	common.ParamOption.UseAscendDocker = *useAscendDocker

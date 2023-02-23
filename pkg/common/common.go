@@ -174,15 +174,14 @@ func GetDefaultDevices(getFdFlag bool) ([]string, error) {
 	if getFdFlag {
 		setDeviceByPathWhen200RC(&defaultDevices)
 	}
-	if ParamOption.ProductType != Atlas200ISoc {
-		return defaultDevices, nil
+	if len(ParamOption.ProductTypes) == 1 && ParamOption.ProductTypes[0] == Atlas200ISoc {
+		socDefaultDevices, err := set200SocDefaultDevices()
+		if err != nil {
+			hwlog.RunLog.Errorf("get 200I soc default devices failed, err: %#v", err)
+			return nil, err
+		}
+		defaultDevices = append(defaultDevices, socDefaultDevices...)
 	}
-	socDefaultDevices, err := set200SocDefaultDevices()
-	if err != nil {
-		hwlog.RunLog.Errorf("get 200I soc default devices failed, err: %#v", err)
-		return nil, err
-	}
-	defaultDevices = append(defaultDevices, socDefaultDevices...)
 	return defaultDevices, nil
 }
 

@@ -83,11 +83,14 @@ func (hdm *HwDevManager) setAscendManager(dmgr devmanager.DeviceInterface) error
 		return fmt.Errorf("an unsupported device type")
 	}
 	hdm.manager.SetDmgr(dmgr)
-	productType, err := hdm.manager.GetDmgr().GetProductType()
+	productTypes, err := hdm.manager.GetDmgr().GetAllProductType()
 	if err != nil {
 		return err
 	}
-	common.ParamOption.ProductType = productType
+	common.ParamOption.ProductTypes = productTypes
+	if err = common.CheckCardUsageMode(common.ParamOption.Use310PMixedInsert, productTypes); err != nil {
+		return err
+	}
 	return hdm.UpdateServerType()
 }
 

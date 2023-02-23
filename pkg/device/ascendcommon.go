@@ -179,6 +179,27 @@ func (tool *AscendTools) assembleSpecVirtualDevice(phyID int32, vDevInfo npuComm
 	return vDeviType, devID, nil
 }
 
+func (tool *AscendTools) assemble310PMixedPhyDevices(davinCiDev common.DavinCiDev, devices *[]common.NpuDevice,
+	deviceTypes *[]string) error {
+	cardID, deviceID, err := tool.dmgr.GetCardIDDeviceID(davinCiDev.LogicID)
+	if err != nil {
+		return fmt.Errorf("get cardID and deviceID failed: LogicID[%#v]", davinCiDev.LogicID)
+	}
+	productType, err := tool.dmgr.GetProductType(cardID, deviceID)
+	if err != nil {
+		return fmt.Errorf("get product type failed:cardID[%#v] deviceID[%#v]", cardID, deviceID)
+	}
+	ProductTypeMap := common.Get310PProductType()
+	if _, ok := ProductTypeMap[productType]; !ok {
+		return fmt.Errorf("%#v not found", productType)
+	}
+	deviceName := fmt.Sprintf("%s-%d", ProductTypeMap[productType], davinCiDev.PhyID)
+	device := tool.assembleNpuDeviceStruct(ProductTypeMap[productType], deviceName, davinCiDev.LogicID, davinCiDev.PhyID)
+	*deviceTypes = append(*deviceTypes, ProductTypeMap[productType])
+	*devices = append(*devices, device)
+	return nil
+}
+
 func (tool *AscendTools) removeDuplicate(allDeviceTypes *[]string) []string {
 	deviceTypesMap := make(map[string]string, len(*allDeviceTypes))
 	var rmDupDeviceTypes []string
