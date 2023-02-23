@@ -163,6 +163,9 @@ const (
 	// AscendfdPrefix use in fd
 	AscendfdPrefix = "davinci-mini"
 
+	// Ascend910B ascend 1980B(910B) chip
+	Ascend910B = "Ascend910B"
+
 	// HuaweiNetworkUnHealthAscend910 910 network unhealthy
 	HuaweiNetworkUnHealthAscend910 = ResourceNamePrefix + "Ascend910-NetworkUnhealthy"
 	// HuaweiUnHealthAscend910 unhealthy
