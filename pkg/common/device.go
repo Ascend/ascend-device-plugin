@@ -197,3 +197,21 @@ func GetVNPUSegmentInfo(deviceInfos []string) (int32, string, error) {
 	}
 	return int32(phyID), deviceInfos[1], nil
 }
+
+// CheckCardUsageMode check card usage mode
+func CheckCardUsageMode(use310PMixedInsert bool, productTypes []string) error {
+	if !use310PMixedInsert && len(productTypes) > 1 {
+		return fmt.Errorf("more than one product type")
+	}
+	if !use310PMixedInsert {
+		return nil
+	}
+	DeviceTypeMap := Get310PProductType()
+	for _, productType := range productTypes {
+		if _, ok := DeviceTypeMap[productType]; !ok {
+			return fmt.Errorf("only supports ascend310P-V, ascend310P-VPro, ascend310P-IPro " +
+				"card mixed insert mode")
+		}
+	}
+	return nil
+}

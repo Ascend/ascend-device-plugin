@@ -111,3 +111,31 @@ func TestFakeAiCoreDevice(t *testing.T) {
 		})
 	})
 }
+
+// TestCheckCardUsageMode for test CheckCardUsageMode
+func TestCheckCardUsageMode(t *testing.T) {
+	convey.Convey("test use 310P Mixed Insert and device is correct", t, func() {
+		convey.Convey("virtual device", func() {
+			ret := CheckCardUsageMode(true, []string{"Atlas 300V Pro", "Atlas 300V"})
+			convey.So(ret, convey.ShouldBeNil)
+		})
+	})
+	convey.Convey("test use 310P Mixed Insert and device is incorrect", t, func() {
+		convey.Convey("virtual device", func() {
+			ret := CheckCardUsageMode(true, []string{"11", "222"})
+			convey.So(ret, convey.ShouldNotBeNil)
+		})
+	})
+	convey.Convey("test not use 310P Mixed Insert and device is correct", t, func() {
+		convey.Convey("virtual device", func() {
+			ret := CheckCardUsageMode(false, []string{"111"})
+			convey.So(ret, convey.ShouldBeNil)
+		})
+	})
+	convey.Convey("test use 310P Mixed Insert and device is incorrect", t, func() {
+		convey.Convey("virtual device", func() {
+			ret := CheckCardUsageMode(false, []string{"11", "222"})
+			convey.So(ret, convey.ShouldNotBeNil)
+		})
+	})
+}

@@ -332,3 +332,34 @@ func getMockNode() *v1.Node {
 		},
 	}
 }
+
+// TestAssemble310PMixedPhyDevices test assemble310PMixedPhyDevices
+func TestAssemble310PMixedPhyDevices(t *testing.T) {
+	convey.Convey("test assembleVirtualDevices", t, func() {
+		tool := AscendTools{name: common.Ascend310P, client: &kubeclient.ClientK8s{},
+			dmgr: &devmanager.DeviceManagerMock{}}
+		var device []common.NpuDevice
+		var deivceType []string
+		davinCiDev := common.DavinCiDev{
+			PhyID:   phyIDNum,
+			LogicID: logicIDNum,
+		}
+		mockProductType := gomonkey.ApplyMethod(reflect.TypeOf(new(devmanager.DeviceManagerMock)),
+			"GetProductType",
+			func(_ *devmanager.DeviceManagerMock, cardID int32, deviceID int32) (string, error) {
+				return "Atlas 300V Pro", nil
+			})
+		defer mockProductType.Reset()
+		productTypeMap := common.Get310PProductType()
+		tool.assemble310PMixedPhyDevices(davinCiDev, &device, &deivceType)
+		testRes := common.NpuDevice{
+			DevType:       productTypeMap["Atlas 300V Pro"],
+			DeviceName:    fmt.Sprintf("%s-%d", productTypeMap["Atlas 300V Pro"], phyIDNum),
+			Health:        v1beta1.Healthy,
+			NetworkHealth: v1beta1.Healthy,
+			LogicID:       logicIDNum,
+			PhyID:         phyIDNum,
+		}
+		convey.So(device, convey.ShouldContain, testRes)
+	})
+}
