@@ -22,9 +22,9 @@ import (
 	"strings"
 	"time"
 
-	"huawei.com/npu-exporter/v3/common-utils/hwlog"
-	"huawei.com/npu-exporter/v3/devmanager"
-	npuCommon "huawei.com/npu-exporter/v3/devmanager/common"
+	"huawei.com/npu-exporter/v5/common-utils/hwlog"
+	"huawei.com/npu-exporter/v5/devmanager"
+	npuCommon "huawei.com/npu-exporter/v5/devmanager/common"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
