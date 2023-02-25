@@ -12,8 +12,8 @@ cloud.google.com/go/datastore v1.0.0/go.mod h1:LXYbyblFSglQ5pkeyhO+Qmw7ukd3C+pD7
 cloud.google.com/go/pubsub v1.0.1/go.mod h1:R0Gpsv3s54REJCy4fxDixWD93lHJMoZTyQ2kNxGRt3I=
 cloud.google.com/go/storage v1.0.0/go.mod h1:IhtSnM/ZTZV8YYJWCY8RULGVqBDmpoyjwiyrjsg+URw=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
-gitee.com/ascend/ascend-npu-exporter/v5 v5.0.0-rc1 h1:/6X/wXbh3iJ+77vaRMDwj4tbDZvS65rw8vqIr5djV2I=
-gitee.com/ascend/ascend-npu-exporter/v5 v5.0.0-rc1/go.mod h1:fMiyWfHf3p+Wo4hu8Uy+cnD8ulQV3nzwwVzupRM8XEk=
+gitee.com/ascend/ascend-npu-exporter/v5 v5.0.0-rc1.1 h1:XXNpZemFi7/kmW7v+eXLwYumeDCDgLZtIT6AJHY8w9Q=
+gitee.com/ascend/ascend-npu-exporter/v5 v5.0.0-rc1.1/go.mod h1:fMiyWfHf3p+Wo4hu8Uy+cnD8ulQV3nzwwVzupRM8XEk=
 github.com/Azure/azure-sdk-for-go v43.0.0+incompatible/go.mod h1:9XXNKU+eRnpl9moKnB4QOLf1HestfXbmab5FXxiDBjc=
 github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78/go.mod h1:LmzpDX56iTiv29bbRTIsUNlaFfuhWRQBWjQdVyAevI8=
 github.com/Azure/go-autorest/autorest v0.9.0/go.mod h1:xyHB1BMZT0cuDHU7I0+g046+BFDTQ8rEZB0s4Yfa6bI=
