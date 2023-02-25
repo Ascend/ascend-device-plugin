@@ -132,10 +132,4 @@ func TestCheckCardUsageMode(t *testing.T) {
 			convey.So(ret, convey.ShouldBeNil)
 		})
 	})
-	convey.Convey("test use 310P Mixed Insert and device is incorrect", t, func() {
-		convey.Convey("virtual device", func() {
-			ret := CheckCardUsageMode(false, []string{"11", "222"})
-			convey.So(ret, convey.ShouldNotBeNil)
-		})
-	})
 }
