@@ -24,8 +24,8 @@ import (
 
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/smartystreets/goconvey/convey"
-	"huawei.com/npu-exporter/v3/common-utils/hwlog"
-	"huawei.com/npu-exporter/v3/devmanager"
+	"huawei.com/npu-exporter/v5/common-utils/hwlog"
+	"huawei.com/npu-exporter/v5/devmanager"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 

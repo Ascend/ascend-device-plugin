@@ -18,7 +18,7 @@ package device
 import (
 	"fmt"
 
-	"huawei.com/npu-exporter/v3/common-utils/hwlog"
+	"huawei.com/npu-exporter/v5/common-utils/hwlog"
 
 	"Ascend-device-plugin/pkg/common"
 )
@@ -55,6 +55,12 @@ func (hnm *HwAscend310PManager) GetNPUs() (common.NpuAllInfo, error) {
 		davinCiDev, err := hnm.getDavinCiDev(devList[i])
 		if err != nil {
 			return common.NpuAllInfo{}, err
+		}
+		if common.ParamOption.Use310PMixedInsert {
+			if err = hnm.assemble310PMixedPhyDevices(davinCiDev, &allDevices, &allDeviceTypes); err != nil {
+				hwlog.RunLog.Errorf("assemble 310P mixed phy devices failed: %#v", err)
+			}
+			continue
 		}
 		vDevInfos, err := hnm.getVirtualDevice(devList[i])
 		if err != nil {

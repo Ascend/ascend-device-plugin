@@ -126,6 +126,12 @@ const (
 	ResourceNamePrefix = "huawei.com/"
 	// Ascend310P 310p
 	Ascend310P = "Ascend310P"
+	// Ascend310PV 310P-V
+	Ascend310PV = Ascend310P + "-V"
+	// Ascend310PVPro 310P-VPro
+	Ascend310PVPro = Ascend310P + "-VPro"
+	// Ascend310PIPro 310P-IPro
+	Ascend310PIPro = Ascend310P + "-IPro"
 	// Ascend310Pc1 Ascend310P 1 core
 	Ascend310Pc1 = Ascend310P + "-" + Core1
 	// Ascend310Pc2 Ascend310P 2 core
@@ -162,6 +168,9 @@ const (
 	HuaweiAscend310 = ResourceNamePrefix + Ascend310
 	// AscendfdPrefix use in fd
 	AscendfdPrefix = "davinci-mini"
+
+	// Ascend910B ascend 1980B(910B) chip
+	Ascend910B = "Ascend910B"
 
 	// HuaweiNetworkUnHealthAscend910 910 network unhealthy
 	HuaweiNetworkUnHealthAscend910 = ResourceNamePrefix + "Ascend910-NetworkUnhealthy"

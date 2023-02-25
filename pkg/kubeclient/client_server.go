@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"huawei.com/npu-exporter/v3/common-utils/hwlog"
+	"huawei.com/npu-exporter/v5/common-utils/hwlog"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
