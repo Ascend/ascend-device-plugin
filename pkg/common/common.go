@@ -409,3 +409,13 @@ func CheckFileUserSameWithProcess(loggerPath string) bool {
 	}
 	return true
 }
+
+// IsContainAtlas300IDuo in ProductTypes list, is contain Atlas 300I Duo card
+func IsContainAtlas300IDuo() bool {
+	for _, product := range ParamOption.ProductTypes {
+		if product == Atlas300IDuo {
+			return true
+		}
+	}
+	return false
+}

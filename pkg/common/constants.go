@@ -308,3 +308,16 @@ const (
 const (
 	DeviceNotSupport = 8255
 )
+
+const (
+	// Atlas300IDuo for hot reset function, sync chip healthy state
+	Atlas300IDuo = "Atlas 300I Duo"
+	// HotResetClose not using chip hot reset function
+	HotResetClose = -1
+	// HotResetInfer using infer chip hot reset
+	HotResetInfer = 0
+	// HotResetTrain using train chip hot reset
+	HotResetTrain = 1
+	// BootStartFinish chip hot reset finish
+	BootStartFinish = 16
+)

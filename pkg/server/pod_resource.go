@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"huawei.com/npu-exporter/v5/common-utils/hwlog"
+	"k8s.io/api/core/v1"
 	"k8s.io/kubernetes/pkg/kubelet/apis/podresources"
 	"k8s.io/kubernetes/pkg/kubelet/apis/podresources/v1alpha1"
 
@@ -182,6 +183,55 @@ func (pr *PodResource) stop() {
 		pr.conn = nil
 		pr.client = nil
 	}
+}
+
+// IsPodMoveComplete is UnHealthy Pod remove complete
+func (pr *PodResource) IsPodMoveComplete(deviceName string, podList *v1.PodList) bool {
+	podResourceList, err := pr.getValidPodResources(podList)
+	if err != nil {
+		return false
+	}
+	for _, podResource := range podResourceList {
+		if len(podResource.DeviceIds) == 0 {
+			continue
+		}
+		for _, devID := range podResource.DeviceIds {
+			if devID == deviceName {
+				return false
+			}
+		}
+	}
+	hwlog.RunLog.Info("UnHealthy pod remove complete")
+	return true
+}
+
+func (pr *PodResource) getValidPodResources(podList *v1.PodList) ([]PodDevice, error) {
+	var res []PodDevice
+	podResourceList, err := pr.GetPodResource()
+	if err != nil {
+		hwlog.RunLog.Errorf("get pod resource failed, err: %v", err)
+		return nil, err
+	}
+	for podNameAndNs := range podResourceList {
+		if !pr.isValidPod(podNameAndNs, podList) {
+			continue
+		}
+		podResource, ok := podResourceList[podNameAndNs]
+		if !ok {
+			continue
+		}
+		res = append(res, podResource)
+	}
+	return res, nil
+}
+
+func (pr *PodResource) isValidPod(podResourceKey string, podList *v1.PodList) bool {
+	for _, pod := range podList.Items {
+		if podResourceKey == pod.Namespace+common.UnderLine+pod.Name {
+			return true
+		}
+	}
+	return false
 }
 
 // NewPodResource returns an initialized PodResource
