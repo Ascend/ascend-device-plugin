@@ -29,7 +29,7 @@ import (
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/fsnotify/fsnotify"
 	"github.com/smartystreets/goconvey/convey"
-	"huawei.com/npu-exporter/v3/common-utils/hwlog"
+	"huawei.com/npu-exporter/v5/common-utils/hwlog"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

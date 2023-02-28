@@ -86,14 +86,15 @@ type Instance struct { // Instance
 
 // Option option
 type Option struct {
-	GetFdFlag          bool // to describe FdFlag
-	UseAscendDocker    bool // UseAscendDocker to chose docker type
-	UseVolcanoType     bool
-	ListAndWatchPeriod int  // set listening device state period
-	AutoStowingDevs    bool // auto stowing fixes devices or not
-	PresetVDevice      bool
-	ProductType        string
-	AiCoreCount        int32 // found by dcmi interface
+	GetFdFlag          bool     // to describe FdFlag
+	UseAscendDocker    bool     // UseAscendDocker to chose docker type
+	UseVolcanoType     bool     // use volcano mode
+	AutoStowingDevs    bool     // auto stowing fixes devices or not
+	PresetVDevice      bool     // preset virtual device
+	Use310PMixedInsert bool     // chose 310P mixed insert mode
+	ListAndWatchPeriod int      // set listening device state period
+	AiCoreCount        int32    // found by dcmi interface
+	ProductTypes       []string // all product types
 }
 
 // GetAllDeviceInfoTypeList Get All Device Info Type List
@@ -119,4 +120,13 @@ type DevStatusSet struct {
 	UnHealthyDevice    sets.String
 	NetUnHealthyDevice sets.String
 	FreeHealthyDevice  map[string]sets.String
+}
+
+// Get310PProductType get 310P product type
+func Get310PProductType() map[string]string {
+	return map[string]string{
+		"Atlas 300V Pro": Ascend310PVPro,
+		"Atlas 300V":     Ascend310PV,
+		"Atlas 300I Pro": Ascend310PIPro,
+	}
 }
