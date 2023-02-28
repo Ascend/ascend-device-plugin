@@ -200,9 +200,6 @@ func GetVNPUSegmentInfo(deviceInfos []string) (int32, string, error) {
 
 // CheckCardUsageMode check card usage mode
 func CheckCardUsageMode(use310PMixedInsert bool, productTypes []string) error {
-	if !use310PMixedInsert && len(productTypes) > 1 {
-		return fmt.Errorf("more than one product type")
-	}
 	if !use310PMixedInsert {
 		return nil
 	}

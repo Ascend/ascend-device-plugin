@@ -657,12 +657,12 @@ func (ps *PluginServer) Allocate(ctx context.Context, requests *v1beta1.Allocate
 		}
 
 		resp := new(v1beta1.ContainerAllocateResponse)
-		common.SetAscendRuntimeEnv(ascendVisibleDevices, ps.ascendRuntimeOptions, resp)
 		if !common.ParamOption.UseAscendDocker {
 			hwlog.RunLog.Info("device-plugin will use origin mount way")
 			mountDefaultDevice(resp, ps.defaultDevs)
 			mountDevice(resp, ascendVisibleDevices, ps.ascendRuntimeOptions)
 		} else {
+			common.SetAscendRuntimeEnv(ascendVisibleDevices, ps.ascendRuntimeOptions, resp)
 			hwlog.RunLog.Info("device-plugin will use ascend-docker to mount")
 		}
 		resps.ContainerResponses = append(resps.ContainerResponses, resp)
