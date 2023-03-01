@@ -29,6 +29,8 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"huawei.com/npu-exporter/v5/common-utils/hwlog"
 	"huawei.com/npu-exporter/v5/devmanager"
+	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
@@ -108,7 +110,7 @@ func (hdm *HwDevManager) UpdateServerType() error {
 			hwlog.RunLog.Errorf("init kubeclient failed err: %#v", err)
 			return err
 		}
-		if common.ParamOption.UseVolcanoType {
+		if common.ParamOption.UseVolcanoType || common.ParamOption.HotReset != common.HotResetClose {
 			hwlog.RunLog.Warnf("not exist kube config, maybe it's edge scene")
 			return errors.New("using volcano need kubeConfig, but not found")
 		}
@@ -251,6 +253,7 @@ func (hdm *HwDevManager) ListenDevice(ctx context.Context) {
 			}
 			hdm.notifyToK8s()
 			hdm.useVolcanoNotify()
+			hdm.chipHotReset()
 			common.UnlockAllDeviceInfo()
 		}
 	}
@@ -283,6 +286,43 @@ func (hdm *HwDevManager) notifyToK8s() {
 			return
 		}
 		hdm.pluginNotify(hdm.groupDevice[devType], devType)
+	}
+}
+
+func (hdm *HwDevManager) chipHotReset() {
+	if hdm.RunMode == common.Ascend910 {
+		hwlog.RunLog.Debugf("training card not support hot reset function now!")
+		return
+	}
+	if common.ParamOption.HotReset != common.HotResetInfer {
+		hwlog.RunLog.Debugf("infer device hot reset mode error: %d", common.ParamOption.HotReset)
+		return
+	}
+	prClient := NewPodResource()
+	for devType, devices := range hdm.groupDevice {
+		if common.IsVirtualDev(devType) || len(devices) == 0 {
+			continue
+		}
+		if common.IsContainAtlas300IDuo() {
+			hdm.resetDuoCard(devices, prClient)
+			continue
+		}
+		for _, device := range devices {
+			hdm.hotReset(device, prClient.IsPodMoveComplete)
+		}
+	}
+}
+
+func (hdm *HwDevManager) resetDuoCard(devices []*common.NpuDevice, prClient *PodResource) {
+	var cardResetOnce = make(map[int32]*common.NpuDevice, 0)
+	for _, device := range devices {
+		if _, ok := cardResetOnce[device.CardID]; ok {
+			continue
+		}
+		cardResetOnce[device.CardID] = device
+	}
+	for _, device := range cardResetOnce {
+		hdm.hotReset(device, prClient.IsPodMoveComplete)
 	}
 }
 
@@ -481,5 +521,64 @@ func (hdm *HwDevManager) updateSpecTypePodAnnotation(deviceType, serverID string
 			hwlog.RunLog.Infof("update pod %s_%s annotation success", deviceInfo.Pod.Namespace, deviceInfo.Pod.Name)
 		}
 	}
+	return nil
+}
+
+func (hdm *HwDevManager) hotReset(device *common.NpuDevice, isPodRemoveComplete func(
+	_ string, _ *v1.PodList) bool) {
+	if device.Health == v1beta1.Healthy {
+		return
+	}
+	podList, err := hdm.manager.GetKubeClient().GetAllPodList()
+	if err != nil {
+		hwlog.RunLog.Errorf("get pod list failed, err: %#v", err)
+		return
+	}
+	for !isPodRemoveComplete(device.DeviceName, podList) {
+		hwlog.RunLog.Warn("service pod has not been migrated or destroyed, wait for scanning again.")
+		return
+	}
+	var isResetExec = false
+	if err := wait.PollImmediate(time.Second, time.Minute, func() (bool, error) {
+		if err := hdm.execResetChip(device.LogicID, &isResetExec); err != nil {
+			hwlog.RunLog.Errorf("get device boot status failed, err: %#v", err)
+			return false, err
+		}
+		bootState, err := hdm.manager.GetDmgr().GetDeviceBootStatus(device.LogicID)
+		if err != nil {
+			hwlog.RunLog.Errorf("get device boot status failed, err: %#v", err)
+			return false, err
+		}
+		if bootState != common.BootStartFinish {
+			hwlog.RunLog.Warnf("device bootState(%d), starting...", bootState)
+			return false, nil
+		}
+		return true, nil
+	}); err != nil {
+		hwlog.RunLog.Warnf("hot reset failed, timeout or err: %#v", err)
+		return
+	}
+	hwlog.RunLog.Info("hot reset success")
+}
+
+func (hdm *HwDevManager) execResetChip(logicID int32, isResetExec *bool) error {
+	if *isResetExec {
+		return nil
+	}
+	cardID, deviceID, err := hdm.manager.GetDmgr().GetCardIDDeviceID(logicID)
+	if err != nil {
+		hwlog.RunLog.Errorf("failed to get cardID and deviceID by logicID(%d)", logicID)
+		return err
+	}
+	if common.IsContainAtlas300IDuo() {
+		deviceID = 0
+	}
+	hwlog.RunLog.Infof("start device card(%d) and deviceID(%d) reset...", cardID, deviceID)
+	if err := hdm.manager.GetDmgr().SetDeviceReset(cardID, deviceID); err != nil {
+		hwlog.RunLog.Errorf("hot reset failed, err: %#v", err)
+		return err
+	}
+	*isResetExec = true
+	hwlog.RunLog.Infof("card(%d) and deviceID(%d) exec set device reset function success", cardID, deviceID)
 	return nil
 }

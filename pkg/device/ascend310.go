@@ -55,12 +55,12 @@ func (hnm *HwAscend310Manager) GetNPUs() (common.NpuAllInfo, error) {
 	var allDevices []common.NpuDevice
 	var allDeviceTypes []string
 	for i := int32(0); i < devNum; i++ {
-		phyID, err := hnm.dmgr.GetPhysicIDFromLogicID(devList[i])
+		davinCiDev, err := hnm.getDavinCiDev(devList[i])
 		if err != nil {
 			return common.NpuAllInfo{}, err
 		}
-		deviceName := fmt.Sprintf("%s-%d", hnm.name, phyID)
-		device := hnm.assembleNpuDeviceStruct(hnm.name, deviceName, devList[i], phyID)
+		deviceName := fmt.Sprintf("%s-%d", hnm.name, davinCiDev.PhyID)
+		device := hnm.assembleNpuDeviceStruct(hnm.name, deviceName, davinCiDev)
 		allDevices = append(allDevices, device)
 	}
 	allDeviceTypes = append(allDeviceTypes, hnm.name)
