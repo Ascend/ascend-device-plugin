@@ -307,6 +307,8 @@ const (
 // Special scene for invoking the dcmi interface
 const (
 	DeviceNotSupport = 8255
+	// DefaultAiCoreNum set a default value of aicore number
+	DefaultAiCoreNum = 1
 )
 
 const (
