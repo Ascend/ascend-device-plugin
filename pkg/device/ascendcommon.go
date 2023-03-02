@@ -658,8 +658,9 @@ func (tool *AscendTools) GetChipAiCoreCount() (int32, error) {
 			return common.DeviceNotSupport, nil
 		}
 		if err != nil {
-			hwlog.RunLog.Debug(err)
-			continue
+			// if not support found aicore number, setting a default value
+			hwlog.RunLog.Infof("not found aicore number by dcmi: %#v", err)
+			return common.DefaultAiCoreNum, nil
 		}
 		return tool.getAiCoreCount(cgoVDevInfo)
 	}
