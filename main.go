@@ -69,6 +69,7 @@ var (
 		"computing power splitting function, only support Ascend910 and Ascend310P")
 	use310PMixedInsert = flag.Bool("use310PMixedInsert", false, "Whether to use mixed insert "+
 		"ascend310P-V, ascend310P-VPro, ascend310P-IPro card mode")
+	hotReset = flag.Int("hotReset", -1, "set hot reset mode: -1-close, 0-infer, 1-train")
 )
 
 var (
@@ -106,8 +107,8 @@ func checkParam() bool {
 		hwlog.RunLog.Errorf("list and watch period %d out of range", *listWatchPeriod)
 		return false
 	}
-	if !(*presetVirtualDevice) && !(*volcanoType) {
-		hwlog.RunLog.Error("presetVirtualDevice is false, volcanoType should be true")
+	if !(*presetVirtualDevice) {
+		hwlog.RunLog.Error("presetVirtualDevice not support set to false now")
 		return false
 	}
 	if len(*mode) > maxRunModeLength {
@@ -117,6 +118,15 @@ func checkParam() bool {
 	if *use310PMixedInsert && *volcanoType {
 		hwlog.RunLog.Error("use310PMixedInsert is ture, volcanoType should be false")
 		return false
+	}
+	switch *hotReset {
+	case common.HotResetClose, common.HotResetInfer, common.HotResetTrain:
+	default:
+		hwlog.RunLog.Error("hot reset mode param invalid")
+		return false
+	}
+	if (*hotReset) == common.HotResetTrain {
+		hwlog.RunLog.Warn("hotReset to 1 is a reserved value")
 	}
 	switch *mode {
 	case common.RunMode310, common.RunMode910, common.RunMode310P, "":
@@ -177,6 +187,7 @@ func setParameters() {
 		ListAndWatchPeriod: *listWatchPeriod,
 		PresetVDevice:      *presetVirtualDevice,
 		Use310PMixedInsert: *use310PMixedInsert,
+		HotReset:           *hotReset,
 	}
 }
 

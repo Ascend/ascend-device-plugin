@@ -63,12 +63,14 @@ type NpuDevice struct {
 	IP            string
 	LogicID       int32
 	PhyID         int32
+	CardID        int32
 }
 
 // DavinCiDev davinci device
 type DavinCiDev struct {
 	LogicID int32
 	PhyID   int32
+	CardID  int32
 }
 
 // Device id for Instcance
@@ -95,6 +97,7 @@ type Option struct {
 	ListAndWatchPeriod int      // set listening device state period
 	AiCoreCount        int32    // found by dcmi interface
 	ProductTypes       []string // all product types
+	HotReset           int
 }
 
 // GetAllDeviceInfoTypeList Get All Device Info Type List

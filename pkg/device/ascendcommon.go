@@ -130,22 +130,24 @@ func (tool *AscendTools) delVirDevInfo(newDeviceList map[string]string) {
 	}
 }
 
-func (tool *AscendTools) assembleNpuDeviceStruct(deviType, deviceName string, logicID, phyID int32) common.NpuDevice {
+func (tool *AscendTools) assembleNpuDeviceStruct(deviType, deviceName string,
+	davinCiDev common.DavinCiDev) common.NpuDevice {
 	hwlog.RunLog.Debugf("Found Huawei Ascend, deviceType: %s, deviceName: %s", deviType, deviceName)
 	return common.NpuDevice{
 		DevType:       deviType,
 		DeviceName:    deviceName,
 		Health:        v1beta1.Healthy,
 		NetworkHealth: v1beta1.Healthy,
-		LogicID:       logicID,
-		PhyID:         phyID,
+		LogicID:       davinCiDev.LogicID,
+		PhyID:         davinCiDev.PhyID,
+		CardID:        davinCiDev.CardID,
 	}
 }
 
 func (tool *AscendTools) assemblePhyDevices(davinCiDev common.DavinCiDev, devices *[]common.NpuDevice,
 	deviceTypes *[]string) {
 	deviceName := fmt.Sprintf("%s-%d", tool.name, davinCiDev.PhyID)
-	device := tool.assembleNpuDeviceStruct(tool.name, deviceName, davinCiDev.LogicID, davinCiDev.PhyID)
+	device := tool.assembleNpuDeviceStruct(tool.name, deviceName, davinCiDev)
 	*deviceTypes = append(*deviceTypes, tool.name)
 	*devices = append(*devices, device)
 }
@@ -158,7 +160,7 @@ func (tool *AscendTools) assembleVirtualDevices(davinCiDev common.DavinCiDev, vD
 			hwlog.RunLog.Error(err)
 			continue
 		}
-		device := tool.assembleNpuDeviceStruct(vDeviType, deviceName, davinCiDev.LogicID, davinCiDev.PhyID)
+		device := tool.assembleNpuDeviceStruct(vDeviType, deviceName, davinCiDev)
 		*devices = append(*devices, device)
 		*vDeviceTypes = append(*vDeviceTypes, vDeviType)
 	}
@@ -194,7 +196,7 @@ func (tool *AscendTools) assemble310PMixedPhyDevices(davinCiDev common.DavinCiDe
 		return fmt.Errorf("%#v not found", productType)
 	}
 	deviceName := fmt.Sprintf("%s-%d", ProductTypeMap[productType], davinCiDev.PhyID)
-	device := tool.assembleNpuDeviceStruct(ProductTypeMap[productType], deviceName, davinCiDev.LogicID, davinCiDev.PhyID)
+	device := tool.assembleNpuDeviceStruct(ProductTypeMap[productType], deviceName, davinCiDev)
 	*deviceTypes = append(*deviceTypes, ProductTypeMap[productType])
 	*devices = append(*devices, device)
 	return nil
@@ -313,9 +315,14 @@ func (tool *AscendTools) getDavinCiDev(logicID int32) (common.DavinCiDev, error)
 	if err != nil {
 		return common.DavinCiDev{}, err
 	}
+	cardID, _, err := tool.dmgr.GetCardIDDeviceID(logicID)
+	if err != nil {
+		return common.DavinCiDev{}, err
+	}
 	return common.DavinCiDev{
 		LogicID: logicID,
 		PhyID:   phyID,
+		CardID:  cardID,
 	}, nil
 }
 
@@ -430,6 +437,7 @@ func (tool *AscendTools) IsDeviceStatusChange(groupDevice map[string][]*common.N
 			}
 		}
 	}
+	tool.syncDuoCardState(groupDevice)
 	if common.ParamOption.PresetVDevice {
 		return isStateChange
 	}
@@ -439,6 +447,43 @@ func (tool *AscendTools) IsDeviceStatusChange(groupDevice map[string][]*common.N
 		device.NetworkHealth = healthStatus[device.LogicID].NetworkHealth
 	}
 	return isStateChange
+}
+
+func (tool *AscendTools) syncDuoCardState(groupDevice map[string][]*common.NpuDevice) {
+	if common.IsContainAtlas300IDuo() {
+		return
+	}
+	if common.ParamOption.HotReset != common.HotResetInfer {
+		hwlog.RunLog.Debugf("not open infer device hot reset function, it's %d", common.ParamOption.HotReset)
+		return
+	}
+	ascend310PDevices, ok := groupDevice[common.Ascend310P]
+	if !ok {
+		hwlog.RunLog.Debugf("not found 310P devices")
+		return
+	}
+	unHealthyCards := getUnHealthyCard(ascend310PDevices)
+	for devType, devices := range groupDevice {
+		if devType != common.Ascend310P {
+			continue
+		}
+		for idx, device := range devices {
+			if _, ok := unHealthyCards[device.CardID]; ok {
+				devices[idx].Health = v1beta1.Unhealthy
+			}
+		}
+	}
+}
+
+func getUnHealthyCard(ascend310PDevices []*common.NpuDevice) map[int32]interface{} {
+	unHealthyCards := make(map[int32]interface{}, len(ascend310PDevices))
+	for _, device := range ascend310PDevices {
+		if device.Health == v1beta1.Healthy {
+			continue
+		}
+		unHealthyCards[device.CardID] = struct{}{}
+	}
+	return unHealthyCards
 }
 
 // ClassifyDevices classify diff type devices
@@ -613,8 +658,9 @@ func (tool *AscendTools) GetChipAiCoreCount() (int32, error) {
 			return common.DeviceNotSupport, nil
 		}
 		if err != nil {
-			hwlog.RunLog.Debug(err)
-			continue
+			// if not support found aicore number, setting a default value
+			hwlog.RunLog.Infof("not found aicore number by dcmi: %#v", err)
+			return common.DefaultAiCoreNum, nil
 		}
 		return tool.getAiCoreCount(cgoVDevInfo)
 	}

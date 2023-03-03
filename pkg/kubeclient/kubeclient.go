@@ -103,11 +103,37 @@ func (ki *ClientK8s) GetActivePodList() ([]v1.Pod, error) {
 	if err != nil {
 		return nil, err
 	}
-	podList, err := ki.Clientset.CoreV1().Pods(v1.NamespaceAll).List(context.Background(), metav1.ListOptions{
-		FieldSelector: fieldSelector.String()})
+	podList, err := ki.GetPodListByCondition(fieldSelector)
 	if err != nil {
 		return nil, err
 	}
+	return ki.CheckPodList(podList)
+}
+
+// GetAllPodList get pod list by field selector
+func (ki *ClientK8s) GetAllPodList() (*v1.PodList, error) {
+	selector := fields.SelectorFromSet(fields.Set{"spec.nodeName": ki.NodeName})
+	podList, err := ki.GetPodListByCondition(selector)
+	if err != nil {
+		hwlog.RunLog.Errorf("get pod list failed, err: %#v", err)
+		return nil, err
+	}
+	if len(podList.Items) >= common.MaxPodLimit {
+		hwlog.RunLog.Error("The number of pods exceeds the upper limit")
+		return nil, fmt.Errorf("pod list count invalid")
+	}
+	return podList, nil
+}
+
+// GetPodListByCondition get pod list by field selector
+func (ki *ClientK8s) GetPodListByCondition(selector fields.Selector) (*v1.PodList, error) {
+	return ki.Clientset.CoreV1().Pods(v1.NamespaceAll).List(context.Background(), metav1.ListOptions{
+		FieldSelector: selector.String(),
+	})
+}
+
+// CheckPodList check each pod and return podList
+func (ki *ClientK8s) CheckPodList(podList *v1.PodList) ([]v1.Pod, error) {
 	if podList == nil {
 		return nil, fmt.Errorf("pod list is invalid")
 	}
