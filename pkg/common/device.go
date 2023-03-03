@@ -203,6 +203,10 @@ func CheckCardUsageMode(use310PMixedInsert bool, productTypes []string) error {
 	if !use310PMixedInsert {
 		return nil
 	}
+	if len(productTypes) == 0 {
+		return fmt.Errorf("do not get product type,only supports ascend310P-V, ascend310P-VPro, " +
+			"ascend310P-IPro card mixed insert mode")
+	}
 	DeviceTypeMap := Get310PProductType()
 	for _, productType := range productTypes {
 		if _, ok := DeviceTypeMap[productType]; !ok {
