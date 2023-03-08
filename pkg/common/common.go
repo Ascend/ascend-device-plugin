@@ -188,13 +188,11 @@ func GetDefaultDevices(getFdFlag bool) ([]string, error) {
 // set200SocDefaultDevices set 200 soc defaults devices
 func set200SocDefaultDevices() ([]string, error) {
 	var socDefaultDevices = []string{
-		Atlas200ISocXSMEM,
 		Atlas200ISocVPC,
 		Atlas200ISocVDEC,
 		Atlas200ISocSYS,
 		Atlas200ISocSpiSmbus,
 		Atlas200ISocUserConfig,
-		HiAi200RCEventSched,
 		HiAi200RCTsAisle,
 		HiAi200RCSVM0,
 		HiAi200RCLog,
@@ -205,6 +203,17 @@ func set200SocDefaultDevices() ([]string, error) {
 		if _, err := os.Stat(devPath); err != nil {
 			return nil, err
 		}
+	}
+	var socOptionsDevices = []string{
+		HiAi200RCEventSched,
+		Atlas200ISocXSMEM,
+	}
+	for _, devPath := range socOptionsDevices {
+		if _, err := os.Stat(devPath); err != nil {
+			hwlog.RunLog.Warnf("device %s not exist", devPath)
+			continue
+		}
+		socDefaultDevices = append(socDefaultDevices, devPath)
 	}
 	return socDefaultDevices, nil
 }
