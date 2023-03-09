@@ -29,7 +29,6 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"huawei.com/npu-exporter/v5/common-utils/hwlog"
 	"huawei.com/npu-exporter/v5/devmanager"
-	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
@@ -304,16 +303,16 @@ func (hdm *HwDevManager) chipHotReset() {
 			continue
 		}
 		if common.IsContainAtlas300IDuo() {
-			hdm.resetDuoCard(devices, prClient)
+			hdm.resetDuoCard(devType, devices, prClient)
 			continue
 		}
 		for _, device := range devices {
-			hdm.hotReset(device, prClient.IsPodMoveComplete)
+			hdm.hotReset(devType, device, prClient)
 		}
 	}
 }
 
-func (hdm *HwDevManager) resetDuoCard(devices []*common.NpuDevice, prClient *PodResource) {
+func (hdm *HwDevManager) resetDuoCard(devType string, devices []*common.NpuDevice, prClient *PodResource) {
 	var cardResetOnce = make(map[int32]*common.NpuDevice, 0)
 	for _, device := range devices {
 		if _, ok := cardResetOnce[device.CardID]; ok {
@@ -322,7 +321,7 @@ func (hdm *HwDevManager) resetDuoCard(devices []*common.NpuDevice, prClient *Pod
 		cardResetOnce[device.CardID] = device
 	}
 	for _, device := range cardResetOnce {
-		hdm.hotReset(device, prClient.IsPodMoveComplete)
+		hdm.hotReset(devType, device, prClient)
 	}
 }
 
@@ -524,8 +523,7 @@ func (hdm *HwDevManager) updateSpecTypePodAnnotation(deviceType, serverID string
 	return nil
 }
 
-func (hdm *HwDevManager) hotReset(device *common.NpuDevice, isPodRemoveComplete func(
-	_ string, _ *v1.PodList) bool) {
+func (hdm *HwDevManager) hotReset(devType string, device *common.NpuDevice, prClient *PodResource) {
 	if device.Health == v1beta1.Healthy {
 		return
 	}
@@ -534,7 +532,17 @@ func (hdm *HwDevManager) hotReset(device *common.NpuDevice, isPodRemoveComplete 
 		hwlog.RunLog.Errorf("get pod list failed, err: %#v", err)
 		return
 	}
-	for !isPodRemoveComplete(device.DeviceName, podList) {
+	element, exist := hdm.ServerMap[devType]
+	if !exist {
+		hwlog.RunLog.Errorf("not found %s plugin server", devType)
+		return
+	}
+	pluginServer, ok := element.(*PluginServer)
+	if !ok {
+		hwlog.RunLog.Errorf("serverMap convert %s failed", devType)
+		return
+	}
+	if !prClient.IsPodMoveComplete(device.DeviceName, podList, pluginServer) {
 		hwlog.RunLog.Warn("service pod has not been migrated or destroyed, wait for scanning again.")
 		return
 	}

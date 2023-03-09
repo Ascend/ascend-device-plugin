@@ -186,23 +186,40 @@ func (pr *PodResource) stop() {
 }
 
 // IsPodMoveComplete is UnHealthy Pod remove complete
-func (pr *PodResource) IsPodMoveComplete(deviceName string, podList *v1.PodList) bool {
+func (pr *PodResource) IsPodMoveComplete(deviceName string, podList *v1.PodList, ps *PluginServer) bool {
+	hwlog.RunLog.Infof("check is pod real use chip %s move complete or not", deviceName)
 	podResourceList, err := pr.getValidPodResources(podList)
 	if err != nil {
 		return false
 	}
+	k8sDev := pr.getKltDev(ps, deviceName)
+	hwlog.RunLog.Infof("check is pod klt use chip %s move complete or not", k8sDev)
 	for _, podResource := range podResourceList {
 		if len(podResource.DeviceIds) == 0 {
 			continue
 		}
 		for _, devID := range podResource.DeviceIds {
-			if devID == deviceName {
+			if devID == k8sDev {
 				return false
 			}
 		}
 	}
 	hwlog.RunLog.Info("UnHealthy pod remove complete")
 	return true
+}
+
+func (pr *PodResource) getKltDev(ps *PluginServer, deviceName string) string {
+	if !common.ParamOption.UseVolcanoType {
+		return deviceName
+	}
+	var k8sDev string
+	for klDev, realDev := range ps.klt2RealDevMap {
+		if realDev == deviceName {
+			k8sDev = klDev
+			break
+		}
+	}
+	return k8sDev
 }
 
 func (pr *PodResource) getValidPodResources(podList *v1.PodList) ([]PodDevice, error) {
@@ -212,15 +229,10 @@ func (pr *PodResource) getValidPodResources(podList *v1.PodList) ([]PodDevice, e
 		hwlog.RunLog.Errorf("get pod resource failed, err: %v", err)
 		return nil, err
 	}
-	for podNameAndNs := range podResourceList {
-		if !pr.isValidPod(podNameAndNs, podList) {
-			continue
+	for podNameAndNs, podResource := range podResourceList {
+		if pr.isValidPod(podNameAndNs, podList) {
+			res = append(res, podResource)
 		}
-		podResource, ok := podResourceList[podNameAndNs]
-		if !ok {
-			continue
-		}
-		res = append(res, podResource)
 	}
 	return res, nil
 }
