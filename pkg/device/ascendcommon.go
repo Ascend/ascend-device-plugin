@@ -450,7 +450,7 @@ func (tool *AscendTools) IsDeviceStatusChange(groupDevice map[string][]*common.N
 }
 
 func (tool *AscendTools) syncDuoCardState(groupDevice map[string][]*common.NpuDevice) {
-	if common.IsContainAtlas300IDuo() {
+	if !common.IsContainAtlas300IDuo() {
 		return
 	}
 	if common.ParamOption.HotReset != common.HotResetInfer {
