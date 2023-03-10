@@ -391,11 +391,7 @@ func (ps *PluginServer) GetRealAllocateDevices(kltAllocate []string) ([]string, 
 }
 
 // GetKltAndRealAllocateDev get kubelet and real allocate device of pod
-func (ps *PluginServer) GetKltAndRealAllocateDev() ([]PodDeviceInfo, error) {
-	podList, err := ps.manager.GetKubeClient().GetActivePodList()
-	if err != nil {
-		return nil, err
-	}
+func (ps *PluginServer) GetKltAndRealAllocateDev(podList []v1.Pod) ([]PodDeviceInfo, error) {
 	prClient := NewPodResource()
 	podDevice, err := prClient.GetPodResource()
 	if err != nil {
@@ -437,14 +433,15 @@ func (ps *PluginServer) DestroyNotUsedVNPU() error {
 	if err != nil {
 		return err
 	}
-	podDeviceInfo, err := ps.GetKltAndRealAllocateDev()
+	podList, err := ps.manager.GetKubeClient().GetAllPodList()
 	if err != nil {
 		return err
 	}
-	usedDevice := sets.String{}
-	for _, deviceInfo := range podDeviceInfo {
-		usedDevice.Insert(deviceInfo.RealDevice...)
+	podDeviceInfo, err := ps.GetKltAndRealAllocateDev(podList.Items)
+	if err != nil {
+		return err
 	}
+	usedDevice := ps.removeVGroup(podDeviceInfo)
 	var needToDestroy []string
 	for _, dev := range allDevInfo.AllDevs {
 		if !usedDevice.Has(dev.DeviceName) {
@@ -462,6 +459,21 @@ func (ps *PluginServer) DestroyNotUsedVNPU() error {
 		}
 	}
 	return nil
+}
+
+func (ps *PluginServer) removeVGroup(podDeviceInfo []PodDeviceInfo) sets.String {
+	usedDevice := sets.String{}
+	for _, deviceInfo := range podDeviceInfo {
+		usedDevice.Insert(deviceInfo.RealDevice...)
+	}
+	noVGroupDevice := sets.String{}
+	for dev := range usedDevice {
+		vDevAndGroup := strings.Split(dev, common.UnderLine)
+		if len(vDevAndGroup) == 1 || len(vDevAndGroup) == common.VGroupAndDevLen {
+			noVGroupDevice.Insert(vDevAndGroup[0])
+		}
+	}
+	return noVGroupDevice
 }
 
 func checkAnnotationAllocateValid(requestDevices []string, deviceType string, pod *v1.Pod, chipAICore int32) bool {
