@@ -108,13 +108,18 @@ func TestUpdatePodAnnotation(t *testing.T) {
 					return node, nil
 				})
 			mockPodDeviceInfo := gomonkey.ApplyMethod(reflect.TypeOf(new(PluginServer)), "GetKltAndRealAllocateDev",
-				func(_ *PluginServer) ([]PodDeviceInfo, error) {
+				func(_ *PluginServer, _ []v1.Pod) ([]PodDeviceInfo, error) {
 					return podDeviceInfo, nil
 				})
 			mockManager := gomonkey.ApplyMethod(reflect.TypeOf(new(device.AscendTools)), "AddPodAnnotation",
 				func(_ *device.AscendTools, _ *v1.Pod, _ []string, _ []string, _ string, _ string) error {
 					return nil
 				})
+			mockPodList := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)), "GetActivePodList",
+				func(_ *kubeclient.ClientK8s) ([]v1.Pod, error) {
+					return []v1.Pod{}, nil
+				})
+			defer mockPodList.Reset()
 			defer mockManager.Reset()
 			defer mockNode.Reset()
 			defer mockPodDeviceInfo.Reset()

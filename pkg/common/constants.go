@@ -240,6 +240,8 @@ const (
 	ServerTypeLabelKey = "servertype"
 	// ServerTypeInfoMinLen the min len of server type split data
 	ServerTypeInfoMinLen = 2
+	// VGroupAndDevLen a list only contain virtual group and device
+	VGroupAndDevLen = 2
 )
 
 const (
