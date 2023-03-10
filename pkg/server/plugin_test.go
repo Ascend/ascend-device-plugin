@@ -402,9 +402,14 @@ func TestDestroyNotUsedVNPU(t *testing.T) {
 			return nil
 		})
 	mockAllocateDev := gomonkey.ApplyMethod(reflect.TypeOf(new(PluginServer)), "GetKltAndRealAllocateDev",
-		func(_ *PluginServer) ([]PodDeviceInfo, error) {
+		func(_ *PluginServer, _ []v1.Pod) ([]PodDeviceInfo, error) {
 			return []PodDeviceInfo{}, nil
 		})
+	mockPodList := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)), "GetAllPodList",
+		func(_ *kubeclient.ClientK8s) (*v1.PodList, error) {
+			return &v1.PodList{}, nil
+		})
+	defer mockPodList.Reset()
 	defer mockDestroy.Reset()
 	defer mockAllocateDev.Reset()
 	defer mockGetNPUs.Reset()

@@ -495,7 +495,11 @@ func (hdm *HwDevManager) updateSpecTypePodAnnotation(deviceType, serverID string
 	if !ok {
 		return fmt.Errorf("serverMap convert %s failed", deviceType)
 	}
-	podDeviceInfo, err := pluginServer.GetKltAndRealAllocateDev()
+	podList, err := hdm.manager.GetKubeClient().GetActivePodList()
+	if err != nil {
+		return err
+	}
+	podDeviceInfo, err := pluginServer.GetKltAndRealAllocateDev(podList)
 	if err != nil {
 		return err
 	}
