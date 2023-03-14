@@ -306,23 +306,54 @@ func (hdm *HwDevManager) chipHotReset() {
 			hdm.resetDuoCard(devType, devices, prClient)
 			continue
 		}
-		for _, device := range devices {
-			hdm.hotReset(devType, device, prClient)
+		hdm.resetCommonInferCard(devType, devices, prClient)
+	}
+}
+
+func (hdm *HwDevManager) resetCommonInferCard(devType string, devices []*common.NpuDevice, prClient *PodResource) {
+	for _, device := range devices {
+		if device.Health == v1beta1.Healthy {
+			continue
 		}
+		if !hdm.isPodRemove(devType, device, prClient) {
+			continue
+		}
+		hdm.hotReset(device)
 	}
 }
 
 func (hdm *HwDevManager) resetDuoCard(devType string, devices []*common.NpuDevice, prClient *PodResource) {
-	var cardResetOnce = make(map[int32]*common.NpuDevice, 0)
+	var cardResetOnce = make(map[int32][]*common.NpuDevice, 1)
 	for _, device := range devices {
-		if _, ok := cardResetOnce[device.CardID]; ok {
+		cardResetOnce[device.CardID] = append(cardResetOnce[device.CardID], device)
+	}
+	for _, deviceChip := range cardResetOnce {
+		if hdm.isDuoCardChipHealthy(deviceChip) {
 			continue
 		}
-		cardResetOnce[device.CardID] = device
+		if !hdm.isDuoRemove(devType, deviceChip, prClient) {
+			continue
+		}
+		hdm.hotReset(deviceChip[0])
 	}
-	for _, device := range cardResetOnce {
-		hdm.hotReset(devType, device, prClient)
+}
+
+func (hdm *HwDevManager) isDuoRemove(devType string, deviceChip []*common.NpuDevice, prClient *PodResource) bool {
+	for _, dev := range deviceChip {
+		if !hdm.isPodRemove(devType, dev, prClient) {
+			return false
+		}
 	}
+	return true
+}
+
+func (hdm *HwDevManager) isDuoCardChipHealthy(deviceChip []*common.NpuDevice) bool {
+	for _, dev := range deviceChip {
+		if dev.Health == v1beta1.Unhealthy {
+			return false
+		}
+	}
+	return true
 }
 
 func (hdm *HwDevManager) useVolcanoNotify() {
@@ -527,29 +558,7 @@ func (hdm *HwDevManager) updateSpecTypePodAnnotation(deviceType, serverID string
 	return nil
 }
 
-func (hdm *HwDevManager) hotReset(devType string, device *common.NpuDevice, prClient *PodResource) {
-	if device.Health == v1beta1.Healthy {
-		return
-	}
-	podList, err := hdm.manager.GetKubeClient().GetAllPodList()
-	if err != nil {
-		hwlog.RunLog.Errorf("get pod list failed, err: %#v", err)
-		return
-	}
-	element, exist := hdm.ServerMap[devType]
-	if !exist {
-		hwlog.RunLog.Errorf("not found %s plugin server", devType)
-		return
-	}
-	pluginServer, ok := element.(*PluginServer)
-	if !ok {
-		hwlog.RunLog.Errorf("serverMap convert %s failed", devType)
-		return
-	}
-	if !prClient.IsPodMoveComplete(device.DeviceName, podList, pluginServer) {
-		hwlog.RunLog.Warn("service pod has not been migrated or destroyed, wait for scanning again.")
-		return
-	}
+func (hdm *HwDevManager) hotReset(device *common.NpuDevice) {
 	var isResetExec = false
 	if err := wait.PollImmediate(time.Second, time.Minute, func() (bool, error) {
 		if err := hdm.execResetChip(device.LogicID, &isResetExec); err != nil {
@@ -571,6 +580,29 @@ func (hdm *HwDevManager) hotReset(devType string, device *common.NpuDevice, prCl
 		return
 	}
 	hwlog.RunLog.Info("hot reset success")
+}
+
+func (hdm *HwDevManager) isPodRemove(devType string, device *common.NpuDevice, prClient *PodResource) bool {
+	podList, err := hdm.manager.GetKubeClient().GetAllPodList()
+	if err != nil {
+		hwlog.RunLog.Errorf("get pod list failed, err: %#v", err)
+		return false
+	}
+	element, exist := hdm.ServerMap[devType]
+	if !exist {
+		hwlog.RunLog.Errorf("not found %s plugin server", devType)
+		return false
+	}
+	pluginServer, ok := element.(*PluginServer)
+	if !ok {
+		hwlog.RunLog.Errorf("serverMap convert %s failed", devType)
+		return false
+	}
+	if !prClient.IsPodMoveComplete(device.DeviceName, podList, pluginServer) {
+		hwlog.RunLog.Warn("service pod has not been migrated or destroyed, wait for scanning again.")
+		return false
+	}
+	return true
 }
 
 func (hdm *HwDevManager) execResetChip(logicID int32, isResetExec *bool) error {
