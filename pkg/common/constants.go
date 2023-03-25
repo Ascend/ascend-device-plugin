@@ -304,6 +304,10 @@ const (
 	NoNPUResource = "NoNPUResource"
 	// NPUSegmentFailed means create vnpu device failed
 	NPUSegmentFailed = "NPUSegmentFailed"
+	// CenterScene deploy the device-plugin component on the central side
+	CenterScene = "center"
+	// EdgeScene deploy the device-plugin component on the edge side
+	EdgeScene = "edge"
 )
 
 // Special scene for invoking the dcmi interface

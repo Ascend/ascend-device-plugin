@@ -17,7 +17,6 @@ package server
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -30,7 +29,6 @@ import (
 	"huawei.com/npu-exporter/v5/common-utils/hwlog"
 	"huawei.com/npu-exporter/v5/devmanager"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/pkg/common"
@@ -40,13 +38,12 @@ import (
 
 // HwDevManager manages huawei device devices.
 type HwDevManager struct {
-	groupDevice       map[string][]*common.NpuDevice
-	ServerMap         map[string]InterfaceServer
-	allInfo           common.NpuAllInfo
-	manager           device.DevManager
-	RunMode           string
-	isEmptyKubeCfgErr bool
-	RealCardType      string
+	groupDevice  map[string][]*common.NpuDevice
+	ServerMap    map[string]InterfaceServer
+	allInfo      common.NpuAllInfo
+	manager      device.DevManager
+	RunMode      string
+	RealCardType string
 }
 
 // NewHwDevManager function is used to new a dev manager.
@@ -102,21 +99,13 @@ func (hdm *HwDevManager) setAscendManager(dmgr devmanager.DeviceInterface) error
 
 // UpdateServerType update server type, like Ascend910-32
 func (hdm *HwDevManager) UpdateServerType() error {
-	kubeClient, err := kubeclient.NewClientK8s()
-	if err != nil {
-		hdm.isEmptyKubeCfgErr = strings.Contains(err.Error(), clientcmd.ErrEmptyConfig.Error())
-		if !hdm.isEmptyKubeCfgErr {
-			hwlog.RunLog.Errorf("init kubeclient failed err: %#v", err)
-			return err
-		}
-		if common.ParamOption.UseVolcanoType || common.ParamOption.HotReset != common.HotResetClose {
-			hwlog.RunLog.Warnf("not exist kube config, maybe it's edge scene")
-			return errors.New("using volcano need kubeConfig, but not found")
-		}
+	if common.ParamOption.BuildScene == common.EdgeScene {
 		return nil
 	}
-	if kubeClient == nil {
-		return errors.New("kube client is nil")
+	kubeClient, err := kubeclient.NewClientK8s()
+	if err != nil {
+		hwlog.RunLog.Errorf("init k8s client failed err: %#v", err.Error())
+		return err
 	}
 	hdm.manager.SetKubeClient(kubeClient)
 	hwlog.RunLog.Info("init kube client success")
@@ -357,7 +346,11 @@ func (hdm *HwDevManager) isDuoCardChipHealthy(deviceChip []*common.NpuDevice) bo
 }
 
 func (hdm *HwDevManager) useVolcanoNotify() {
-	if hdm.isEmptyKubeCfgErr {
+	if common.ParamOption.BuildScene == common.EdgeScene {
+		return
+	}
+	if hdm.manager.GetKubeClient() == nil {
+		hwlog.RunLog.Error("kube client is nil, can't interacting with k8s")
 		return
 	}
 	common.DpStartReset.Do(func() {
