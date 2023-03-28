@@ -77,6 +77,8 @@ var (
 	BuildName string
 	// BuildVersion show app version
 	BuildVersion string
+	// BuildScene show app staring scene
+	BuildScene string
 )
 
 func initLogModule(ctx context.Context) error {
@@ -134,6 +136,10 @@ func checkParam() bool {
 		hwlog.RunLog.Errorf("unSupport mode: %s", *mode)
 		return false
 	}
+	if BuildScene != common.EdgeScene && BuildScene != common.CenterScene {
+		hwlog.RunLog.Error("unSupport build scene, only support edge and center")
+		return false
+	}
 	return true
 }
 
@@ -151,6 +157,7 @@ func main() {
 		return
 	}
 	hwlog.RunLog.Infof("ascend device plugin starting and the version is %s", BuildVersion)
+	hwlog.RunLog.Infof("ascend device plugin starting scene is %s", BuildScene)
 	setParameters()
 	hdm, err := InitFunction()
 	if err != nil {
@@ -188,6 +195,7 @@ func setParameters() {
 		PresetVDevice:      *presetVirtualDevice,
 		Use310PMixedInsert: *use310PMixedInsert,
 		HotReset:           *hotReset,
+		BuildScene:         BuildScene,
 	}
 }
 
