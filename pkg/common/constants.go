@@ -61,9 +61,13 @@ const (
 	// DeviceInfoCMDataKey device info configmap data key
 	DeviceInfoCMDataKey = "DeviceInfoCfg"
 
-	runtimeEnvNum           = 2
-	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES" // visible env
-	ascendRuntimeOptionsEnv = "ASCEND_RUNTIME_OPTIONS" // virtual runtime option env
+	runtimeEnvNum = 3
+	// ascendVisibleDevicesEnv visible devices env
+	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"
+	// ascendRuntimeOptionsEnv virtual runtime option env
+	ascendRuntimeOptionsEnv = "ASCEND_RUNTIME_OPTIONS"
+	// ascendAllowLinkEnv a500a2 need mount softlink
+	ascendAllowLinkEnv = "ASCEND_ALLOW_LINK"
 	// PodPredicateTime pod predicate time
 	PodPredicateTime = "predicate-time"
 	// Pod2kl pod annotation key, means kubelet allocate device
@@ -282,6 +286,17 @@ const (
 	Atlas200ISocSpiSmbus = "/dev/spi_smbus"
 	// Atlas200ISocUserConfig is user_config
 	Atlas200ISocUserConfig = "/dev/user_config"
+)
+
+const (
+	// Atlas500A2 a500 a2 device's product name
+	Atlas500A2 = "Atlas 500 A2"
+	// Atlas500A2DvppCmdlist is dvpp_cmdlist
+	Atlas500A2DvppCmdlist = "/dev/dvpp_cmdlist"
+	// Atlas500A2Pngd is pngd
+	Atlas500A2Pngd = "/dev/pngd"
+	// Atlas500A2Venc is venc
+	Atlas500A2Venc = "/dev/venc"
 )
 
 const (

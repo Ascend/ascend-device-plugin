@@ -78,6 +78,9 @@ func SetAscendRuntimeEnv(devices []int, ascendRuntimeOptions string,
 	}
 	(*resp).Envs[ascendVisibleDevicesEnv] = strings.Join(deviceStr, ",")
 	(*resp).Envs[ascendRuntimeOptionsEnv] = ascendRuntimeOptions
+	if len(ParamOption.ProductTypes) == 1 && ParamOption.ProductTypes[0] == Atlas500A2 {
+		(*resp).Envs[ascendAllowLinkEnv] = "True"
+	}
 
 	hwlog.RunLog.Infof("allocate resp env: %s; %s", (*resp).Envs[ascendVisibleDevicesEnv], ascendRuntimeOptions)
 }
@@ -174,13 +177,28 @@ func GetDefaultDevices(getFdFlag bool) ([]string, error) {
 	if getFdFlag {
 		setDeviceByPathWhen200RC(&defaultDevices)
 	}
-	if len(ParamOption.ProductTypes) == 1 && ParamOption.ProductTypes[0] == Atlas200ISoc {
+
+	var productType string
+	if len(ParamOption.ProductTypes) == 1 {
+		productType = ParamOption.ProductTypes[0]
+	}
+	switch productType {
+	case Atlas200ISoc:
 		socDefaultDevices, err := set200SocDefaultDevices()
 		if err != nil {
 			hwlog.RunLog.Errorf("get 200I soc default devices failed, err: %#v", err)
 			return nil, err
 		}
 		defaultDevices = append(defaultDevices, socDefaultDevices...)
+	case Atlas500A2:
+		a500A2DefaultDevices, err := set500A2DefaultDevices()
+		if err != nil {
+			hwlog.RunLog.Errorf("get A500 A2 default devices failed, err: %#v", err)
+			return nil, err
+		}
+		defaultDevices = append(defaultDevices, a500A2DefaultDevices...)
+	default:
+
 	}
 	return defaultDevices, nil
 }
@@ -216,6 +234,27 @@ func set200SocDefaultDevices() ([]string, error) {
 		socDefaultDevices = append(socDefaultDevices, devPath)
 	}
 	return socDefaultDevices, nil
+}
+
+func set500A2DefaultDevices() ([]string, error) {
+	var a500A2DefaultDevices = []string{
+		Atlas500A2DvppCmdlist,
+		Atlas500A2Pngd,
+		Atlas500A2Venc,
+		HiAi200RCUpgrade,
+		Atlas200ISocSYS,
+		HiAi200RCSVM0,
+		Atlas200ISocVDEC,
+		Atlas200ISocVPC,
+		HiAi200RCTsAisle,
+		HiAi200RCLog,
+	}
+	for _, devPath := range a500A2DefaultDevices {
+		if _, err := os.Stat(devPath); err != nil {
+			return nil, err
+		}
+	}
+	return a500A2DefaultDevices, nil
 }
 
 func getNPUResourceNumOfPod(pod *v1.Pod, deviceType string) int64 {
