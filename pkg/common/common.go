@@ -78,7 +78,7 @@ func SetAscendRuntimeEnv(devices []int, ascendRuntimeOptions string,
 	}
 	(*resp).Envs[ascendVisibleDevicesEnv] = strings.Join(deviceStr, ",")
 	(*resp).Envs[ascendRuntimeOptionsEnv] = ascendRuntimeOptions
-	if len(ParamOption.ProductTypes) == 1 && ParamOption.ProductTypes[0] == Atlas500A2 {
+	if ParamOption.RealCardType == Ascend310B {
 		(*resp).Envs[ascendAllowLinkEnv] = "True"
 	}
 
@@ -182,23 +182,17 @@ func GetDefaultDevices(getFdFlag bool) ([]string, error) {
 	if len(ParamOption.ProductTypes) == 1 {
 		productType = ParamOption.ProductTypes[0]
 	}
-	switch productType {
-	case Atlas200ISoc:
+	if productType == Atlas200ISoc {
 		socDefaultDevices, err := set200SocDefaultDevices()
 		if err != nil {
 			hwlog.RunLog.Errorf("get 200I soc default devices failed, err: %#v", err)
 			return nil, err
 		}
 		defaultDevices = append(defaultDevices, socDefaultDevices...)
-	case Atlas500A2:
-		a500A2DefaultDevices, err := set500A2DefaultDevices()
-		if err != nil {
-			hwlog.RunLog.Errorf("get A500 A2 default devices failed, err: %#v", err)
-			return nil, err
-		}
-		defaultDevices = append(defaultDevices, a500A2DefaultDevices...)
-	default:
-
+	}
+	if ParamOption.RealCardType == Ascend310B {
+		a310BDefaultDevices := set310BDefaultDevices()
+		defaultDevices = append(defaultDevices, a310BDefaultDevices...)
 	}
 	return defaultDevices, nil
 }
@@ -236,11 +230,11 @@ func set200SocDefaultDevices() ([]string, error) {
 	return socDefaultDevices, nil
 }
 
-func set500A2DefaultDevices() ([]string, error) {
-	var a500A2DefaultDevices = []string{
-		Atlas500A2DvppCmdlist,
-		Atlas500A2Pngd,
-		Atlas500A2Venc,
+func set310BDefaultDevices() []string {
+	var a310BDefaultDevices = []string{
+		Atlas310BDvppCmdlist,
+		Atlas310BPngd,
+		Atlas310BVenc,
 		HiAi200RCUpgrade,
 		Atlas200ISocSYS,
 		HiAi200RCSVM0,
@@ -249,12 +243,15 @@ func set500A2DefaultDevices() ([]string, error) {
 		HiAi200RCTsAisle,
 		HiAi200RCLog,
 	}
-	for _, devPath := range a500A2DefaultDevices {
+	var available310BDevices []string
+	for _, devPath := range a310BDefaultDevices {
 		if _, err := os.Stat(devPath); err != nil {
-			return nil, err
+			hwlog.RunLog.Warnf("device %s not exist", devPath)
+			continue
 		}
+		available310BDevices = append(available310BDevices, devPath)
 	}
-	return a500A2DefaultDevices, nil
+	return available310BDevices
 }
 
 func getNPUResourceNumOfPod(pod *v1.Pod, deviceType string) int64 {
