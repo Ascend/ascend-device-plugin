@@ -99,6 +99,7 @@ type Option struct {
 	AiCoreCount        int32    // found by dcmi interface
 	BuildScene         string   // build scene judge device-plugin start scene
 	ProductTypes       []string // all product types
+	RealCardType       string   // real card type
 }
 
 // GetAllDeviceInfoTypeList Get All Device Info Type List

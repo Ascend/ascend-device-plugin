@@ -168,6 +168,8 @@ const (
 
 	// Ascend310 310
 	Ascend310 = "Ascend310"
+	// Ascend310B 310B chip
+	Ascend310B = "Ascend310B"
 	// HuaweiAscend310 with prefix
 	HuaweiAscend310 = ResourceNamePrefix + Ascend310
 	// AscendfdPrefix use in fd
@@ -289,14 +291,12 @@ const (
 )
 
 const (
-	// Atlas500A2 a500 a2 device's product name
-	Atlas500A2 = "Atlas 500 A2"
-	// Atlas500A2DvppCmdlist is dvpp_cmdlist
-	Atlas500A2DvppCmdlist = "/dev/dvpp_cmdlist"
-	// Atlas500A2Pngd is pngd
-	Atlas500A2Pngd = "/dev/pngd"
-	// Atlas500A2Venc is venc
-	Atlas500A2Venc = "/dev/venc"
+	// Atlas310BDvppCmdlist is dvpp_cmdlist
+	Atlas310BDvppCmdlist = "/dev/dvpp_cmdlist"
+	// Atlas310BPngd is pngd
+	Atlas310BPngd = "/dev/pngd"
+	// Atlas310BVenc is venc
+	Atlas310BVenc = "/dev/venc"
 )
 
 const (

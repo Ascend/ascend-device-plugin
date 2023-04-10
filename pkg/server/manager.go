@@ -38,12 +38,11 @@ import (
 
 // HwDevManager manages huawei device devices.
 type HwDevManager struct {
-	groupDevice  map[string][]*common.NpuDevice
-	ServerMap    map[string]InterfaceServer
-	allInfo      common.NpuAllInfo
-	manager      device.DevManager
-	RunMode      string
-	RealCardType string
+	groupDevice map[string][]*common.NpuDevice
+	ServerMap   map[string]InterfaceServer
+	allInfo     common.NpuAllInfo
+	manager     device.DevManager
+	RunMode     string
 }
 
 // NewHwDevManager function is used to new a dev manager.
@@ -65,26 +64,25 @@ func NewHwDevManager(devM devmanager.DeviceInterface) *HwDevManager {
 }
 
 func (hdm *HwDevManager) setAscendManager(dmgr devmanager.DeviceInterface) error {
-	switch dmgr.GetDevType() {
-	case common.Ascend310:
+	devType := dmgr.GetDevType()
+	switch devType {
+	case common.Ascend310, common.Ascend310B:
 		if !common.ParamOption.PresetVDevice {
 			return fmt.Errorf("only 310p and 910 support dynamic virtual instance")
 		}
 		hdm.RunMode = common.Ascend310
-		hdm.RealCardType = common.Ascend310
 		hdm.manager = device.NewHwAscend310Manager()
 	case common.Ascend910, common.Ascend910B:
 		hdm.RunMode = common.Ascend910
-		hdm.RealCardType = dmgr.GetDevType()
 		hdm.manager = device.NewHwAscend910Manager()
 	case common.Ascend310P:
 		hdm.RunMode = common.Ascend310P
-		hdm.RealCardType = common.Ascend310P
 		hdm.manager = device.NewHwAscend310PManager()
 	default:
 		hwlog.RunLog.Error("found an unsupported device type")
 		return fmt.Errorf("an unsupported device type")
 	}
+	common.ParamOption.RealCardType = devType
 	hdm.manager.SetDmgr(dmgr)
 	productTypes, err := hdm.manager.GetDmgr().GetAllProductType()
 	if err != nil {
@@ -133,7 +131,8 @@ func (hdm *HwDevManager) updateNodeServerType(aiCoreCount int32) error {
 		return nil
 	}
 	newNode := oldNode.DeepCopy()
-	newNode.Labels[common.ServerTypeLabelKey] = hdm.RealCardType + common.MiddelLine + strconv.Itoa(int(aiCoreCount))
+	newNode.Labels[common.ServerTypeLabelKey] = common.ParamOption.RealCardType +
+		common.MiddelLine + strconv.Itoa(int(aiCoreCount))
 	for i := 0; i < common.RetryUpdateCount; i++ {
 		if _, _, err = hdm.manager.GetKubeClient().PatchNodeState(oldNode, newNode); err == nil {
 			hwlog.RunLog.Infof("update server type success")
