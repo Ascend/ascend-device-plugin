@@ -279,13 +279,10 @@ func (ps *PluginServer) getOldestPod(pods []v1.Pod) *v1.Pod {
 	}
 	oldest := pods[0]
 	for _, pod := range pods {
-		hwlog.RunLog.Debugf("pod %s, predicate time: %s", oldest.Name, pod.Annotations[common.PodPredicateTime])
 		if getPredicateTimeFromPodAnnotation(&oldest) > getPredicateTimeFromPodAnnotation(&pod) {
 			oldest = pod
 		}
 	}
-	hwlog.RunLog.Debugf("oldest pod %#v, predicate time: %#v", oldest.Name,
-		oldest.Annotations[common.PodPredicateTime])
 	annotation := map[string]string{common.PodPredicateTime: strconv.FormatUint(math.MaxUint64, common.BaseDec)}
 	if err := ps.manager.GetKubeClient().TryUpdatePodAnnotation(&oldest, annotation); err != nil {
 		hwlog.RunLog.Errorf("update pod %s failed, err: %#v", oldest.Name, err)

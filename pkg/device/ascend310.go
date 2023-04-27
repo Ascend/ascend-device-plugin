@@ -45,17 +45,17 @@ func NewHwAscend310Manager() *HwAscend310Manager {
 
 // GetNPUs Discovers all HUAWEI Ascend310 devices by call devmanager interface
 func (hnm *HwAscend310Manager) GetNPUs() (common.NpuAllInfo, error) {
-	devNum, devList, err := hnm.dmgr.GetDeviceList()
+	_, devList, err := hnm.dmgr.GetDeviceList()
 	if err != nil {
 		return common.NpuAllInfo{}, err
 	}
-	if devNum > hnm.devCount {
-		return common.NpuAllInfo{}, fmt.Errorf("invalid device num: %d", devNum)
+	if int32(len(devList)) > hnm.devCount {
+		return common.NpuAllInfo{}, fmt.Errorf("invalid device num: %d", len(devList))
 	}
 	var allDevices []common.NpuDevice
 	var allDeviceTypes []string
-	for i := int32(0); i < devNum; i++ {
-		davinCiDev, err := hnm.getDavinCiDev(devList[i])
+	for _, dev := range devList {
+		davinCiDev, err := hnm.getDavinCiDev(dev)
 		if err != nil {
 			return common.NpuAllInfo{}, err
 		}

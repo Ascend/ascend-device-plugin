@@ -59,22 +59,22 @@ func NewHwAscend910Manager() *HwAscend910Manager {
 // vDeviTypes may is: [Ascend910-4c, Ascend910-4c, Ascend910-8c], also deviTypes may is: [Ascend910, Ascend910]
 // one class deviType will generate a socket file, like ascend910-4c.sock or Ascend910.sock, so we deduplicate
 func (hnm *HwAscend910Manager) GetNPUs() (common.NpuAllInfo, error) {
-	devNum, devList, err := hnm.dmgr.GetDeviceList()
+	_, devList, err := hnm.dmgr.GetDeviceList()
 	if err != nil {
 		return common.NpuAllInfo{}, err
 	}
-	if devNum > hnm.devCount {
-		return common.NpuAllInfo{}, fmt.Errorf("invalid device num: %d", devNum)
+	if int32(len(devList)) > hnm.devCount {
+		return common.NpuAllInfo{}, fmt.Errorf("invalid device num: %d", len(devList))
 	}
 	var allDevices []common.NpuDevice
 	var aiCoreDevices []*common.NpuDevice
 	var allDeviceTypes []string
-	for i := int32(0); i < devNum; i++ {
-		davinCiDev, err := hnm.getDavinCiDev(devList[i])
+	for _, dev := range devList {
+		davinCiDev, err := hnm.getDavinCiDev(dev)
 		if err != nil {
 			return common.NpuAllInfo{}, err
 		}
-		vDevInfos, err := hnm.getVirtualDevice(devList[i])
+		vDevInfos, err := hnm.getVirtualDevice(dev)
 		if err != nil {
 			hwlog.RunLog.Errorf("The virtual device is considered not exist, please check the error: %#v", err)
 		}

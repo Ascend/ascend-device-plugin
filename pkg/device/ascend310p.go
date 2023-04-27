@@ -41,18 +41,18 @@ func NewHwAscend310PManager() *HwAscend310PManager {
 
 // GetNPUs Discovers all HUAWEI Ascend310P devices by call devmanager interface
 func (hnm *HwAscend310PManager) GetNPUs() (common.NpuAllInfo, error) {
-	devNum, devList, err := hnm.dmgr.GetDeviceList()
+	_, devList, err := hnm.dmgr.GetDeviceList()
 	if err != nil {
 		return common.NpuAllInfo{}, err
 	}
-	if devNum > hnm.devCount {
-		return common.NpuAllInfo{}, fmt.Errorf("invalid device num: %d", devNum)
+	if int32(len(devList)) > hnm.devCount {
+		return common.NpuAllInfo{}, fmt.Errorf("invalid device num: %d", len(devList))
 	}
 	var allDevices []common.NpuDevice
 	var aiCoreDevices []*common.NpuDevice
 	var allDeviceTypes []string
-	for i := int32(0); i < devNum; i++ {
-		davinCiDev, err := hnm.getDavinCiDev(devList[i])
+	for _, dev := range devList {
+		davinCiDev, err := hnm.getDavinCiDev(dev)
 		if err != nil {
 			return common.NpuAllInfo{}, err
 		}
@@ -62,7 +62,7 @@ func (hnm *HwAscend310PManager) GetNPUs() (common.NpuAllInfo, error) {
 			}
 			continue
 		}
-		vDevInfos, err := hnm.getVirtualDevice(devList[i])
+		vDevInfos, err := hnm.getVirtualDevice(dev)
 		if err != nil {
 			hwlog.RunLog.Errorf("The virtual device is considered not exist, please check the error: %#v", err)
 		}
