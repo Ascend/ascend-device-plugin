@@ -328,19 +328,24 @@ func VerifyPathAndPermission(verifyPath string) (string, bool) {
 	hwlog.RunLog.Debug("starting check device socket file path.")
 	absVerifyPath, err := filepath.Abs(verifyPath)
 	if err != nil {
-		hwlog.RunLog.Error("abs current path failed")
+		hwlog.RunLog.Errorf("abs current path failed: %#v", err)
 		return "", false
 	}
 	pathInfo, err := os.Stat(absVerifyPath)
 	if err != nil {
-		hwlog.RunLog.Error("file path not exist")
+		hwlog.RunLog.Errorf("abs current path failed: %#v", err)
 		return "", false
 	}
 	realPath, err := filepath.EvalSymlinks(absVerifyPath)
-	if err != nil || absVerifyPath != realPath {
+	if err != nil {
+		hwlog.RunLog.Errorf("evaluation of any symbolic failed: %#v", err)
+		return "", false
+	}
+	if absVerifyPath != realPath {
 		hwlog.RunLog.Error("Symlinks is not allowed")
 		return "", false
 	}
+
 	stat, ok := pathInfo.Sys().(*syscall.Stat_t)
 	if !ok || stat.Uid != RootUID || stat.Gid != RootGID {
 		hwlog.RunLog.Error("Non-root owner group of the path")
