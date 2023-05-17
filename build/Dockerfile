@@ -1,6 +1,7 @@
 FROM ubuntu:18.04
 
 RUN useradd -d /home/HwHiAiUser -u 1000 -m -s /usr/sbin/nologin HwHiAiUser && \
+    useradd -d /home/hwMindX -u 9000 -m -s /usr/sbin/nologin hwMindX &&\
     usermod root -s /usr/sbin/nologin
 
 ENV USE_ASCEND_DOCKER true
@@ -13,5 +14,6 @@ COPY ./device-plugin /usr/local/bin/
 RUN chmod 550 /usr/local/bin/device-plugin &&\
     chmod 550 /usr/local/bin &&\
     chmod 750 /home/HwHiAiUser &&\
+    chmod 750 /home/hwMindX &&\
     echo 'umask 027' >> /etc/profile &&\
     echo 'source /etc/profile' >> ~/.bashrc
