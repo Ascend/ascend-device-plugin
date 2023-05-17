@@ -71,6 +71,9 @@ func GetDeviceListID(devices []string, ascendRuntimeOptions string) (map[int]int
 			phyDevMapVirtualDev[virID] = deviceID
 			continue
 		}
+		if ParamOption.ShareCount != 1 {
+			deviceID = deviceID / int(ParamOption.ShareCount)
+		}
 		ascendVisibleDevices = append(ascendVisibleDevices, deviceID)
 	}
 	return phyDevMapVirtualDev, ascendVisibleDevices, nil

@@ -53,18 +53,34 @@ func (hnm *HwAscend310Manager) GetNPUs() (common.NpuAllInfo, error) {
 		return common.NpuAllInfo{}, fmt.Errorf("invalid device num: %d", devNum)
 	}
 	var allDevices []common.NpuDevice
-	var allDeviceTypes []string
-	for i := int32(0); i < devNum; i++ {
-		davinCiDev, err := hnm.getDavinCiDev(devList[i])
+	for logicIDIdx := 0; logicIDIdx < len(devList); logicIDIdx++ {
+		davinCiDev, err := hnm.getDavinCiDev(devList[logicIDIdx])
 		if err != nil {
 			return common.NpuAllInfo{}, err
 		}
-		deviceName := fmt.Sprintf("%s-%d", hnm.name, davinCiDev.PhyID)
-		device := hnm.assembleNpuDeviceStruct(hnm.name, deviceName, davinCiDev)
-		allDevices = append(allDevices, device)
+		normalDevices := hnm.getNPUsByNormalMode(davinCiDev)
+		if common.ParamOption.ShareCount > 1 && common.ParamOption.RealCardType == common.Ascend310B {
+			normalDevices = hnm.getNPUsByShareMode(davinCiDev)
+		}
+		allDevices = append(allDevices, normalDevices...)
 	}
-	allDeviceTypes = append(allDeviceTypes, hnm.name)
-	return common.NpuAllInfo{AllDevs: allDevices, AllDevTypes: allDeviceTypes}, nil
+	return common.NpuAllInfo{AllDevs: allDevices, AllDevTypes: []string{hnm.name}}, err
+}
+
+func (hnm *HwAscend310Manager) getNPUsByNormalMode(davinCiDev common.DavinCiDev) []common.NpuDevice {
+	deviceName := fmt.Sprintf("%s-%d", hnm.name, davinCiDev.PhyID)
+	return []common.NpuDevice{hnm.assembleNpuDeviceStruct(hnm.name, deviceName, davinCiDev)}
+}
+
+func (hnm *HwAscend310Manager) getNPUsByShareMode(davinCiDev common.DavinCiDev) []common.NpuDevice {
+	var shareDevices []common.NpuDevice
+	for id := uint(davinCiDev.LogicID)*common.ParamOption.ShareCount; id < uint(davinCiDev.LogicID+1)*
+		common.ParamOption.ShareCount; id++ {
+		deviceName := fmt.Sprintf("%s-%d", hnm.name, id)
+		device := hnm.assembleNpuDeviceStruct(hnm.name, deviceName, davinCiDev)
+		shareDevices = append(shareDevices, device)
+	}
+	return shareDevices
 }
 
 // DoWithVolcanoListAndWatch ascend310 watch device
