@@ -59,7 +59,7 @@ func (hnm *HwAscend310Manager) GetNPUs() (common.NpuAllInfo, error) {
 			return common.NpuAllInfo{}, err
 		}
 		normalDevices := hnm.getNPUsByNormalMode(davinCiDev)
-		if common.ParamOption.ShareCount > 1 && common.ParamOption.RealCardType == common.Ascend310B {
+		if common.ShareDev() {
 			normalDevices = hnm.getNPUsByShareMode(davinCiDev)
 		}
 		allDevices = append(allDevices, normalDevices...)
@@ -74,7 +74,7 @@ func (hnm *HwAscend310Manager) getNPUsByNormalMode(davinCiDev common.DavinCiDev)
 
 func (hnm *HwAscend310Manager) getNPUsByShareMode(davinCiDev common.DavinCiDev) []common.NpuDevice {
 	var shareDevices []common.NpuDevice
-	for id := uint(davinCiDev.LogicID)*common.ParamOption.ShareCount; id < uint(davinCiDev.LogicID+1)*
+	for id := uint(davinCiDev.LogicID) * common.ParamOption.ShareCount; id < uint(davinCiDev.LogicID+1)*
 		common.ParamOption.ShareCount; id++ {
 		deviceName := fmt.Sprintf("%s-%d", hnm.name, id)
 		device := hnm.assembleNpuDeviceStruct(hnm.name, deviceName, davinCiDev)

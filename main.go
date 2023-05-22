@@ -133,7 +133,7 @@ func checkParam() bool {
 }
 
 func checkShareDevCount() bool {
-	if *shareDevCount == 0 || *shareDevCount > common.MaxShareDevCount {
+	if *shareDevCount < 1 || *shareDevCount > common.MaxShareDevCount {
 		hwlog.RunLog.Error("share device function params invalid")
 		return false
 	}
