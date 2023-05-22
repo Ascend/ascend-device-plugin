@@ -242,9 +242,6 @@ func (ps *PluginServer) checkAllocateRequest(requests *v1beta1.AllocateRequest) 
 			if !ps.deviceExists(deviceName) {
 				return fmt.Errorf("plugin doesn't have device %s", deviceName)
 			}
-			if common.ShareDev() && len(rqt.DevicesIDs) > 1 {
-				return fmt.Errorf("shareDevFunc only support request one dev, now is %d", len(rqt.DevicesIDs))
-			}
 			if common.IsVirtualDev(deviceName) && len(rqt.DevicesIDs) > common.MaxRequestVirtualDeviceNum {
 				return fmt.Errorf("request more than %d virtual device, current is %d",
 					common.MaxRequestVirtualDeviceNum, len(rqt.DevicesIDs))
