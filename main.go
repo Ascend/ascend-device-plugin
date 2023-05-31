@@ -108,8 +108,8 @@ func checkParam() bool {
 		hwlog.RunLog.Errorf("list and watch period %d out of range", *listWatchPeriod)
 		return false
 	}
-	if !(*presetVirtualDevice) {
-		hwlog.RunLog.Error("presetVirtualDevice not support set to false now")
+	if !(*presetVirtualDevice) && !(*volcanoType) {
+		hwlog.RunLog.Error("presetVirtualDevice is false, volcanoType should be true")
 		return false
 	}
 	if *use310PMixedInsert && *volcanoType {
