@@ -73,7 +73,7 @@ func (hnm *HwAscend310Manager) getNPUsByNormalMode(davinCiDev common.DavinCiDev)
 }
 
 func (hnm *HwAscend310Manager) getNPUsByShareMode(davinCiDev common.DavinCiDev) []common.NpuDevice {
-	var shareDevices []common.NpuDevice
+	shareDevices := make([]common.NpuDevice, common.ParamOption.ShareCount)
 	for id := uint(davinCiDev.LogicID) * common.ParamOption.ShareCount; id < uint(davinCiDev.LogicID+1)*
 		common.ParamOption.ShareCount; id++ {
 		deviceName := fmt.Sprintf("%s-%d", hnm.name, id)
