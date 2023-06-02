@@ -1,4 +1,4 @@
-/* Copyright(C) 2022. Huawei Technologies Co.,Ltd. All rights reserved.
+/* Copyright(C) 2022-2023. Huawei Technologies Co.,Ltd. All rights reserved.
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
@@ -39,13 +39,10 @@ const (
 	maxListWatchPeriod = 60
 	// minListWatchPeriod is the min listening device state's period
 	minListWatchPeriod = 3
-	maxRunModeLength   = 10
 	maxLogLineLength   = 1024
 )
 
 var (
-	mode = flag.String("mode", "", "Device plugin running mode: ascend310, ascend310P, "+
-		"ascend910. This parameter will be deprecated in future versions")
 	fdFlag          = flag.Bool("fdFlag", false, "Whether to use fd system to manage device (default false)")
 	useAscendDocker = flag.Bool("useAscendDocker", true, "Whether to use ascend docker. "+
 		"This parameter will be deprecated in future versions")
@@ -69,7 +66,9 @@ var (
 		"computing power splitting function, only support Ascend910 and Ascend310P")
 	use310PMixedInsert = flag.Bool("use310PMixedInsert", false, "Whether to use mixed insert "+
 		"ascend310P-V, ascend310P-VPro, ascend310P-IPro card mode")
-	hotReset = flag.Int("hotReset", -1, "set hot reset mode: -1-close, 0-infer, 1-train")
+	hotReset      = flag.Int("hotReset", -1, "set hot reset mode: -1-close, 0-infer, 1-train")
+	shareDevCount = flag.Uint("shareDevCount", 1, "share device function, enable the func by setting "+
+		"a value greater than 1, range is [1, 100], only support 310B")
 )
 
 var (
@@ -113,10 +112,6 @@ func checkParam() bool {
 		hwlog.RunLog.Error("presetVirtualDevice is false, volcanoType should be true")
 		return false
 	}
-	if len(*mode) > maxRunModeLength {
-		hwlog.RunLog.Error("run mode param length invalid")
-		return false
-	}
 	if *use310PMixedInsert && *volcanoType {
 		hwlog.RunLog.Error("use310PMixedInsert is ture, volcanoType should be false")
 		return false
@@ -130,14 +125,16 @@ func checkParam() bool {
 	if (*hotReset) == common.HotResetTrain {
 		hwlog.RunLog.Warn("hotReset to 1 is a reserved value")
 	}
-	switch *mode {
-	case common.RunMode310, common.RunMode910, common.RunMode310P, "":
-	default:
-		hwlog.RunLog.Errorf("unSupport mode: %s", *mode)
-		return false
-	}
 	if BuildScene != common.EdgeScene && BuildScene != common.CenterScene {
 		hwlog.RunLog.Error("unSupport build scene, only support edge and center")
+		return false
+	}
+	return checkShareDevCount()
+}
+
+func checkShareDevCount() bool {
+	if *shareDevCount < 1 || *shareDevCount > common.MaxShareDevCount {
+		hwlog.RunLog.Error("share device function params invalid")
 		return false
 	}
 	return true
@@ -196,6 +193,7 @@ func setParameters() {
 		Use310PMixedInsert: *use310PMixedInsert,
 		HotReset:           *hotReset,
 		BuildScene:         BuildScene,
+		ShareCount:         *shareDevCount,
 	}
 }
 

@@ -248,6 +248,8 @@ const (
 	ServerTypeInfoMinLen = 2
 	// VGroupAndDevLen a list only contain virtual group and device
 	VGroupAndDevLen = 2
+	// MaxShareDevCount open share device function, max share count is 100
+	MaxShareDevCount = 100
 )
 
 const (

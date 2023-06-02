@@ -71,9 +71,17 @@ func GetDeviceListID(devices []string, ascendRuntimeOptions string) (map[int]int
 			phyDevMapVirtualDev[virID] = deviceID
 			continue
 		}
+		if ShareDev() {
+			deviceID = deviceID / int(ParamOption.ShareCount)
+		}
 		ascendVisibleDevices = append(ascendVisibleDevices, deviceID)
 	}
 	return phyDevMapVirtualDev, ascendVisibleDevices, nil
+}
+
+// ShareDev open the share dev function
+func ShareDev() bool {
+	return ParamOption.ShareCount > 1 && ParamOption.RealCardType == Ascend310B
 }
 
 // IsVirtualDev used to judge whether a physical device or a virtual device

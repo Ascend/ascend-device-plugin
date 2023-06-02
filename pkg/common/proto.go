@@ -96,6 +96,7 @@ type Option struct {
 	Use310PMixedInsert bool     // chose 310P mixed insert mode
 	ListAndWatchPeriod int      // set listening device state period
 	HotReset           int      // unhealthy chip hot reset
+	ShareCount         uint     // share device count
 	AiCoreCount        int32    // found by dcmi interface
 	BuildScene         string   // build scene judge device-plugin start scene
 	ProductTypes       []string // all product types
