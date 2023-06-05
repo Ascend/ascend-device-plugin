@@ -86,7 +86,7 @@ const (
 	// VirDeviceLen like Ascend910-2c-100-1 split length is 4
 	VirDeviceLen = 4
 	// MaxDevicesNum max device num
-	MaxDevicesNum = 64
+	MaxDevicesNum = 100
 	// MaxCardNum max card num
 	MaxCardNum = 64
 	// MaxDevNumInCard max device num in card
