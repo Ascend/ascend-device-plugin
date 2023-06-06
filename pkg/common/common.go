@@ -42,7 +42,7 @@ func GetPattern() map[string]string {
 		"nodeName":    `^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`,
 		"podName":     "^[a-z0-9]+[a-z0-9\\-]*[a-z0-9]+$",
 		"fullPodName": "^[a-z0-9]+([a-z0-9\\-.]*)[a-z0-9]+$",
-		"vir910":      "Ascend910-(2|4|8|16)c",
+		"vir910":      "Ascend910-([2-6]|8|10|12|16)c",
 		"vir310p":     "Ascend310P-(1|2|4)c",
 		"ascend910":   `^Ascend910-\d+`,
 	}
