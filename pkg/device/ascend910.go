@@ -102,8 +102,8 @@ func (hnm *HwAscend910Manager) DoWithVolcanoListAndWatch(classifyDevs map[string
 	}
 }
 
-func (hnm *AscendTools) getDeviceNetworkState(logicID int32) string {
-	healthCode, err := hnm.dmgr.GetDeviceNetWorkHealth(logicID)
+func (tool *AscendTools) getDeviceNetworkState(logicID int32) string {
+	healthCode, err := tool.dmgr.GetDeviceNetWorkHealth(logicID)
 	if err != nil {
 		hwlog.RunLog.Warnf("get logicID %d network health failed, error code is %d", logicID, healthCode)
 		return v1beta1.Unhealthy
