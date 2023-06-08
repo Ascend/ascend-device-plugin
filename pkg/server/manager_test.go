@@ -59,6 +59,12 @@ func TestNewHwDevManager(t *testing.T) {
 			res := NewHwDevManager(&devmanager.DeviceManagerMock{})
 			convey.So(res, convey.ShouldBeNil)
 		})
+		convey.Convey("test NewHwDevManager, product type is not supported", func() {
+			common.ParamOption.PresetVDevice = false
+			common.ParamOption.ProductTypes = []string{common.Atlas300IDuo}
+			res := NewHwDevManager(&devmanager.DeviceManagerMock{})
+			convey.So(res, convey.ShouldBeNil)
+		})
 	})
 }
 
