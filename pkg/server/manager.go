@@ -56,6 +56,10 @@ func NewHwDevManager(devM devmanager.DeviceInterface) *HwDevManager {
 		hwlog.RunLog.Errorf("set all device and type failed, err: %#v", err)
 		return nil
 	}
+	if err := hdm.checkSupportedProductType(); err != nil {
+		hwlog.RunLog.Errorf("check supported product type failed, err: %v", err)
+		return nil
+	}
 	if err := hdm.initPluginServer(); err != nil {
 		hwlog.RunLog.Errorf("init plugin server failed, err: %#v", err)
 		return nil
@@ -171,6 +175,13 @@ func (hdm *HwDevManager) initPluginServer() error {
 	for _, deviceType := range hdm.allInfo.AllDevTypes {
 		hdm.ServerMap[deviceType] = NewPluginServer(deviceType, hdm.groupDevice[deviceType], defaultDevices,
 			hdm.manager)
+	}
+	return nil
+}
+
+func (hdm *HwDevManager) checkSupportedProductType() error {
+	if !common.ParamOption.PresetVDevice && common.IsContainAtlas300IDuo() {
+		return fmt.Errorf("%s is not supported to dynamic virtual instance", common.Atlas300IDuo)
 	}
 	return nil
 }
