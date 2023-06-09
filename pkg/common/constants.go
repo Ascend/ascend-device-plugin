@@ -123,6 +123,11 @@ const (
 	BitSize32 = 32
 	// SleepTime The unit is seconds
 	SleepTime = 5
+
+	// GeneralMapSize general map size
+	GeneralMapSize = 8
+	// GeneralSubscribeTime general subscribe try time
+	GeneralSubscribeTime = 3
 )
 
 const (

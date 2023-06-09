@@ -43,6 +43,7 @@ type NodeDeviceInfo struct {
 
 // DeviceHealth health status of device
 type DeviceHealth struct {
+	FaultCodes    []int64
 	Health        string
 	NetworkHealth string
 }
@@ -56,6 +57,7 @@ type NpuAllInfo struct {
 
 // NpuDevice npu device description
 type NpuDevice struct {
+	FaultCodes    []int64
 	DevType       string
 	DeviceName    string
 	Health        string

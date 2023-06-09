@@ -159,7 +159,7 @@ func TestUpdateDevice(t *testing.T) {
 			common.ParamOption.PresetVDevice = false
 			hdm := NewHwDevManager(&devmanager.DeviceManagerMock{})
 			hdm.ServerMap[common.AiCoreResourceName] = NewPluginServer(common.Ascend310P, nil, nil, nil)
-			err := hdm.updateDevice()
+			err := hdm.updateAllInfo()
 			convey.So(err, convey.ShouldBeNil)
 			common.ParamOption.PresetVDevice = true
 		})

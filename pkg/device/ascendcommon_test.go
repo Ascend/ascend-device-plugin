@@ -48,7 +48,7 @@ func TestIsDeviceStatusChange(t *testing.T) {
 	convey.Convey("test IsDeviceStatusChange true", t, func() {
 		devices := map[string][]*common.NpuDevice{common.Ascend910: {{Health: v1beta1.Healthy}}}
 		aiCoreDevice := []*common.NpuDevice{{Health: v1beta1.Healthy}}
-		res := tool.IsDeviceStatusChange(devices, aiCoreDevice, common.Ascend910)
+		res := tool.UpdateHealthyAndGetChange(devices, aiCoreDevice, common.Ascend910)
 		convey.So(res, convey.ShouldNotBeNil)
 	})
 	tool = AscendTools{name: common.Ascend310P, client: &kubeclient.ClientK8s{},
@@ -56,7 +56,7 @@ func TestIsDeviceStatusChange(t *testing.T) {
 	convey.Convey("test IsDeviceStatusChange which chip is unhealthy ", t, func() {
 		devices := map[string][]*common.NpuDevice{common.Ascend310P: {{Health: v1beta1.Unhealthy}}}
 		aiCoreDevice := []*common.NpuDevice{{Health: v1beta1.Unhealthy}}
-		res := tool.IsDeviceStatusChange(devices, aiCoreDevice, common.Ascend310P)
+		res := tool.UpdateHealthyAndGetChange(devices, aiCoreDevice, common.Ascend310P)
 		convey.So(res, convey.ShouldNotBeNil)
 	})
 }
