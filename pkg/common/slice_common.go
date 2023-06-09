@@ -51,14 +51,17 @@ func (i int64Tool) SameElement(sources, targets []int64) bool {
 
 // Remove slice for int64 remove target
 func (i int64Tool) Remove(sources []int64, target int64) []int64 {
-	index := i.Index(sources, target)
-	if index == -1 {
-		return sources
+	for len(sources) > 0 {
+		index := i.Index(sources, target)
+		if index == -1 {
+			return sources
+		}
+		sources = append(sources[:index], sources[index+1:]...)
 	}
-	return append(sources[:index], sources[index+1:]...)
+	return sources
 }
 
-// Index slice for int6 seach the index with target
+// Index slice for int6 search the index with target
 func (i int64Tool) Index(sources []int64, target int64) int {
 	for i, source := range sources {
 		if source == target {

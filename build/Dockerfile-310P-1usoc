@@ -18,8 +18,10 @@ ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/Ascend/driver/lib64
 
 COPY ./device-plugin /usr/local/bin/
 COPY ./run_for_310P_1usoc.sh /
+COPY ./faultCode.json /usr/local/
 RUN chmod 550 /usr/local/bin/device-plugin &&\
     chmod 550 /usr/local/bin &&\
+    chmod 440 /usr/local/faultCode.json &&\
     chmod 750 /home/HwHiAiUser &&\
     chmod 500 /run_for_310P_1usoc.sh &&\
     echo 'umask 027' >> /etc/profile &&\
