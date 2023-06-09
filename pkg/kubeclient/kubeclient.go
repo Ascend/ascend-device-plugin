@@ -149,7 +149,7 @@ func (ki *ClientK8s) CreateConfigMap(cm *v1.ConfigMap) (*v1.ConfigMap, error) {
 	return ki.Clientset.CoreV1().ConfigMaps(cm.ObjectMeta.Namespace).Create(context.TODO(), cm, metav1.CreateOptions{})
 }
 
-// GetConfigMap get config map
+// GetConfigMap get config map by name and namespace
 func (ki *ClientK8s) GetConfigMap(cmName, cmNameSpace string) (*v1.ConfigMap, error) {
 	return ki.Clientset.CoreV1().ConfigMaps(cmNameSpace).Get(context.TODO(),
 		cmName, metav1.GetOptions{})

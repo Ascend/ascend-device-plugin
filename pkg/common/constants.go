@@ -49,8 +49,8 @@ const (
 	CacheSize = 128
 	// MaxVirtualDeviceNum max num of virtual device
 	MaxVirtualDeviceNum = 1024
-	// CMDataMaxMemory configMap max data size 1MB
-	CMDataMaxMemory = 1024 * 1024
+	// CMDataMaxLength configMap max data size 1MB
+	CMDataMaxLength = 1024 * 1024
 	// PodAnnotationMaxLength pod annotation max data length 1MB
 	PodAnnotationMaxLength = 1024 * 1024
 
@@ -128,6 +128,11 @@ const (
 	BitSize32 = 32
 	// SleepTime The unit is seconds
 	SleepTime = 5
+
+	// GeneralMapSize general map size
+	GeneralMapSize = 8
+	// GeneralSubscribeTime general subscribe try time
+	GeneralSubscribeTime = 3
 )
 
 const (

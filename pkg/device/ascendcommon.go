@@ -34,6 +34,9 @@ import (
 	"Ascend-device-plugin/pkg/kubeclient"
 )
 
+// isFirstFlushFault for device fault init
+var isFirstFlushFault = true
+
 // AscendTools struct definition
 type AscendTools struct {
 	client       *kubeclient.ClientK8s
@@ -55,7 +58,7 @@ type DevManager interface {
 	GetName() string
 	SetKubeClient(*kubeclient.ClientK8s)
 	GetKubeClient() *kubeclient.ClientK8s
-	IsDeviceStatusChange(map[string][]*common.NpuDevice, []*common.NpuDevice, string) map[string]bool
+	UpdateHealthyAndGetChange(map[string][]*common.NpuDevice, []*common.NpuDevice, string) map[string]bool
 	AddPodAnnotation(*v1.Pod, []string, []string, string, string) error
 	AppendVGroupInfo([]string)
 	CheckDeviceTypeLabel() error
@@ -232,7 +235,7 @@ func getDeviceInfoData(deviceInfo *v1.ConfigMap) (map[string]string, error) {
 	if !ok {
 		return nil, fmt.Errorf("%s not exist", common.DeviceInfoCMDataKey)
 	}
-	if len(data) > common.CMDataMaxMemory {
+	if len(data) > common.CMDataMaxLength {
 		return nil, fmt.Errorf("configMap data size is out of memory")
 	}
 	var nodeDeviceInfo common.NodeDeviceInfoCache
@@ -250,7 +253,7 @@ func getResetInfoData(resetInfo *v1.ConfigMap) ([]*common.TaskDevInfo, error) {
 	if !ok {
 		return nil, fmt.Errorf("%s not exist", common.ResetInfoCMDataKey)
 	}
-	if len(data) > common.CMDataMaxMemory {
+	if len(data) > common.CMDataMaxLength {
 		return nil, fmt.Errorf("configmap data size is out of memory")
 	}
 	var taskResetInfo common.TaskResetInfo
@@ -263,7 +266,7 @@ func getResetInfoData(resetInfo *v1.ConfigMap) ([]*common.TaskDevInfo, error) {
 	}
 	checkCode, ok := resetInfo.Data[common.ResetInfoCMCheckCodeKey]
 	if !ok {
-		return nil, fmt.Errorf("%s not exit", common.ResetInfoCMCheckCodeKey)
+		return nil, fmt.Errorf("%s not exist", common.ResetInfoCMCheckCodeKey)
 	}
 	if checkCode != common.MakeDataHash(taskResetInfo) {
 		return nil, fmt.Errorf("configmap check hash code error")
@@ -431,52 +434,48 @@ func (tool *AscendTools) AddPodAnnotation(pod *v1.Pod, kltRequestDevices, dpResp
 	return tool.client.TryUpdatePodAnnotation(pod, annotation)
 }
 
-// IsDeviceStatusChange is device status change
-func (tool *AscendTools) IsDeviceStatusChange(groupDevice map[string][]*common.NpuDevice,
+// UpdateHealthyAndGetChange update group device healthy and return device healthy change map
+func (tool *AscendTools) UpdateHealthyAndGetChange(groupDevice map[string][]*common.NpuDevice,
 	aiCoreDevs []*common.NpuDevice, runMode string) map[string]bool {
-	// get all chip by logic id
-	healthStatus := make(map[int32]common.DeviceHealth, 1)
-	for _, devices := range groupDevice {
-		for _, device := range devices {
-			healthStatus[device.LogicID] = common.DeviceHealth{Health: v1beta1.Healthy, NetworkHealth: v1beta1.Healthy}
-		}
-	}
-	// get all chip's health
-	for logicID := range healthStatus {
-		if runMode == common.Ascend910 {
-			healthStatus[logicID] = common.DeviceHealth{Health: tool.getDevState(logicID),
-				NetworkHealth: tool.getDeviceNetworkState(logicID)}
-		} else {
-			healthStatus[logicID] = common.DeviceHealth{Health: tool.getDevState(logicID)}
-		}
-	}
+	tool.writeNewFaultCode(groupDevice)
 
-	// update all device's health
+	// update device's health and record change by new fault code
 	isStateChange := make(map[string]bool, len(groupDevice))
 	for devType, devices := range groupDevice {
 		for idx, device := range devices {
-			if healthStatus[device.LogicID].Health != device.Health {
+			newHealthyStatus := isHealthy(device.FaultCodes)
+			if newHealthyStatus != device.Health {
 				isStateChange[devType] = true
-				devices[idx].Health = healthStatus[device.LogicID].Health
+				devices[idx].Health = newHealthyStatus
 			}
 			if runMode == common.Ascend910 {
-				devices[idx].NetworkHealth = healthStatus[device.LogicID].NetworkHealth
+				devices[idx].NetworkHealth = tool.getDeviceNetworkState(device.LogicID)
 			}
 		}
 	}
-	tool.syncDuoCardState(groupDevice)
-	if common.ParamOption.PresetVDevice {
-		return isStateChange
-	}
-	// update all ai core device's health
-	for _, device := range aiCoreDevs {
-		device.Health = healthStatus[device.LogicID].Health
-		device.NetworkHealth = healthStatus[device.LogicID].NetworkHealth
-	}
+	setHealthyIfDuoCard(groupDevice)
+	setAICoreHealthyIfVNpu(groupDevice, aiCoreDevs)
 	return isStateChange
 }
 
-func (tool *AscendTools) syncDuoCardState(groupDevice map[string][]*common.NpuDevice) {
+func setAICoreHealthyIfVNpu(groupDevice map[string][]*common.NpuDevice, aiCoreDevs []*common.NpuDevice) {
+	if common.ParamOption.PresetVDevice {
+		return
+	}
+	logicDeviceMap := make(map[int32]*common.NpuDevice, common.GeneralMapSize)
+	for _, devices := range groupDevice {
+		for _, device := range devices {
+			logicDeviceMap[device.LogicID] = device
+		}
+	}
+	for _, device := range aiCoreDevs {
+		device.Health = logicDeviceMap[device.LogicID].Health
+		device.FaultCodes = logicDeviceMap[device.LogicID].FaultCodes
+		device.NetworkHealth = logicDeviceMap[device.LogicID].NetworkHealth
+	}
+}
+
+func setHealthyIfDuoCard(groupDevice map[string][]*common.NpuDevice) {
 	if !common.IsContainAtlas300IDuo() {
 		return
 	}
@@ -490,25 +489,20 @@ func (tool *AscendTools) syncDuoCardState(groupDevice map[string][]*common.NpuDe
 		return
 	}
 	unHealthyCards := getUnHealthyCard(ascend310PDevices)
-	for devType, devices := range groupDevice {
-		if devType != common.Ascend310P {
-			continue
-		}
-		for idx, device := range devices {
-			if _, ok := unHealthyCards[device.CardID]; ok {
-				devices[idx].Health = v1beta1.Unhealthy
-			}
+	for _, device := range ascend310PDevices {
+		if _, ok := unHealthyCards[device.CardID]; ok {
+			device.Health = v1beta1.Unhealthy
 		}
 	}
 }
 
-func getUnHealthyCard(ascend310PDevices []*common.NpuDevice) map[int32]interface{} {
-	unHealthyCards := make(map[int32]interface{}, len(ascend310PDevices))
+func getUnHealthyCard(ascend310PDevices []*common.NpuDevice) map[int32]int8 {
+	unHealthyCards := make(map[int32]int8, len(ascend310PDevices))
 	for _, device := range ascend310PDevices {
 		if device.Health == v1beta1.Healthy {
 			continue
 		}
-		unHealthyCards[device.CardID] = struct{}{}
+		unHealthyCards[device.CardID] = 0
 	}
 	return unHealthyCards
 }
@@ -532,21 +526,12 @@ func classifyDevByType(allDevs []common.NpuDevice, suffix string) []*common.NpuD
 	return classifyDev
 }
 
-func (tool *AscendTools) getDevState(logicID int32) string {
-	healthState, err := tool.dmgr.GetDeviceHealth(logicID)
-	if err != nil {
-		hwlog.RunLog.Errorf("get device healthy state failed, deviceId: %d, err: %#v", logicID, err)
-		return v1beta1.Unhealthy
-	}
-	switch healthState {
-	case common.NormalState, common.GeneralAlarm:
+func isHealthy(faultCodes []int64) string {
+	faultType := common.GetFaultTypeByCode(faultCodes)
+	if faultType == common.NormalNPU || faultType == common.NotHandleFault {
 		return v1beta1.Healthy
-	default:
-		if err = tool.unhealthyState(healthState, logicID); err != nil {
-			hwlog.RunLog.Errorf("UnhealthyState, err: %#v", err)
-		}
-		return v1beta1.Unhealthy
 	}
+	return v1beta1.Unhealthy
 }
 
 // UnhealthyState state unhealthy info
@@ -700,4 +685,28 @@ func (tool *AscendTools) getAiCoreCount(cgoVDevInfo npuCommon.VirtualDevInfo) (i
 		return 0, fmt.Errorf("invalid ai core num %f", chipAICore)
 	}
 	return int32(chipAICore), nil
+}
+
+func (tool *AscendTools) writeNewFaultCode(deviceMap map[string][]*common.NpuDevice) {
+	initLogicIDs := common.GetAndCleanLogicID()
+	for _, devices := range deviceMap {
+		for _, device := range devices {
+			tool.flushFaultCodesWithInit(device, initLogicIDs)
+		}
+	}
+	isFirstFlushFault = false
+}
+
+func (tool *AscendTools) flushFaultCodesWithInit(device *common.NpuDevice, initLogicIDs []int32) {
+	faultInfos := common.TakeOutDevFaultInfo(device.LogicID)
+	if isFirstFlushFault || (common.Int32Tool.Contains(initLogicIDs, device.LogicID)) || common.SubscribeFailed {
+		_, errCodes, err := tool.dmgr.GetDeviceAllErrorCode(device.LogicID)
+		if err != nil {
+			hwlog.RunLog.Errorf("get device fault failed logic: %d, err: %v", device.LogicID, err)
+			return
+		}
+		common.SetFaultCodes(device, errCodes)
+		return
+	}
+	common.SetNewFaultAndCacheOnceRecoverFault(device.LogicID, faultInfos, device)
 }

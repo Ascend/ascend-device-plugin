@@ -133,8 +133,8 @@ func (hnm *HwAscend910Manager) DoWithVolcanoListAndWatch(classifyDevs map[string
 	}
 }
 
-func (hnm *AscendTools) getDeviceNetworkState(logicID int32) string {
-	healthCode, err := hnm.dmgr.GetDeviceNetWorkHealth(logicID)
+func (tool *AscendTools) getDeviceNetworkState(logicID int32) string {
+	healthCode, err := tool.dmgr.GetDeviceNetWorkHealth(logicID)
 	if err != nil {
 		hwlog.RunLog.Warnf("get logicID %d network health failed, error code is %d", logicID, healthCode)
 		return v1beta1.Unhealthy
@@ -333,6 +333,7 @@ func (hnm *HwAscend910Manager) getTaskDevInfoCache() (map[string][]int32,
 			hwlog.RunLog.Error("failed to get task name by task key")
 			continue
 		}
+
 		rankIndex, ok := pod.Annotations[common.RankIndexKey]
 		if !ok {
 			hwlog.RunLog.Error("failed to get rank index by rank index key")
@@ -370,7 +371,7 @@ func (hnm *HwAscend910Manager) isTaskInReset(taskName string) (bool, error) {
 		hwlog.RunLog.Errorf("failed to get reset info data, err: %#v", err)
 		return false, err
 	}
-	if resetInfoData == nil || len(resetInfoData) == 0 {
+	if len(resetInfoData) == 0 {
 		return false, nil
 	}
 	hwlog.RunLog.Infof("global task %s is resetting, skip once process", taskName)
@@ -623,7 +624,7 @@ func (hnm *HwAscend910Manager) resetDeviceOnce(devFaultInfoList []*common.TaskDe
 		return err
 	}
 	if err := hnm.execResetDevice(resetFaultInfoList); err != nil {
-		hwlog.RunLog.Errorf("failed to exec reset device lsit, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to exec reset device list, err: %#v", err)
 		return err
 	}
 	time.Sleep(common.WaitFlushCMTime * time.Second)

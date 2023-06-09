@@ -101,7 +101,7 @@ func (hnm *HwAscend310PManager) updateDeviceInfo(_, newDevInfo map[string]string
 	return nil
 }
 
-/ GraceTolerance graceful fault tolerance, not supported currently
-func (hnm *HwAscend310PManager) GraceTolerance (map[string][]*common.NpuDevice)  {
+// GraceTolerance graceful fault tolerance, not supported currently
+func (hnm *HwAscend310PManager) GraceTolerance(map[string][]*common.NpuDevice) {
 	return
 }

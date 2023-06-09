@@ -11,6 +11,7 @@ ENV LD_LIBRARY_PATH  /usr/local/Ascend/driver/lib64/driver:/usr/local/Ascend/dri
 ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/Ascend/driver/lib64
 
 COPY ./device-plugin /usr/local/bin/
+COPY ./faultCode.json /usr/local/
 RUN chmod 550 /usr/local/bin/device-plugin &&\
     chmod 550 /usr/local/bin &&\
     chmod 750 /home/HwHiAiUser &&\

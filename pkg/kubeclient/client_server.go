@@ -142,7 +142,7 @@ func (ki *ClientK8s) WriteResetInfoDataIntoCM(taskName string, taskInfo *common.
 	}
 
 	hwlog.RunLog.Debugf("write reset info cache into cm: %s/%s.", resetInfoCM.Namespace, resetInfoCM.Name)
-	return ki.createOrUpdateConfigMap(resetInfoCM)
+	return ki.UpdateConfigMap(resetInfoCM)
 }
 
 // WriteFaultInfoDataIntoCM write fault info into config map
@@ -175,7 +175,7 @@ func (ki *ClientK8s) WriteFaultInfoDataIntoCM(taskName string, faultInfo *common
 	}
 
 	hwlog.RunLog.Debugf("write fault info cache into cm: %s/%s.", faultInfoCM.Namespace, faultInfoCM.Name)
-	return ki.createOrUpdateConfigMap(faultInfoCM)
+	return ki.UpdateConfigMap(faultInfoCM)
 }
 
 // AnnotationReset reset annotation and device info

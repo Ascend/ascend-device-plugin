@@ -28,6 +28,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"huawei.com/npu-exporter/v5/common-utils/hwlog"
 	"huawei.com/npu-exporter/v5/devmanager"
+	npuCommon "huawei.com/npu-exporter/v5/devmanager/common"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
@@ -198,11 +199,12 @@ func (hdm *HwDevManager) updateDeviceHealth(curAllDevs []common.NpuDevice) {
 		if index, exist := lastAllDevs[dev.DeviceName]; exist && index < len(hdm.allInfo.AllDevs) {
 			curAllDevs[i].Health = hdm.allInfo.AllDevs[index].Health
 			curAllDevs[i].NetworkHealth = hdm.allInfo.AllDevs[index].NetworkHealth
+			curAllDevs[i].FaultCodes = hdm.allInfo.AllDevs[index].FaultCodes
 		}
 	}
 }
 
-func (hdm *HwDevManager) updateDevice() error {
+func (hdm *HwDevManager) updateAllInfo() error {
 	if common.ParamOption.PresetVDevice {
 		return nil
 	}
@@ -234,6 +236,7 @@ func (hdm *HwDevManager) updateDevice() error {
 // ListenDevice ListenDevice coroutine
 func (hdm *HwDevManager) ListenDevice(ctx context.Context) {
 	hwlog.RunLog.Info("starting the listen device")
+	hdm.subscribeFaultEvent()
 	go hdm.Serve(ctx)
 	for {
 		select {
@@ -246,7 +249,7 @@ func (hdm *HwDevManager) ListenDevice(ctx context.Context) {
 		default:
 			time.Sleep(time.Duration(common.ParamOption.ListAndWatchPeriod) * time.Second)
 			common.LockAllDeviceInfo()
-			if err := hdm.updateDevice(); err != nil {
+			if err := hdm.updateAllInfo(); err != nil {
 				hwlog.RunLog.Error(err)
 				common.UnlockAllDeviceInfo()
 				continue
@@ -255,6 +258,7 @@ func (hdm *HwDevManager) ListenDevice(ctx context.Context) {
 			hdm.graceTolerance()
 			hdm.useVolcanoNotify()
 			hdm.chipHotReset()
+			common.DelOnceRecoverFault(hdm.groupDevice)
 			common.UnlockAllDeviceInfo()
 		}
 	}
@@ -277,7 +281,7 @@ func (hdm *HwDevManager) pluginNotify(classifyDev []*common.NpuDevice, devType s
 }
 
 func (hdm *HwDevManager) notifyToK8s() {
-	isDevStateChange := hdm.manager.IsDeviceStatusChange(hdm.groupDevice, hdm.allInfo.AICoreDevs, hdm.RunMode)
+	isDevStateChange := hdm.manager.UpdateHealthyAndGetChange(hdm.groupDevice, hdm.allInfo.AICoreDevs, hdm.RunMode)
 	for devType, isChanged := range isDevStateChange {
 		if !isChanged {
 			continue
@@ -631,6 +635,28 @@ func (hdm *HwDevManager) execResetChip(logicID int32, isResetExec *bool) error {
 	*isResetExec = true
 	hwlog.RunLog.Infof("card(%d) and deviceID(%d) exec set device reset function success", cardID, deviceID)
 	return nil
+}
+
+func (hdm *HwDevManager) subscribeFaultEvent() {
+	if err := common.LoadFaultCodeFromFile(); err != nil {
+		common.SubscribeFailed = true
+		hwlog.RunLog.Errorf("load faultCode.json failed, the subscribe way is closed")
+		return
+	}
+	if err := hdm.manager.GetDmgr().SetFaultEventCallFunc(common.SaveDevFaultInfo); err != nil {
+		common.SubscribeFailed = true
+		hwlog.RunLog.Errorf("set fault event call back function failed, the subscribe way is closed")
+		return
+	}
+	for i := 0; i < common.GeneralSubscribeTime; i++ {
+		if err := hdm.manager.GetDmgr().SubscribeDeviceFaultEvent(npuCommon.SubscribeAllDevice); err != nil {
+			time.Sleep(time.Second)
+			continue
+		}
+		return
+	}
+	common.SubscribeFailed = true
+	hwlog.RunLog.Errorf("request SubscribeDeviceFaultEvent failed, the subscribe way is closed")
 }
 
 // graceTolerance start fault tolerance for training tasks
