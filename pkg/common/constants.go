@@ -49,10 +49,10 @@ const (
 	CacheSize = 128
 	// MaxVirtualDeviceNum max num of virtual device
 	MaxVirtualDeviceNum = 1024
-	// CMDataMaxMemory configMap max data size 1MB
-	CMDataMaxMemory = 1024 * 1024
-	// PodAnnotationMaxMemory pod annotation max data size 1MB
-	PodAnnotationMaxMemory = 1024 * 1024
+	// CMDataMaxLength configMap max data size 1MB
+	CMDataMaxLength = 1024 * 1024
+	// PodAnnotationMaxLength pod annotation max data length 1MB
+	PodAnnotationMaxLength = 1024 * 1024
 
 	// DeviceInfoCMNameSpace namespace of device info configmap
 	DeviceInfoCMNameSpace = "kube-system"
@@ -110,6 +110,11 @@ const (
 	RunMode910 = "ascend910"
 	// RunMode310P for 310P chip
 	RunMode310P = "ascend310P"
+
+	// AMPMode for AMP chip work mode
+	AMPMode = "AMP"
+	// SMPMode for SMP chip work mode
+	SMPMode = "SMP"
 
 	// Interval interval time
 	Interval = 1
@@ -446,4 +451,80 @@ const (
 	HotResetTrain = 1
 	// BootStartFinish chip hot reset finish
 	BootStartFinish = 16
+)
+
+const (
+	// Ascend910RingsNum indicates the number of devices in a ring
+	Ascend910RingsNum = 4
+	// RingSum indicates the max number of ring
+	RingSum = 2
+	// RankIndexKey for obtain the rank index in the pod
+	RankIndexKey = "hccl/rankIndex"
+	// WaitFlushCMTime for wait for cm info to flush in container
+	WaitFlushCMTime = 90
+	// WaitResetEndTime for wait device reset to complete
+	WaitResetEndTime = 120
+	// WaitRetryTime for wait five seconds to reset device again
+	WaitRetryTime = 5
+	// ResetRetryTimes for max retry times when reset failed
+	ResetRetryTimes = 3
+)
+
+const (
+	// ResetInfoCMNamePrefix for reset configmap name prefix
+	ResetInfoCMNamePrefix = "reset-config-"
+	// ResetInfoCMNameSpace for reset configmap name space
+	ResetInfoCMNameSpace = "vcjob"
+	// ResetInfoCMDataKey for reset configmap data key
+	ResetInfoCMDataKey = "reset.json"
+	// ResetInfoCMCheckCodeKey for reset configmap checkcode key
+	ResetInfoCMCheckCodeKey = "checkCode"
+	// ResetTaskNameKey for obtain the reset task name
+	ResetTaskNameKey = "volcano.sh/job-name"
+)
+
+const (
+	// FaultInfoCMNamePrefix for fault configmap name prefix
+	FaultInfoCMNamePrefix = "fault-config-"
+	// FaultInfoCMNameSpace for fault configmap name space
+	FaultInfoCMNameSpace = "vcjob"
+	// FaultInfoCMDataKey for fault configmap data key
+	FaultInfoCMDataKey = "fault-npus"
+	// FaultInfoCMCheckCodeKey for fault configmap checkcode key
+	FaultInfoCMCheckCodeKey = "checkCode"
+)
+
+const (
+	// EmptyError indicates that there is no fault
+	EmptyError = "empty"
+	// IgnoreError indicates that the current fault can be ignored
+	IgnoreError = "ignore"
+	// RestartError indicates that the training needs to be re-executed for the current fault
+	RestartError = "restart"
+	// ResetError indicates that the current fault requires resetting the chip and re-executing the training
+	ResetError = "reset"
+	// IsolateError indicates that the device needs to be isolated due to the current fault
+	IsolateError = "isolate"
+)
+
+const (
+	//EmptyErrorLevel indicates the level of no fault state
+	EmptyErrorLevel = iota
+	// IgnoreErrorLevel indicates the level of a fault that can be ignored
+	IgnoreErrorLevel
+	// RestartErrorLevel indicates the level of the fault that needs to be re-executed
+	RestartErrorLevel
+	// ResetErrorLevel indicates the fault level of the device to be reset
+	ResetErrorLevel
+	// IsolateErrorLevel indicates the fault level of the device to be isolated
+	IsolateErrorLevel
+)
+
+const (
+	// UnrecoveredStatus indicates the status before recovery
+	UnrecoveredStatus = "unrecovered"
+	// RecoveredStatus indicates that the recovery is successful
+	RecoveredStatus = "recovered"
+	// RecoverFailedStatus indicates that the recovery fails
+	RecoverFailedStatus = "failed"
 )

@@ -44,6 +44,7 @@ type HwDevManager struct {
 	allInfo     common.NpuAllInfo
 	manager     device.DevManager
 	RunMode     string
+	WorkMode    string
 }
 
 // NewHwDevManager function is used to new a dev manager.
@@ -80,6 +81,7 @@ func (hdm *HwDevManager) setAscendManager(dmgr devmanager.DeviceInterface) error
 	case common.Ascend910, common.Ascend910B:
 		hdm.RunMode = common.Ascend910
 		hdm.manager = device.NewHwAscend910Manager()
+		hdm.WorkMode = dmgr.GetNpuWorkMode()
 	case common.Ascend310P:
 		hdm.RunMode = common.Ascend310P
 		hdm.manager = device.NewHwAscend310PManager()
@@ -253,6 +255,7 @@ func (hdm *HwDevManager) ListenDevice(ctx context.Context) {
 				continue
 			}
 			hdm.notifyToK8s()
+			hdm.graceTolerance()
 			hdm.useVolcanoNotify()
 			hdm.chipHotReset()
 			common.DelOnceRecoverFault(hdm.groupDevice)
@@ -654,4 +657,21 @@ func (hdm *HwDevManager) subscribeFaultEvent() {
 	}
 	common.SubscribeFailed = true
 	hwlog.RunLog.Errorf("request SubscribeDeviceFaultEvent failed, the subscribe way is closed")
+}
+
+// graceTolerance start fault tolerance for training tasks
+func (hdm *HwDevManager) graceTolerance() {
+	if hdm.RunMode != common.Ascend910 {
+		hwlog.RunLog.Debugf("grace tolerance only support training chip")
+		return
+	}
+	if common.ParamOption.HotReset != common.HotResetTrain {
+		hwlog.RunLog.Debugf("train device hot reset mode error: %d", common.ParamOption.HotReset)
+		return
+	}
+	if hdm.WorkMode != common.SMPMode {
+		hwlog.RunLog.Debugf("grace tolerance only support SMP chip mode")
+		return
+	}
+	hdm.manager.GraceTolerance(hdm.groupDevice)
 }

@@ -138,6 +138,44 @@ type DevStatusSet struct {
 	FreeHealthyDevice  map[string]sets.String
 }
 
+// TaskResetInfoCache record task reset device information cache
+type TaskResetInfoCache struct {
+	ResetInfo *TaskResetInfo
+	CheckCode string
+}
+
+// TaskResetInfo record task reset device information
+type TaskResetInfo struct {
+	RankList   []*TaskDevInfo
+	UpdateTime int64
+}
+
+// TaskDevInfo is the device info of a task
+type TaskDevInfo struct {
+	RankId int
+	DevFaultInfo
+}
+
+// DevFaultInfo is the fault info of device
+type DevFaultInfo struct {
+	LogicId   int32
+	Status    string
+	Policy    string
+	ErrorCode []int64
+}
+
+// TaskFaultInfoCache record task fault rank information cache
+type TaskFaultInfoCache struct {
+	FaultInfo *TaskFaultInfo
+	CheckCode string
+}
+
+// TaskFaultInfo record task fault rank information
+type TaskFaultInfo struct {
+	FaultRank  []int
+	UpdateTime int64
+}
+
 // Get310PProductType get 310P product type
 func Get310PProductType() map[string]string {
 	return map[string]string{

@@ -149,10 +149,10 @@ func (ki *ClientK8s) CreateConfigMap(cm *v1.ConfigMap) (*v1.ConfigMap, error) {
 	return ki.Clientset.CoreV1().ConfigMaps(cm.ObjectMeta.Namespace).Create(context.TODO(), cm, metav1.CreateOptions{})
 }
 
-// GetConfigMap get config map
-func (ki *ClientK8s) GetConfigMap() (*v1.ConfigMap, error) {
-	return ki.Clientset.CoreV1().ConfigMaps(common.DeviceInfoCMNameSpace).Get(context.TODO(),
-		ki.DeviceInfoName, metav1.GetOptions{})
+// GetConfigMap get config map by name and namespace
+func (ki *ClientK8s) GetConfigMap(cmName, cmNameSpace string) (*v1.ConfigMap, error) {
+	return ki.Clientset.CoreV1().ConfigMaps(cmNameSpace).Get(context.TODO(),
+		cmName, metav1.GetOptions{})
 }
 
 // UpdateConfigMap update device info, which is cm
@@ -177,6 +177,18 @@ func (ki *ClientK8s) ResetDeviceInfo() {
 	if _, err := ki.WriteDeviceInfoDataIntoCM(deviceList); err != nil {
 		hwlog.RunLog.Errorf("write device info failed, error is %#v", err)
 	}
+}
+
+// ClearResetInfo clear reset info
+func (ki *ClientK8s) ClearResetInfo(taskName string) error {
+	taskInfo := &common.TaskResetInfo{
+		RankList: make([]*common.TaskDevInfo, 0),
+	}
+	if _, err := ki.WriteResetInfoDataIntoCM(taskName, taskInfo); err != nil {
+		hwlog.RunLog.Errorf("failed to clear reset info, err: %#v", err)
+		return err
+	}
+	return nil
 }
 
 func getNodeNameFromEnv() (string, error) {

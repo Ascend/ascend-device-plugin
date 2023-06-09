@@ -51,6 +51,7 @@ type AscendTools struct {
 type DevManager interface {
 	GetNPUs() (common.NpuAllInfo, error)
 	DoWithVolcanoListAndWatch(map[string][]*common.NpuDevice)
+	GraceTolerance(map[string][]*common.NpuDevice)
 	SetDmgr(devmanager.DeviceInterface)
 	GetDmgr() devmanager.DeviceInterface
 	GetChipAICore() int32
@@ -218,7 +219,7 @@ func (tool *AscendTools) removeDuplicate(allDeviceTypes *[]string) []string {
 }
 
 func (tool *AscendTools) getDeviceListFromConfigMap() (map[string]string, error) {
-	deviceInfo, err := tool.client.GetConfigMap()
+	deviceInfo, err := tool.client.GetConfigMap(tool.client.DeviceInfoName, common.DeviceInfoCMNameSpace)
 	if err != nil || deviceInfo == nil {
 		return nil, fmt.Errorf("get configmap failed. %#v", err)
 	}
@@ -234,7 +235,7 @@ func getDeviceInfoData(deviceInfo *v1.ConfigMap) (map[string]string, error) {
 	if !ok {
 		return nil, fmt.Errorf("%s not exist", common.DeviceInfoCMDataKey)
 	}
-	if len(data) > common.CMDataMaxMemory {
+	if len(data) > common.CMDataMaxLength {
 		return nil, fmt.Errorf("configMap data size is out of memory")
 	}
 	var nodeDeviceInfo common.NodeDeviceInfoCache
@@ -245,6 +246,32 @@ func getDeviceInfoData(deviceInfo *v1.ConfigMap) (map[string]string, error) {
 		return nil, fmt.Errorf("configmap check hash code error")
 	}
 	return nodeDeviceInfo.DeviceInfo.DeviceList, nil
+}
+
+func getResetInfoData(resetInfo *v1.ConfigMap) ([]*common.TaskDevInfo, error) {
+	data, ok := resetInfo.Data[common.ResetInfoCMDataKey]
+	if !ok {
+		return nil, fmt.Errorf("%s not exist", common.ResetInfoCMDataKey)
+	}
+	if len(data) > common.CMDataMaxLength {
+		return nil, fmt.Errorf("configmap data size is out of memory")
+	}
+	var taskResetInfo common.TaskResetInfo
+	if err := json.Unmarshal([]byte(data), &taskResetInfo); err != nil {
+		return nil, fmt.Errorf("unmarshal configmap data failed, err: %#v", err)
+	}
+	if taskResetInfo.UpdateTime == 0 {
+		hwlog.RunLog.Info(" reset configmap is initializing")
+		return nil, nil
+	}
+	checkCode, ok := resetInfo.Data[common.ResetInfoCMCheckCodeKey]
+	if !ok {
+		return nil, fmt.Errorf("%s not exist", common.ResetInfoCMCheckCodeKey)
+	}
+	if checkCode != common.MakeDataHash(taskResetInfo) {
+		return nil, fmt.Errorf("configmap check hash code error")
+	}
+	return taskResetInfo.RankList, nil
 }
 
 func (tool *AscendTools) getRealUsedDevices() sets.String {
@@ -407,7 +434,7 @@ func (tool *AscendTools) AddPodAnnotation(pod *v1.Pod, kltRequestDevices, dpResp
 	return tool.client.TryUpdatePodAnnotation(pod, annotation)
 }
 
-// UpdateHealthyAndGetChange update group device healthy and return healthy change map
+// UpdateHealthyAndGetChange update group device healthy and return device healthy change map
 func (tool *AscendTools) UpdateHealthyAndGetChange(groupDevice map[string][]*common.NpuDevice,
 	aiCoreDevs []*common.NpuDevice, runMode string) map[string]bool {
 	tool.writeNewFaultCode(groupDevice)

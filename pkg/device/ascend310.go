@@ -101,3 +101,8 @@ func (hnm *HwAscend310Manager) updateDeviceInfo(_, newDeviceInfo map[string]stri
 	newDeviceInfo[hnm.unHealthyKey] = common.ToString(devStatusSet.UnHealthyDevice, common.CommaSepDev)
 	return nil
 }
+
+// GraceTolerance graceful fault tolerance, not supported currently
+func (hnm *HwAscend310Manager) GraceTolerance(map[string][]*common.NpuDevice) {
+	return
+}

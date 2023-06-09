@@ -261,7 +261,7 @@ func getPredicateTimeFromPodAnnotation(pod *v1.Pod) uint64 {
 		hwlog.RunLog.Warnf("volcano not write timestamp, pod Name: %s", pod.Name)
 		return math.MaxUint64
 	}
-	if len(assumeTimeStr) > common.PodAnnotationMaxMemory {
+	if len(assumeTimeStr) > common.PodAnnotationMaxLength {
 		hwlog.RunLog.Warnf("timestamp fmt invalid, pod Name: %s", pod.Name)
 		return math.MaxUint64
 	}

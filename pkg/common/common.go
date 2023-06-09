@@ -132,7 +132,7 @@ func GetPodAnnotationByDeviceType(pod *v1.Pod, deviceType string) (string, error
 	if !exist {
 		return "", fmt.Errorf("cannot find the annotation")
 	}
-	if len(annotation) > PodAnnotationMaxMemory {
+	if len(annotation) > PodAnnotationMaxLength {
 		return "", fmt.Errorf("pod annotation size out of memory")
 	}
 	return annotation, nil

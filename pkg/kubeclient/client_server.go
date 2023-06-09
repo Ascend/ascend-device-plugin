@@ -59,7 +59,7 @@ func (ki *ClientK8s) TryUpdatePodAnnotation(pod *v1.Pod, annotation map[string]s
 }
 
 func (ki *ClientK8s) isConfigMapChanged(cm *v1.ConfigMap) bool {
-	cmData, err := ki.GetConfigMap()
+	cmData, err := ki.GetConfigMap(ki.DeviceInfoName, common.DeviceInfoCMNameSpace)
 	if err != nil {
 		hwlog.RunLog.Infof("get device info configmap failed, error is: %#v", err)
 		return true
@@ -116,6 +116,68 @@ func (ki *ClientK8s) WriteDeviceInfoDataIntoCM(deviceInfo map[string]string) (*v
 	return ki.createOrUpdateConfigMap(deviceInfoCM)
 }
 
+// WriteResetInfoDataIntoCM write reset info into config map
+func (ki *ClientK8s) WriteResetInfoDataIntoCM(taskName string, taskInfo *common.TaskResetInfo) (*v1.ConfigMap, error) {
+	oldCM, err := ki.GetConfigMap(common.ResetInfoCMNamePrefix+taskName, common.ResetInfoCMNameSpace)
+	if err != nil {
+		hwlog.RunLog.Errorf("failed to get reset cm of task %s, err: %#v", taskName, err)
+		return nil, err
+	}
+	taskResetInfo := &common.TaskResetInfoCache{
+		ResetInfo: taskInfo,
+	}
+	taskResetInfo.ResetInfo.UpdateTime = time.Now().Unix()
+	checkCode := common.MakeDataHash(taskResetInfo.ResetInfo)
+	var data []byte
+	if data = common.MarshalData(taskResetInfo.ResetInfo); len(data) == 0 {
+		return nil, fmt.Errorf("marshal task reset data failed")
+	}
+	resetInfoCM := &v1.ConfigMap{
+		TypeMeta:   oldCM.TypeMeta,
+		ObjectMeta: oldCM.ObjectMeta,
+		Data: map[string]string{
+			common.ResetInfoCMDataKey:      string(data),
+			common.ResetInfoCMCheckCodeKey: checkCode,
+		},
+	}
+
+	hwlog.RunLog.Debugf("write reset info cache into cm: %s/%s.", resetInfoCM.Namespace, resetInfoCM.Name)
+	return ki.UpdateConfigMap(resetInfoCM)
+}
+
+// WriteFaultInfoDataIntoCM write fault info into config map
+func (ki *ClientK8s) WriteFaultInfoDataIntoCM(taskName string, faultInfo *common.TaskFaultInfo) (*v1.ConfigMap, error) {
+	oldCM, err := ki.GetConfigMap(common.FaultInfoCMNamePrefix+taskName, common.FaultInfoCMNameSpace)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			hwlog.RunLog.Infof("fault config map in task %s is not found", taskName)
+			return nil, nil
+		}
+		hwlog.RunLog.Errorf("failed to get fault cm of task %s, err: %#v", taskName, err)
+		return nil, err
+	}
+	taskFaultInfo := &common.TaskFaultInfoCache{
+		FaultInfo: faultInfo,
+	}
+	taskFaultInfo.FaultInfo.UpdateTime = time.Now().Unix()
+	checkCode := common.MakeDataHash(taskFaultInfo.FaultInfo)
+	var data []byte
+	if data = common.MarshalData(taskFaultInfo.FaultInfo); len(data) == 0 {
+		return nil, fmt.Errorf("marshal task reset data failed")
+	}
+	faultInfoCM := &v1.ConfigMap{
+		TypeMeta:   oldCM.TypeMeta,
+		ObjectMeta: oldCM.ObjectMeta,
+		Data: map[string]string{
+			common.FaultInfoCMDataKey:      string(data),
+			common.FaultInfoCMCheckCodeKey: checkCode,
+		},
+	}
+
+	hwlog.RunLog.Debugf("write fault info cache into cm: %s/%s.", faultInfoCM.Namespace, faultInfoCM.Name)
+	return ki.UpdateConfigMap(faultInfoCM)
+}
+
 // AnnotationReset reset annotation and device info
 func (ki *ClientK8s) AnnotationReset() error {
 	curNode, err := ki.GetNode()
@@ -154,7 +216,7 @@ func (ki *ClientK8s) GetPodsUsedNpu(devType string) sets.String {
 	for _, pod := range podList {
 		annotationTag := fmt.Sprintf("%s%s", common.ResourceNamePrefix, devType)
 		tmpNpu, ok := pod.Annotations[annotationTag]
-		if !ok || len(tmpNpu) == 0 || len(tmpNpu) > common.PodAnnotationMaxMemory {
+		if !ok || len(tmpNpu) == 0 || len(tmpNpu) > common.PodAnnotationMaxLength {
 			continue
 		}
 		tmpNpuList := strings.Split(tmpNpu, common.CommaSepDev)
