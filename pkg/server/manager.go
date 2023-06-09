@@ -39,12 +39,13 @@ import (
 
 // HwDevManager manages huawei device devices.
 type HwDevManager struct {
-	groupDevice map[string][]*common.NpuDevice
-	ServerMap   map[string]InterfaceServer
-	allInfo     common.NpuAllInfo
-	manager     device.DevManager
-	RunMode     string
-	WorkMode    string
+	groupDevice      map[string][]*common.NpuDevice
+	renewGroupDevice map[string][]*common.NpuDevice
+	ServerMap        map[string]InterfaceServer
+	allInfo          common.NpuAllInfo
+	manager          device.DevManager
+	RunMode          string
+	WorkMode         string
 }
 
 // NewHwDevManager function is used to new a dev manager.
@@ -255,6 +256,7 @@ func (hdm *HwDevManager) ListenDevice(ctx context.Context) {
 				continue
 			}
 			hdm.notifyToK8s()
+			hdm.renewGroupDevice = deepCopyGroupDevice(hdm.groupDevice)
 			hdm.graceTolerance()
 			hdm.useVolcanoNotify()
 			hdm.chipHotReset()
@@ -262,6 +264,29 @@ func (hdm *HwDevManager) ListenDevice(ctx context.Context) {
 			common.UnlockAllDeviceInfo()
 		}
 	}
+}
+
+func deepCopyGroupDevice(groupDevice map[string][]*common.NpuDevice) map[string][]*common.NpuDevice {
+	newGroupDevice := make(map[string][]*common.NpuDevice, len(groupDevice))
+	for deviceType, npuDevices := range groupDevice {
+		newNpuDevices := make([]*common.NpuDevice, 0, len(npuDevices))
+		for _, npuDevice := range npuDevices {
+			newNpuDevice := &common.NpuDevice{
+				FaultCodes:    npuDevice.FaultCodes,
+				DevType:       npuDevice.DevType,
+				DeviceName:    npuDevice.DeviceName,
+				Health:        npuDevice.Health,
+				NetworkHealth: npuDevice.NetworkHealth,
+				IP:            npuDevice.IP,
+				LogicID:       npuDevice.LogicID,
+				PhyID:         npuDevice.PhyID,
+				CardID:        npuDevice.CardID,
+			}
+			newNpuDevices = append(newNpuDevices, newNpuDevice)
+		}
+		newGroupDevice[deviceType] = newNpuDevices
+	}
+	return newGroupDevice
 }
 
 func (hdm *HwDevManager) pluginNotify(classifyDev []*common.NpuDevice, devType string) {
@@ -381,7 +406,7 @@ func (hdm *HwDevManager) useVolcanoNotify() {
 	if !common.ParamOption.UseVolcanoType {
 		return
 	}
-	hdm.manager.DoWithVolcanoListAndWatch(hdm.groupDevice)
+	hdm.manager.DoWithVolcanoListAndWatch(hdm.renewGroupDevice)
 }
 
 // SignCatch stop system sign catch
@@ -673,5 +698,5 @@ func (hdm *HwDevManager) graceTolerance() {
 		hwlog.RunLog.Debugf("grace tolerance only support SMP chip mode")
 		return
 	}
-	hdm.manager.GraceTolerance(hdm.groupDevice)
+	hdm.manager.GraceTolerance(hdm.renewGroupDevice)
 }

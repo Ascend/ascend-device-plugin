@@ -145,22 +145,19 @@ func SetNewFaultAndCacheOnceRecoverFault(logicID int32, faultInfos []common.DevF
 	// the recover message and occur message both in faultInfos, this fault cannot be reports outside.
 	for _, faultInfo := range faultInfos {
 		if faultInfo.Assertion == common.FaultRecover {
-			device.FaultCodes = Int64Tool.Remove(device.FaultCodes, faultInfo.EventID)
+			if Int64Tool.Index(device.FaultCodes, faultInfo.EventID) == -1 {
+				recoverFaultMap[logicID] = append(recoverFaultMap[logicID], faultInfo.EventID)
+			} else {
+				device.FaultCodes = Int64Tool.Remove(device.FaultCodes, faultInfo.EventID)
+			}
+		}
+		if faultInfo.Assertion == common.FaultOnce {
+			recoverFaultMap[logicID] = append(recoverFaultMap[logicID], faultInfo.EventID)
 		}
 	}
 	for _, faultInfo := range faultInfos {
 		if faultInfo.Assertion == common.FaultOccur || faultInfo.Assertion == common.FaultOnce {
 			device.FaultCodes = append(device.FaultCodes, faultInfo.EventID)
-		}
-	}
-	// once fault or recover in one cycle fault should remove in the end, so we cache the fault first.
-	cacheAfterDelFaultCode(logicID, faultInfos)
-}
-
-func cacheAfterDelFaultCode(logicID int32, faultInfos []common.DevFaultInfo) {
-	for _, faultInfo := range faultInfos {
-		if faultInfo.Assertion == common.FaultRecover || faultInfo.Assertion == common.FaultOnce {
-			recoverFaultMap[logicID] = append(recoverFaultMap[logicID], faultInfo.EventID)
 		}
 	}
 }
