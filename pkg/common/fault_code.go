@@ -110,7 +110,7 @@ func GetFaultTypeByCode(faultCodes []int64) string {
 	case Int64Tool.SameElement(faultTypeCode.NotHandleFaultCodes, faultCodes):
 		return NotHandleFault
 	default:
-		hwlog.RunLog.Warnf("not record fault code : #s, use default type NotHandleFault", faultCodes)
+		hwlog.RunLog.Debugf("not record fault code : #s, use default type NotHandleFault", faultCodes)
 		return NotHandleFault
 	}
 }
