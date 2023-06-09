@@ -176,9 +176,9 @@ func (hrt *HotResetTools) GetNeedRestartDevList(devFaultInfoList []*common.TaskD
 	for _, devFaultInfo := range devFaultInfoList {
 		policyType, ok := hrt.processPolicyTable[devFaultInfo.Policy]
 		if !ok {
-			hwlog.RunLog.Errorf("invalid policy str of device %d",
-				devFaultInfo.LogicId)
-			return nil, fmt.Errorf("invalid policy str of device %d")
+			err := fmt.Errorf("invalid policy str of device %d", devFaultInfo.LogicId)
+			hwlog.RunLog.Error(err)
+			return nil, err
 		}
 		if policyType == common.RestartErrorLevel {
 			if _, ok := needRestartDevList[devFaultInfo.LogicId]; !ok {
@@ -195,10 +195,10 @@ func (hrt *HotResetTools) GetNeedResetDevList(devFaultInfoList []*common.TaskDev
 	for _, devFaultInfo := range devFaultInfoList {
 		policyType, ok := hrt.processPolicyTable[devFaultInfo.Policy]
 		if !ok {
-			hwlog.RunLog.Errorf("invalid policy str of device %d",
+			err := fmt.Errorf("invalid policy str of device %d",
 				devFaultInfo.LogicId)
-			return nil, fmt.Errorf("invalid policy str of device %d",
-				devFaultInfo.LogicId)
+			hwlog.RunLog.Error(err)
+			return nil, err
 		}
 		if policyType == common.RestartErrorLevel || policyType == common.ResetErrorLevel {
 			resetIndex := devFaultInfo.LogicId / int32(hrt.GetRingNum())
