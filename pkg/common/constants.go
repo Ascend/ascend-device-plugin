@@ -473,8 +473,6 @@ const (
 const (
 	// ResetInfoCMNamePrefix for reset configmap name prefix
 	ResetInfoCMNamePrefix = "reset-config-"
-	// ResetInfoCMNameSpace for reset configmap name space
-	ResetInfoCMNameSpace = "vcjob"
 	// ResetInfoCMDataKey for reset configmap data key
 	ResetInfoCMDataKey = "reset.json"
 	// ResetInfoCMCheckCodeKey for reset configmap checkcode key
@@ -486,8 +484,6 @@ const (
 const (
 	// FaultInfoCMNamePrefix for fault configmap name prefix
 	FaultInfoCMNamePrefix = "fault-config-"
-	// FaultInfoCMNameSpace for fault configmap name space
-	FaultInfoCMNameSpace = "vcjob"
 	// FaultInfoCMDataKey for fault configmap data key
 	FaultInfoCMDataKey = "fault-npus"
 	// FaultInfoCMCheckCodeKey for fault configmap checkcode key

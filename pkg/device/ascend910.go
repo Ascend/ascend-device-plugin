@@ -294,29 +294,22 @@ func (hnm *HwAscend910Manager) updateHotResetCache(classifyDevs map[string][]*co
 		hwlog.RunLog.Errorf("failed to update global device fault info cache, err: %#v", err)
 		return err
 	}
-	newTaskDevListCache, newTaskDevFaultInfoCache, err := hnm.getTaskDevInfoCache()
-	if err != nil {
-		hwlog.RunLog.Errorf("failed to get task device info cache, err: %#v", err)
-		return err
-	}
-	if err := hnm.hotResetManager.UpdateTaskDevListCache(newTaskDevListCache); err != nil {
-		return err
-	}
-	if err := hnm.hotResetManager.UpdateTaskDevFaultInfoCache(newTaskDevFaultInfoCache); err != nil {
+	if err := hnm.setTaskDevInfoCache(); err != nil {
+		hwlog.RunLog.Errorf("failed to set task device info cache, err: %#v", err)
 		return err
 	}
 	return nil
 }
 
-func (hnm *HwAscend910Manager) getTaskDevInfoCache() (map[string][]int32,
-	map[string][]*common.TaskDevInfo, error) {
+func (hnm *HwAscend910Manager) setTaskDevInfoCache() error {
 	podList, err := hnm.client.GetActivePodList()
 	if err != nil {
 		hwlog.RunLog.Errorf("failed to get pod list when update task, err: %#v", err)
-		return nil, nil, err
+		return err
 	}
 	newTaskDevListCache := make(map[string][]int32)
 	newTaskDevFaultInfoCache := make(map[string][]*common.TaskDevInfo)
+	newTaskNamespaceCache := make(map[string]string)
 	taskListUsedDevice := make(map[string]struct{})
 	for _, pod := range podList {
 		annotationTag := fmt.Sprintf("%s%s", common.ResourceNamePrefix, common.Ascend910)
@@ -344,16 +337,31 @@ func (hnm *HwAscend910Manager) getTaskDevInfoCache() (map[string][]int32,
 		taskDevFaultInfoList, err := hnm.hotResetManager.GenerateTaskDevFaultInfoList(devIdList, rankIndex)
 		if err != nil {
 			hwlog.RunLog.Errorf("failed to get task device fault info list, err: %#v", err)
-			return nil, nil, err
+			return err
 		}
 		newTaskDevFaultInfoCache[taskName] = taskDevFaultInfoList
+		newTaskNamespaceCache[taskName] = pod.Namespace
 	}
 	hnm.hotResetManager.UpdateFreeTask(taskListUsedDevice)
-	return newTaskDevListCache, newTaskDevFaultInfoCache, nil
+	if err := hnm.hotResetManager.UpdateTaskDevListCache(newTaskDevListCache); err != nil {
+		return err
+	}
+	if err := hnm.hotResetManager.UpdateTaskDevFaultInfoCache(newTaskDevFaultInfoCache); err != nil {
+		return err
+	}
+	if err := hnm.hotResetManager.UpdateTaskNamespaceCache(newTaskNamespaceCache); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (hnm *HwAscend910Manager) isTaskInReset(taskName string) (bool, error) {
-	resetCM, err := hnm.client.GetConfigMap(common.ResetInfoCMNamePrefix+taskName, common.ResetInfoCMNameSpace)
+	namespace, err := hnm.hotResetManager.GetTaskNamespace(taskName)
+	if err != nil {
+		hwlog.RunLog.Errorf("failed to get task namespace, err: %#v", err)
+		return false, err
+	}
+	resetCM, err := hnm.client.GetConfigMap(common.ResetInfoCMNamePrefix+taskName, namespace)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			hwlog.RunLog.Debugf("task %s does not have reset info cm, skip this choice", taskName)
@@ -496,7 +504,12 @@ func (hnm *HwAscend910Manager) updateResetCMStatus(taskName, policyType, status 
 		hwlog.RunLog.Errorf("failed to get task reset info list, err: %#v", err)
 		return err
 	}
-	if _, err := hnm.client.WriteResetInfoDataIntoCM(taskName, newResetInfo); err != nil {
+	namespace, err := hnm.hotResetManager.GetTaskNamespace(taskName)
+	if err != nil {
+		hwlog.RunLog.Errorf("failed to get task namespace, err: %#v", err)
+		return err
+	}
+	if _, err := hnm.client.WriteResetInfoDataIntoCM(taskName, namespace, newResetInfo); err != nil {
 		hwlog.RunLog.Errorf("failed to write reset info to cm, err: %#v", err)
 		return err
 	}
@@ -563,12 +576,17 @@ func (hnm *HwAscend910Manager) preProcess(taskName, policy string) (*common.Task
 		hwlog.RunLog.Errorf("failed to get task device fault info list, err: %#v", err)
 		return nil, err
 	}
+	namespace, err := hnm.hotResetManager.GetTaskNamespace(taskName)
+	if err != nil {
+		hwlog.RunLog.Errorf("failed to get task namespace, err: %#v", err)
+		return nil, err
+	}
 	resetInfo, err := hnm.hotResetManager.GetTaskResetInfo(devFaultInfoList, policy, common.UnrecoveredStatus)
 	if err != nil {
 		hwlog.RunLog.Errorf("failed to get task reset info list, err: %#v")
 		return nil, err
 	}
-	if _, err := hnm.client.WriteResetInfoDataIntoCM(taskName, resetInfo); err != nil {
+	if _, err := hnm.client.WriteResetInfoDataIntoCM(taskName, namespace, resetInfo); err != nil {
 		hwlog.RunLog.Errorf("failed to write reset info to cm, err: %#v", err)
 		return nil, err
 	}
@@ -577,7 +595,7 @@ func (hnm *HwAscend910Manager) preProcess(taskName, policy string) (*common.Task
 		hwlog.RunLog.Errorf("failed to get task fault rank info, err: %#v", err)
 		return nil, err
 	}
-	if _, err := hnm.client.WriteFaultInfoDataIntoCM(taskName, faultInfo); err != nil {
+	if _, err := hnm.client.WriteFaultInfoDataIntoCM(taskName, namespace, faultInfo); err != nil {
 		hwlog.RunLog.Errorf("failed to write fault rank info to cm, err %#v", err)
 		return nil, err
 	}
@@ -594,7 +612,12 @@ func (hnm *HwAscend910Manager) preProcess(taskName, policy string) (*common.Task
 
 // postProcess clear reset info cm and unset the reset status of all device in a task
 func (hnm *HwAscend910Manager) postProcess(taskName string, resetInfo *common.TaskResetInfo) error {
-	if err := hnm.client.ClearResetInfo(taskName); err != nil {
+	namespace, err := hnm.hotResetManager.GetTaskNamespace(taskName)
+	if err != nil {
+		hwlog.RunLog.Errorf("failed to get task namespace, err: %#v", err)
+		return err
+	}
+	if err := hnm.client.ClearResetInfo(taskName, namespace); err != nil {
 		hwlog.RunLog.Errorf("failed to clear reset info, err: %#v", err)
 		return err
 	}
