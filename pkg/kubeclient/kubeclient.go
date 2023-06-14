@@ -180,11 +180,11 @@ func (ki *ClientK8s) ResetDeviceInfo() {
 }
 
 // ClearResetInfo clear reset info
-func (ki *ClientK8s) ClearResetInfo(taskName string) error {
+func (ki *ClientK8s) ClearResetInfo(taskName, namespace string) error {
 	taskInfo := &common.TaskResetInfo{
 		RankList: make([]*common.TaskDevInfo, 0),
 	}
-	if _, err := ki.WriteResetInfoDataIntoCM(taskName, taskInfo); err != nil {
+	if _, err := ki.WriteResetInfoDataIntoCM(taskName, namespace, taskInfo); err != nil {
 		hwlog.RunLog.Errorf("failed to clear reset info, err: %#v", err)
 		return err
 	}

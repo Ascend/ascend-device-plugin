@@ -30,6 +30,7 @@ type HotResetManager interface {
 	GetRingNum() int
 	GetDevIdList(string) []int32
 	GetTaskDevFaultInfoList(string) ([]*common.TaskDevInfo, error)
+	GetTaskNamespace(string) (string, error)
 	GetAllTaskDevList() map[string][]int32
 	GetAllTaskDevFaultInfoList() map[string][]*common.TaskDevInfo
 	GetDevProcessPolicy(string) string
@@ -43,6 +44,7 @@ type HotResetManager interface {
 	UpdateGlobalDevFaultInfoCache([]*common.NpuDevice) error
 	UpdateTaskDevListCache(map[string][]int32) error
 	UpdateTaskDevFaultInfoCache(map[string][]*common.TaskDevInfo) error
+	UpdateTaskNamespaceCache(map[string]string) error
 	UpdateFreeTask(map[string]struct{})
 	SetTaskInReset(string) error
 	SetDevInReset(int32) error
@@ -59,6 +61,7 @@ type HotResetTools struct {
 	allTaskDevList      map[string][]int32
 	allTaskDevFaultInfo map[string][]*common.TaskDevInfo
 	globalDevFaultInfo  map[int32]*common.DevFaultInfo
+	taskNamespace       map[string]string
 	resetTask           map[string]struct{}
 	resetDev            map[int32]struct{}
 	processPolicyTable  map[string]int
@@ -104,6 +107,15 @@ func (hrt *HotResetTools) GetTaskDevFaultInfoList(taskName string) ([]*common.Ta
 		return nil, fmt.Errorf("task %s is not in task device fault info list cache", taskName)
 	}
 	return taskDevFaultInfoList, nil
+}
+
+// GetTaskNamespace return task namespace
+func (hrt *HotResetTools) GetTaskNamespace(taskName string) (string, error) {
+	namespace, ok := hrt.taskNamespace[taskName]
+	if !ok {
+		return "", fmt.Errorf("task %s is not in task namespace cache", taskName)
+	}
+	return namespace, nil
 }
 
 // GetAllTaskDevFaultInfoList return all task device fault info list
@@ -324,9 +336,18 @@ func (hrt *HotResetTools) UpdateTaskDevFaultInfoCache(taskDevFaultInfo map[strin
 	return nil
 }
 
+// UpdateTaskNamespaceCache update all task namespace cache
+func (hrt *HotResetTools) UpdateTaskNamespaceCache(taskNamespace map[string]string) error {
+	if taskNamespace == nil {
+		return fmt.Errorf("taskNamespace is nil")
+	}
+	hrt.taskNamespace = taskNamespace
+	return nil
+}
+
 // UpdateFreeTask unset task in reset task after delete task
 func (hrt *HotResetTools) UpdateFreeTask(taskListUsedDevice map[string]struct{}) {
-	for taskName, _ := range hrt.resetTask {
+	for taskName := range hrt.resetTask {
 		if _, ok := taskListUsedDevice[taskName]; !ok {
 			delete(hrt.resetTask, taskName)
 		}

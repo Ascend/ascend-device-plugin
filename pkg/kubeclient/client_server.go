@@ -117,8 +117,9 @@ func (ki *ClientK8s) WriteDeviceInfoDataIntoCM(deviceInfo map[string]string) (*v
 }
 
 // WriteResetInfoDataIntoCM write reset info into config map
-func (ki *ClientK8s) WriteResetInfoDataIntoCM(taskName string, taskInfo *common.TaskResetInfo) (*v1.ConfigMap, error) {
-	oldCM, err := ki.GetConfigMap(common.ResetInfoCMNamePrefix+taskName, common.ResetInfoCMNameSpace)
+func (ki *ClientK8s) WriteResetInfoDataIntoCM(taskName string, namespace string,
+	taskInfo *common.TaskResetInfo) (*v1.ConfigMap, error) {
+	oldCM, err := ki.GetConfigMap(common.ResetInfoCMNamePrefix+taskName, namespace)
 	if err != nil {
 		hwlog.RunLog.Errorf("failed to get reset cm of task %s, err: %#v", taskName, err)
 		return nil, err
@@ -146,8 +147,9 @@ func (ki *ClientK8s) WriteResetInfoDataIntoCM(taskName string, taskInfo *common.
 }
 
 // WriteFaultInfoDataIntoCM write fault info into config map
-func (ki *ClientK8s) WriteFaultInfoDataIntoCM(taskName string, faultInfo *common.TaskFaultInfo) (*v1.ConfigMap, error) {
-	oldCM, err := ki.GetConfigMap(common.FaultInfoCMNamePrefix+taskName, common.FaultInfoCMNameSpace)
+func (ki *ClientK8s) WriteFaultInfoDataIntoCM(taskName string, namespace string,
+	faultInfo *common.TaskFaultInfo) (*v1.ConfigMap, error) {
+	oldCM, err := ki.GetConfigMap(common.FaultInfoCMNamePrefix+taskName, namespace)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			hwlog.RunLog.Infof("fault config map in task %s is not found", taskName)
