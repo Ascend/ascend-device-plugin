@@ -321,7 +321,6 @@ func (hdm *HwDevManager) notifyToK8s() {
 
 func (hdm *HwDevManager) chipHotReset() {
 	if hdm.RunMode == common.Ascend910 {
-		hwlog.RunLog.Debugf("training card not support hot reset function now!")
 		return
 	}
 	if common.ParamOption.HotReset != common.HotResetInfer {
