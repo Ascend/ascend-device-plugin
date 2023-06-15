@@ -26,6 +26,7 @@ import (
 	"Ascend-device-plugin/pkg/common"
 )
 
+// HotResetManager hot reset manager
 type HotResetManager interface {
 	GetRingNum() int
 	GetDevIdList(string) []int32
@@ -56,6 +57,7 @@ type HotResetManager interface {
 	DeepCopyDevFaultInfoList([]*common.TaskDevInfo) []*common.TaskDevInfo
 }
 
+// HotResetTools hot reset tool
 type HotResetTools struct {
 	ringNum             int
 	allTaskDevList      map[string][]int32
@@ -67,6 +69,7 @@ type HotResetTools struct {
 	processPolicyTable  map[string]int
 }
 
+// NewHotResetManager create HotResetManager and init data
 func NewHotResetManager(devType string) HotResetManager {
 	switch devType {
 	case common.Ascend910:
@@ -304,7 +307,7 @@ func (hrt *HotResetTools) GenerateTaskDevFaultInfoList(devIdList []int32,
 
 // UpdateGlobalDevFaultInfoCache update global device fault info cache
 func (hrt *HotResetTools) UpdateGlobalDevFaultInfoCache(devDeviceList []*common.NpuDevice) error {
-	if devDeviceList == nil {
+	if len(devDeviceList) == 0 {
 		return fmt.Errorf("npu device list is nil")
 	}
 	hrt.globalDevFaultInfo = make(map[int32]*common.DevFaultInfo, len(devDeviceList))
