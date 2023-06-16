@@ -504,7 +504,7 @@ const (
 )
 
 const (
-	//EmptyErrorLevel indicates the level of no fault state
+	// EmptyErrorLevel indicates the level of no fault state
 	EmptyErrorLevel = iota
 	// IgnoreErrorLevel indicates the level of a fault that can be ignored
 	IgnoreErrorLevel
