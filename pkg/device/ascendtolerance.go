@@ -138,7 +138,7 @@ func (hrt *HotResetTools) GetDevProcessPolicy(faultType string) string {
 		return common.EmptyError
 	case common.RestartBusiness, common.RecoverRestartBusiness:
 		return common.RestartError
-	case common.FreeRestartNPU, common.RestartError:
+	case common.FreeRestartNPU, common.RestartNPU:
 		return common.ResetError
 	default:
 		return common.IsolateError
