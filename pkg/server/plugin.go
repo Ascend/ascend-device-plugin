@@ -66,10 +66,16 @@ func (ps *PluginServer) getUnhealthyAICore() sets.String {
 		}
 		allAICore.Insert(device.DeviceName)
 	}
+	// get real used AICore devs
+	realUsedAICore, err := ps.getRealUsedAICore()
+	if err != nil {
+		hwlog.RunLog.Errorf("failed to get real used AICore device, %v", err)
+		return sets.String{}
+	}
 	// if chip is unhealthy, the real device has same phyid is unhealthy, and the klt ai core is unhealthy
 	unhealthyAICore := sets.String{}
 	usedAICore := sets.String{}
-	for k, r := range ps.klt2RealDevMap {
+	for k, r := range realUsedAICore {
 		phyID, _, err := common.GetDeviceID(r, "")
 		if err != nil {
 			hwlog.RunLog.Warn(err)
@@ -101,6 +107,29 @@ func (ps *PluginServer) getUnhealthyAICore() sets.String {
 		unhealthyAICore.Insert(freeList[count])
 	}
 	return unhealthyAICore
+}
+
+func (ps *PluginServer) getRealUsedAICore() (map[string]string, error) {
+	podList, err := ps.manager.GetKubeClient().GetActivePodList()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get active pod list, %w", err)
+	}
+	podDeviceInfo, err := ps.GetKltAndRealAllocateDev(podList)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get klt and real allocate device, %w", err)
+	}
+	usedAICore := make(map[string]string, len(podDeviceInfo))
+	for _, deviceInfo := range podDeviceInfo {
+		hwlog.RunLog.Debugf("pod info name: %s, status:%s, uid:%s", deviceInfo.Pod.Name,
+			deviceInfo.Pod.Status.Phase, deviceInfo.Pod.UID)
+		if len(deviceInfo.RealDevice) == 0 {
+			continue
+		}
+		for _, coreName := range deviceInfo.KltDevice {
+			usedAICore[coreName] = deviceInfo.RealDevice[0]
+		}
+	}
+	return usedAICore, nil
 }
 
 func (ps *PluginServer) generateAllDeviceMap() map[string]string {

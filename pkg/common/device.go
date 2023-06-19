@@ -46,6 +46,9 @@ func GetDeviceID(deviceName string, ascendRuntimeOptions string) (int, int, erro
 			return 0, 0, fmt.Errorf("convert vnpu id %s failed, erros is %v", idSplit[PhyDeviceLen], err)
 		}
 	}
+	if index := strings.Index(phyIDStr, UnderLine); index > 0 {
+		phyIDStr = phyIDStr[:index]
+	}
 	phyID, err := strconv.Atoi(phyIDStr)
 	if err != nil {
 		return 0, 0, fmt.Errorf("convert physical id %s failed, erros is %v", phyIDStr, err)
