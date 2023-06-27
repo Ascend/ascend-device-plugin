@@ -379,6 +379,9 @@ func TestGetUnhealthyAICore(t *testing.T) {
 		device.NewHwAscend910Manager())
 	ps.klt2RealDevMap["Ascend910-0"] = "Ascend910-0"
 	common.ParamOption.AiCoreCount = common.MinAICoreNum
+	mockGetAiCore := gomonkey.ApplyMethod(reflect.TypeOf(new(PluginServer)), "GetRealUsedAICore",
+		func(_ *PluginServer) (map[string]string, error) { return nil, nil })
+	defer mockGetAiCore.Reset()
 	convey.Convey("test GetUnhealthyAICore", t, func() {
 		convey.Convey("GetUnhealthyAICore success", func() {
 			unhealthyDev := ps.getUnhealthyAICore()

@@ -67,7 +67,7 @@ func (ps *PluginServer) getUnhealthyAICore() sets.String {
 		allAICore.Insert(device.DeviceName)
 	}
 	// get real used AICore devs
-	realUsedAICore, err := ps.getRealUsedAICore()
+	realUsedAICore, err := ps.GetRealUsedAICore()
 	if err != nil {
 		hwlog.RunLog.Errorf("failed to get real used AICore device, %v", err)
 		return sets.String{}
@@ -109,7 +109,8 @@ func (ps *PluginServer) getUnhealthyAICore() sets.String {
 	return unhealthyAICore
 }
 
-func (ps *PluginServer) getRealUsedAICore() (map[string]string, error) {
+// GetRealUsedAICore get real used aicore from pod
+func (ps *PluginServer) GetRealUsedAICore() (map[string]string, error) {
 	podList, err := ps.manager.GetKubeClient().GetActivePodList()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get active pod list, %w", err)

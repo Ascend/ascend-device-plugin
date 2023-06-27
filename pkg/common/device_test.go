@@ -83,7 +83,7 @@ func TestGetVNPUSegmentInfo(t *testing.T) {
 			_, _, err := GetVNPUSegmentInfo(deviceInfos)
 			convey.So(err, convey.ShouldBeNil)
 		})
-		deviceInfos = []string{"65", "vir02"}
+		deviceInfos = []string{"165", "vir02"}
 		convey.Convey("GetVNPUSegmentInfo failed with upper limit id", func() {
 			_, _, err := GetVNPUSegmentInfo(deviceInfos)
 			convey.So(err, convey.ShouldNotBeNil)

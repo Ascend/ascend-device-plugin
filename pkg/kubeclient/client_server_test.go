@@ -152,7 +152,7 @@ func TestWriteDeviceInfoDataIntoCM(t *testing.T) {
 	defer resetMock(mockErr, mockCreateCM, mockUpdateCM)
 	convey.Convey("write device info (cm) when get cm failed", t, func() {
 		mockGetCM := gomonkey.ApplyMethod(reflect.TypeOf(new(ClientK8s)), "GetConfigMap",
-			func(_ *ClientK8s) (*v1.ConfigMap, error) {
+			func(_ *ClientK8s, _ string, _ string) (*v1.ConfigMap, error) {
 				return nil, fmt.Errorf("test function errors")
 			})
 		defer mockGetCM.Reset()
@@ -161,7 +161,7 @@ func TestWriteDeviceInfoDataIntoCM(t *testing.T) {
 	})
 	convey.Convey("get write device info (cm) when get cm success", t, func() {
 		mockGetCM := gomonkey.ApplyMethod(reflect.TypeOf(new(ClientK8s)), "GetConfigMap",
-			func(_ *ClientK8s) (*v1.ConfigMap, error) {
+			func(_ *ClientK8s, _ string, _ string) (*v1.ConfigMap, error) {
 				return updateCM, nil
 			})
 		defer mockGetCM.Reset()

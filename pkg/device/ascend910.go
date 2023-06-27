@@ -584,7 +584,7 @@ func (hnm *HwAscend910Manager) preProcess(taskName, policy string) (*common.Task
 	}
 	resetInfo, err := hnm.hotResetManager.GetTaskResetInfo(devFaultInfoList, policy, common.UnrecoveredStatus)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get task reset info list, err: %#v")
+		hwlog.RunLog.Errorf("failed to get task reset info list, err: %#v", err)
 		return nil, err
 	}
 	if _, err := hnm.client.WriteResetInfoDataIntoCM(taskName, namespace, resetInfo); err != nil {

@@ -63,7 +63,7 @@ func TestNewHwDevManager(t *testing.T) {
 			common.ParamOption.PresetVDevice = false
 			common.ParamOption.ProductTypes = []string{common.Atlas300IDuo}
 			res := NewHwDevManager(&devmanager.DeviceManagerMock{})
-			convey.So(res, convey.ShouldBeNil)
+			convey.So(res, convey.ShouldNotBeNil)
 		})
 	})
 }
@@ -175,7 +175,7 @@ func TestNotifyToK8s(t *testing.T) {
 	defer mockGetDevType.Reset()
 	convey.Convey("test NotifyToK8s", t, func() {
 		convey.Convey("NotifyToK8s success", func() {
-			mockChange := gomonkey.ApplyMethod(reflect.TypeOf(new(device.AscendTools)), "IsDeviceStatusChange",
+			mockChange := gomonkey.ApplyMethod(reflect.TypeOf(new(device.AscendTools)), "UpdateHealthyAndGetChange",
 				func(_ *device.AscendTools, _ map[string][]*common.NpuDevice, _ []*common.NpuDevice, _ string) map[string]bool {
 					return map[string]bool{common.Ascend310P: true, common.Ascend310: false}
 				})
