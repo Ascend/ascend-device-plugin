@@ -62,7 +62,7 @@ func TestDoWithVolcanoListAndWatch310p(t *testing.T) {
 				return nil
 			})
 		mockGetConfigMap := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)),
-			"GetConfigMap", func(_ *kubeclient.ClientK8s) (*v1.ConfigMap, error) {
+			"GetConfigMap", func(_ *kubeclient.ClientK8s, _ string, _ string) (*v1.ConfigMap, error) {
 				nodeDeviceData := common.NodeDeviceInfoCache{
 					DeviceInfo: common.NodeDeviceInfo{
 						DeviceList: map[string]string{common.Ascend310P: "Ascend310p-1"},
