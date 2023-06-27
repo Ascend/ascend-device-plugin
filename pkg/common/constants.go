@@ -173,38 +173,34 @@ const (
 	Ascend910c8 = Ascend910 + "-" + Core8
 	// Ascend910c16 Ascend910 16core
 	Ascend910c16 = Ascend910 + "-" + Core16
-	// Ascend910c2HalfCpu Ascend910 2core 0.5cpu
-	Ascend910c2HalfCpu = Ascend910 + "-" + Core2HalfCpu
-	// Ascend910c2HalfCpuGb5 Ascend910 2core 0.5cpu 5Gb memory
-	Ascend910c2HalfCpuGb5 = Ascend910 + "-" + Core2HalfCpuG5
-	// Ascend910c3HalfCpuGb7 Ascend910 3core 0.5cpu 7Gb memory
-	Ascend910c3HalfCpuGb7 = Ascend910 + "-" + Core3HalfCpuGb7
-	// Ascend910c4Cpu1Gb5 Ascend910 4core 1cpu 5Gb memory
-	Ascend910c4Cpu1Gb5 = Ascend910 + "-" + Core4Cpu1Gb5
-	// Ascend910c5Cpu1 Ascend910 5core 1cpu
-	Ascend910c5Cpu1 = Ascend910 + "-" + Core5Cpu1
-	// Ascend910c5Cpu1Gb7 Ascend910 5core 1cpu 7Gb memory
-	Ascend910c5Cpu1Gb7 = Ascend910 + "-" + Core5Cpu1Gb7
-	// Ascend910c6Cpu1Gb15 Ascend910 6core 1cpu 15Gb memory
-	Ascend910c6Cpu1Gb15 = Ascend910 + "-" + Core6Cpu1Gb15
-	// Ascend910c10Cpu3 Ascend910 10core 3cpu
-	Ascend910c10Cpu3 = Ascend910 + "-" + Core10Cpu3
-	// Ascend910c10Cpu3Dvpp Ascend910 10core 3cpu dvpp
-	Ascend910c10Cpu3Dvpp = Ascend910 + "-" + Core10Cpu3Dvpp
-	// Ascend910c10Cpu3Ndvpp Ascend910 10core 3cpu ndvpp
-	Ascend910c10Cpu3Ndvpp = Ascend910 + "-" + Core10Cpu3Ndvpp
-	// Ascend910c10Cpu3Gb14 Ascend910 10core 3cpu 14Gb memory
-	Ascend910c10Cpu3Gb14 = Ascend910 + "-" + Core10Cpu3Gb14
-	// Ascend910c10Cpu3Gb14Dvpp Ascend910 10core 3cpu 14Gb memory dvpp
-	Ascend910c10Cpu3Gb14Dvpp = Ascend910 + "-" + Core10Cpu3Gb14Dvpp
-	// Ascend910c10Cpu3Gb14NDvpp Ascend910 10core 3cpu 14Gb memory ndvpp
-	Ascend910c10Cpu3Gb14NDvpp = Ascend910 + "-" + Core10Cpu3Gb14Ndvpp
-	// Ascend910c12Cpu3Gb30 Ascend910 12core 3cpu 30Gb memory
-	Ascend910c12Cpu3Gb30 = Ascend910 + "-" + Core12Cpu3Gb30
-	// Ascend910c12Cpu3Gb30Dvpp Ascend910 12core 3cpu 30Gb memory dvpp
-	Ascend910c12Cpu3Gb30Dvpp = Ascend910 + "-" + Core12Cpu3Gb30Dvpp
-	// Ascend910c12Cpu3Gb30Ndvpp Ascend910 12core 3cpu 30Gb memory ndvpp
-	Ascend910c12Cpu3Gb30Ndvpp = Ascend910 + "-" + Core12Cpu3Gb30Ndvpp
+	// Ascend910c3HalfCpuGb8 Ascend910 3core 0.5cpu 8Gb memory
+	Ascend910c3HalfCpuGb8 = Ascend910 + "-" + Core3HalfCpuGb8
+	// Ascend910c4Cpu1Gb6 Ascend910 4core 1cpu 6Gb memory
+	Ascend910c4Cpu1Gb6 = Ascend910 + "-" + Core4Cpu1Gb6
+	// Ascend910c5Cpu1Gb8 Ascend910 5core 1cpu 8 Gb memory
+	Ascend910c5Cpu1Gb8 = Ascend910 + "-" + Core5Cpu1Gb8
+	// Ascend910c5Cpu1Gb16 Ascend910 5core 1cpu 16Gb memory
+	Ascend910c5Cpu1Gb16 = Ascend910 + "-" + Core5Cpu1Gb16
+	// Ascend910c6Cpu1Gb16 Ascend910 6core 1cpu 16Gb memory
+	Ascend910c6Cpu1Gb16 = Ascend910 + "-" + Core6Cpu1Gb16
+	// Ascend910c10Cpu3Gb16 Ascend910 10core 3cpu 16Gb memory
+	Ascend910c10Cpu3Gb16 = Ascend910 + "-" + Core10Cpu3Gb16
+	// Ascend910c10Cpu3Gb16Dvpp Ascend910 10core 3cpu 16Gb memory dvpp
+	Ascend910c10Cpu3Gb16Dvpp = Ascend910 + "-" + Core10Cpu3Gb16Dvpp
+	// Ascend910c10Cpu3Gb16Ndvpp Ascend910 10core 3cpu 16Gb memory ndvpp
+	Ascend910c10Cpu3Gb16Ndvpp = Ascend910 + "-" + Core10Cpu3Gb16Ndvpp
+	// Ascend910c10Cpu3Gb32 Ascend910 10core 3cpu 32Gb memory
+	Ascend910c10Cpu3Gb32 = Ascend910 + "-" + Core10Cpu3Gb32
+	// Ascend910c10Cpu3Gb32Dvpp Ascend910 10core 3cpu 32Gb memory dvpp
+	Ascend910c10Cpu3Gb32Dvpp = Ascend910 + "-" + Core10Cpu3Gb32Dvpp
+	// Ascend910c10Cpu3Gb32Ndvpp Ascend910 10core 3cpu 32Gb memory ndvpp
+	Ascend910c10Cpu3Gb32Ndvpp = Ascend910 + "-" + Core10Cpu3Gb32Ndvpp
+	// Ascend910c12Cpu3Gb32 Ascend910 12core 3cpu 32Gb memory
+	Ascend910c12Cpu3Gb32 = Ascend910 + "-" + Core12Cpu3Gb32
+	// Ascend910c12Cpu3Gb32Dvpp Ascend910 12core 3cpu 32Gb memory dvpp
+	Ascend910c12Cpu3Gb32Dvpp = Ascend910 + "-" + Core12Cpu3Gb32Dvpp
+	// Ascend910c12Cpu3Gb32Ndvpp Ascend910 12core 3cpu 32Gb memory ndvpp
+	Ascend910c12Cpu3Gb32Ndvpp = Ascend910 + "-" + Core12Cpu3Gb32Ndvpp
 	// HuaweiAscend910 with prefix
 	HuaweiAscend910 = ResourceNamePrefix + Ascend910
 
@@ -240,50 +236,46 @@ const (
 	Core1 = "1c"
 	// Core2 2 core
 	Core2 = "2c"
-	// Core2HalfCpu 2 core and 0.5 cpu
-	Core2HalfCpu = "2c.0.5cpu"
-	// Core2HalfCpuG5 2 core, 0.5 cpu and 5GB memory
-	Core2HalfCpuG5 = "2c.0.5cpu.5g"
 	// Core2Cpu1 2core 1cpu
 	Core2Cpu1 = "2c.1cpu"
-	// Core3HalfCpuGb7 3 core, 0.5 cpu and 7GB memory
-	Core3HalfCpuGb7 = "3c.0.5cpu.7g"
+	// Core3HalfCpuGb8 3 core, 0.5 cpu and 8GB memory
+	Core3HalfCpuGb8 = "3c.0.5cpu.8g"
 	// Core4 4 core
 	Core4 = "4c"
-	// Core4Cpu1Gb5 4 core, 1 cpu and 5GB memory
-	Core4Cpu1Gb5 = "4c.1cpu.5g"
+	// Core4Cpu1Gb6 4 core, 1 cpu and 6GB memory
+	Core4Cpu1Gb6 = "4c.1cpu.6g"
 	// Core4Cpu3 4core 3cpu
 	Core4Cpu3 = "4c.3cpu"
 	// Core4Cpu3Ndvpp 4core 3cpu ndvpp
 	Core4Cpu3Ndvpp = "4c.3cpu.ndvpp"
 	// Core4Cpu4Dvpp 4core 4cpu dvpp
 	Core4Cpu4Dvpp = "4c.4cpu.dvpp"
-	// Core5Cpu1 5 core and 1 cpu
-	Core5Cpu1 = "5c.1cpu"
-	// Core5Cpu1Gb7 5 core, 1 cpu and 7GB memory
-	Core5Cpu1Gb7 = "5c.1cpu.7g"
-	// Core6Cpu1Gb15 6 core, 1 cpu and 15GB memory
-	Core6Cpu1Gb15 = "6c.1cpu.15g"
+	// Core5Cpu1Gb8 5 core, 1 cpu and 8GB memory
+	Core5Cpu1Gb8 = "5c.1cpu.8g"
+	// Core5Cpu1Gb16 5 core, 1 cpu and 16GB memory
+	Core5Cpu1Gb16 = "5c.1cpu.16g"
+	// Core6Cpu1Gb16 6 core, 1 cpu and 16GB memory
+	Core6Cpu1Gb16 = "6c.1cpu.16g"
 	// Core8 8 core
 	Core8 = "8c"
-	// Core10Cpu3 10 core and 3 cpu
-	Core10Cpu3 = "10c.3cpu"
-	// Core10Cpu3Dvpp 10 core, 3 cpu and dvpp
-	Core10Cpu3Dvpp = "10c.3cpu.dvpp"
-	// Core10Cpu3Ndvpp 10 core, 3 cpu and ndvpp
-	Core10Cpu3Ndvpp = "10c.3cpu.ndvpp"
-	// Core10Cpu3Gb14 10 core, 3 cpu and 14GB memory
-	Core10Cpu3Gb14 = "10c.3cpu.14g"
-	// Core10Cpu3Gb14Dvpp 10 core, 3 cpu, 14GB memory and dvpp
-	Core10Cpu3Gb14Dvpp = "10c.3cpu.14g.dvpp"
-	// Core10Cpu3Gb14Ndvpp 10 core, 3 cpu, 14GB memory and ndvpp
-	Core10Cpu3Gb14Ndvpp = "10c.3cpu.14g.ndvpp"
-	// Core12Cpu3Gb30 12 core, 3 cpu and 30GB memory
-	Core12Cpu3Gb30 = "12c.3cpu.30g"
-	// Core12Cpu3Gb30Dvpp 12 core, 3 cpu, 30GB memory and dvpp
-	Core12Cpu3Gb30Dvpp = "12c.3cpu.30g.dvpp"
-	// Core12Cpu3Gb30Ndvpp 12 core, 3 cpu, 30GB memory and ndvpp
-	Core12Cpu3Gb30Ndvpp = "12c.3cpu.30g.ndvpp"
+	// Core10Cpu3Gb16 10 core, 3 cpu and 16Gb memory
+	Core10Cpu3Gb16 = "10c.3cpu.16g"
+	// Core10Cpu3Gb16Dvpp 10 core, 3 cpu, 16Gb memory and dvpp
+	Core10Cpu3Gb16Dvpp = "10c.3cpu.16g.dvpp"
+	// Core10Cpu3Gb16Ndvpp 10 core, 3 cpu, 16Gb memory and ndvpp
+	Core10Cpu3Gb16Ndvpp = "10c.3cpu.16g.ndvpp"
+	// Core10Cpu3Gb32 10 core, 3 cpu and 32GB memory
+	Core10Cpu3Gb32 = "10c.3cpu.32g"
+	// Core10Cpu3Gb32Dvpp 10 core, 3 cpu, 32GB memory and dvpp
+	Core10Cpu3Gb32Dvpp = "10c.3cpu.32g.dvpp"
+	// Core10Cpu3Gb32Ndvpp 10 core, 3 cpu, 32GB memory and ndvpp
+	Core10Cpu3Gb32Ndvpp = "10c.3cpu.32g.ndvpp"
+	// Core12Cpu3Gb32 12 core, 3 cpu and 32GB memory
+	Core12Cpu3Gb32 = "12c.3cpu.32g"
+	// Core12Cpu3Gb32Dvpp 12 core, 3 cpu, 32GB memory and dvpp
+	Core12Cpu3Gb32Dvpp = "12c.3cpu.32g.dvpp"
+	// Core12Cpu3Gb32Ndvpp 12 core, 3 cpu, 32GB memory and ndvpp
+	Core12Cpu3Gb32Ndvpp = "12c.3cpu.32g.ndvpp"
 	// Core16 16 core
 	Core16 = "16c"
 
@@ -293,48 +285,44 @@ const (
 	Vir02 = "vir02"
 	// Vir02C1 template name vir02_1c
 	Vir02C1 = "vir02_1c"
-	// Vir02HC template name vir02_hc
-	Vir02HC = "vir02_hc"
-	// Vir02HCG5 template name vir02_hc_5g
-	Vir02HCG5 = "vir02_hc_5g"
-	// Vir03HCG7 template name vir03_hc_7g
-	Vir03HCG7 = "vir03_hc_7g"
+	// Vir03HCG8 template name vir03_hc_8g
+	Vir03HCG8 = "vir03_hc_8g"
 	// Vir04 template name vir04
 	Vir04 = "vir04"
-	// Vir04C1G5 template name vir04_1c_5g
-	Vir04C1G5 = "vir04_1c_5g"
+	// Vir04C1G6 template name vir04_1c_6g
+	Vir04C1G6 = "vir04_1c_6g"
 	// Vir04C3 template name vir04_3c
 	Vir04C3 = "vir04_3c"
 	// Vir04C4Dvpp template name vir04_4c_dvpp
 	Vir04C4Dvpp = "vir04_4c_dvpp"
 	// Vir04C3Ndvpp template name vir04_3c_ndvpp
 	Vir04C3Ndvpp = "vir04_3c_ndvpp"
-	// Vir05C1 template name vir05_1c
-	Vir05C1 = "vir05_1c"
-	// Vir05C1G7 template name vir05_1c_7g
-	Vir05C1G7 = "vir05_1c_7g"
-	// Vir06C1G15 template name vir06_1c_15g
-	Vir06C1G15 = "vir06_1c_15g"
+	// Vir05C1G8 template name vir05_1c_8g
+	Vir05C1G8 = "vir05_1c_8g"
+	// Vir05C1G16 template name vir05_1c_16g
+	Vir05C1G16 = "vir05_1c_16g"
+	// Vir06C1G16 template name vir06_1c_16g
+	Vir06C1G16 = "vir06_1c_16g"
 	// Vir08 template name vir08
 	Vir08 = "vir08"
-	// Vir10C3 template name vir10_3c
-	Vir10C3 = "vir10_3c"
-	// Vir10C3M template name vir10_3c_m
-	Vir10C3M = "vir10_3c_m"
-	// Vir10C3NM template name vir10_3c_nm
-	Vir10C3NM = "vir10_3c_nm"
-	// Vir10C3G14 template name vir10_3c_14g
-	Vir10C3G14 = "vir10_3c_14g"
-	// Vir10C3G14M template name vir10_3c_14g_m
-	Vir10C3G14M = "vir10_3c_14g_m"
-	// Vir10C3G14NM template name vir10_3c_14g_nm
-	Vir10C3G14NM = "vir10_3c_14g_nm"
-	// Vir12C3G30 template name vir12_3c_30g
-	Vir12C3G30 = "vir12_3c_30g"
-	// Vir12C3G30M template name vir12_3c_30g_m
-	Vir12C3G30M = "vir12_3c_30g_m"
-	// Vir12C3G30NM template name vir12_3c_30g_nm
-	Vir12C3G30NM = "vir12_3c_30g_nm"
+	// Vir10C3G16 template name vir10_3c_16g
+	Vir10C3G16 = "vir10_3c_16g"
+	// Vir10C3G16M template name vir10_3c_16g_m
+	Vir10C3G16M = "vir10_3c_16g_m"
+	// Vir10C3G16NM template name vir10_3c_16g_nm
+	Vir10C3G16NM = "vir10_3c_16g_nm"
+	// Vir10C3G32 template name vir10_3c_32g
+	Vir10C3G32 = "vir10_3c_32g"
+	// Vir10C3G32M template name vir10_3c_32g_m
+	Vir10C3G32M = "vir10_3c_32g_m"
+	// Vir10C3G32NM template name vir10_3c_32g_nm
+	Vir10C3G32NM = "vir10_3c_32g_nm"
+	// Vir12C3G32 template name vir12_3c_32g
+	Vir12C3G32 = "vir12_3c_32g"
+	// Vir12C3G32M template name vir12_3c_32g_m
+	Vir12C3G32M = "vir12_3c_32g_m"
+	// Vir12C3G32NM template name vir12_3c_32g_nm
+	Vir12C3G32NM = "vir12_3c_32g_nm"
 	// Vir16 template name vir16
 	Vir16 = "vir16"
 
