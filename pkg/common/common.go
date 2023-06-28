@@ -168,7 +168,7 @@ func GetDefaultDevices(getFdFlag bool) ([]string, error) {
 	// hiAIManagerDevice or HiAIManagerDeviceDocker is required
 	managerDevice := HiAIManagerDeviceDocker
 	if _, err := os.Stat(HiAIManagerDeviceDocker); err != nil {
-		hwlog.RunLog.Errorf("get davinci manager docker failed, err: %#v", err)
+		hwlog.RunLog.Warnf("get davinci manager docker failed, err: %#v", err)
 		managerDevice = HiAIManagerDevice
 		if _, err := os.Stat(HiAIManagerDevice); err != nil {
 			return nil, err
