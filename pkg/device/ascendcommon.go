@@ -716,6 +716,7 @@ func (tool *AscendTools) flushFaultCodesWithInit(device *common.NpuDevice, initL
 		return
 	}
 	common.SetNewFaultAndCacheOnceRecoverFault(device.LogicID, devFaultInfoMap[device.LogicID], device)
+	common.SetNewFaultAndCacheOnceRecoverFault(device.LogicID, devFaultInfoMap[device.LogicID], device)
 }
 
 func moreThanFiveMin(device *common.NpuDevice) bool {
