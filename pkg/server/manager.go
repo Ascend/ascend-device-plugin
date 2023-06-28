@@ -667,6 +667,11 @@ func (hdm *HwDevManager) subscribeFaultEvent() {
 		hwlog.RunLog.Errorf("load faultCode.json failed, the subscribe way is closed")
 		return
 	}
+	if common.ParamOption.HotReset != common.HotResetTrain {
+		hwlog.RunLog.Debug("subscribe mode only support train now")
+		common.SubscribeFailed = true
+		return
+	}
 	if err := hdm.manager.GetDmgr().SetFaultEventCallFunc(common.SaveDevFaultInfo); err != nil {
 		common.SubscribeFailed = true
 		hwlog.RunLog.Errorf("set fault event call back function failed, the subscribe way is closed")
