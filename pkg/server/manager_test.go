@@ -60,7 +60,6 @@ func TestNewHwDevManager(t *testing.T) {
 			convey.So(res, convey.ShouldBeNil)
 		})
 		convey.Convey("test NewHwDevManager, product type is not supported", func() {
-			common.ParamOption.PresetVDevice = false
 			common.ParamOption.ProductTypes = []string{common.Atlas300IDuo}
 			res := NewHwDevManager(&devmanager.DeviceManagerMock{})
 			convey.So(res, convey.ShouldNotBeNil)
@@ -81,6 +80,7 @@ func TestStartAllServer(t *testing.T) {
 				return fmt.Errorf("error")
 			})
 		defer mockStart.Reset()
+		common.ParamOption.PresetVDevice = true
 		hdm := NewHwDevManager(&devmanager.DeviceManagerMock{})
 		res := hdm.startAllServer(&common.FileWatch{})
 		convey.So(res, convey.ShouldBeFalse)
@@ -156,12 +156,11 @@ func TestUpdateDevice(t *testing.T) {
 				})
 			defer mockDestroy.Reset()
 			defer mockCheckLabel.Reset()
-			common.ParamOption.PresetVDevice = false
+			common.ParamOption.PresetVDevice = true
 			hdm := NewHwDevManager(&devmanager.DeviceManagerMock{})
 			hdm.ServerMap[common.AiCoreResourceName] = NewPluginServer(common.Ascend310P, nil, nil, nil)
 			err := hdm.updateAllInfo()
 			convey.So(err, convey.ShouldBeNil)
-			common.ParamOption.PresetVDevice = true
 		})
 	})
 }
@@ -180,6 +179,7 @@ func TestNotifyToK8s(t *testing.T) {
 					return map[string]bool{common.Ascend310P: true, common.Ascend310: false}
 				})
 			defer mockChange.Reset()
+			common.ParamOption.PresetVDevice = true
 			hdm := NewHwDevManager(&devmanager.DeviceManagerMock{})
 			hdm.ServerMap[common.AiCoreResourceName] = NewPluginServer(common.Ascend310P, nil, nil, nil)
 			hdm.notifyToK8s()
