@@ -363,6 +363,8 @@ const (
 	HiAIHDCDevice = "/dev/hisi_hdc"
 	// HiAIManagerDevice davinci_manager
 	HiAIManagerDevice = "/dev/davinci_manager"
+	// HiAIManagerDeviceDocker davinci_manager for docker
+	HiAIManagerDeviceDocker = "/dev/davinci_manager_docker"
 	// HiAISVMDevice devmm_svm
 	HiAISVMDevice = "/dev/devmm_svm"
 	// HiAi200RCSVM0 svm0

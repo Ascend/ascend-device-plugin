@@ -72,11 +72,11 @@ func NewHwDevManager(devM devmanager.DeviceInterface) *HwDevManager {
 
 func (hdm *HwDevManager) setAscendManager(dmgr devmanager.DeviceInterface) error {
 	devType := dmgr.GetDevType()
+	if !common.ParamOption.PresetVDevice && devType != common.Ascend310P {
+		return fmt.Errorf("only 310p support to set presetVirtualDevice false")
+	}
 	switch devType {
 	case common.Ascend310, common.Ascend310B:
-		if !common.ParamOption.PresetVDevice {
-			return fmt.Errorf("only 310p and 910 support dynamic virtual instance")
-		}
 		hdm.RunMode = common.Ascend310
 		hdm.manager = device.NewHwAscend310Manager()
 	case common.Ascend910, common.Ascend910B:
@@ -608,6 +608,7 @@ func (hdm *HwDevManager) hotReset(device *common.NpuDevice) {
 			hwlog.RunLog.Warnf("device bootState(%d), starting...", bootState)
 			return false, nil
 		}
+		common.SetDeviceInit(device.LogicID)
 		return true, nil
 	}); err != nil {
 		hwlog.RunLog.Warnf("hot reset failed, timeout or err: %#v", err)

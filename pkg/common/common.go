@@ -165,12 +165,17 @@ func setDeviceByPath(defaultDevices *[]string, device string) {
 
 // GetDefaultDevices get default device, for allocate mount
 func GetDefaultDevices(getFdFlag bool) ([]string, error) {
-	// hiAIManagerDevice is required
-	if _, err := os.Stat(HiAIManagerDevice); err != nil {
-		return nil, err
+	// hiAIManagerDevice or HiAIManagerDeviceDocker is required
+	managerDevice := HiAIManagerDeviceDocker
+	if _, err := os.Stat(HiAIManagerDeviceDocker); err != nil {
+		hwlog.RunLog.Errorf("get davinci manager docker failed, err: %#v", err)
+		managerDevice = HiAIManagerDevice
+		if _, err := os.Stat(HiAIManagerDevice); err != nil {
+			return nil, err
+		}
 	}
 	var defaultDevices []string
-	defaultDevices = append(defaultDevices, HiAIManagerDevice)
+	defaultDevices = append(defaultDevices, managerDevice)
 
 	setDeviceByPath(&defaultDevices, HiAIHDCDevice)
 	setDeviceByPath(&defaultDevices, HiAISVMDevice)

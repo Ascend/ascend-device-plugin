@@ -667,10 +667,17 @@ func mountDefaultDevice(resp *v1beta1.ContainerAllocateResponse, defaultDevs []s
 	for _, d := range defaultDevs {
 		resp.Devices = append(resp.Devices, &v1beta1.DeviceSpec{
 			HostPath:      d,
-			ContainerPath: d,
+			ContainerPath: getDeviceContainerPath(d),
 			Permissions:   "rw",
 		})
 	}
+}
+
+func getDeviceContainerPath(hostPath string) string {
+	if hostPath == common.HiAIManagerDeviceDocker {
+		return common.HiAIManagerDevice
+	}
+	return hostPath
 }
 
 // Allocate is called by kubelet to mount device to k8s pod.
