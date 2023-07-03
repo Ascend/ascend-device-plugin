@@ -57,15 +57,16 @@ type NpuAllInfo struct {
 
 // NpuDevice npu device description
 type NpuDevice struct {
-	FaultCodes    []int64
-	DevType       string
-	DeviceName    string
-	Health        string
-	NetworkHealth string
-	IP            string
-	LogicID       int32
-	PhyID         int32
-	CardID        int32
+	FaultCodes      []int64
+	AlarmRaisedTime int64
+	DevType         string
+	DeviceName      string
+	Health          string
+	NetworkHealth   string
+	IP              string
+	LogicID         int32
+	PhyID           int32
+	CardID          int32
 }
 
 // DavinCiDev davinci device

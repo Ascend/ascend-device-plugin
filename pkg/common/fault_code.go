@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"huawei.com/npu-exporter/v5/common-utils/hwlog"
 	"huawei.com/npu-exporter/v5/common-utils/utils"
@@ -137,6 +138,16 @@ func GetAndCleanLogicID() []int32 {
 // SetFaultCodes set fault codes, all fault code write operate should package into this file for safe
 func SetFaultCodes(device *NpuDevice, faultCodes []int64) {
 	device.FaultCodes = faultCodes
+	setAlarmRaisedTime(device)
+}
+
+// setAlarmRaisedTime set `AlarmRaisedTime` by device fault code length
+func setAlarmRaisedTime(device *NpuDevice) {
+	if len(device.FaultCodes) == 0 {
+		device.AlarmRaisedTime = 0
+	} else if device.AlarmRaisedTime == 0 {
+		device.AlarmRaisedTime = time.Now().UnixMilli()
+	}
 }
 
 // SetNewFaultAndCacheOnceRecoverFault set new fault code and cache once recover fault
@@ -160,6 +171,7 @@ func SetNewFaultAndCacheOnceRecoverFault(logicID int32, faultInfos []common.DevF
 			device.FaultCodes = append(device.FaultCodes, faultInfo.EventID)
 		}
 	}
+	setAlarmRaisedTime(device)
 }
 
 // DelOnceRecoverFault delete func 'cacheAfterDelFaultCode' record fault code in the end of cycle
@@ -170,6 +182,7 @@ func DelOnceRecoverFault(groupDevice map[string][]*NpuDevice) {
 			for _, recoverFault := range recoverFaults {
 				device.FaultCodes = Int64Tool.Remove(device.FaultCodes, recoverFault)
 			}
+			setAlarmRaisedTime(device)
 		}
 	}
 	recoverFaultMap = make(map[int32][]int64, GeneralMapSize)
@@ -186,14 +199,14 @@ func SaveDevFaultInfo(devFaultInfo common.DevFaultInfo) {
 	devFaultInfoMapLock.Unlock()
 }
 
-// TakeOutDevFaultInfo take out device fault info
-func TakeOutDevFaultInfo(logicID int32) []common.DevFaultInfo {
-	if len(devFaultInfoMap[logicID]) == 0 {
-		return nil
+// GetAndCleanFaultInfo get device fault info and clean cache
+func GetAndCleanFaultInfo() map[int32][]common.DevFaultInfo {
+	if len(devFaultInfoMap) == 0 {
+		return map[int32][]common.DevFaultInfo{}
 	}
 	devFaultInfoMapLock.Lock()
-	devFaultInfo := devFaultInfoMap[logicID]
-	devFaultInfoMap[logicID] = []common.DevFaultInfo{}
+	oldDevFaultInfoMap := devFaultInfoMap
+	devFaultInfoMap = make(map[int32][]common.DevFaultInfo, GeneralMapSize)
 	devFaultInfoMapLock.Unlock()
-	return devFaultInfo
+	return oldDevFaultInfoMap
 }

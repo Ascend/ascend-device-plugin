@@ -37,6 +37,10 @@ import (
 // isFirstFlushFault for device fault init
 var isFirstFlushFault = true
 
+var subscribeToPollingTime = 5 * time.Minute.Milliseconds()
+
+var twoPollingPeriod = int64(2*common.ParamOption.ListAndWatchPeriod) * time.Second.Milliseconds()
+
 // AscendTools struct definition
 type AscendTools struct {
 	client       *kubeclient.ClientK8s
@@ -471,6 +475,7 @@ func setAICoreHealthyIfVNpu(groupDevice map[string][]*common.NpuDevice, aiCoreDe
 	for _, device := range aiCoreDevs {
 		device.Health = logicDeviceMap[device.LogicID].Health
 		device.FaultCodes = logicDeviceMap[device.LogicID].FaultCodes
+		device.AlarmRaisedTime = logicDeviceMap[device.LogicID].AlarmRaisedTime
 		device.NetworkHealth = logicDeviceMap[device.LogicID].NetworkHealth
 	}
 }
@@ -689,17 +694,19 @@ func (tool *AscendTools) getAiCoreCount(cgoVDevInfo npuCommon.VirtualDevInfo) (i
 
 func (tool *AscendTools) writeNewFaultCode(deviceMap map[string][]*common.NpuDevice) {
 	initLogicIDs := common.GetAndCleanLogicID()
+	devFaultInfoMap := common.GetAndCleanFaultInfo()
 	for _, devices := range deviceMap {
 		for _, device := range devices {
-			tool.flushFaultCodesWithInit(device, initLogicIDs)
+			tool.flushFaultCodesWithInit(device, initLogicIDs, devFaultInfoMap)
 		}
 	}
 	isFirstFlushFault = false
 }
 
-func (tool *AscendTools) flushFaultCodesWithInit(device *common.NpuDevice, initLogicIDs []int32) {
-	faultInfos := common.TakeOutDevFaultInfo(device.LogicID)
-	if isFirstFlushFault || (common.Int32Tool.Contains(initLogicIDs, device.LogicID)) || common.SubscribeFailed {
+func (tool *AscendTools) flushFaultCodesWithInit(device *common.NpuDevice, initLogicIDs []int32,
+	devFaultInfoMap map[int32][]npuCommon.DevFaultInfo) {
+	if isFirstFlushFault || (common.Int32Tool.Contains(initLogicIDs, device.LogicID)) || common.SubscribeFailed ||
+		(device.Health == v1beta1.Unhealthy && moreThanFiveMin(device)) {
 		_, errCodes, err := tool.dmgr.GetDeviceAllErrorCode(device.LogicID)
 		if err != nil {
 			hwlog.RunLog.Errorf("get device fault failed logic: %d, err: %v", device.LogicID, err)
@@ -708,5 +715,19 @@ func (tool *AscendTools) flushFaultCodesWithInit(device *common.NpuDevice, initL
 		common.SetFaultCodes(device, errCodes)
 		return
 	}
-	common.SetNewFaultAndCacheOnceRecoverFault(device.LogicID, faultInfos, device)
+	common.SetNewFaultAndCacheOnceRecoverFault(device.LogicID, devFaultInfoMap[device.LogicID], device)
+}
+
+func moreThanFiveMin(device *common.NpuDevice) bool {
+	if device.AlarmRaisedTime == 0 {
+		return false
+	}
+	if time.Now().UnixMilli()-device.AlarmRaisedTime > subscribeToPollingTime {
+		if time.Now().UnixMilli()-device.AlarmRaisedTime < subscribeToPollingTime+twoPollingPeriod {
+			hwlog.RunLog.Debugf("the fault raised more than five minutes, use polling now. logicID:%v",
+				device.LogicID)
+		}
+		return true
+	}
+	return false
 }

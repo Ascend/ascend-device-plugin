@@ -201,6 +201,7 @@ func (hdm *HwDevManager) updateDeviceHealth(curAllDevs []common.NpuDevice) {
 			curAllDevs[i].Health = hdm.allInfo.AllDevs[index].Health
 			curAllDevs[i].NetworkHealth = hdm.allInfo.AllDevs[index].NetworkHealth
 			curAllDevs[i].FaultCodes = hdm.allInfo.AllDevs[index].FaultCodes
+			curAllDevs[i].AlarmRaisedTime = hdm.allInfo.AllDevs[index].AlarmRaisedTime
 		}
 	}
 }
@@ -272,15 +273,16 @@ func deepCopyGroupDevice(groupDevice map[string][]*common.NpuDevice) map[string]
 		newNpuDevices := make([]*common.NpuDevice, 0, len(npuDevices))
 		for _, npuDevice := range npuDevices {
 			newNpuDevice := &common.NpuDevice{
-				FaultCodes:    npuDevice.FaultCodes,
-				DevType:       npuDevice.DevType,
-				DeviceName:    npuDevice.DeviceName,
-				Health:        npuDevice.Health,
-				NetworkHealth: npuDevice.NetworkHealth,
-				IP:            npuDevice.IP,
-				LogicID:       npuDevice.LogicID,
-				PhyID:         npuDevice.PhyID,
-				CardID:        npuDevice.CardID,
+				FaultCodes:      npuDevice.FaultCodes,
+				AlarmRaisedTime: npuDevice.AlarmRaisedTime,
+				DevType:         npuDevice.DevType,
+				DeviceName:      npuDevice.DeviceName,
+				Health:          npuDevice.Health,
+				NetworkHealth:   npuDevice.NetworkHealth,
+				IP:              npuDevice.IP,
+				LogicID:         npuDevice.LogicID,
+				PhyID:           npuDevice.PhyID,
+				CardID:          npuDevice.CardID,
 			}
 			newNpuDevices = append(newNpuDevices, newNpuDevice)
 		}
