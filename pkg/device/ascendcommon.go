@@ -732,3 +732,17 @@ func moreThanFiveMin(device *common.NpuDevice) bool {
 	}
 	return false
 }
+
+func moreThanFiveMin(device *common.NpuDevice) bool {
+	if device.AlarmRaisedTime == 0 {
+		return false
+	}
+	if time.Now().UnixMilli()-device.AlarmRaisedTime > subscribeToPollingTime {
+		if time.Now().UnixMilli()-device.AlarmRaisedTime < subscribeToPollingTime+twoPollingPeriod {
+			hwlog.RunLog.Debugf("the fault raised more than five minutes, use polling now. logicID:%v",
+				device.LogicID)
+		}
+		return true
+	}
+	return false
+}
