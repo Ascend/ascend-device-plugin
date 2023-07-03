@@ -18,6 +18,7 @@ package common
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -41,6 +42,16 @@ func init() {
 		OnlyToStdout: true,
 	}
 	hwlog.InitRunLogger(&hwLogConfig, context.Background())
+}
+
+// TestLockAllDeviceInfo for test LockAllDeviceInfo
+func TestLockAllDeviceInfo(t *testing.T) {
+	convey.Convey("test LockAllDeviceInfo", t, func() {
+		convey.Convey("LockAllDeviceInfo success", func() {
+			LockAllDeviceInfo()
+			UnlockAllDeviceInfo()
+		})
+	})
 }
 
 // TestSetAscendRuntimeEnv for test SetAscendRuntimeEnv
@@ -173,6 +184,46 @@ func TestGetDefaultDevices(t *testing.T) {
 	t.Logf("TestGetDefaultDevices Run Pass")
 }
 
+// TestSet200SocDefaultDevices for test set200SocDefaultDevices
+func TestSet200SocDefaultDevices(t *testing.T) {
+	convey.Convey("test set200SocDefaultDevices", t, func() {
+		convey.Convey("os.Stat err", func() {
+			mockStat := gomonkey.ApplyFuncReturn(os.Stat, nil, errors.New("failed"))
+			defer mockStat.Reset()
+			_, err := set200SocDefaultDevices()
+			convey.So(err, convey.ShouldNotBeNil)
+		})
+		convey.Convey("device is exist", func() {
+			mockStat := gomonkey.ApplyFunc(os.Stat, func(name string) (os.FileInfo, error) {
+				if name == HiAi200RCEventSched {
+					return nil, fmt.Errorf("err")
+				}
+				return nil, nil
+			})
+			defer mockStat.Reset()
+			ret, err := set200SocDefaultDevices()
+			convey.So(ret, convey.ShouldNotBeNil)
+			convey.So(err, convey.ShouldBeNil)
+		})
+	})
+}
+
+// TestSet310BDefaultDevices for test set310BDefaultDevices
+func TestSet310BDefaultDevices(t *testing.T) {
+	convey.Convey("test set310BDefaultDevices", t, func() {
+		convey.Convey("os.Stat err", func() {
+			mockStat := gomonkey.ApplyFuncReturn(os.Stat, nil, errors.New("failed"))
+			defer mockStat.Reset()
+			convey.So(len(set310BDefaultDevices()), convey.ShouldEqual, 0)
+		})
+		convey.Convey("device is exist", func() {
+			mockStat := gomonkey.ApplyFuncReturn(os.Stat, nil, nil)
+			defer mockStat.Reset()
+			convey.So(len(set310BDefaultDevices()), convey.ShouldNotEqual, 0)
+		})
+	})
+}
+
 func TestFilterPods1(t *testing.T) {
 	convey.Convey("test FilterPods part1", t, func() {
 		convey.Convey("The number of container exceeds the upper limit", func() {
@@ -291,6 +342,22 @@ func TestVerifyPath(t *testing.T) {
 	})
 }
 
+// TestCheckPodNameAndSpace for test CheckPodNameAndSpace
+func TestCheckPodNameAndSpace(t *testing.T) {
+	convey.Convey("test CheckPodNameAndSpace", t, func() {
+		convey.Convey("beyond max length", func() {
+			podPara, maxLength := "abc", 1
+			convey.So(CheckPodNameAndSpace(podPara, maxLength), convey.ShouldNotBeNil)
+		})
+		convey.Convey("device is exist", func() {
+			podPara, maxLength := "abc", PodNameMaxLength
+			convey.So(CheckPodNameAndSpace(podPara, maxLength), convey.ShouldBeNil)
+			podPara = "abc_d"
+			convey.So(CheckPodNameAndSpace(podPara, maxLength), convey.ShouldNotBeNil)
+		})
+	})
+}
+
 // TestWatchFile for test watchFile
 func TestWatchFile(t *testing.T) {
 	convey.Convey("TestWatchFile", t, func() {
@@ -398,5 +465,34 @@ func TestNewSignWatcher(t *testing.T) {
 	convey.Convey("TestNewSignWatcher", t, func() {
 		signChan := NewSignWatcher(syscall.SIGHUP)
 		convey.So(signChan, convey.ShouldNotBeNil)
+	})
+}
+
+// TestCheckFileUserSameWithProcess for test CheckFileUserSameWithProcess
+func TestCheckFileUserSameWithProcess(t *testing.T) {
+	convey.Convey("CheckFileUserSameWithProcess", t, func() {
+		loggerPath := "/home/test"
+		convey.Convey("user is root", func() {
+			mockGetuid := gomonkey.ApplyFuncReturn(syscall.Getuid, RootUID)
+			defer mockGetuid.Reset()
+			convey.So(CheckFileUserSameWithProcess(loggerPath), convey.ShouldBeTrue)
+		})
+		convey.Convey("user is not root", func() {
+			mockGetuid := gomonkey.ApplyFuncReturn(syscall.Getuid, 1)
+			defer mockGetuid.Reset()
+			convey.So(CheckFileUserSameWithProcess(loggerPath), convey.ShouldBeFalse)
+		})
+	})
+}
+
+// TestIsContainAtlas300IDuo for test IsContainAtlas300IDuo
+func TestIsContainAtlas300IDuo(t *testing.T) {
+	convey.Convey("IsContainAtlas300IDuo", t, func() {
+		convey.Convey("IsContainAtlas300IDuo success", func() {
+			ParamOption.ProductTypes = nil
+			convey.So(IsContainAtlas300IDuo(), convey.ShouldBeFalse)
+			ParamOption.ProductTypes = []string{Atlas300IDuo}
+			convey.So(IsContainAtlas300IDuo(), convey.ShouldBeTrue)
+		})
 	})
 }

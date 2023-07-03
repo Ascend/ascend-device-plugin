@@ -16,12 +16,27 @@
 package common
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/smartystreets/goconvey/convey"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
+
+// TestToString for test ToString
+func TestToString(t *testing.T) {
+	convey.Convey("test ToString", t, func() {
+		convey.Convey("ToString success", func() {
+			testVal1, testVal2 := "test1", "test2"
+			testStr := sets.String{}
+			testStr.Insert(testVal1, testVal2)
+			convey.So(ToString(testStr, ","), convey.ShouldEqual,
+				fmt.Sprintf("%s,%s", testVal1, testVal2))
+		})
+	})
+}
 
 // TestConvertDevListToSets for test ConvertDevListToSets
 func TestConvertDevListToSets(t *testing.T) {
@@ -52,6 +67,9 @@ func TestConvertDevListToSets(t *testing.T) {
 			devices := "Ascend910-0.Ascend910-1.Ascend910-2"
 			ret := ConvertDevListToSets(devices, DotSepDev)
 			convey.So(ret.Len(), convey.ShouldEqual, 0)
+			testDevices := "Ascend910-0,Ascend910-1"
+			res := ConvertDevListToSets(testDevices, CommaSepDev)
+			convey.So(res.Len(), convey.ShouldEqual, 2)
 		})
 		convey.Convey("not match Ascend910", func() {
 			devices := "0.1.2"
@@ -83,6 +101,10 @@ func TestGetVNPUSegmentInfo(t *testing.T) {
 			_, _, err := GetVNPUSegmentInfo(deviceInfos)
 			convey.So(err, convey.ShouldBeNil)
 		})
+		convey.Convey("device info is empty", func() {
+			_, _, err := GetVNPUSegmentInfo(nil)
+			convey.So(err, convey.ShouldNotBeNil)
+		})
 		deviceInfos = []string{"165", "vir02"}
 		convey.Convey("GetVNPUSegmentInfo failed with upper limit id", func() {
 			_, _, err := GetVNPUSegmentInfo(deviceInfos)
@@ -92,6 +114,39 @@ func TestGetVNPUSegmentInfo(t *testing.T) {
 		convey.Convey("GetVNPUSegmentInfo failed with invalid id", func() {
 			_, _, err := GetVNPUSegmentInfo(deviceInfos)
 			convey.So(err, convey.ShouldNotBeNil)
+		})
+	})
+}
+
+// TestIsValidNumber for IsValidNumber
+func TestIsValidNumber(t *testing.T) {
+	convey.Convey("test IsValidNumber", t, func() {
+		convey.Convey("IsValidNumber success", func() {
+			testVal := "_"
+			ret, err := IsValidNumber(testVal)
+			convey.So(ret, convey.ShouldEqual, -1)
+			convey.So(err, convey.ShouldBeFalse)
+		})
+	})
+}
+
+// TestGetAICore for GetAICore
+func TestGetAICore(t *testing.T) {
+	convey.Convey("test GetAICore", t, func() {
+		convey.Convey("GetAICore success", func() {
+			testVal := "0"
+			ret, err := GetAICore(testVal)
+			convey.So(ret, convey.ShouldEqual, 0)
+			convey.So(err, convey.ShouldBeNil)
+		})
+	})
+}
+
+// TestGetTemplateName2DeviceTypeMap for GetTemplateName2DeviceTypeMap
+func TestGetTemplateName2DeviceTypeMap(t *testing.T) {
+	convey.Convey("test GetTemplateName2DeviceTypeMap", t, func() {
+		convey.Convey("GetTemplateName2DeviceTypeMap success", func() {
+			convey.So(GetTemplateName2DeviceTypeMap(), convey.ShouldNotBeNil)
 		})
 	})
 }
@@ -130,6 +185,11 @@ func TestCheckCardUsageMode(t *testing.T) {
 		convey.Convey("virtual device", func() {
 			ret := CheckCardUsageMode(false, []string{"111"})
 			convey.So(ret, convey.ShouldBeNil)
+		})
+	})
+	convey.Convey("test CheckCardUsageMode", t, func() {
+		convey.Convey("do not get product type", func() {
+			convey.So(CheckCardUsageMode(true, []string{}), convey.ShouldNotBeNil)
 		})
 	})
 }
