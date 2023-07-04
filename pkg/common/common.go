@@ -165,17 +165,12 @@ func setDeviceByPath(defaultDevices *[]string, device string) {
 
 // GetDefaultDevices get default device, for allocate mount
 func GetDefaultDevices(getFdFlag bool) ([]string, error) {
-	// hiAIManagerDevice or HiAIManagerDeviceDocker is required
-	managerDevice := HiAIManagerDeviceDocker
-	if _, err := os.Stat(HiAIManagerDeviceDocker); err != nil {
-		hwlog.RunLog.Warnf("get davinci manager docker failed, err: %#v", err)
-		managerDevice = HiAIManagerDevice
-		if _, err := os.Stat(HiAIManagerDevice); err != nil {
-			return nil, err
-		}
+	davinciManager, err := getDavinciManagerPath()
+	if err != nil {
+		return nil, err
 	}
 	var defaultDevices []string
-	defaultDevices = append(defaultDevices, managerDevice)
+	defaultDevices = append(defaultDevices, davinciManager)
 
 	setDeviceByPath(&defaultDevices, HiAIHDCDevice)
 	setDeviceByPath(&defaultDevices, HiAISVMDevice)
@@ -200,6 +195,19 @@ func GetDefaultDevices(getFdFlag bool) ([]string, error) {
 		defaultDevices = append(defaultDevices, a310BDefaultDevices...)
 	}
 	return defaultDevices, nil
+}
+
+func getDavinciManagerPath() (string, error) {
+	if ParamOption.RealCardType == Ascend310B {
+		if _, err := os.Stat(HiAIManagerDeviceDocker); err == nil {
+			return HiAIManagerDeviceDocker, nil
+		}
+		hwlog.RunLog.Warn("get davinci manager docker failed")
+	}
+	if _, err := os.Stat(HiAIManagerDevice); err != nil {
+		return "", err
+	}
+	return HiAIManagerDevice, nil
 }
 
 // set200SocDefaultDevices set 200 soc defaults devices
