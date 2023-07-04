@@ -39,7 +39,11 @@ var isFirstFlushFault = true
 
 var subscribeToPollingTime = 5 * time.Minute.Milliseconds()
 
-var twoPollingPeriod = int64(2*common.ParamOption.ListAndWatchPeriod) * time.Second.Milliseconds()
+var faultMode = make(map[int32]string, common.GeneralMapSize)
+
+const subscribe = "subscribe"
+
+const polling = "polling"
 
 // AscendTools struct definition
 type AscendTools struct {
@@ -713,36 +717,46 @@ func (tool *AscendTools) flushFaultCodesWithInit(device *common.NpuDevice, initL
 			return
 		}
 		common.SetFaultCodes(device, errCodes)
+		logFaultModeChange(device, initLogicIDs, polling)
 		return
 	}
 	common.SetNewFaultAndCacheOnceRecoverFault(device.LogicID, devFaultInfoMap[device.LogicID], device)
-	common.SetNewFaultAndCacheOnceRecoverFault(device.LogicID, devFaultInfoMap[device.LogicID], device)
+	logFaultModeChange(device, initLogicIDs, subscribe)
 }
 
 func moreThanFiveMin(device *common.NpuDevice) bool {
 	if device.AlarmRaisedTime == 0 {
 		return false
 	}
-	if time.Now().UnixMilli()-device.AlarmRaisedTime > subscribeToPollingTime {
-		if time.Now().UnixMilli()-device.AlarmRaisedTime < subscribeToPollingTime+twoPollingPeriod {
-			hwlog.RunLog.Debugf("the fault raised more than five minutes, use polling now. logicID:%v",
-				device.LogicID)
-		}
-		return true
-	}
-	return false
+	return time.Now().UnixMilli()-device.AlarmRaisedTime > subscribeToPollingTime
 }
 
-func moreThanFiveMin(device *common.NpuDevice) bool {
-	if device.AlarmRaisedTime == 0 {
-		return false
+func logFaultModeChange(device *common.NpuDevice, initLogicIDs []int32, newMode string) {
+	var oldMode string
+	var ok bool
+	if oldMode, ok = faultMode[device.LogicID]; !ok {
+		faultMode[device.LogicID] = newMode
+		return
 	}
-	if time.Now().UnixMilli()-device.AlarmRaisedTime > subscribeToPollingTime {
-		if time.Now().UnixMilli()-device.AlarmRaisedTime < subscribeToPollingTime+twoPollingPeriod {
-			hwlog.RunLog.Debugf("the fault raised more than five minutes, use polling now. logicID:%v",
-				device.LogicID)
+	if oldMode == newMode {
+		return
+	}
+	faultMode[device.LogicID] = newMode
+	if newMode == polling {
+		var reason string
+		if device.Health == v1beta1.Unhealthy && moreThanFiveMin(device) {
+			reason = "fault raised more than five minutes"
+		} else if common.Int32Tool.Contains(initLogicIDs, device.LogicID) {
+			reason = "device reset"
+		} else if common.SubscribeFailed {
+			reason = "subscribe failed"
+		} else if isFirstFlushFault {
+			reason = "first flush fault"
+		} else {
+			reason = "unknown reason"
 		}
-		return true
+		hwlog.RunLog.Infof("fault get mode downgrade. logicId: %v, cause by : %v", device.LogicID, reason)
+		return
 	}
-	return false
+	hwlog.RunLog.Infof("fault get mode upgrade. logicId: %v", device.LogicID)
 }
