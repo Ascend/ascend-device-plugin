@@ -302,7 +302,7 @@ func (hnm *HwAscend910Manager) updateHotResetCache(classifyDevs map[string][]*co
 }
 
 func (hnm *HwAscend910Manager) setTaskDevInfoCache() error {
-	podList, err := hnm.client.GetActivePodList()
+	podList, err := hnm.client.GetAllPodList()
 	if err != nil {
 		hwlog.RunLog.Errorf("failed to get pod list when update task, err: %#v", err)
 		return err
@@ -311,7 +311,7 @@ func (hnm *HwAscend910Manager) setTaskDevInfoCache() error {
 	newTaskDevFaultInfoCache := make(map[string][]*common.TaskDevInfo)
 	newTaskNamespaceCache := make(map[string]string)
 	taskListUsedDevice := make(map[string]struct{})
-	for _, pod := range podList {
+	for _, pod := range podList.Items {
 		annotationTag := fmt.Sprintf("%s%s", common.ResourceNamePrefix, common.Ascend910)
 		tmpNpu, ok := pod.Annotations[annotationTag]
 		if !ok || len(tmpNpu) == 0 || len(tmpNpu) > common.PodAnnotationMaxLength {
@@ -566,7 +566,6 @@ func (hnm *HwAscend910Manager) upgradeResetProcess(taskName string, devFaultInfo
 		hwlog.RunLog.Errorf("failed to update reset cm to recover failed status, err: %#v", err)
 		return err
 	}
-	time.Sleep(common.WaitFlushCMTime * time.Second)
 	return fmt.Errorf("failed to reset task, upgrade recovery failed status")
 }
 
@@ -663,20 +662,33 @@ func (hnm *HwAscend910Manager) resetDeviceOnce(devFaultInfoList []*common.TaskDe
 }
 
 func (hnm *HwAscend910Manager) execResetDevice(devList map[int32]struct{}) error {
+	errList := make([]error, 0, len(devList))
 	for devLogicId := range devList {
 		cardId, deviceId, err := hnm.GetDmgr().GetCardIDDeviceID(devLogicId)
 		if err != nil {
 			hwlog.RunLog.Errorf("failed to get reset device card id and device id, err %#v", err)
 			return err
 		}
-		for i := 0; i < common.ResetRetryTimes; i++ {
-			if err := hnm.GetDmgr().SetDeviceReset(cardId, deviceId); err != nil {
-				hwlog.RunLog.Errorf("failed to reset device, err: %#v", err)
-				continue
-			}
-			hwlog.RunLog.Infof("reset device %d success", deviceId)
-			break
+		if err := hnm.tryResetDevice(cardId, deviceId); err != nil {
+			errList = append(errList, err)
 		}
 	}
-	return nil
+	if len(errList) == 0 {
+		return nil
+	}
+	return errList[0]
+}
+
+func (hnm *HwAscend910Manager) tryResetDevice(cardId, deviceId int32) error {
+	var realError error
+	for i := 0; i < common.ResetRetryTimes; i++ {
+		err := hnm.GetDmgr().SetDeviceReset(cardId, deviceId)
+		if err == nil {
+			hwlog.RunLog.Infof("reset cardId %d success", cardId)
+			return nil
+		}
+		hwlog.RunLog.Errorf("cardId(%d) failed to reset device, err: %#v", cardId, err)
+		realError = err
+	}
+	return realError
 }

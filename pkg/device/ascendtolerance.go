@@ -218,7 +218,7 @@ func (hrt *HotResetTools) GetNeedResetDevList(devFaultInfoList []*common.TaskDev
 		if policyType == common.RestartErrorLevel || policyType == common.ResetErrorLevel {
 			resetIndex := devFaultInfo.LogicId / int32(hrt.GetRingNum())
 			if _, ok := needResetDevList[devFaultInfo.LogicId]; !ok {
-				needResetDevList[resetIndex] = struct{}{}
+				needResetDevList[resetIndex*int32(hrt.GetRingNum())] = struct{}{}
 			}
 		}
 	}
