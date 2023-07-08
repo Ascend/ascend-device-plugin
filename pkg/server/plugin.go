@@ -194,7 +194,8 @@ func (ps *PluginServer) responseToKubelet() *v1beta1.ListAndWatchResponse {
 				hwlog.RunLog.Warnf(" not exist map key, %s  map %+v", device.DeviceName, vol2kltMap)
 				continue
 			}
-			hwlog.RunLog.Infof("ListAndWatch resp devices: %s %s", d, device.Health)
+			hwlog.RunLog.Infof("ListAndWatch resp devices: inner device: %s %s, real device: %s %s", d,
+				device.Health, device.DeviceName, device.Health)
 			resp.Devices = append(resp.Devices, &v1beta1.Device{ID: d, Health: device.Health})
 		}
 	} else {
