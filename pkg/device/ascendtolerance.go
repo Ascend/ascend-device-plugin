@@ -368,7 +368,7 @@ func (hrt *HotResetTools) IsCurNodeTaskInReset(taskName string) bool {
 // SetTaskInReset set a task to the reset state
 func (hrt *HotResetTools) SetTaskInReset(taskName string) error {
 	if _, ok := hrt.resetTask[taskName]; ok {
-		return fmt.Errorf("tasl %s is resetting", taskName)
+		return fmt.Errorf("task %s is resetting", taskName)
 	}
 	hrt.resetTask[taskName] = struct{}{}
 	return nil

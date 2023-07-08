@@ -612,6 +612,11 @@ func (hnm *HwAscend910Manager) preProcess(taskName, policy string) (*common.Task
 
 // postProcess clear reset info cm and unset the reset status of all device in a task
 func (hnm *HwAscend910Manager) postProcess(taskName string, resetInfo *common.TaskResetInfo) error {
+	if err := hnm.hotResetManager.UnSetAllDevInReset(resetInfo); err != nil {
+		hwlog.RunLog.Errorf("failed to unset all device in reset, err: %#v", err)
+		return err
+	}
+
 	namespace, err := hnm.hotResetManager.GetTaskNamespace(taskName)
 	if err != nil {
 		hwlog.RunLog.Errorf("failed to get task namespace, err: %#v", err)
@@ -619,10 +624,6 @@ func (hnm *HwAscend910Manager) postProcess(taskName string, resetInfo *common.Ta
 	}
 	if err := hnm.client.ClearResetInfo(taskName, namespace); err != nil {
 		hwlog.RunLog.Errorf("failed to clear reset info, err: %#v", err)
-		return err
-	}
-	if err := hnm.hotResetManager.UnSetAllDevInReset(resetInfo); err != nil {
-		hwlog.RunLog.Errorf("failed to unset all device in reset, err: %#v", err)
 		return err
 	}
 	return nil
