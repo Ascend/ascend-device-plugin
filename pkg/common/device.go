@@ -191,7 +191,6 @@ func GetTemplateName2DeviceTypeMap() map[string]string {
 		Vir04C4Dvpp:  Core4Cpu4Dvpp,
 		Vir04C3Ndvpp: Core4Cpu3Ndvpp,
 		Vir03HCG8:    Core3HalfCpuGb8,
-		Vir04C1G6:    Core4Cpu1Gb6,
 		Vir05C1G8:    Core5Cpu1Gb8,
 		Vir05C1G16:   Core5Cpu1Gb16,
 		Vir06C1G16:   Core6Cpu1Gb16,
