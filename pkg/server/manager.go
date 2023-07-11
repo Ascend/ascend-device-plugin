@@ -17,6 +17,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -29,6 +30,7 @@ import (
 	"huawei.com/npu-exporter/v5/common-utils/hwlog"
 	"huawei.com/npu-exporter/v5/devmanager"
 	npuCommon "huawei.com/npu-exporter/v5/devmanager/common"
+	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
@@ -553,6 +555,40 @@ func (hdm *HwDevManager) updatePodAnnotation() error {
 	return nil
 }
 
+// tryToClearResetInfoCM try to clear reset info config map
+func (hdm *HwDevManager) tryToClearResetInfoCM(pod v1.Pod) error {
+	taskName := pod.Annotations[common.ResetTaskNameKey]
+	resetInfo, err := hdm.manager.GetKubeClient().GetConfigMap(
+		common.ResetInfoCMNamePrefix+taskName, pod.Namespace)
+	if err != nil {
+		hwlog.RunLog.Warnf("get reset configMap failed, because: %#v", err)
+		return err
+	}
+
+	data, ok := resetInfo.Data[common.ResetInfoCMDataKey]
+	if !ok {
+		return fmt.Errorf("%s not exist", common.ResetInfoCMDataKey)
+	}
+	if len(data) > common.CMDataMaxLength {
+		return fmt.Errorf("configmap data size is out of memory")
+	}
+	var taskResetInfo common.TaskResetInfo
+	if err := json.Unmarshal([]byte(data), &taskResetInfo); err != nil {
+		return fmt.Errorf("unmarshal configmap data failed, err: %#v", err)
+	}
+	// skip it when the reset info config map is initialized
+	if taskResetInfo.UpdateTime == 0 {
+		return nil
+	}
+
+	if err := hdm.manager.GetKubeClient().ClearResetInfo(taskName, pod.Namespace); err != nil {
+		return fmt.Errorf("clear reset configMap failed err is: %#v", err)
+	}
+	return nil
+}
+
+// updateSpecTypePodAnnotation will update annotation of pod and
+// try to clear reset info config map which may not be initialized after rescheduling
 func (hdm *HwDevManager) updateSpecTypePodAnnotation(deviceType, serverID string) error {
 	element, exist := hdm.ServerMap[deviceType]
 	if !exist {
@@ -589,6 +625,11 @@ func (hdm *HwDevManager) updateSpecTypePodAnnotation(deviceType, serverID string
 				deviceInfo.Pod.Name, err)
 		} else {
 			hwlog.RunLog.Infof("update pod %s_%s annotation success", deviceInfo.Pod.Namespace, deviceInfo.Pod.Name)
+		}
+
+		// need to clear reset info config map after rescheduling
+		if err = hdm.tryToClearResetInfoCM(deviceInfo.Pod); err != nil {
+			hwlog.RunLog.Warnf("try to clear configMap failed, err is: %#v", err)
 		}
 	}
 	return nil
