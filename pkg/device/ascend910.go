@@ -386,18 +386,30 @@ func (hnm *HwAscend910Manager) isTaskInReset(taskName string) (bool, error) {
 	return true, nil
 }
 
+// filterDevStatus filters the health of the device being reset and
+// the network health of the ring that the device is on
 func (hnm *HwAscend910Manager) filterDevStatus(classifyDevs map[string][]*common.NpuDevice) error {
 	devStatusList, ok := classifyDevs[common.Ascend910]
 	if !ok {
 		return fmt.Errorf("no ascend 910 device needed filter")
 	}
 	devInReset := hnm.hotResetManager.GetDevListInReset()
+	filteredRingIndex := -1
 	for _, devStatus := range devStatusList {
-		if _, ok := devInReset[devStatus.LogicID]; !ok {
+		if _, ok := devInReset[devStatus.LogicID]; !ok || devStatus.Health == v1beta1.Healthy {
 			continue
 		}
-		if devStatus.Health == v1beta1.Unhealthy {
-			devStatus.Health = v1beta1.Healthy
+
+		devStatus.Health = v1beta1.Healthy
+		ringNum := hnm.hotResetManager.GetRingNum()
+		ringIndex := int(devStatus.LogicID) / ringNum
+		if ringIndex != filteredRingIndex {
+			starDevIndex := ringIndex * ringNum
+			endDevIndex := starDevIndex + ringNum
+			for devIndex := starDevIndex; devIndex < endDevIndex; devIndex++ {
+				devStatusList[devIndex].NetworkHealth = v1beta1.Healthy
+			}
+			filteredRingIndex = ringIndex
 		}
 	}
 	return nil
