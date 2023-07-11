@@ -320,6 +320,9 @@ const (
 	// Vir16 template name vir16
 	Vir16 = "vir16"
 
+	// VirMark the mark of virtual device
+	VirMark = "vir"
+
 	// AnnotationVNPUInfoSplitLen length of pod annotation for allocate vnpu info
 	AnnotationVNPUInfoSplitLen = 2
 
