@@ -372,10 +372,20 @@ func (tool *AscendTools) getVirtualDevice(logicID int32) (npuCommon.VirtualDevIn
 	return virtualDevInfos, nil
 }
 
-func (tool *AscendTools) getDeviceIP(phyID int) (string, error) {
+func (tool *AscendTools) getDeviceIP(deviceType string, phyID int) (string, error) {
+	if common.IsVirtualDev(deviceType) {
+		return common.DefaultDeviceIP, nil
+	}
 	logicID, err := tool.dmgr.GetLogicIDFromPhysicID(int32(phyID))
 	if err != nil {
 		return "", fmt.Errorf("transfor phyID %d to logicID failed, err: %#v", phyID, err)
+	}
+	chip, err := tool.dmgr.GetChipInfo(logicID)
+	if err != nil {
+		return "", fmt.Errorf("get logicID %d chip info failed, err: %#v", logicID, err)
+	}
+	if strings.Contains(chip.Name, common.VirMark) {
+		return common.DefaultDeviceIP, nil
 	}
 	return tool.dmgr.GetDeviceIPAddress(logicID)
 }
@@ -392,15 +402,11 @@ func (tool *AscendTools) getDeviceListIP(devices []string, deviceType string) (m
 	}
 	devicesWithIP := make(map[int]string, len(devices))
 	for _, id := range ascendDevices {
-		if ascendRuntimeOptions == common.VirtualDev {
-			devicesWithIP[id] = common.DefaultDeviceIP
-			continue
-		}
 		if !strings.Contains(deviceType, common.Ascend910) {
 			devicesWithIP[id] = ""
 			continue
 		}
-		deviceIP, err := tool.getDeviceIP(id)
+		deviceIP, err := tool.getDeviceIP(deviceType, id)
 		if err != nil {
 			hwlog.RunLog.Errorf("get device %d ip err: %#v", id, err)
 			return nil, err
