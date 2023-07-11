@@ -175,8 +175,6 @@ const (
 	Ascend910c16 = Ascend910 + "-" + Core16
 	// Ascend910c3HalfCpuGb8 Ascend910 3core 0.5cpu 8Gb memory
 	Ascend910c3HalfCpuGb8 = Ascend910 + "-" + Core3HalfCpuGb8
-	// Ascend910c4Cpu1Gb6 Ascend910 4core 1cpu 6Gb memory
-	Ascend910c4Cpu1Gb6 = Ascend910 + "-" + Core4Cpu1Gb6
 	// Ascend910c5Cpu1Gb8 Ascend910 5core 1cpu 8 Gb memory
 	Ascend910c5Cpu1Gb8 = Ascend910 + "-" + Core5Cpu1Gb8
 	// Ascend910c5Cpu1Gb16 Ascend910 5core 1cpu 16Gb memory
@@ -242,8 +240,6 @@ const (
 	Core3HalfCpuGb8 = "3c.0.5cpu.8g"
 	// Core4 4 core
 	Core4 = "4c"
-	// Core4Cpu1Gb6 4 core, 1 cpu and 6GB memory
-	Core4Cpu1Gb6 = "4c.1cpu.6g"
 	// Core4Cpu3 4core 3cpu
 	Core4Cpu3 = "4c.3cpu"
 	// Core4Cpu3Ndvpp 4core 3cpu ndvpp
@@ -289,8 +285,6 @@ const (
 	Vir03HCG8 = "vir03_hc_8g"
 	// Vir04 template name vir04
 	Vir04 = "vir04"
-	// Vir04C1G6 template name vir04_1c_6g
-	Vir04C1G6 = "vir04_1c_6g"
 	// Vir04C3 template name vir04_3c
 	Vir04C3 = "vir04_3c"
 	// Vir04C4Dvpp template name vir04_4c_dvpp
