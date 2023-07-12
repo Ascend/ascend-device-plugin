@@ -255,6 +255,11 @@ func set310BDefaultDevices() []string {
 		Atlas200ISocVPC,
 		HiAi200RCTsAisle,
 		HiAi200RCLog,
+		Atlas310BAcodec,
+		Atlas310BAi,
+		Atlas310BAo,
+		Atlas310BVo,
+		Atlas310BHdmi,
 	}
 	var available310BDevices []string
 	for _, devPath := range a310BDefaultDevices {
