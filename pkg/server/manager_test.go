@@ -125,10 +125,15 @@ func TestUpdatePodAnnotation(t *testing.T) {
 				func(_ *kubeclient.ClientK8s) ([]v1.Pod, error) {
 					return []v1.Pod{}, nil
 				})
+			mockClearCM := gomonkey.ApplyPrivateMethod(reflect.TypeOf(new(HwDevManager)), "tryToClearResetInfoCM",
+				func(_ *HwDevManager, _ v1.Pod) error {
+					return nil
+				})
 			defer mockPodList.Reset()
 			defer mockManager.Reset()
 			defer mockNode.Reset()
 			defer mockPodDeviceInfo.Reset()
+			defer mockClearCM.Reset()
 			hdm := NewHwDevManager(&devmanager.DeviceManagerMock{})
 			err := hdm.updatePodAnnotation()
 			convey.So(err, convey.ShouldBeNil)
@@ -174,10 +179,20 @@ func TestNotifyToK8s(t *testing.T) {
 	defer mockGetDevType.Reset()
 	convey.Convey("test NotifyToK8s", t, func() {
 		convey.Convey("NotifyToK8s success", func() {
-			mockChange := gomonkey.ApplyMethod(reflect.TypeOf(new(device.AscendTools)), "UpdateHealthyAndGetChange",
-				func(_ *device.AscendTools, _ map[string][]*common.NpuDevice, _ []*common.NpuDevice, _ string) map[string]bool {
+			mockUpdateHealth := gomonkey.ApplyMethod(reflect.TypeOf(new(device.AscendTools)), "UpdateHealth",
+				func(_ *device.AscendTools, _ map[string][]*common.NpuDevice, _ []*common.NpuDevice, _ string) {
+					return
+				})
+			mockGrace := gomonkey.ApplyPrivateMethod(reflect.TypeOf(new(HwDevManager)), "graceTolerance",
+				func(_ *HwDevManager, _ map[string][]*common.NpuDevice) {
+					return
+				})
+			mockChange := gomonkey.ApplyMethod(reflect.TypeOf(new(device.AscendTools)), "GetChange",
+				func(_ *device.AscendTools, _ map[string][]*common.NpuDevice, _ map[string][]*common.NpuDevice) map[string]bool {
 					return map[string]bool{common.Ascend310P: true, common.Ascend310: false}
 				})
+			defer mockUpdateHealth.Reset()
+			defer mockGrace.Reset()
 			defer mockChange.Reset()
 			common.ParamOption.PresetVDevice = true
 			hdm := NewHwDevManager(&devmanager.DeviceManagerMock{})

@@ -66,7 +66,8 @@ type DevManager interface {
 	GetName() string
 	SetKubeClient(*kubeclient.ClientK8s)
 	GetKubeClient() *kubeclient.ClientK8s
-	UpdateHealthyAndGetChange(map[string][]*common.NpuDevice, []*common.NpuDevice, string) map[string]bool
+	UpdateHealth(map[string][]*common.NpuDevice, []*common.NpuDevice, string)
+	GetChange(map[string][]*common.NpuDevice, map[string][]*common.NpuDevice) map[string]bool
 	AddPodAnnotation(*v1.Pod, []string, []string, string, string) error
 	AppendVGroupInfo([]string)
 	CheckDeviceTypeLabel() error
@@ -448,27 +449,25 @@ func (tool *AscendTools) AddPodAnnotation(pod *v1.Pod, kltRequestDevices, dpResp
 	return tool.client.TryUpdatePodAnnotation(pod, annotation)
 }
 
-// UpdateHealthyAndGetChange update group device healthy and return device healthy change map
-func (tool *AscendTools) UpdateHealthyAndGetChange(groupDevice map[string][]*common.NpuDevice,
-	aiCoreDevs []*common.NpuDevice, runMode string) map[string]bool {
-	tool.writeNewFaultCode(groupDevice)
+// UpdateHealth update group device healthy
+func (tool *AscendTools) UpdateHealth(groupDevice map[string][]*common.NpuDevice,
+	aiCoreDevs []*common.NpuDevice, runMode string) {
+	// update health of device
+	tool.writeNewFaultCode(groupDevice, runMode)
 
-	// update device's health and record change by new fault code
+	setHealthyIfDuoCard(groupDevice)
+	setAICoreHealthyIfVNpu(groupDevice, aiCoreDevs)
+}
+
+func (tool *AscendTools) GetChange(groupDevice, oldGroupDevice map[string][]*common.NpuDevice) map[string]bool {
 	isStateChange := make(map[string]bool, len(groupDevice))
 	for devType, devices := range groupDevice {
 		for idx, device := range devices {
-			newHealthyStatus := isHealthy(device.FaultCodes)
-			if newHealthyStatus != device.Health {
+			if device.Health != oldGroupDevice[devType][idx].Health {
 				isStateChange[devType] = true
-				devices[idx].Health = newHealthyStatus
-			}
-			if runMode == common.Ascend910 {
-				devices[idx].NetworkHealth = tool.getDeviceNetworkState(device.LogicID)
 			}
 		}
 	}
-	setHealthyIfDuoCard(groupDevice)
-	setAICoreHealthyIfVNpu(groupDevice, aiCoreDevs)
 	return isStateChange
 }
 
@@ -702,12 +701,17 @@ func (tool *AscendTools) getAiCoreCount(cgoVDevInfo npuCommon.VirtualDevInfo) (i
 	return int32(chipAICore), nil
 }
 
-func (tool *AscendTools) writeNewFaultCode(deviceMap map[string][]*common.NpuDevice) {
+// writeNewFaultCode writes fault code and health to device
+func (tool *AscendTools) writeNewFaultCode(deviceMap map[string][]*common.NpuDevice, runMode string) {
 	initLogicIDs := common.GetAndCleanLogicID()
 	devFaultInfoMap := common.GetAndCleanFaultInfo()
 	for _, devices := range deviceMap {
-		for _, device := range devices {
+		for idx, device := range devices {
 			tool.flushFaultCodesWithInit(device, initLogicIDs, devFaultInfoMap)
+			device.Health = isHealthy(device.FaultCodes)
+			if runMode == common.Ascend910 {
+				devices[idx].NetworkHealth = tool.getDeviceNetworkState(device.LogicID)
+			}
 		}
 	}
 	isFirstFlushFault = false

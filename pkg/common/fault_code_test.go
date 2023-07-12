@@ -174,7 +174,7 @@ func TestTakeOutDevFaultInfo(t *testing.T) {
 	convey.Convey("test TakeOutDevFaultInfo", t, func() {
 		convey.Convey("TakeOutDevFaultInfo success", func() {
 			devFaultInfoMap = make(map[int32][]common.DevFaultInfo, GeneralMapSize)
-			convey.So(GetAndCleanFaultInfo(), convey.ShouldEqual, 0)
+			convey.So(len(GetAndCleanFaultInfo()), convey.ShouldEqual, 0)
 			testInfo := []common.DevFaultInfo{{EventID: 1}}
 			devFaultInfoMap[0] = testInfo
 			convey.So(GetAndCleanFaultInfo()[0], convey.ShouldResemble, testInfo)

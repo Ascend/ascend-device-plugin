@@ -127,6 +127,15 @@ func (ki *ClientK8s) WriteResetInfoDataIntoCM(taskName string, namespace string,
 	taskResetInfo := &common.TaskResetInfoCache{
 		ResetInfo: taskInfo,
 	}
+
+	oldResetInfoData, ok := oldCM.Data[common.ResetInfoCMDataKey]
+	if !ok {
+		return nil, fmt.Errorf("invalid reset info data")
+	}
+	if strings.Contains(oldResetInfoData, common.IsolateError) && len(taskResetInfo.ResetInfo.RankList) != 0 {
+		return nil, fmt.Errorf("task should be rescheduled")
+	}
+
 	taskResetInfo.ResetInfo.UpdateTime = time.Now().Unix()
 	checkCode := common.MakeDataHash(taskResetInfo.ResetInfo)
 	var data []byte

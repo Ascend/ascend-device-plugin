@@ -41,6 +41,30 @@ const (
 	vDevChipID  = 100
 )
 
+func deepCopyGroupDevice(groupDevice map[string][]*common.NpuDevice) map[string][]*common.NpuDevice {
+	newGroupDevice := make(map[string][]*common.NpuDevice, len(groupDevice))
+	for deviceType, npuDevices := range groupDevice {
+		newNpuDevices := make([]*common.NpuDevice, 0, len(npuDevices))
+		for _, npuDevice := range npuDevices {
+			newNpuDevice := &common.NpuDevice{
+				FaultCodes:      npuDevice.FaultCodes,
+				AlarmRaisedTime: npuDevice.AlarmRaisedTime,
+				DevType:         npuDevice.DevType,
+				DeviceName:      npuDevice.DeviceName,
+				Health:          npuDevice.Health,
+				NetworkHealth:   npuDevice.NetworkHealth,
+				IP:              npuDevice.IP,
+				LogicID:         npuDevice.LogicID,
+				PhyID:           npuDevice.PhyID,
+				CardID:          npuDevice.CardID,
+			}
+			newNpuDevices = append(newNpuDevices, newNpuDevice)
+		}
+		newGroupDevice[deviceType] = newNpuDevices
+	}
+	return newGroupDevice
+}
+
 // TestIsDeviceStatusChange testIsDeviceStatusChange
 func TestIsDeviceStatusChange(t *testing.T) {
 	tool := AscendTools{name: common.Ascend910, client: &kubeclient.ClientK8s{},
@@ -48,7 +72,9 @@ func TestIsDeviceStatusChange(t *testing.T) {
 	convey.Convey("test IsDeviceStatusChange true", t, func() {
 		devices := map[string][]*common.NpuDevice{common.Ascend910: {{Health: v1beta1.Healthy}}}
 		aiCoreDevice := []*common.NpuDevice{{Health: v1beta1.Healthy}}
-		res := tool.UpdateHealthyAndGetChange(devices, aiCoreDevice, common.Ascend910)
+		oldDevice := deepCopyGroupDevice(devices)
+		tool.UpdateHealth(devices, aiCoreDevice, common.Ascend910)
+		res := tool.GetChange(devices, oldDevice)
 		convey.So(res, convey.ShouldNotBeNil)
 	})
 	tool = AscendTools{name: common.Ascend310P, client: &kubeclient.ClientK8s{},
@@ -56,7 +82,9 @@ func TestIsDeviceStatusChange(t *testing.T) {
 	convey.Convey("test IsDeviceStatusChange which chip is unhealthy ", t, func() {
 		devices := map[string][]*common.NpuDevice{common.Ascend310P: {{Health: v1beta1.Unhealthy}}}
 		aiCoreDevice := []*common.NpuDevice{{Health: v1beta1.Unhealthy}}
-		res := tool.UpdateHealthyAndGetChange(devices, aiCoreDevice, common.Ascend310P)
+		oldDevice := deepCopyGroupDevice(devices)
+		tool.UpdateHealth(devices, aiCoreDevice, common.Ascend310P)
+		res := tool.GetChange(devices, oldDevice)
 		convey.So(res, convey.ShouldNotBeNil)
 	})
 }

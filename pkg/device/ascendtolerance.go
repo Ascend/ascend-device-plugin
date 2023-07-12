@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"huawei.com/npu-exporter/v5/common-utils/hwlog"
+	"k8s.io/api/core/v1"
 
 	"Ascend-device-plugin/pkg/common"
 )
@@ -41,7 +42,9 @@ type HotResetManager interface {
 	GetNeedResetDevList([]*common.TaskDevInfo) (map[int32]struct{}, error)
 	GetTaskResetInfo([]*common.TaskDevInfo, string, string) (*common.TaskResetInfo, error)
 	GetTaskFaultRankInfo([]*common.TaskDevInfo) (*common.TaskFaultInfo, error)
+	GetFaultDev2PodMap() (map[int32]v1.Pod, error)
 	GenerateTaskDevFaultInfoList(devIdList []int32, rankIndex string) ([]*common.TaskDevInfo, error)
+	UpdateFaultDev2PodMap([]int32, v1.Pod) error
 	UpdateGlobalDevFaultInfoCache([]*common.NpuDevice) error
 	UpdateTaskDevListCache(map[string][]int32) error
 	UpdateTaskDevFaultInfoCache(map[string][]*common.TaskDevInfo) error
@@ -54,6 +57,7 @@ type HotResetManager interface {
 	UnSetDevInReset(int32) error
 	UnSetAllDevInReset(*common.TaskResetInfo) error
 	IsCurNodeTaskInReset(string) bool
+	IsExistFaultyDevInTask(string) bool
 	DeepCopyDevFaultInfoList([]*common.TaskDevInfo) []*common.TaskDevInfo
 }
 
@@ -64,6 +68,7 @@ type HotResetTools struct {
 	allTaskDevFaultInfo map[string][]*common.TaskDevInfo
 	globalDevFaultInfo  map[int32]*common.DevFaultInfo
 	taskNamespace       map[string]string
+	faultDev2PodMap     map[int32]v1.Pod
 	resetTask           map[string]struct{}
 	resetDev            map[int32]struct{}
 	processPolicyTable  map[string]int
@@ -74,9 +79,10 @@ func NewHotResetManager(devType string) HotResetManager {
 	switch devType {
 	case common.Ascend910:
 		return &HotResetTools{
-			ringNum:   common.Ascend910RingsNum,
-			resetTask: map[string]struct{}{},
-			resetDev:  map[int32]struct{}{},
+			ringNum:         common.Ascend910RingsNum,
+			resetTask:       map[string]struct{}{},
+			resetDev:        map[int32]struct{}{},
+			faultDev2PodMap: map[int32]v1.Pod{},
 			processPolicyTable: map[string]int{
 				common.EmptyError:   common.EmptyErrorLevel,
 				common.IgnoreError:  common.IgnoreErrorLevel,
@@ -277,6 +283,13 @@ func (hrt *HotResetTools) GetTaskFaultRankInfo(devFaultInfoList []*common.TaskDe
 	return taskFaultInfo, nil
 }
 
+func (hrt *HotResetTools) GetFaultDev2PodMap() (map[int32]v1.Pod, error) {
+	if hrt.faultDev2PodMap == nil {
+		return nil, fmt.Errorf("no valid faultDev2PodMap here")
+	}
+	return hrt.faultDev2PodMap, nil
+}
+
 // GenerateTaskDevFaultInfoList generate device fault info list in a task by device logic id list and rank index
 func (hrt *HotResetTools) GenerateTaskDevFaultInfoList(devIdList []int32,
 	rankIndex string) ([]*common.TaskDevInfo, error) {
@@ -303,6 +316,28 @@ func (hrt *HotResetTools) GenerateTaskDevFaultInfoList(devIdList []int32,
 		taskDevInfoList = append(taskDevInfoList, taskDevInfo)
 	}
 	return taskDevInfoList, nil
+}
+
+// UpdateFaultDevAndPodMap updates the mapping between the unhealthy device and pod
+func (hrt *HotResetTools) UpdateFaultDev2PodMap(devList []int32, pod v1.Pod) error {
+	if hrt.faultDev2PodMap == nil {
+		return fmt.Errorf("no valid faultDev2PodMap here")
+	}
+	for _, device := range devList {
+		// save when device is unhealthy
+		if hrt.globalDevFaultInfo[device].Policy != common.EmptyError &&
+			hrt.globalDevFaultInfo[device].Policy != common.IgnoreError {
+			hrt.faultDev2PodMap[device] = pod
+			continue
+		}
+
+		// delete when device is healthy
+		if _, ok := hrt.faultDev2PodMap[device]; ok {
+			delete(hrt.faultDev2PodMap, device)
+		}
+	}
+
+	return nil
 }
 
 // UpdateGlobalDevFaultInfoCache update global device fault info cache
@@ -363,6 +398,21 @@ func (hrt *HotResetTools) IsCurNodeTaskInReset(taskName string) bool {
 		return false
 	}
 	return true
+}
+
+func (hrt *HotResetTools) IsExistFaultyDevInTask(taskName string) bool {
+	if _, ok := hrt.allTaskDevList[taskName]; !ok {
+		hwlog.RunLog.Warnf("task: %s is not exist in cache", taskName)
+		return false
+	}
+	for _, pod := range hrt.faultDev2PodMap {
+		if pod.Annotations[common.ResetTaskNameKey] == taskName {
+			hwlog.RunLog.Infof("faulty device exists in task: %s", taskName)
+			return true
+		}
+	}
+
+	return false
 }
 
 // SetTaskInReset set a task to the reset state

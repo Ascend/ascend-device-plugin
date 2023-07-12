@@ -41,13 +41,12 @@ import (
 
 // HwDevManager manages huawei device devices.
 type HwDevManager struct {
-	groupDevice      map[string][]*common.NpuDevice
-	renewGroupDevice map[string][]*common.NpuDevice
-	ServerMap        map[string]InterfaceServer
-	allInfo          common.NpuAllInfo
-	manager          device.DevManager
-	RunMode          string
-	WorkMode         string
+	groupDevice map[string][]*common.NpuDevice
+	ServerMap   map[string]InterfaceServer
+	allInfo     common.NpuAllInfo
+	manager     device.DevManager
+	RunMode     string
+	WorkMode    string
 }
 
 // NewHwDevManager function is used to new a dev manager.
@@ -259,8 +258,6 @@ func (hdm *HwDevManager) ListenDevice(ctx context.Context) {
 				continue
 			}
 			hdm.notifyToK8s()
-			hdm.renewGroupDevice = deepCopyGroupDevice(hdm.groupDevice)
-			hdm.graceTolerance()
 			hdm.useVolcanoNotify()
 			hdm.chipHotReset()
 			common.DelOnceRecoverFault(hdm.groupDevice)
@@ -310,7 +307,13 @@ func (hdm *HwDevManager) pluginNotify(classifyDev []*common.NpuDevice, devType s
 }
 
 func (hdm *HwDevManager) notifyToK8s() {
-	isDevStateChange := hdm.manager.UpdateHealthyAndGetChange(hdm.groupDevice, hdm.allInfo.AICoreDevs, hdm.RunMode)
+	oldGroupDevice := deepCopyGroupDevice(hdm.groupDevice)
+	hdm.manager.UpdateHealth(hdm.groupDevice, hdm.allInfo.AICoreDevs, hdm.RunMode)
+
+	// If hot reset is used, the health of the device being reset is set here to healthy
+	hdm.graceTolerance(hdm.groupDevice)
+	isDevStateChange := hdm.manager.GetChange(hdm.groupDevice, oldGroupDevice)
+
 	for devType, isChanged := range isDevStateChange {
 		if !isChanged {
 			continue
@@ -409,7 +412,7 @@ func (hdm *HwDevManager) useVolcanoNotify() {
 	if !common.ParamOption.UseVolcanoType {
 		return
 	}
-	hdm.manager.DoWithVolcanoListAndWatch(hdm.renewGroupDevice)
+	hdm.manager.DoWithVolcanoListAndWatch(hdm.groupDevice)
 }
 
 // SignCatch stop system sign catch
@@ -733,7 +736,7 @@ func (hdm *HwDevManager) subscribeFaultEvent() {
 }
 
 // graceTolerance start fault tolerance for training tasks
-func (hdm *HwDevManager) graceTolerance() {
+func (hdm *HwDevManager) graceTolerance(groupDevice map[string][]*common.NpuDevice) {
 	if hdm.RunMode != common.Ascend910 {
 		hwlog.RunLog.Debugf("grace tolerance only support training chip")
 		return
@@ -746,5 +749,5 @@ func (hdm *HwDevManager) graceTolerance() {
 		hwlog.RunLog.Debugf("grace tolerance only support SMP chip mode")
 		return
 	}
-	hdm.manager.GraceTolerance(hdm.renewGroupDevice)
+	hdm.manager.GraceTolerance(groupDevice)
 }
