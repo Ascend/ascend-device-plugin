@@ -394,6 +394,15 @@ const (
 	Atlas310BVenc = "/dev/venc"
 )
 
+// Audio and video dependent device for Atlas310B
+const (
+	Atlas310BAcodec = "/dev/acodec"
+	Atlas310BAi     = "/dev/ai"
+	Atlas310BAo     = "/dev/ao"
+	Atlas310BVo     = "/dev/vo"
+	Atlas310BHdmi   = "/dev/hdmi"
+)
+
 const (
 	// RootUID is root user id
 	RootUID = 0
