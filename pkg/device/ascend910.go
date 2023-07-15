@@ -329,7 +329,7 @@ func (hnm *HwAscend910Manager) setTaskDevInfoCache() error {
 
 		rankIndex, ok := pod.Annotations[common.RankIndexKey]
 		if !ok {
-			hwlog.RunLog.Error("failed to get rank index by rank index key")
+			hwlog.RunLog.Warnf("failed to get rank index by rank index key")
 			continue
 		}
 		taskListUsedDevice[taskName] = struct{}{}
@@ -341,6 +341,9 @@ func (hnm *HwAscend910Manager) setTaskDevInfoCache() error {
 		}
 		newTaskDevFaultInfoCache[taskName] = taskDevFaultInfoList
 		newTaskNamespaceCache[taskName] = pod.Namespace
+		if err = hnm.hotResetManager.UpdateFaultDev2PodMap(devIdList, pod); err != nil {
+			hwlog.RunLog.Errorf("update faultDev2PodMap error: %#v", err)
+		}
 	}
 	hnm.hotResetManager.UpdateFreeTask(taskListUsedDevice)
 	if err := hnm.hotResetManager.UpdateTaskDevListCache(newTaskDevListCache); err != nil {
@@ -352,6 +355,7 @@ func (hnm *HwAscend910Manager) setTaskDevInfoCache() error {
 	if err := hnm.hotResetManager.UpdateTaskNamespaceCache(newTaskNamespaceCache); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -365,9 +369,9 @@ func (hnm *HwAscend910Manager) isTaskInReset(taskName string) (bool, error) {
 	if err != nil {
 		if errors.IsNotFound(err) {
 			hwlog.RunLog.Debugf("task %s does not have reset info cm, skip this choice", taskName)
-			return true, nil
+			return false, err
 		}
-		hwlog.RunLog.Errorf("failed to reset info cm, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to get reset info cm, err: %#v", err)
 		return false, err
 	}
 	if hnm.hotResetManager.IsCurNodeTaskInReset(taskName) {
@@ -396,7 +400,8 @@ func (hnm *HwAscend910Manager) filterDevStatus(classifyDevs map[string][]*common
 	devInReset := hnm.hotResetManager.GetDevListInReset()
 	filteredRingIndex := -1
 	for _, devStatus := range devStatusList {
-		if _, ok := devInReset[devStatus.LogicID]; !ok || devStatus.Health == v1beta1.Healthy {
+		if _, ok := devInReset[devStatus.LogicID]; !ok || devStatus.Health == v1beta1.Healthy ||
+			hnm.isDevShouldBeIsolate(devStatus.LogicID) {
 			continue
 		}
 
@@ -404,9 +409,9 @@ func (hnm *HwAscend910Manager) filterDevStatus(classifyDevs map[string][]*common
 		ringNum := hnm.hotResetManager.GetRingNum()
 		ringIndex := int(devStatus.LogicID) / ringNum
 		if ringIndex != filteredRingIndex {
-			starDevIndex := ringIndex * ringNum
-			endDevIndex := starDevIndex + ringNum
-			for devIndex := starDevIndex; devIndex < endDevIndex; devIndex++ {
+			startDevIndex := ringIndex * ringNum
+			endDevIndex := startDevIndex + ringNum
+			for devIndex := startDevIndex; devIndex < endDevIndex; devIndex++ {
 				devStatusList[devIndex].NetworkHealth = v1beta1.Healthy
 			}
 			filteredRingIndex = ringIndex
@@ -427,13 +432,17 @@ func (hnm *HwAscend910Manager) processAllTask() error {
 			continue
 		}
 		if resetFlag, err := hnm.isTaskInReset(taskName); err != nil || resetFlag {
+			if resetFlag && !hnm.hotResetManager.IsCurNodeTaskInReset(taskName) &&
+				hnm.hotResetManager.IsExistFaultyDevInTask(taskName) {
+				go hnm.tryWriteIsolationInfo(taskName)
+			}
 			continue
 		}
 		resetInfo, err := hnm.preProcess(taskName, policy)
 		if err != nil {
 			return err
 		}
-		if err := hnm.runProcessTask(taskName, policyLevel, resetInfo); err != nil {
+		if err = hnm.runProcessTask(taskName, policyLevel, resetInfo); err != nil {
 			return err
 		}
 	}
@@ -512,6 +521,12 @@ func (hnm *HwAscend910Manager) upgradeRestartProcess(taskName string, devFaultIn
 
 func (hnm *HwAscend910Manager) updateResetCMStatus(taskName, policyType, status string,
 	devFaultInfoList []*common.TaskDevInfo) error {
+	if taskInReset, _ := hnm.isTaskInReset(taskName); !taskInReset &&
+		(status == common.RecoveredStatus || status == common.RecoverFailedStatus) {
+		return fmt.Errorf("no need to update reset config map with failed or recovered status, " +
+			"because there is no task in reset")
+	}
+
 	newResetInfo, err := hnm.hotResetManager.GetTaskResetInfo(devFaultInfoList, policyType, status)
 	if err != nil {
 		hwlog.RunLog.Errorf("failed to get task reset info list, err: %#v", err)
@@ -704,4 +719,53 @@ func (hnm *HwAscend910Manager) tryResetDevice(cardId, deviceId int32) error {
 		realError = err
 	}
 	return realError
+}
+
+// tryRescheduleTask writes the isolation info to the reset config map
+// so that other nodes don't filter the health of device
+func (hnm *HwAscend910Manager) tryWriteIsolationInfo(taskName string) {
+	devFaultInfoList, err := hnm.hotResetManager.GetTaskDevFaultInfoList(taskName)
+	if err != nil {
+		hwlog.RunLog.Errorf("failed to get task device fault info list, err: %#v", err)
+		return
+	}
+	if err := hnm.updateResetCMStatus(taskName, common.IsolateError, common.RecoverFailedStatus,
+		devFaultInfoList); err != nil {
+		hwlog.RunLog.Errorf("failed to update reset cm to isolate, err: %#v", err)
+	}
+}
+
+// isDevShouldBeIsolate determines whether device should be isolated
+func (hnm *HwAscend910Manager) isDevShouldBeIsolate(faultyDevLogicId int32) bool {
+	faultDev2Pod, err := hnm.hotResetManager.GetFaultDev2PodMap()
+	if err != nil {
+		hwlog.RunLog.Warnf("get faultDev2Pod info err: %#v", err)
+		return false
+	}
+	pod, ok := faultDev2Pod[faultyDevLogicId]
+	if !ok {
+		hwlog.RunLog.Warnf("the dev %#v does not in cache", faultyDevLogicId)
+		return false
+	}
+	taskName := pod.Annotations[common.ResetTaskNameKey]
+	resetCM, err := hnm.client.GetConfigMap(common.ResetInfoCMNamePrefix+taskName, pod.Namespace)
+	if err != nil {
+		hwlog.RunLog.Warnf("get reset cm error: %#v", err)
+		return true
+	}
+	resetInfoData, err := getResetInfoData(resetCM)
+	if err != nil {
+		hwlog.RunLog.Warnf("get reset info data error: %#v", err)
+		return true
+	}
+	if len(resetInfoData) == 0 {
+		return true
+	}
+	for _, rankInfo := range resetInfoData {
+		if rankInfo.Policy == common.IsolateError {
+			return true
+		}
+	}
+
+	return false
 }
