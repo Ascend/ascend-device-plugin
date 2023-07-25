@@ -32,7 +32,7 @@ type HotResetManager interface {
 	GetRingNum() int
 	GetDevIdList(string) []int32
 	GetTaskDevFaultInfoList(string) ([]*common.TaskDevInfo, error)
-	GetTaskNamespace(string) (string, error)
+	GetTaskPod(string) (v1.Pod, error)
 	GetAllTaskDevList() map[string][]int32
 	GetAllTaskDevFaultInfoList() map[string][]*common.TaskDevInfo
 	GetDevProcessPolicy(string) string
@@ -48,7 +48,7 @@ type HotResetManager interface {
 	UpdateGlobalDevFaultInfoCache([]*common.NpuDevice) error
 	UpdateTaskDevListCache(map[string][]int32) error
 	UpdateTaskDevFaultInfoCache(map[string][]*common.TaskDevInfo) error
-	UpdateTaskNamespaceCache(map[string]string) error
+	UpdateTaskPodCache(map[string]v1.Pod) error
 	UpdateFreeTask(map[string]struct{})
 	SetTaskInReset(string) error
 	SetDevInReset(int32) error
@@ -67,7 +67,7 @@ type HotResetTools struct {
 	allTaskDevList      map[string][]int32
 	allTaskDevFaultInfo map[string][]*common.TaskDevInfo
 	globalDevFaultInfo  map[int32]*common.DevFaultInfo
-	taskNamespace       map[string]string
+	taskPod             map[string]v1.Pod
 	faultDev2PodMap     map[int32]v1.Pod
 	resetTask           map[string]struct{}
 	resetDev            map[int32]struct{}
@@ -118,13 +118,13 @@ func (hrt *HotResetTools) GetTaskDevFaultInfoList(taskName string) ([]*common.Ta
 	return taskDevFaultInfoList, nil
 }
 
-// GetTaskNamespace return task namespace
-func (hrt *HotResetTools) GetTaskNamespace(taskName string) (string, error) {
-	namespace, ok := hrt.taskNamespace[taskName]
+// GetTaskPod return task pod
+func (hrt *HotResetTools) GetTaskPod(taskName string) (v1.Pod, error) {
+	pod, ok := hrt.taskPod[taskName]
 	if !ok {
-		return "", fmt.Errorf("task %s is not in task namespace cache", taskName)
+		return v1.Pod{}, fmt.Errorf("task %s is not in task pod cache", taskName)
 	}
-	return namespace, nil
+	return pod, nil
 }
 
 // GetAllTaskDevFaultInfoList return all task device fault info list
@@ -374,12 +374,12 @@ func (hrt *HotResetTools) UpdateTaskDevFaultInfoCache(taskDevFaultInfo map[strin
 	return nil
 }
 
-// UpdateTaskNamespaceCache update all task namespace cache
-func (hrt *HotResetTools) UpdateTaskNamespaceCache(taskNamespace map[string]string) error {
-	if taskNamespace == nil {
-		return fmt.Errorf("taskNamespace is nil")
+// UpdateTaskPodCache update all task pod cache
+func (hrt *HotResetTools) UpdateTaskPodCache(taskPod map[string]v1.Pod) error {
+	if taskPod == nil {
+		return fmt.Errorf("taskPod is nil")
 	}
-	hrt.taskNamespace = taskNamespace
+	hrt.taskPod = taskPod
 	return nil
 }
 

@@ -31,8 +31,9 @@ import (
 )
 
 const (
-	networkDetectOK   = uint32(0)
-	networkDetectInit = uint32(6)
+	networkDetectOK        = uint32(0)
+	networkDetectInit      = uint32(6)
+	podDevStatusAnnotation = "podDevStatus"
 )
 
 var (
@@ -309,7 +310,7 @@ func (hnm *HwAscend910Manager) setTaskDevInfoCache() error {
 	}
 	newTaskDevListCache := make(map[string][]int32)
 	newTaskDevFaultInfoCache := make(map[string][]*common.TaskDevInfo)
-	newTaskNamespaceCache := make(map[string]string)
+	newTaskPodCache := make(map[string]v1.Pod)
 	taskListUsedDevice := make(map[string]struct{})
 	for _, pod := range podList.Items {
 		annotationTag := fmt.Sprintf("%s%s", common.ResourceNamePrefix, common.Ascend910)
@@ -340,7 +341,7 @@ func (hnm *HwAscend910Manager) setTaskDevInfoCache() error {
 			return err
 		}
 		newTaskDevFaultInfoCache[taskName] = taskDevFaultInfoList
-		newTaskNamespaceCache[taskName] = pod.Namespace
+		newTaskPodCache[taskName] = pod
 		if err = hnm.hotResetManager.UpdateFaultDev2PodMap(devIdList, pod); err != nil {
 			hwlog.RunLog.Errorf("update faultDev2PodMap error: %#v", err)
 		}
@@ -352,7 +353,7 @@ func (hnm *HwAscend910Manager) setTaskDevInfoCache() error {
 	if err := hnm.hotResetManager.UpdateTaskDevFaultInfoCache(newTaskDevFaultInfoCache); err != nil {
 		return err
 	}
-	if err := hnm.hotResetManager.UpdateTaskNamespaceCache(newTaskNamespaceCache); err != nil {
+	if err := hnm.hotResetManager.UpdateTaskPodCache(newTaskPodCache); err != nil {
 		return err
 	}
 
@@ -360,12 +361,12 @@ func (hnm *HwAscend910Manager) setTaskDevInfoCache() error {
 }
 
 func (hnm *HwAscend910Manager) isTaskInReset(taskName string) (bool, error) {
-	namespace, err := hnm.hotResetManager.GetTaskNamespace(taskName)
+	pod, err := hnm.hotResetManager.GetTaskPod(taskName)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get task namespace, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to get task pod, err: %#v", err)
 		return false, err
 	}
-	resetCM, err := hnm.client.GetConfigMap(common.ResetInfoCMNamePrefix+taskName, namespace)
+	resetCM, err := hnm.client.GetConfigMap(common.ResetInfoCMNamePrefix+taskName, pod.Namespace)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			hwlog.RunLog.Debugf("task %s does not have reset info cm, skip this choice", taskName)
@@ -420,6 +421,34 @@ func (hnm *HwAscend910Manager) filterDevStatus(classifyDevs map[string][]*common
 	return nil
 }
 
+// refreshNormalPodAnnotation do not add new annotation to pod, actually.
+// It just refreshes annotation to trigger pod syncing
+func (hnm *HwAscend910Manager) refreshNormalPodAnnotation(taskName string) {
+	if resetFlag, _ := hnm.isTaskInReset(taskName); !resetFlag {
+		return
+	}
+
+	pod, err := hnm.hotResetManager.GetTaskPod(taskName)
+	if err != nil {
+		hwlog.RunLog.Errorf("failed to get task pod, err: %#v", err)
+		return
+	}
+
+	annotation := map[string]string{podDevStatusAnnotation: "normal"}
+	if err = hnm.GetKubeClient().TryUpdatePodAnnotation(&pod, annotation); err != nil {
+		hwlog.RunLog.Errorf("update add annotation %#v to pod %s failed, err: %#v", annotation, pod.Name, err)
+		return
+	}
+
+	annotation[podDevStatusAnnotation] = ""
+	if err = hnm.GetKubeClient().TryUpdatePodAnnotation(&pod, annotation); err != nil {
+		hwlog.RunLog.Errorf("update add annotation %#v to pod %s failed, err: %#v", annotation, pod.Name, err)
+		return
+	}
+
+	hwlog.RunLog.Info("normal pod refresh annotation success")
+}
+
 func (hnm *HwAscend910Manager) processAllTask() error {
 	taskDevFaultInfoList := hnm.hotResetManager.GetAllTaskDevFaultInfoList()
 	for taskName := range taskDevFaultInfoList {
@@ -429,6 +458,7 @@ func (hnm *HwAscend910Manager) processAllTask() error {
 			continue
 		}
 		if policyLevel != common.RestartErrorLevel && policyLevel != common.ResetErrorLevel {
+			hnm.refreshNormalPodAnnotation(taskName)
 			continue
 		}
 		if resetFlag, err := hnm.isTaskInReset(taskName); err != nil || resetFlag {
@@ -532,12 +562,12 @@ func (hnm *HwAscend910Manager) updateResetCMStatus(taskName, policyType, status 
 		hwlog.RunLog.Errorf("failed to get task reset info list, err: %#v", err)
 		return err
 	}
-	namespace, err := hnm.hotResetManager.GetTaskNamespace(taskName)
+	pod, err := hnm.hotResetManager.GetTaskPod(taskName)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get task namespace, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to get task pod, err: %#v", err)
 		return err
 	}
-	if _, err := hnm.client.WriteResetInfoDataIntoCM(taskName, namespace, newResetInfo); err != nil {
+	if _, err := hnm.client.WriteResetInfoDataIntoCM(taskName, pod.Namespace, newResetInfo); err != nil {
 		hwlog.RunLog.Errorf("failed to write reset info to cm, err: %#v", err)
 		return err
 	}
@@ -603,9 +633,9 @@ func (hnm *HwAscend910Manager) preProcess(taskName, policy string) (*common.Task
 		hwlog.RunLog.Errorf("failed to get task device fault info list, err: %#v", err)
 		return nil, err
 	}
-	namespace, err := hnm.hotResetManager.GetTaskNamespace(taskName)
+	pod, err := hnm.hotResetManager.GetTaskPod(taskName)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get task namespace, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to get task pod, err: %#v", err)
 		return nil, err
 	}
 	resetInfo, err := hnm.hotResetManager.GetTaskResetInfo(devFaultInfoList, policy, common.UnrecoveredStatus)
@@ -613,7 +643,7 @@ func (hnm *HwAscend910Manager) preProcess(taskName, policy string) (*common.Task
 		hwlog.RunLog.Errorf("failed to get task reset info list, err: %#v", err)
 		return nil, err
 	}
-	if _, err := hnm.client.WriteResetInfoDataIntoCM(taskName, namespace, resetInfo); err != nil {
+	if _, err := hnm.client.WriteResetInfoDataIntoCM(taskName, pod.Namespace, resetInfo); err != nil {
 		hwlog.RunLog.Errorf("failed to write reset info to cm, err: %#v", err)
 		return nil, err
 	}
@@ -622,7 +652,7 @@ func (hnm *HwAscend910Manager) preProcess(taskName, policy string) (*common.Task
 		hwlog.RunLog.Errorf("failed to get task fault rank info, err: %#v", err)
 		return nil, err
 	}
-	if _, err := hnm.client.WriteFaultInfoDataIntoCM(taskName, namespace, faultInfo); err != nil {
+	if _, err := hnm.client.WriteFaultInfoDataIntoCM(taskName, pod.Namespace, faultInfo); err != nil {
 		hwlog.RunLog.Errorf("failed to write fault rank info to cm, err %#v", err)
 		return nil, err
 	}
@@ -644,12 +674,12 @@ func (hnm *HwAscend910Manager) postProcess(taskName string, resetInfo *common.Ta
 		return err
 	}
 
-	namespace, err := hnm.hotResetManager.GetTaskNamespace(taskName)
+	pod, err := hnm.hotResetManager.GetTaskPod(taskName)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get task namespace, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to get task pod, err: %#v", err)
 		return err
 	}
-	if err := hnm.client.ClearResetInfo(taskName, namespace); err != nil {
+	if err := hnm.client.ClearResetInfo(taskName, pod.Namespace); err != nil {
 		hwlog.RunLog.Errorf("failed to clear reset info, err: %#v", err)
 		return err
 	}
