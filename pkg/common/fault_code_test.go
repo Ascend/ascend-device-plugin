@@ -182,3 +182,78 @@ func TestTakeOutDevFaultInfo(t *testing.T) {
 		})
 	})
 }
+
+// TestGetLargeModelFaultTypeByCode for test GetLargeModelFaultTypeByCode
+func TestGetLargeModelFaultTypeByCode(t *testing.T) {
+	convey.Convey("test GetLargeModelFaultTypeByCode", t, func() {
+		faultCodes := []int64{1}
+		convey.Convey("fault type NormalNPU", func() {
+			convey.So(GetLargeModelFaultTypeByCode(nil), convey.ShouldEqual, NormalNPU)
+		})
+		convey.Convey("fault type NotHandleFault", func() {
+			faultTypeCode = FaultTypeCode{LargeModelNotHandleFaultCodes: faultCodes}
+			convey.So(GetLargeModelFaultTypeByCode(faultCodes), convey.ShouldEqual, NotHandleFault)
+		})
+		convey.Convey("fault type SeparateNPU", func() {
+			faultTypeCode = FaultTypeCode{
+				LargeModelSeparateNPUCodes: faultCodes,
+				NotHandleFaultCodes:        faultCodes,
+			}
+			convey.So(GetLargeModelFaultTypeByCode(faultCodes), convey.ShouldEqual, SeparateNPU)
+		})
+		convey.Convey("fault type PreSeparateNPU", func() {
+			faultTypeCode = FaultTypeCode{
+				LargeModelPreSeparateNPUCodes: faultCodes,
+				NotHandleFaultCodes:           faultCodes,
+			}
+			convey.So(GetLargeModelFaultTypeByCode(faultCodes), convey.ShouldEqual, PreSeparateNPU)
+			faultTypeCode = FaultTypeCode{}
+			convey.So(GetLargeModelFaultTypeByCode(faultCodes), convey.ShouldEqual, PreSeparateNPU)
+		})
+		convey.Convey("read json failed", func() {
+			faultTypeCode = FaultTypeCode{}
+			mockLoadFile := gomonkey.ApplyFuncReturn(utils.LoadFile, nil, errors.New("failed"))
+			defer mockLoadFile.Reset()
+			convey.So(GetLargeModelFaultTypeByCode(faultCodes), convey.ShouldEqual, PreSeparateNPU)
+		})
+	})
+}
+
+// TestGetNetworkFaultTypeByCode for test GetNetworkFaultTypeByCode
+func TestGetNetworkFaultTypeByCode(t *testing.T) {
+	convey.Convey("test GetNetworkFaultTypeByCode", t, func() {
+		faultCodes := []string{CardNetworkDisconnected}
+		convey.Convey("fault type NormalNetwork", func() {
+			convey.So(GetNetworkFaultTypeByCode(nil), convey.ShouldEqual, NormalNetwork)
+		})
+		convey.Convey("fault type NotHandleFault", func() {
+			faultTypeCode = FaultTypeCode{
+				NotHandleFaultNetworkCodes: faultCodes,
+				NotHandleFaultCodes:        []int64{1},
+			}
+			convey.So(GetNetworkFaultTypeByCode(faultCodes), convey.ShouldEqual, NotHandleFault)
+		})
+		convey.Convey("fault type SeparateNPU", func() {
+			faultTypeCode = FaultTypeCode{
+				SeparateNPUNetworkCodes: faultCodes,
+				NotHandleFaultCodes:     []int64{1},
+			}
+			convey.So(GetNetworkFaultTypeByCode(faultCodes), convey.ShouldEqual, SeparateNPU)
+		})
+		convey.Convey("fault type PreSeparateNPU", func() {
+			faultTypeCode = FaultTypeCode{
+				PreSeparateNPUNetworkCodes: faultCodes,
+				NotHandleFaultCodes:        []int64{1},
+			}
+			convey.So(GetNetworkFaultTypeByCode(faultCodes), convey.ShouldEqual, PreSeparateNPU)
+			faultTypeCode = FaultTypeCode{}
+			convey.So(GetNetworkFaultTypeByCode(faultCodes), convey.ShouldEqual, PreSeparateNPU)
+		})
+		convey.Convey("read json failed", func() {
+			faultTypeCode = FaultTypeCode{}
+			mockLoadFile := gomonkey.ApplyFuncReturn(utils.LoadFile, nil, errors.New("failed"))
+			defer mockLoadFile.Reset()
+			convey.So(GetNetworkFaultTypeByCode(faultCodes), convey.ShouldEqual, PreSeparateNPU)
+		})
+	})
+}

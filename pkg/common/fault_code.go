@@ -17,8 +17,8 @@ package common
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -42,8 +42,16 @@ const (
 	SeparateNPU = "SeparateNPU"
 	// NormalNPU normal NPU
 	NormalNPU = "NormalNPU"
-	// OneDeviceMaxFaultNum one device max fault num
-	OneDeviceMaxFaultNum = 128
+	// NormalNetwork normal network
+	NormalNetwork = "NormalNetwork"
+	// PreSeparateNPU pre separate NPU
+	PreSeparateNPU = "PreSeparateNPU"
+	// CardUnhealthy fault is caused by card unhealthy
+	CardUnhealthy = "CardUnhealthy"
+	// CardNetworkUnhealthy  fault is caused by card network unhealthy
+	CardNetworkUnhealthy = "CardNetworkUnhealthy"
+	// CardNetworkDisconnected card network disconnected
+	CardNetworkDisconnected = "Disconnected"
 
 	faultCodeFilePath = "/usr/local/faultCode.json"
 )
@@ -66,12 +74,34 @@ var (
 
 // FaultTypeCode group code by type
 type FaultTypeCode struct {
-	NotHandleFaultCodes         []int64
-	RestartBusinessCodes        []int64
-	RecoverRestartBusinessCodes []int64
-	RestartNPUCodes             []int64
-	FreeRestartNPUCodes         []int64
-	SeparateNPUCodes            []int64
+	NotHandleFaultCodes           []int64
+	RestartBusinessCodes          []int64
+	RecoverRestartBusinessCodes   []int64
+	RestartNPUCodes               []int64
+	FreeRestartNPUCodes           []int64
+	SeparateNPUCodes              []int64
+	LargeModelNotHandleFaultCodes []int64
+	LargeModelPreSeparateNPUCodes []int64
+	LargeModelSeparateNPUCodes    []int64
+	NotHandleFaultNetworkCodes    []string
+	PreSeparateNPUNetworkCodes    []string
+	SeparateNPUNetworkCodes       []string
+}
+
+// faultFileInfo fault code file data
+type faultFileInfo struct {
+	NotHandleFaultCodes           []string
+	RestartBusinessCodes          []string
+	RecoverRestartBusinessCodes   []string
+	RestartNPUCodes               []string
+	FreeRestartNPUCodes           []string
+	SeparateNPUCodes              []string
+	LargeModelNotHandleFaultCodes []string
+	LargeModelPreSeparateNPUCodes []string
+	LargeModelSeparateNPUCodes    []string
+	NotHandleFaultNetworkCodes    []string
+	PreSeparateNPUNetworkCodes    []string
+	SeparateNPUNetworkCodes       []string
 }
 
 // LoadFaultCodeFromFile load fault code and fault type from faultCode.json
@@ -80,16 +110,71 @@ func LoadFaultCodeFromFile() error {
 	if err != nil {
 		return fmt.Errorf("load fault code json failed: %v", err)
 	}
-	err = json.Unmarshal(faultCodeBytes, &faultTypeCode)
-	if err != nil {
+	var fileInfo faultFileInfo
+	if err = json.Unmarshal(faultCodeBytes, &fileInfo); err != nil {
 		return fmt.Errorf("unmarshal fault code byte failed: %v", err)
 	}
-	if len(faultTypeCode.NotHandleFaultCodes) == 0 && len(faultTypeCode.RestartBusinessCodes) == 0 &&
-		len(faultTypeCode.RestartNPUCodes) == 0 && len(faultTypeCode.SeparateNPUCodes) == 0 &&
-		len(faultTypeCode.FreeRestartNPUCodes) == 0 && len(faultTypeCode.RecoverRestartBusinessCodes) == 0 {
-		return errors.New("at least one fault code in faultTypeCode")
+	faultTypeCode = FaultTypeCode{
+		NotHandleFaultCodes:           StringTool.HexStringToInt(fileInfo.NotHandleFaultCodes),
+		RestartBusinessCodes:          StringTool.HexStringToInt(fileInfo.RestartBusinessCodes),
+		RecoverRestartBusinessCodes:   StringTool.HexStringToInt(fileInfo.RecoverRestartBusinessCodes),
+		RestartNPUCodes:               StringTool.HexStringToInt(fileInfo.RestartNPUCodes),
+		FreeRestartNPUCodes:           StringTool.HexStringToInt(fileInfo.FreeRestartNPUCodes),
+		SeparateNPUCodes:              StringTool.HexStringToInt(fileInfo.SeparateNPUCodes),
+		LargeModelNotHandleFaultCodes: StringTool.HexStringToInt(fileInfo.LargeModelNotHandleFaultCodes),
+		LargeModelPreSeparateNPUCodes: StringTool.HexStringToInt(fileInfo.LargeModelPreSeparateNPUCodes),
+		LargeModelSeparateNPUCodes:    StringTool.HexStringToInt(fileInfo.LargeModelSeparateNPUCodes),
+		NotHandleFaultNetworkCodes:    fileInfo.NotHandleFaultNetworkCodes,
+		PreSeparateNPUNetworkCodes:    fileInfo.PreSeparateNPUNetworkCodes,
+		SeparateNPUNetworkCodes:       fileInfo.SeparateNPUNetworkCodes,
 	}
 	return nil
+}
+
+// GetLargeModelFaultTypeByCode get large model fault type by fault code. if code not record, default PreSeparateNPU
+func GetLargeModelFaultTypeByCode(faultCodes []int64) string {
+	if len(faultCodes) == 0 {
+		return NormalNPU
+	}
+	if len(faultTypeCode.NotHandleFaultCodes) == 0 && len(faultTypeCode.LargeModelNotHandleFaultCodes) == 0 {
+		if err := LoadFaultCodeFromFile(); err != nil {
+			return PreSeparateNPU
+		}
+	}
+	switch {
+	case Int64Tool.SameElement(faultTypeCode.LargeModelSeparateNPUCodes, faultCodes):
+		return SeparateNPU
+	case Int64Tool.SameElement(faultTypeCode.LargeModelPreSeparateNPUCodes, faultCodes):
+		return PreSeparateNPU
+	case Int64Tool.SameElement(faultTypeCode.LargeModelNotHandleFaultCodes, faultCodes):
+		return NotHandleFault
+	default:
+		hwlog.RunLog.Debugf("not record fault code : %d, use default type PreSeparateNPU", faultCodes)
+		return PreSeparateNPU
+	}
+}
+
+// GetNetworkFaultTypeByCode get network fault type by fault code. if code not record, default PreSeparateNPU
+func GetNetworkFaultTypeByCode(faultCodes []string) string {
+	if len(faultCodes) == 0 {
+		return NormalNetwork
+	}
+	if len(faultTypeCode.NotHandleFaultCodes) == 0 && len(faultTypeCode.PreSeparateNPUNetworkCodes) == 0 {
+		if err := LoadFaultCodeFromFile(); err != nil {
+			return PreSeparateNPU
+		}
+	}
+	switch {
+	case StringTool.SameElement(faultTypeCode.SeparateNPUNetworkCodes, faultCodes):
+		return SeparateNPU
+	case StringTool.SameElement(faultTypeCode.PreSeparateNPUNetworkCodes, faultCodes):
+		return PreSeparateNPU
+	case StringTool.SameElement(faultTypeCode.NotHandleFaultNetworkCodes, faultCodes):
+		return NotHandleFault
+	default:
+		hwlog.RunLog.Debugf("not record fault code : %v, use default type PreSeparateNPU", faultCodes)
+		return PreSeparateNPU
+	}
 }
 
 // GetFaultTypeByCode get fault type by fault code. if code not record, default NotHandleFault
@@ -190,7 +275,8 @@ func DelOnceRecoverFault(groupDevice map[string][]*NpuDevice) {
 
 // SaveDevFaultInfo save device fault info , subscribe interface call back function
 func SaveDevFaultInfo(devFaultInfo common.DevFaultInfo) {
-	hwlog.RunLog.Debugf("receive devFaultInfo: %v", devFaultInfo)
+	hwlog.RunLog.Debugf("receive devFaultInfo: %v, hex code: %v", devFaultInfo,
+		strconv.FormatInt(devFaultInfo.EventID, Hex))
 	if devFaultInfo.EventID == 0 {
 		return
 	}

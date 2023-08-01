@@ -15,10 +15,19 @@
 // Package common a series of common function
 package common
 
+import (
+	"strconv"
+
+	"huawei.com/npu-exporter/v5/common-utils/hwlog"
+)
+
 type int32Tool struct {
 }
 
 type int64Tool struct {
+}
+
+type stringTool struct {
 }
 
 // Int32Tool slice for int32 tool
@@ -26,6 +35,9 @@ var Int32Tool int32Tool
 
 // Int64Tool slice for int64 tool
 var Int64Tool int64Tool
+
+// StringTool slice for string tool
+var StringTool stringTool
 
 // Contains slice for int32 contains
 func (i int32Tool) Contains(sources []int32, target int32) bool {
@@ -61,7 +73,7 @@ func (i int64Tool) Remove(sources []int64, target int64) []int64 {
 	return i.Remove(append(sources[:index], sources[index+1:]...), target)
 }
 
-// Index slice for int6 search the index with target
+// Index slice for int64 search the index with target
 func (i int64Tool) Index(sources []int64, target int64) int {
 	for i, source := range sources {
 		if source == target {
@@ -69,4 +81,43 @@ func (i int64Tool) Index(sources []int64, target int64) int {
 		}
 	}
 	return -1
+}
+
+// ToHexString slice for int64 to Hex string
+func (i int64Tool) ToHexString(sources []int64) string {
+	var target string
+	for i, source := range sources {
+		if i == 0 {
+			target = strconv.FormatInt(source, Hex)
+			continue
+		}
+		target = target + "," + strconv.FormatInt(source, Hex)
+	}
+	return target
+}
+
+// SameElement string slice has same element with others slice
+func (s stringTool) SameElement(sources, targets []string) bool {
+	for _, source := range sources {
+		for _, target := range targets {
+			if source == target {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// HexStringToInt hex string slice to int64 slice
+func (s stringTool) HexStringToInt(sources []string) []int64 {
+	intSlice := make([]int64, 0, len(sources))
+	for _, source := range sources {
+		num, err := strconv.ParseInt(source, Hex, 0)
+		if err != nil {
+			hwlog.RunLog.Errorf("parse hex int failed , string: %s", source)
+			return nil
+		}
+		intSlice = append(intSlice, num)
+	}
+	return intSlice
 }

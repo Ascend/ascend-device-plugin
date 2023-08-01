@@ -303,50 +303,71 @@ func (tool *AscendTools) getRealUsedDevices() sets.String {
 func (tool *AscendTools) getDevStatesDevSet(classifyDevs map[string][]*common.NpuDevice) common.DevStatusSet {
 	totalFreeDevices := make(map[string]sets.String, len(classifyDevs))
 	totalUHDevices, totalNetUHDevices, allTypeUsedDevice := sets.String{}, sets.String{}, sets.String{}
+	totalDeviceFaults := make([]common.DeviceFault, 0, common.GeneralMapSize)
 	if !common.ParamOption.PresetVDevice {
 		allTypeUsedDevice = tool.getRealUsedDevices()
 	}
 	for devType, classifyDev := range classifyDevs {
-		healthDevices, uhDevices, netUnHDevices := tool.groupDevsByStatus(classifyDev, tool.name)
+		partDevStatusSet := tool.groupDevsByStatus(classifyDev, tool.name)
 		usedDevices := tool.client.GetPodsUsedNpu(devType)
-		totalFreeDevices[devType] = healthDevices.Difference(usedDevices)
+		totalFreeDevices[devType] = partDevStatusSet.HealthDevices.Difference(usedDevices)
 		if !common.ParamOption.PresetVDevice {
 			totalFreeDevices[devType] = totalFreeDevices[devType].Difference(allTypeUsedDevice)
 		}
-		totalUHDevices = totalUHDevices.Union(uhDevices)
-		totalNetUHDevices = totalNetUHDevices.Union(netUnHDevices)
+		totalUHDevices = totalUHDevices.Union(partDevStatusSet.UnHealthyDevice)
+		totalNetUHDevices = totalNetUHDevices.Union(partDevStatusSet.NetUnHealthyDevice)
+		totalDeviceFaults = append(totalDeviceFaults, partDevStatusSet.DeviceFault...)
 	}
 	return common.DevStatusSet{
 		FreeHealthyDevice:  totalFreeDevices,
 		UnHealthyDevice:    totalUHDevices,
 		NetUnHealthyDevice: totalNetUHDevices,
+		DeviceFault:        totalDeviceFaults,
 	}
 }
 
-func (tool *AscendTools) groupDevsByStatus(subClassDevices []*common.NpuDevice, runMode string) (
-	sets.String, sets.String, sets.String) {
+func (tool *AscendTools) groupDevsByStatus(subClassDevices []*common.NpuDevice, runMode string) common.DevStatusSet {
 	healthDevice, totalUHDevices, totalNetworkUHDevices := sets.String{}, sets.String{}, sets.String{}
+	deviceFaults := make([]common.DeviceFault, 0, common.GeneralMapSize)
 	for _, device := range subClassDevices {
 		if device.NetworkHealth != v1beta1.Healthy {
 			totalNetworkUHDevices.Insert(device.DeviceName)
+			deviceFaults = append(deviceFaults, common.DeviceFault{
+				FaultType:            common.CardNetworkUnhealthy,
+				NPUName:              device.DeviceName,
+				LargeModelFaultLevel: common.GetNetworkFaultTypeByCode([]string{common.CardNetworkDisconnected}),
+				FaultLevel:           common.GetNetworkFaultTypeByCode([]string{common.CardNetworkDisconnected}),
+				FaultCode:            common.CardNetworkDisconnected,
+			})
 		}
 		if device.Health == v1beta1.Healthy {
 			healthDevice.Insert(device.DeviceName)
 			continue
 		}
+		deviceFaults = append(deviceFaults, common.DeviceFault{
+			FaultType:            common.CardUnhealthy,
+			NPUName:              device.DeviceName,
+			LargeModelFaultLevel: common.GetLargeModelFaultTypeByCode(device.FaultCodes),
+			FaultLevel:           common.GetFaultTypeByCode(device.FaultCodes),
+			FaultCode:            common.Int64Tool.ToHexString(device.FaultCodes),
+		})
 		if !common.IsVirtualDev(device.DeviceName) {
 			totalUHDevices.Insert(device.DeviceName)
 			continue
 		}
-		dev := fmt.Sprintf("%s-%d", runMode, device.PhyID)
-		if !totalUHDevices.Has(dev) {
+		if dev := fmt.Sprintf("%s-%d", runMode, device.PhyID); !totalUHDevices.Has(dev) {
 			totalUHDevices.Insert(dev)
 		}
 	}
 	hwlog.RunLog.Debugf("healthy device %#v", healthDevice)
 	hwlog.RunLog.Debugf("total unhealthy devices %#v", totalUHDevices)
 	hwlog.RunLog.Debugf("total network unhealthy devices %#v", totalNetworkUHDevices)
-	return healthDevice, totalUHDevices, totalNetworkUHDevices
+	return common.DevStatusSet{
+		HealthDevices:      healthDevice,
+		UnHealthyDevice:    totalUHDevices,
+		NetUnHealthyDevice: totalNetworkUHDevices,
+		DeviceFault:        deviceFaults,
+	}
 }
 
 func (tool *AscendTools) getDavinCiDev(logicID int32) (common.DavinCiDev, error) {
