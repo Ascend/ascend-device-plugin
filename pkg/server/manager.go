@@ -409,9 +409,6 @@ func (hdm *HwDevManager) useVolcanoNotify() {
 	if err := hdm.updatePodAnnotation(); err != nil {
 		hwlog.RunLog.Error(err)
 	}
-	if !common.ParamOption.UseVolcanoType {
-		return
-	}
 	hdm.manager.DoWithVolcanoListAndWatch(hdm.groupDevice)
 }
 

@@ -135,7 +135,18 @@ type FileWatch struct {
 type DevStatusSet struct {
 	UnHealthyDevice    sets.String
 	NetUnHealthyDevice sets.String
+	HealthDevices      sets.String
 	FreeHealthyDevice  map[string]sets.String
+	DeviceFault        []DeviceFault
+}
+
+// DeviceFault  npu or network fault info
+type DeviceFault struct {
+	FaultType            string `json:"fault_type"`
+	NPUName              string `json:"npu_name"`
+	LargeModelFaultLevel string `json:"large_model_fault_level"`
+	FaultLevel           string `json:"fault_level"`
+	FaultCode            string `json:"fault_code"`
 }
 
 // TaskResetInfoCache record task reset device information cache

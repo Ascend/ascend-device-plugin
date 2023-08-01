@@ -23,6 +23,7 @@ import (
 
 var (
 	testInt64Source = []int64{1}
+	stringSource    = []string{"1"}
 )
 
 // TestContains for test Contains
@@ -72,6 +73,46 @@ func TestIndex(t *testing.T) {
 			existVal, unExistVal := int64(1), int64(2)
 			convey.So(tool.Index(testInt64Source, existVal), convey.ShouldEqual, 0)
 			convey.So(tool.Index(testInt64Source, unExistVal), convey.ShouldEqual, -1)
+		})
+	})
+}
+
+// TestToHexString for test ToHexString
+func TestToHexString(t *testing.T) {
+	convey.Convey("test ToHexString", t, func() {
+		convey.Convey("ToHexString success", func() {
+			tool := int64Tool{}
+			convey.So(tool.ToHexString(testInt64Source), convey.ShouldEqual, "1")
+		})
+		convey.Convey("ToHexString multiple numbers success", func() {
+			tool := int64Tool{}
+			int64Slice := []int64{1, 3, 5}
+			convey.So(tool.ToHexString(int64Slice), convey.ShouldEqual, "1,3,5")
+		})
+	})
+}
+
+// TestStringSameElement for test string SameElement
+func TestStringSameElement(t *testing.T) {
+	convey.Convey("test string SameElement", t, func() {
+		convey.Convey("SameElement success", func() {
+			tool := stringTool{}
+			existVal, unExistVal := []string{"1"}, []string{"2"}
+			convey.So(tool.SameElement(stringSource, existVal), convey.ShouldBeTrue)
+			convey.So(tool.SameElement(stringSource, unExistVal), convey.ShouldBeFalse)
+		})
+	})
+}
+
+// TestHexStringToInt for test string HexStringToInt
+func TestHexStringToInt(t *testing.T) {
+	convey.Convey("test string HexStringToInt", t, func() {
+		convey.Convey("HexStringToInt success", func() {
+			tool := stringTool{}
+			hexString := []string{"a"}
+			errHexString := []string{"xx"}
+			convey.So(tool.HexStringToInt(hexString)[0], convey.ShouldEqual, 10)
+			convey.So(len(tool.HexStringToInt(errHexString)), convey.ShouldEqual, 0)
 		})
 	})
 }

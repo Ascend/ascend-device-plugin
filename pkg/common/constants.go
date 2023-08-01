@@ -133,6 +133,8 @@ const (
 	GeneralMapSize = 8
 	// GeneralSubscribeTime general subscribe try time
 	GeneralSubscribeTime = 3
+	// Hex hexadecimal
+	Hex = 16
 )
 
 const (
@@ -226,6 +228,13 @@ const (
 	HuaweiNetworkRecoverAscend910 = ResourceNamePrefix + Ascend910 + "-NetworkRecover"
 	// HuaweiRecoverAscend910 910 recover
 	HuaweiRecoverAscend910 = ResourceNamePrefix + Ascend910 + "-Recover"
+
+	// HuaweiFaultCodeAscend910 910 fault code
+	HuaweiFaultCodeAscend910 = ResourceNamePrefix + Ascend910 + "-Fault"
+	// HuaweiFaultCodeAscend310P 310p fault code
+	HuaweiFaultCodeAscend310P = ResourceNamePrefix + Ascend310P + "-Fault"
+	// HuaweiFaultCodeAscend310 310 fault code
+	HuaweiFaultCodeAscend310 = ResourceNamePrefix + Ascend310 + "-Fault"
 
 	// AiCoreResourceName resource name for virtual device
 	AiCoreResourceName = "npu-core"

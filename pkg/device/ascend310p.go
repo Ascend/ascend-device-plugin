@@ -98,6 +98,11 @@ func (hnm *HwAscend310PManager) updateDeviceInfo(_, newDevInfo map[string]string
 	newDevInfo[common.HuaweiAscend310P] = common.ToString(devStatusSet.FreeHealthyDevice[hnm.name],
 		common.CommaSepDev)
 	newDevInfo[hnm.unHealthyKey] = common.ToString(devStatusSet.UnHealthyDevice, common.CommaSepDev)
+	var data []byte
+	if data = common.MarshalData(devStatusSet.DeviceFault); len(data) == 0 {
+		return fmt.Errorf("device fault code marshal failed")
+	}
+	newDevInfo[common.HuaweiFaultCodeAscend310P] = string(data)
 	return nil
 }
 

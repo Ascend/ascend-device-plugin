@@ -168,6 +168,11 @@ func (hnm *HwAscend910Manager) updateDeviceInfo(oldDevInfo, newDevInfo map[strin
 	newDevInfo[common.HuaweiAscend910] = newAscend910
 	newDevInfo[common.HuaweiUnHealthAscend910] = common.ToString(devStatusSet.UnHealthyDevice, common.CommaSepDev)
 	newDevInfo[common.HuaweiNetworkUnHealthAscend910] = common.ToString(newNetUHDevSets, common.CommaSepDev)
+	var data []byte
+	if data = common.MarshalData(devStatusSet.DeviceFault); len(data) == 0 {
+		return fmt.Errorf("device fault code marshal failed")
+	}
+	newDevInfo[common.HuaweiFaultCodeAscend910] = string(data)
 	if common.ParamOption.AutoStowingDevs {
 		return nil
 	}
