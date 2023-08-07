@@ -340,17 +340,19 @@ func (tool *AscendTools) groupDevsByStatus(subClassDevices []*common.NpuDevice, 
 				FaultCode:            common.CardNetworkDisconnected,
 			})
 		}
+		if len(device.FaultCodes) != 0 {
+			deviceFaults = append(deviceFaults, common.DeviceFault{
+				FaultType:            common.CardUnhealthy,
+				NPUName:              device.DeviceName,
+				LargeModelFaultLevel: common.GetLargeModelFaultTypeByCode(device.FaultCodes),
+				FaultLevel:           common.GetFaultTypeByCode(device.FaultCodes),
+				FaultCode:            common.Int64Tool.ToHexString(device.FaultCodes),
+			})
+		}
 		if device.Health == v1beta1.Healthy {
 			healthDevice.Insert(device.DeviceName)
 			continue
 		}
-		deviceFaults = append(deviceFaults, common.DeviceFault{
-			FaultType:            common.CardUnhealthy,
-			NPUName:              device.DeviceName,
-			LargeModelFaultLevel: common.GetLargeModelFaultTypeByCode(device.FaultCodes),
-			FaultLevel:           common.GetFaultTypeByCode(device.FaultCodes),
-			FaultCode:            common.Int64Tool.ToHexString(device.FaultCodes),
-		})
 		if !common.IsVirtualDev(device.DeviceName) {
 			totalUHDevices.Insert(device.DeviceName)
 			continue

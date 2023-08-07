@@ -711,8 +711,8 @@ func (hdm *HwDevManager) subscribeFaultEvent() {
 		hwlog.RunLog.Errorf("load faultCode.json failed, the subscribe way is closed")
 		return
 	}
-	if common.ParamOption.HotReset != common.HotResetTrain {
-		hwlog.RunLog.Debug("subscribe mode only support train now")
+	if hdm.RunMode != common.Ascend910 {
+		hwlog.RunLog.Debug("subscribe mode only support 910 now")
 		common.SubscribeFailed = true
 		return
 	}
