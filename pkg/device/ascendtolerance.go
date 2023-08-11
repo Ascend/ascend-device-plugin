@@ -304,7 +304,7 @@ func (hrt *HotResetTools) GenerateTaskDevFaultInfoList(devIdList []int32,
 	devNum := len(devIdList)
 	taskDevInfoList := make([]*common.TaskDevInfo, 0, len(devIdList))
 	for _, devId := range devIdList {
-		rankId := rankStart*devNum + int(devId)
+		rankId := rankStart*devNum + len(taskDevInfoList)
 		faultInfo, ok := hrt.globalDevFaultInfo[devId]
 		if !ok {
 			return nil, fmt.Errorf("device %d is not in global cache", devId)
