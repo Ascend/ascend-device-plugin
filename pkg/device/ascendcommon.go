@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+	"k8s.io/utils/strings/slices"
 
 	"Ascend-device-plugin/pkg/common"
 	"Ascend-device-plugin/pkg/kubeclient"
@@ -563,12 +564,42 @@ func classifyDevByType(allDevs []common.NpuDevice, suffix string) []*common.NpuD
 	return classifyDev
 }
 
-func isHealthy(faultCodes []int64) string {
-	faultType := common.GetFaultTypeByCode(faultCodes)
+func isHealthy(device *common.NpuDevice, podList *v1.PodList) string {
+	// in large model, NotHandleFault: Healthy, SeparateNPU: Unhealthy,
+	// PreSeparateNPU and npu used: Healthy, PreSeparateNPU and npu free: Unhealthy
+	if common.ParamOption.UseLargeModel && common.ParamOption.HotReset != common.HotResetTrain {
+		faultType := common.GetLargeModelFaultTypeByCode(device.FaultCodes)
+		if faultType == common.NormalNPU || faultType == common.NotHandleFault {
+			return v1beta1.Healthy
+		}
+		if faultType == common.SeparateNPU {
+			return v1beta1.Unhealthy
+		}
+		if npuIsUsedNow(device.DeviceName, podList) {
+			return v1beta1.Healthy
+		}
+		return v1beta1.Unhealthy
+	}
+	faultType := common.GetFaultTypeByCode(device.FaultCodes)
 	if faultType == common.NormalNPU || faultType == common.NotHandleFault {
 		return v1beta1.Healthy
 	}
 	return v1beta1.Unhealthy
+}
+
+func npuIsUsedNow(deviceName string, podList *v1.PodList) bool {
+	for _, pod := range podList.Items {
+		annotationTag := fmt.Sprintf("%s%s", common.ResourceNamePrefix, common.Ascend910)
+		tmpNpu, ok := pod.Annotations[annotationTag]
+		if !ok || len(tmpNpu) == 0 || len(tmpNpu) > common.PodAnnotationMaxLength {
+			continue
+		}
+		deviceStrList := strings.Split(tmpNpu, common.CommaSepDev)
+		if slices.Index(deviceStrList, deviceName) != -1 {
+			return true
+		}
+	}
+	return false
 }
 
 // UnhealthyState state unhealthy info
@@ -728,10 +759,14 @@ func (tool *AscendTools) getAiCoreCount(cgoVDevInfo npuCommon.VirtualDevInfo) (i
 func (tool *AscendTools) writeNewFaultCode(deviceMap map[string][]*common.NpuDevice, runMode string) {
 	initLogicIDs := common.GetAndCleanLogicID()
 	devFaultInfoMap := common.GetAndCleanFaultInfo()
+	var podList *v1.PodList
+	if common.ParamOption.UseLargeModel && common.ParamOption.HotReset != common.HotResetTrain {
+		podList, _ = tool.client.GetAllPodList()
+	}
 	for _, devices := range deviceMap {
 		for idx, device := range devices {
 			tool.flushFaultCodesWithInit(device, initLogicIDs, devFaultInfoMap)
-			device.Health = isHealthy(device.FaultCodes)
+			device.Health = isHealthy(device, podList)
 			if runMode == common.Ascend910 {
 				devices[idx].NetworkHealth = tool.getDeviceNetworkState(device.LogicID)
 			}
