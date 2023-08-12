@@ -67,6 +67,7 @@ var (
 	use310PMixedInsert = flag.Bool("use310PMixedInsert", false, "Whether to use mixed insert "+
 		"ascend310P-V, ascend310P-VPro, ascend310P-IPro card mode")
 	hotReset      = flag.Int("hotReset", -1, "set hot reset mode: -1-close, 0-infer, 1-train")
+	useLargeModel = flag.Bool("useLargeModel", false, "Whether to use large model")
 	shareDevCount = flag.Uint("shareDevCount", 1, "share device function, enable the func by setting "+
 		"a value greater than 1, range is [1, 100], only support 310B")
 )
@@ -124,6 +125,10 @@ func checkParam() bool {
 	}
 	if (*hotReset) == common.HotResetTrain {
 		hwlog.RunLog.Warn("hotReset to 1 is a reserved value")
+	}
+	if (*hotReset) == common.HotResetTrain && *useLargeModel {
+		hwlog.RunLog.Warn("hotReset and useLargeModel can't simultaneous open")
+		return false
 	}
 	if BuildScene != common.EdgeScene && BuildScene != common.CenterScene {
 		hwlog.RunLog.Error("unSupport build scene, only support edge and center")
@@ -192,6 +197,7 @@ func setParameters() {
 		PresetVDevice:      *presetVirtualDevice,
 		Use310PMixedInsert: *use310PMixedInsert,
 		HotReset:           *hotReset,
+		UseLargeModel:      *useLargeModel,
 		BuildScene:         BuildScene,
 		ShareCount:         *shareDevCount,
 	}
