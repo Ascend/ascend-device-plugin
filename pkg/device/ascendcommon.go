@@ -828,3 +828,20 @@ func logFaultModeChange(device *common.NpuDevice, initLogicIDs []int32, newMode 
 	}
 	hwlog.RunLog.Infof("fault get mode upgrade. logicId: %v", device.LogicID)
 }
+
+func (tool *AscendTools) getNPUsByShareMode(davinCiDev common.DavinCiDev) []common.NpuDevice {
+	shareDevices := make([]common.NpuDevice, 0, common.ParamOption.ShareCount)
+	for index := uint(0); index < common.ParamOption.ShareCount; index++ {
+		deviceName := fmt.Sprintf("%s-%d-%d", tool.name, davinCiDev.PhyID, index)
+		device := tool.assembleNpuDeviceStruct(tool.name, deviceName, davinCiDev)
+		shareDevices = append(shareDevices, device)
+	}
+	return shareDevices
+}
+
+func (tool *AscendTools) assembleShareModeDevices(davinCiDev common.DavinCiDev, devices *[]common.NpuDevice,
+	deviceTypes *[]string) {
+	device := tool.getNPUsByShareMode(davinCiDev)
+	*devices = append(*devices, device...)
+	*deviceTypes = append(*deviceTypes, tool.name)
+}
