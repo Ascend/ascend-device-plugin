@@ -598,7 +598,7 @@ func (hdm *HwDevManager) updateSpecTypePodAnnotation(deviceType, serverID string
 	if !ok {
 		return fmt.Errorf("serverMap convert %s failed", deviceType)
 	}
-	podList, err := hdm.manager.GetKubeClient().GetActivePodList()
+	podList, err := hdm.manager.GetKubeClient().GetActivePodListNoCache()
 	if err != nil {
 		return err
 	}
@@ -661,7 +661,7 @@ func (hdm *HwDevManager) hotReset(device *common.NpuDevice) {
 }
 
 func (hdm *HwDevManager) isPodRemove(devType string, device *common.NpuDevice, prClient *PodResource) bool {
-	podList, err := hdm.manager.GetKubeClient().GetAllPodList()
+	podList, err := hdm.manager.GetKubeClient().GetAllPodListCache()
 	if err != nil {
 		hwlog.RunLog.Errorf("get pod list failed, err: %#v", err)
 		return false

@@ -285,7 +285,7 @@ func getResetInfoData(resetInfo *v1.ConfigMap) ([]*common.TaskDevInfo, error) {
 }
 
 func (tool *AscendTools) getRealUsedDevices() sets.String {
-	podList, err := tool.client.GetActivePodList()
+	podList, err := tool.client.GetActivePodListCache()
 	if err != nil {
 		hwlog.RunLog.Warn(err)
 		return sets.String{}
@@ -761,7 +761,7 @@ func (tool *AscendTools) writeNewFaultCode(deviceMap map[string][]*common.NpuDev
 	devFaultInfoMap := common.GetAndCleanFaultInfo()
 	var podList *v1.PodList
 	if common.ParamOption.UseLargeModel && common.ParamOption.HotReset != common.HotResetTrain {
-		podList, _ = tool.client.GetAllPodList()
+		podList, _ = tool.client.GetAllPodListCache()
 	}
 	for _, devices := range deviceMap {
 		for idx, device := range devices {

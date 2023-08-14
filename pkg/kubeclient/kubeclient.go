@@ -67,7 +67,9 @@ func NewClientK8s() (*ClientK8s, error) {
 
 // GetNode get node
 func (ki *ClientK8s) GetNode() (*v1.Node, error) {
-	return ki.Clientset.CoreV1().Nodes().Get(context.Background(), ki.NodeName, metav1.GetOptions{})
+	return ki.Clientset.CoreV1().Nodes().Get(context.Background(), ki.NodeName, metav1.GetOptions{
+		ResourceVersion: "0",
+	})
 }
 
 // PatchNodeState patch node state
@@ -77,7 +79,9 @@ func (ki *ClientK8s) PatchNodeState(curNode, newNode *v1.Node) (*v1.Node, []byte
 
 // GetPod get pod by namespace and name
 func (ki *ClientK8s) GetPod(pod *v1.Pod) (*v1.Pod, error) {
-	return ki.Clientset.CoreV1().Pods(pod.Namespace).Get(context.Background(), pod.Name, metav1.GetOptions{})
+	return ki.Clientset.CoreV1().Pods(pod.Namespace).Get(context.Background(), pod.Name, metav1.GetOptions{
+		ResourceVersion: "0",
+	})
 }
 
 // UpdatePod update pod by namespace and name
@@ -92,17 +96,17 @@ func (ki *ClientK8s) GetActivePodList() ([]v1.Pod, error) {
 	if err != nil {
 		return nil, err
 	}
-	podList, err := ki.GetPodListByCondition(fieldSelector)
+	podList, err := ki.getPodListByCondition(fieldSelector)
 	if err != nil {
 		return nil, err
 	}
-	return ki.CheckPodList(podList)
+	return checkPodList(podList)
 }
 
 // GetAllPodList get pod list by field selector
 func (ki *ClientK8s) GetAllPodList() (*v1.PodList, error) {
 	selector := fields.SelectorFromSet(fields.Set{"spec.nodeName": ki.NodeName})
-	podList, err := ki.GetPodListByCondition(selector)
+	podList, err := ki.getPodListByCondition(selector)
 	if err != nil {
 		hwlog.RunLog.Errorf("get pod list failed, err: %#v", err)
 		return nil, err
@@ -114,15 +118,16 @@ func (ki *ClientK8s) GetAllPodList() (*v1.PodList, error) {
 	return podList, nil
 }
 
-// GetPodListByCondition get pod list by field selector
-func (ki *ClientK8s) GetPodListByCondition(selector fields.Selector) (*v1.PodList, error) {
+// getPodListByCondition get pod list by field selector
+func (ki *ClientK8s) getPodListByCondition(selector fields.Selector) (*v1.PodList, error) {
 	return ki.Clientset.CoreV1().Pods(v1.NamespaceAll).List(context.Background(), metav1.ListOptions{
-		FieldSelector: selector.String(),
+		FieldSelector:   selector.String(),
+		ResourceVersion: "0",
 	})
 }
 
-// CheckPodList check each pod and return podList
-func (ki *ClientK8s) CheckPodList(podList *v1.PodList) ([]v1.Pod, error) {
+// checkPodList check each pod and return podList
+func checkPodList(podList *v1.PodList) ([]v1.Pod, error) {
 	if podList == nil {
 		return nil, fmt.Errorf("pod list is invalid")
 	}
@@ -151,8 +156,9 @@ func (ki *ClientK8s) CreateConfigMap(cm *v1.ConfigMap) (*v1.ConfigMap, error) {
 
 // GetConfigMap get config map by name and namespace
 func (ki *ClientK8s) GetConfigMap(cmName, cmNameSpace string) (*v1.ConfigMap, error) {
-	return ki.Clientset.CoreV1().ConfigMaps(cmNameSpace).Get(context.TODO(),
-		cmName, metav1.GetOptions{})
+	return ki.Clientset.CoreV1().ConfigMaps(cmNameSpace).Get(context.TODO(), cmName, metav1.GetOptions{
+		ResourceVersion: "0",
+	})
 }
 
 // UpdateConfigMap update device info, which is cm

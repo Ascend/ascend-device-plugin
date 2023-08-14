@@ -105,6 +105,7 @@ type Option struct {
 	BuildScene         string   // build scene judge device-plugin start scene
 	ProductTypes       []string // all product types
 	RealCardType       string   // real card type
+	CacheExpirePeriod  int64    // k8s resource expire period
 }
 
 // GetAllDeviceInfoTypeList Get All Device Info Type List

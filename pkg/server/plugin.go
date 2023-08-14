@@ -111,7 +111,7 @@ func (ps *PluginServer) getUnhealthyAICore() sets.String {
 
 // GetRealUsedAICore get real used aicore from pod
 func (ps *PluginServer) GetRealUsedAICore() (map[string]string, error) {
-	podList, err := ps.manager.GetKubeClient().GetActivePodList()
+	podList, err := ps.manager.GetKubeClient().GetActivePodListCache()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get active pod list, %w", err)
 	}
@@ -468,7 +468,7 @@ func (ps *PluginServer) DestroyNotUsedVNPU() error {
 	if err != nil {
 		return err
 	}
-	podList, err := ps.manager.GetKubeClient().GetAllPodList()
+	podList, err := ps.manager.GetKubeClient().GetAllPodListCache()
 	if err != nil {
 		return err
 	}
@@ -610,7 +610,7 @@ func (ps *PluginServer) doWithVolcanoSchedule(requestDevices []string) ([]string
 	conditionFunc := func(pod *v1.Pod) bool {
 		return checkAnnotationAllocateValid(requestDevices, ps.deviceType, pod, ps.manager.GetChipAICore())
 	}
-	allPods, err := ps.manager.GetKubeClient().GetActivePodList()
+	allPods, err := ps.manager.GetKubeClient().GetActivePodListNoCache()
 	if err != nil {
 		return nil, err
 	}

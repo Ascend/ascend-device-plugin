@@ -218,7 +218,7 @@ func (ki *ClientK8s) AnnotationReset() error {
 
 // GetPodsUsedNpu get npu by status
 func (ki *ClientK8s) GetPodsUsedNpu(devType string) sets.String {
-	podList, err := ki.GetActivePodList()
+	podList, err := ki.GetActivePodListCache()
 	if err != nil {
 		hwlog.RunLog.Errorf("get pod list failed, err: %#v", err)
 		return sets.String{}
