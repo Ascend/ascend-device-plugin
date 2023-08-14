@@ -72,17 +72,6 @@ func (hnm *HwAscend310Manager) getNPUsByNormalMode(davinCiDev common.DavinCiDev)
 	return []common.NpuDevice{hnm.assembleNpuDeviceStruct(hnm.name, deviceName, davinCiDev)}
 }
 
-func (hnm *HwAscend310Manager) getNPUsByShareMode(davinCiDev common.DavinCiDev) []common.NpuDevice {
-	shareDevices := make([]common.NpuDevice, 0, common.ParamOption.ShareCount)
-	for id := uint(davinCiDev.LogicID) * common.ParamOption.ShareCount; id < uint(davinCiDev.LogicID+1)*
-		common.ParamOption.ShareCount; id++ {
-		deviceName := fmt.Sprintf("%s-%d", hnm.name, id)
-		device := hnm.assembleNpuDeviceStruct(hnm.name, deviceName, davinCiDev)
-		shareDevices = append(shareDevices, device)
-	}
-	return shareDevices
-}
-
 // DoWithVolcanoListAndWatch ascend310 watch device
 func (hnm *HwAscend310Manager) DoWithVolcanoListAndWatch(classifyDevs map[string][]*common.NpuDevice) {
 	devStatusSet := hnm.getDevStatesDevSet(classifyDevs)

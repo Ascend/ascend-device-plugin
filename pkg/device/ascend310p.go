@@ -69,14 +69,21 @@ func (hnm *HwAscend310PManager) GetNPUs() (common.NpuAllInfo, error) {
 		if vDevInfos.TotalResource.VDevNum > common.MaxVirtualDeviceNum {
 			return common.NpuAllInfo{}, fmt.Errorf("invalid virtual device count")
 		}
+		if vDevInfos.TotalResource.VDevNum > 0 && common.ShareDev() {
+			return common.NpuAllInfo{}, fmt.Errorf("virtual device is exist, shareCount should be 1")
+		}
 		if !common.ParamOption.PresetVDevice {
 			common.FakeAiCoreDevice(davinCiDev, &aiCoreDevices)
 		}
-		if vDevInfos.TotalResource.VDevNum == 0 {
-			hnm.assemblePhyDevices(davinCiDev, &allDevices, &allDeviceTypes)
+		if vDevInfos.TotalResource.VDevNum > 0 {
+			hnm.assembleVirtualDevices(davinCiDev, vDevInfos, &allDevices, &allDeviceTypes)
 			continue
 		}
-		hnm.assembleVirtualDevices(davinCiDev, vDevInfos, &allDevices, &allDeviceTypes)
+		if common.ShareDev() {
+			hnm.assembleShareModeDevices(davinCiDev, &allDevices, &allDeviceTypes)
+		} else {
+			hnm.assemblePhyDevices(davinCiDev, &allDevices, &allDeviceTypes)
+		}
 	}
 	allDeviceTypes = hnm.removeDuplicate(&allDeviceTypes)
 	return common.NpuAllInfo{AllDevs: allDevices, AICoreDevs: aiCoreDevices, AllDevTypes: allDeviceTypes}, nil

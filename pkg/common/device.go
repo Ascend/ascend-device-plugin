@@ -28,6 +28,10 @@ import (
 
 // GetDeviceID get device physical id and virtual by device name
 func GetDeviceID(deviceName string, ascendRuntimeOptions string) (int, int, error) {
+	// share mode of ascend310 ascend310P:davinci-devID-index, like Ascend310P-0-99
+	if ShareDev() {
+		deviceName = deviceName[:strings.LastIndex(deviceName, MiddelLine)]
+	}
 	// hiAIAscend310Prefix: davinci-mini
 	// vnpu: davinci-coreNum-vid-devID, like Ascend910-2c-111-0
 	// ascend310:  davinci-mini0
@@ -74,9 +78,6 @@ func GetDeviceListID(devices []string, ascendRuntimeOptions string) (map[int]int
 			phyDevMapVirtualDev[virID] = deviceID
 			continue
 		}
-		if ShareDev() {
-			deviceID = deviceID / int(ParamOption.ShareCount)
-		}
 		ascendVisibleDevices = append(ascendVisibleDevices, deviceID)
 	}
 	return phyDevMapVirtualDev, ascendVisibleDevices, nil
@@ -84,7 +85,8 @@ func GetDeviceListID(devices []string, ascendRuntimeOptions string) (map[int]int
 
 // ShareDev open the share dev function
 func ShareDev() bool {
-	return ParamOption.ShareCount > 1 && ParamOption.RealCardType == Ascend310B
+	return ParamOption.ShareCount > 1 &&
+		(ParamOption.RealCardType == Ascend310B || ParamOption.RealCardType == Ascend310P)
 }
 
 // IsVirtualDev used to judge whether a physical device or a virtual device
