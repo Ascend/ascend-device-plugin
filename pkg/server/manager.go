@@ -53,11 +53,11 @@ type HwDevManager struct {
 func NewHwDevManager(devM devmanager.DeviceInterface) *HwDevManager {
 	var hdm HwDevManager
 	if err := hdm.setAscendManager(devM); err != nil {
-		hwlog.RunLog.Errorf("init hw dev manager failed, err: %#v", err)
+		hwlog.RunLog.Errorf("init hw dev manager failed, err: %v", err)
 		return nil
 	}
 	if err := hdm.setAllDeviceAndType(); err != nil {
-		hwlog.RunLog.Errorf("set all device and type failed, err: %#v", err)
+		hwlog.RunLog.Errorf("set all device and type failed, err: %v", err)
 		return nil
 	}
 	if err := hdm.checkSupportedProductType(); err != nil {
@@ -65,7 +65,7 @@ func NewHwDevManager(devM devmanager.DeviceInterface) *HwDevManager {
 		return nil
 	}
 	if err := hdm.initPluginServer(); err != nil {
-		hwlog.RunLog.Errorf("init plugin server failed, err: %#v", err)
+		hwlog.RunLog.Errorf("init plugin server failed, err: %v", err)
 		return nil
 	}
 	return &hdm

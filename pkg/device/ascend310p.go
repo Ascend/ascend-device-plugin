@@ -70,7 +70,7 @@ func (hnm *HwAscend310PManager) GetNPUs() (common.NpuAllInfo, error) {
 			return common.NpuAllInfo{}, fmt.Errorf("invalid virtual device count")
 		}
 		if vDevInfos.TotalResource.VDevNum > 0 && common.ShareDev() {
-			return common.NpuAllInfo{}, fmt.Errorf("virtual device is exist, shareCount should be 1")
+			return common.NpuAllInfo{}, fmt.Errorf("virtual device is exist, shareDevCount should be 1")
 		}
 		if !common.ParamOption.PresetVDevice {
 			common.FakeAiCoreDevice(davinCiDev, &aiCoreDevices)
