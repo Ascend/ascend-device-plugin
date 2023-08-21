@@ -176,7 +176,7 @@ func (hnm *HwAscend910Manager) updateDeviceInfo(oldDevInfo, newDevInfo map[strin
 	if common.ParamOption.AutoStowingDevs {
 		return nil
 	}
-	if err := hnm.updateNodeLabel(curNode, newDevRecoverLabel, hnm.getPatchLabel(newNetRecoverSets)); err != nil {
+	if err := hnm.update910NodeLabel(curNode, newDevRecoverLabel, hnm.getPatchLabel(newNetRecoverSets)); err != nil {
 		hwlog.RunLog.Errorf("update node label failed, err: %#v", err)
 		return err
 	}
@@ -184,7 +184,7 @@ func (hnm *HwAscend910Manager) updateDeviceInfo(oldDevInfo, newDevInfo map[strin
 	return nil
 }
 
-func (hnm *HwAscend910Manager) updateNodeLabel(curNode *v1.Node, devRecoverLabel, netRecoverLabel string) error {
+func (hnm *HwAscend910Manager) update910NodeLabel(curNode *v1.Node, devRecoverLabel, netRecoverLabel string) error {
 	newNode := curNode.DeepCopy()
 	newNode.Labels[common.HuaweiRecoverAscend910] = devRecoverLabel
 	newNode.Labels[common.HuaweiNetworkRecoverAscend910] = netRecoverLabel

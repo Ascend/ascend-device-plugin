@@ -40,7 +40,7 @@ const (
 // TestTestNewHwDevManager for testTestNewHwDevManager
 func TestNewHwDevManager(t *testing.T) {
 	convey.Convey("test NewHwDevManager", t, func() {
-		mockGetDevType := gomonkey.ApplyMethod(reflect.TypeOf(new(HwDevManager)), "UpdateServerType",
+		mockGetDevType := gomonkey.ApplyMethod(reflect.TypeOf(new(HwDevManager)), "UpdateNodeLabel",
 			func(_ *HwDevManager) error {
 				return nil
 			})
@@ -69,7 +69,7 @@ func TestNewHwDevManager(t *testing.T) {
 
 // TestStartAllServer for testStartAllServer
 func TestStartAllServer(t *testing.T) {
-	mockGetDevType := gomonkey.ApplyMethod(reflect.TypeOf(new(HwDevManager)), "UpdateServerType",
+	mockGetDevType := gomonkey.ApplyMethod(reflect.TypeOf(new(HwDevManager)), "UpdateNodeLabel",
 		func(_ *HwDevManager) error {
 			return nil
 		})
@@ -102,7 +102,7 @@ func TestUpdatePodAnnotation(t *testing.T) {
 			RealDevice: []string{""},
 		},
 	}
-	mockGetDevType := gomonkey.ApplyMethod(reflect.TypeOf(new(HwDevManager)), "UpdateServerType",
+	mockGetDevType := gomonkey.ApplyMethod(reflect.TypeOf(new(HwDevManager)), "UpdateNodeLabel",
 		func(_ *HwDevManager) error {
 			return nil
 		})
@@ -143,7 +143,7 @@ func TestUpdatePodAnnotation(t *testing.T) {
 
 // TestUpdateDevice for testUpdateDevice
 func TestUpdateDevice(t *testing.T) {
-	mockGetDevType := gomonkey.ApplyMethod(reflect.TypeOf(new(HwDevManager)), "UpdateServerType",
+	mockGetDevType := gomonkey.ApplyMethod(reflect.TypeOf(new(HwDevManager)), "UpdateNodeLabel",
 		func(_ *HwDevManager) error {
 			return nil
 		})
@@ -172,7 +172,7 @@ func TestUpdateDevice(t *testing.T) {
 
 // TestNotifyToK8s for testNotifyToK8s
 func TestNotifyToK8s(t *testing.T) {
-	mockGetDevType := gomonkey.ApplyMethod(reflect.TypeOf(new(HwDevManager)), "UpdateServerType",
+	mockGetDevType := gomonkey.ApplyMethod(reflect.TypeOf(new(HwDevManager)), "UpdateNodeLabel",
 		func(_ *HwDevManager) error {
 			return nil
 		})

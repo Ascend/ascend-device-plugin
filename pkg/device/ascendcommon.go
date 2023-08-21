@@ -51,6 +51,7 @@ type AscendTools struct {
 	client       *kubeclient.ClientK8s
 	dmgr         devmanager.DeviceInterface
 	name         string
+	deviceUsage  string
 	unHealthyKey string
 	devCount     int32
 	healthDevice sets.String
@@ -75,6 +76,8 @@ type DevManager interface {
 	CreateVirtualDevice(int32, string) (string, error)
 	DestroyVirtualDevice(string) error
 	GetChipAiCoreCount() (int32, error)
+	SetDeviceUsage(int32) error
+	GetDeviceUsage() string
 }
 
 // SetDmgr set devmanager
@@ -427,7 +430,7 @@ func (tool *AscendTools) getDeviceListIP(devices []string, deviceType string) (m
 	}
 	devicesWithIP := make(map[int]string, len(devices))
 	for _, id := range ascendDevices {
-		if !strings.Contains(deviceType, common.Ascend910) {
+		if tool.deviceUsage == common.Infer {
 			devicesWithIP[id] = ""
 			continue
 		}
@@ -767,7 +770,7 @@ func (tool *AscendTools) writeNewFaultCode(deviceMap map[string][]*common.NpuDev
 		for idx, device := range devices {
 			tool.flushFaultCodesWithInit(device, initLogicIDs, devFaultInfoMap)
 			device.Health = isHealthy(device, podList)
-			if runMode == common.Ascend910 {
+			if runMode == common.Ascend910 && tool.deviceUsage == common.Train {
 				devices[idx].NetworkHealth = tool.getDeviceNetworkState(device.LogicID)
 			}
 		}
@@ -844,4 +847,31 @@ func (tool *AscendTools) assembleShareModeDevices(davinCiDev common.DavinCiDev, 
 	device := tool.getNPUsByShareMode(davinCiDev)
 	*devices = append(*devices, device...)
 	*deviceTypes = append(*deviceTypes, tool.name)
+}
+
+// SetDeviceUsage set usage of device according to board info
+func (tool *AscendTools) SetDeviceUsage(devLogicID int32) error {
+	devType := tool.dmgr.GetDevType()
+	if strings.HasPrefix(devType, common.Ascend310) {
+		tool.deviceUsage = common.Infer
+		return nil
+	}
+
+	boardInfo, err := tool.dmgr.GetBoardInfo(devLogicID)
+	if err != nil {
+		hwlog.RunLog.Errorf("%#v", err)
+		return fmt.Errorf("set device usage error")
+	}
+	if boardInfo.BoardId == common.A300IA2BoardId {
+		tool.deviceUsage = common.Infer
+		return nil
+	}
+
+	tool.deviceUsage = common.Train
+	return nil
+}
+
+// GetDeviceUsage return usage of device, infer or train
+func (tool *AscendTools) GetDeviceUsage() string {
+	return tool.deviceUsage
 }
