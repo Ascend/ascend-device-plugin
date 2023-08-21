@@ -16,104 +16,82 @@
 package kubeclient
 
 import (
-	"fmt"
-	"time"
+	"sync"
 
-	"Ascend-device-plugin/pkg/common"
 	"huawei.com/npu-exporter/v5/common-utils/hwlog"
 	"k8s.io/api/core/v1"
+
+	"Ascend-device-plugin/pkg/common"
 )
 
-var podUpdateSecond int64
-var podList *v1.PodList
+const podDeleteOperator = "delete"
+const podAddOperator = "add"
+const podUpdateOperator = "update"
 
-// GetAllPodListNoCache get pod list by field selector latest and flush cache
-func (ki *ClientK8s) GetAllPodListNoCache() (*v1.PodList, error) {
-	if common.ParamOption.CacheExpirePeriod < 1 {
-		return ki.GetAllPodList()
+var podList []v1.Pod
+var lock sync.Mutex
+
+// UpdatePodList update pod list by informer
+func UpdatePodList(oldObj, newObj interface{}, operator string) {
+	newPod, ok := newObj.(*v1.Pod)
+	if !ok {
+		return
 	}
-	newPodList, err := ki.GetAllPodList()
-	if err != nil {
-		return nil, err
+	lock.Lock()
+	defer lock.Unlock()
+	switch operator {
+	case podAddOperator:
+		podList = append(podList, *newPod)
+	case podDeleteOperator:
+		for i, localPod := range podList {
+			if localPod.Namespace == newPod.Namespace && localPod.Name == newPod.Name {
+				podList = append(podList[:i], podList[i+1:]...)
+				return
+			}
+		}
+		hwlog.RunLog.Infof("pod delete failed, pod %s already delete", newPod.Name)
+	case podUpdateOperator:
+		oldPod, ok := oldObj.(*v1.Pod)
+		if !ok {
+			return
+		}
+		for i, localPod := range podList {
+			if localPod.UID == oldPod.UID {
+				podList[i] = *newPod
+				return
+			}
+		}
+		podList = append(podList, *newPod)
+		hwlog.RunLog.Infof("pod %s update failed, use add", newPod.Name)
 	}
-	// listAndWatch、Allocate、ListenDevice three thread minimum possible both set podList
-	// if set lock will reduce the performance. set podList before set podUpdateSecond, it can work normally
-	podList = newPodList
-	podUpdateSecond = time.Now().Unix()
-	return podList, nil
 }
 
-// GetAllPodListCache get pod list by field selector with cache
-func (ki *ClientK8s) GetAllPodListCache() (*v1.PodList, error) {
-	if common.ParamOption.CacheExpirePeriod < 1 {
-		return ki.GetAllPodList()
-	}
-	if podUpdateSecond+common.ParamOption.CacheExpirePeriod > time.Now().Unix() {
-		return podList, nil
-	}
-	newPodList, err := ki.GetAllPodList()
-	if err != nil {
-		return nil, err
-	}
-	// listAndWatch、Allocate、ListenDevice three thread minimum possible both set podList
-	// if set lock will reduce the performance. set podList before set podUpdateSecond, it can work normally
-	podList = newPodList
-	podUpdateSecond = time.Now().Unix()
-	return podList, nil
-}
-
-// GetActivePodListNoCache is to get active pod list latest and flush cache
-func (ki *ClientK8s) GetActivePodListNoCache() ([]v1.Pod, error) {
-	if common.ParamOption.CacheExpirePeriod < 1 {
-		return ki.GetActivePodList()
-	}
-	newPodList, err := ki.GetAllPodListNoCache()
-	if err != nil {
-		return nil, err
-	}
-	if newPodList == nil {
-		return nil, fmt.Errorf("pod list is invalid")
-	}
-	return filterStatus(newPodList.Items), nil
+// GetAllPodListCache get pod list by field selector with cache,
+func (ki *ClientK8s) GetAllPodListCache() []v1.Pod {
+	return podList
 }
 
 // GetActivePodListCache is to get active pod list with cache
-func (ki *ClientK8s) GetActivePodListCache() ([]v1.Pod, error) {
-	if common.ParamOption.CacheExpirePeriod < 1 {
-		return ki.GetActivePodList()
+func (ki *ClientK8s) GetActivePodListCache() []v1.Pod {
+	if len(podList) == 0 {
+		return []v1.Pod{}
 	}
-	newPodList, err := ki.GetAllPodListCache()
-	if err != nil {
-		return nil, err
-	}
-	if newPodList == nil {
-		return nil, fmt.Errorf("pod list is invalid")
-	}
-	return filterStatus(newPodList.Items), nil
-}
-
-func filterStatus(pods []v1.Pod) []v1.Pod {
-	if pods == nil {
-		return pods
-	}
-	if len(pods) >= common.MaxPodLimit {
-		return pods
-	}
-	var newPods []v1.Pod
-	for _, pod := range pods {
-		if err := common.CheckPodNameAndSpace(pod.Name, common.PodNameMaxLength); err != nil {
+	var newPodList []v1.Pod
+	lock.Lock()
+	defer lock.Unlock()
+	for _, pod := range podList {
+		if err := common.CheckPodNameAndSpace(pod.GetName(), common.PodNameMaxLength); err != nil {
 			hwlog.RunLog.Warnf("pod name syntax illegal, err: %#v", err)
 			continue
 		}
-		if err := common.CheckPodNameAndSpace(pod.Namespace, common.PodNameSpaceMaxLength); err != nil {
+		if err := common.CheckPodNameAndSpace(pod.GetNamespace(), common.PodNameSpaceMaxLength); err != nil {
 			hwlog.RunLog.Warnf("pod namespace syntax illegal, err: %#v", err)
 			continue
 		}
 		if pod.Status.Phase == v1.PodFailed || pod.Status.Phase == v1.PodSucceeded {
-			hwlog.RunLog.Debugf("pod status: %v is not active", pod.Status.Phase)
 			continue
 		}
-		newPods = append(newPods, pod)
+		newPodList = append(newPodList, pod)
 	}
-	return newPods
+	return newPodList
 }

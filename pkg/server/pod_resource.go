@@ -186,7 +186,7 @@ func (pr *PodResource) stop() {
 }
 
 // IsPodMoveComplete is UnHealthy Pod remove complete
-func (pr *PodResource) IsPodMoveComplete(deviceName string, podList *v1.PodList, ps *PluginServer) bool {
+func (pr *PodResource) IsPodMoveComplete(deviceName string, podList []v1.Pod, ps *PluginServer) bool {
 	hwlog.RunLog.Infof("check is pod real use chip %s move complete or not", deviceName)
 	podResourceList, err := pr.getValidPodResources(podList)
 	if err != nil {
@@ -222,7 +222,7 @@ func (pr *PodResource) getKltDev(ps *PluginServer, deviceName string) string {
 	return k8sDev
 }
 
-func (pr *PodResource) getValidPodResources(podList *v1.PodList) ([]PodDevice, error) {
+func (pr *PodResource) getValidPodResources(podList []v1.Pod) ([]PodDevice, error) {
 	var res []PodDevice
 	podResourceList, err := pr.GetPodResource()
 	if err != nil {
@@ -237,8 +237,8 @@ func (pr *PodResource) getValidPodResources(podList *v1.PodList) ([]PodDevice, e
 	return res, nil
 }
 
-func (pr *PodResource) isValidPod(podResourceKey string, podList *v1.PodList) bool {
-	for _, pod := range podList.Items {
+func (pr *PodResource) isValidPod(podResourceKey string, podList []v1.Pod) bool {
+	for _, pod := range podList {
 		if podResourceKey == pod.Namespace+common.UnderLine+pod.Name {
 			return true
 		}
