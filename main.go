@@ -134,6 +134,10 @@ func checkParam() bool {
 		hwlog.RunLog.Error("presetVirtualDevice is false, shareDevCount should be 1")
 		return false
 	}
+	if *volcanoType && *shareDevCount > 1 {
+		hwlog.RunLog.Error("volcanoType is true, shareDevCount should be 1")
+		return false
+	}
 	switch *hotReset {
 	case common.HotResetClose, common.HotResetInfer, common.HotResetTrain:
 	default:
