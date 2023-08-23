@@ -21,6 +21,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"time"
 
 	"huawei.com/npu-exporter/v5/common-utils/hwlog"
 	"k8s.io/api/core/v1"
@@ -111,10 +112,7 @@ func (ps *PluginServer) getUnhealthyAICore() sets.String {
 
 // GetRealUsedAICore get real used aicore from pod
 func (ps *PluginServer) GetRealUsedAICore() (map[string]string, error) {
-	podList, err := ps.manager.GetKubeClient().GetActivePodListCache()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get active pod list, %w", err)
-	}
+	podList := ps.manager.GetKubeClient().GetActivePodListCache()
 	podDeviceInfo, err := ps.GetKltAndRealAllocateDev(podList)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get klt and real allocate device, %w", err)
@@ -468,11 +466,8 @@ func (ps *PluginServer) DestroyNotUsedVNPU() error {
 	if err != nil {
 		return err
 	}
-	podList, err := ps.manager.GetKubeClient().GetAllPodListCache()
-	if err != nil {
-		return err
-	}
-	podDeviceInfo, err := ps.GetKltAndRealAllocateDev(podList.Items)
+	podList := ps.manager.GetKubeClient().GetAllPodListCache()
+	podDeviceInfo, err := ps.GetKltAndRealAllocateDev(podList)
 	if err != nil {
 		return err
 	}
@@ -610,16 +605,21 @@ func (ps *PluginServer) doWithVolcanoSchedule(requestDevices []string) ([]string
 	conditionFunc := func(pod *v1.Pod) bool {
 		return checkAnnotationAllocateValid(requestDevices, ps.deviceType, pod, ps.manager.GetChipAICore())
 	}
-	allPods, err := ps.manager.GetKubeClient().GetActivePodListNoCache()
-	if err != nil {
-		return nil, err
+	var pods []v1.Pod
+	for i := 0; i < common.GetPodFromInformerTime; i++ {
+		allPods := ps.manager.GetKubeClient().GetActivePodListCache()
+		pods = common.FilterPods(allPods, ps.deviceType, conditionFunc)
+		if len(pods) != 0 {
+			break
+		}
+		time.Sleep(time.Second)
 	}
-	pods := common.FilterPods(allPods, ps.deviceType, conditionFunc)
 	oldestPod := ps.getOldestPod(pods)
 	if oldestPod == nil {
 		return nil, fmt.Errorf("not get valid pod")
 	}
 	var allocateDevices []string
+	var err error
 	if !common.ParamOption.PresetVDevice {
 		common.LockAllDeviceInfo()
 		allocateDevices, err = ps.getAICoreFromPodAnnotation(oldestPod, ps.deviceType)

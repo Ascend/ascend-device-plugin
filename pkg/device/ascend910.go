@@ -308,16 +308,12 @@ func (hnm *HwAscend910Manager) updateHotResetCache(classifyDevs map[string][]*co
 }
 
 func (hnm *HwAscend910Manager) setTaskDevInfoCache() error {
-	podList, err := hnm.client.GetAllPodList()
-	if err != nil {
-		hwlog.RunLog.Errorf("failed to get pod list when update task, err: %#v", err)
-		return err
-	}
+	podList := hnm.client.GetAllPodListCache()
 	newTaskDevListCache := make(map[string][]int32)
 	newTaskDevFaultInfoCache := make(map[string][]*common.TaskDevInfo)
 	newTaskPodCache := make(map[string]v1.Pod)
 	taskListUsedDevice := make(map[string]struct{})
-	for _, pod := range podList.Items {
+	for _, pod := range podList {
 		annotationTag := fmt.Sprintf("%s%s", common.ResourceNamePrefix, common.Ascend910)
 		tmpNpu, ok := pod.Annotations[annotationTag]
 		if !ok || len(tmpNpu) == 0 || len(tmpNpu) > common.PodAnnotationMaxLength {

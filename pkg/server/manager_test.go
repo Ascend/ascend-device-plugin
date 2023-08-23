@@ -121,9 +121,9 @@ func TestUpdatePodAnnotation(t *testing.T) {
 				func(_ *device.AscendTools, _ *v1.Pod, _ []string, _ []string, _ string, _ string) error {
 					return nil
 				})
-			mockPodList := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)), "GetActivePodList",
-				func(_ *kubeclient.ClientK8s) ([]v1.Pod, error) {
-					return []v1.Pod{}, nil
+			mockPodList := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)), "GetActivePodListCache",
+				func(_ *kubeclient.ClientK8s) []v1.Pod {
+					return []v1.Pod{}
 				})
 			mockClearCM := gomonkey.ApplyPrivateMethod(reflect.TypeOf(new(HwDevManager)), "tryToClearResetInfoCM",
 				func(_ *HwDevManager, _ v1.Pod) error {

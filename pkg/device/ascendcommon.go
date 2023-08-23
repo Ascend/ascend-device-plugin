@@ -285,11 +285,7 @@ func getResetInfoData(resetInfo *v1.ConfigMap) ([]*common.TaskDevInfo, error) {
 }
 
 func (tool *AscendTools) getRealUsedDevices() sets.String {
-	podList, err := tool.client.GetActivePodListCache()
-	if err != nil {
-		hwlog.RunLog.Warn(err)
-		return sets.String{}
-	}
+	podList := tool.client.GetActivePodListCache()
 	usedDevice := sets.String{}
 	for _, pod := range podList {
 		realDevice, exist := pod.Annotations[common.ResourceNamePrefix+common.PodRealAlloc]
@@ -564,7 +560,7 @@ func classifyDevByType(allDevs []common.NpuDevice, suffix string) []*common.NpuD
 	return classifyDev
 }
 
-func isHealthy(device *common.NpuDevice, podList *v1.PodList) string {
+func isHealthy(device *common.NpuDevice, podList []v1.Pod) string {
 	// in large model, NotHandleFault: Healthy, SeparateNPU: Unhealthy,
 	// PreSeparateNPU and npu used: Healthy, PreSeparateNPU and npu free: Unhealthy
 	if common.ParamOption.UseLargeModel && common.ParamOption.HotReset != common.HotResetTrain {
@@ -587,8 +583,8 @@ func isHealthy(device *common.NpuDevice, podList *v1.PodList) string {
 	return v1beta1.Unhealthy
 }
 
-func npuIsUsedNow(deviceName string, podList *v1.PodList) bool {
-	for _, pod := range podList.Items {
+func npuIsUsedNow(deviceName string, podList []v1.Pod) bool {
+	for _, pod := range podList {
 		annotationTag := fmt.Sprintf("%s%s", common.ResourceNamePrefix, common.Ascend910)
 		tmpNpu, ok := pod.Annotations[annotationTag]
 		if !ok || len(tmpNpu) == 0 || len(tmpNpu) > common.PodAnnotationMaxLength {
@@ -759,9 +755,9 @@ func (tool *AscendTools) getAiCoreCount(cgoVDevInfo npuCommon.VirtualDevInfo) (i
 func (tool *AscendTools) writeNewFaultCode(deviceMap map[string][]*common.NpuDevice, runMode string) {
 	initLogicIDs := common.GetAndCleanLogicID()
 	devFaultInfoMap := common.GetAndCleanFaultInfo()
-	var podList *v1.PodList
+	var podList []v1.Pod
 	if common.ParamOption.UseLargeModel && common.ParamOption.HotReset != common.HotResetTrain {
-		podList, _ = tool.client.GetAllPodListCache()
+		podList = tool.client.GetAllPodListCache()
 	}
 	for _, devices := range deviceMap {
 		for idx, device := range devices {

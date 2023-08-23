@@ -35,6 +35,8 @@ const (
 	MaxContainerLimit = 300000
 	// RetryUpdateCount is max number of retry resource update
 	RetryUpdateCount = 3
+	// GetPodFromInformerTime is max number of get pod from informer
+	GetPodFromInformerTime = 3
 	// MaxDeviceNameLen max length of device name, like "Ascend310P-4c.3cpu-100-0"
 	MaxDeviceNameLen = 50
 	// MaxGRPCRecvMsgSize 4MB

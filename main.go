@@ -179,7 +179,6 @@ func main() {
 		return
 	}
 	setUseAscendDocker()
-
 	go hdm.ListenDevice(ctx)
 	hdm.SignCatch(cancel)
 }

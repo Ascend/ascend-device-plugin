@@ -115,6 +115,7 @@ func (hdm *HwDevManager) UpdateServerType() error {
 		return err
 	}
 	hdm.manager.SetKubeClient(kubeClient)
+	hdm.manager.GetKubeClient().InitPodInformer()
 	hwlog.RunLog.Info("init kube client success")
 	aiCoreCount, err := hdm.manager.GetChipAiCoreCount()
 	if err != nil {
@@ -598,10 +599,7 @@ func (hdm *HwDevManager) updateSpecTypePodAnnotation(deviceType, serverID string
 	if !ok {
 		return fmt.Errorf("serverMap convert %s failed", deviceType)
 	}
-	podList, err := hdm.manager.GetKubeClient().GetActivePodListNoCache()
-	if err != nil {
-		return err
-	}
+	podList := hdm.manager.GetKubeClient().GetActivePodListCache()
 	podDeviceInfo, err := pluginServer.GetKltAndRealAllocateDev(podList)
 	if err != nil {
 		return err
@@ -661,11 +659,7 @@ func (hdm *HwDevManager) hotReset(device *common.NpuDevice) {
 }
 
 func (hdm *HwDevManager) isPodRemove(devType string, device *common.NpuDevice, prClient *PodResource) bool {
-	podList, err := hdm.manager.GetKubeClient().GetAllPodListCache()
-	if err != nil {
-		hwlog.RunLog.Errorf("get pod list failed, err: %#v", err)
-		return false
-	}
+	podList := hdm.manager.GetKubeClient().GetAllPodListCache()
 	element, exist := hdm.ServerMap[devType]
 	if !exist {
 		hwlog.RunLog.Errorf("not found %s plugin server", devType)
