@@ -203,6 +203,26 @@ const (
 	Ascend910c12Cpu3Gb32Dvpp = Ascend910 + "-" + Core12Cpu3Gb32Dvpp
 	// Ascend910c12Cpu3Gb32Ndvpp Ascend910 12core 3cpu 32Gb memory ndvpp
 	Ascend910c12Cpu3Gb32Ndvpp = Ascend910 + "-" + Core12Cpu3Gb32Ndvpp
+	// Ascend910c3Cpu1Gb8 Ascend910 3core 1cpu 8Gb memory
+	Ascend910c3Cpu1Gb8 = Ascend910 + "-" + Core3Cpu1Gb8
+	// Ascend910c5Cpu2Gb8 Ascend910 5core 2cpu 8Gb memory dvpp
+	Ascend910c5Cpu2Gb8 = Ascend910 + "-" + Core5Cpu2Gb8
+	// Ascend910c5Cpu2Gb16 Ascend910 5core 2cpu 16Gb memory
+	Ascend910c5Cpu2Gb16 = Ascend910 + "-" + Core5Cpu2Gb16
+	// Ascend910c6Cpu3Gb16 Ascend910 6core 3cpu 16Gb memory dvpp
+	Ascend910c6Cpu3Gb16 = Ascend910 + "-" + Core6Cpu3Gb16
+	// Ascend910c10Cpu4Gb16 Ascend910 10core 4cpu 16Gb memory
+	Ascend910c10Cpu4Gb16 = Ascend910 + "-" + Core10Cpu4Gb16
+	// Ascend910c10Cpu4Gb16Dvpp Ascend910 10core 4cpu 16Gb memory dvpp
+	Ascend910c10Cpu4Gb16Dvpp = Ascend910 + "-" + Core10Cpu4Gb16Dvpp
+	// Ascend910c10Cpu4Gb32 Ascend910 10core 4cpu 32Gb memory
+	Ascend910c10Cpu4Gb32 = Ascend910 + "-" + Core10Cpu4Gb32
+	// Ascend910c10Cpu4Gb32Dvpp Ascend910 10core 4cpu 32Gb memory dvpp
+	Ascend910c10Cpu4Gb32Dvpp = Ascend910 + "-" + Core10Cpu4Gb32Dvpp
+	// Ascend910c12Cpu4Gb32 Ascend910 12core 4cpu 32Gb memory
+	Ascend910c12Cpu4Gb32 = Ascend910 + "-" + Core12Cpu4Gb32
+	// Ascend910c12Cpu4Gb32Dvpp Ascend910 12core 4cpu 32Gb memory dvpp
+	Ascend910c12Cpu4Gb32Dvpp = Ascend910 + "-" + Core12Cpu4Gb32Dvpp
 	// HuaweiAscend910 with prefix
 	HuaweiAscend910 = ResourceNamePrefix + Ascend910
 
@@ -249,6 +269,8 @@ const (
 	Core2Cpu1 = "2c.1cpu"
 	// Core3HalfCpuGb8 3 core, 0.5 cpu and 8GB memory
 	Core3HalfCpuGb8 = "3c.0.5cpu.8g"
+	// Core3Cpu1Gb8 3 core, 1 cpu and 8GB memory
+	Core3Cpu1Gb8 = "3c.1cpu.8g"
 	// Core4 4 core
 	Core4 = "4c"
 	// Core4Cpu3 4core 3cpu
@@ -261,8 +283,14 @@ const (
 	Core5Cpu1Gb8 = "5c.1cpu.8g"
 	// Core5Cpu1Gb16 5 core, 1 cpu and 16GB memory
 	Core5Cpu1Gb16 = "5c.1cpu.16g"
+	// Core5Cpu2Gb8 5 core, 2 cpu and 8GB memory
+	Core5Cpu2Gb8 = "5c.2cpu.8g"
+	// Core5Cpu2Gb16 5 core, 2 cpu and 16GB memory
+	Core5Cpu2Gb16 = "5c.2cpu.16g"
 	// Core6Cpu1Gb16 6 core, 1 cpu and 16GB memory
 	Core6Cpu1Gb16 = "6c.1cpu.16g"
+	// Core6Cpu3Gb16 6 core, 3 cpu and 16GB memory
+	Core6Cpu3Gb16 = "6c.3cpu.16g"
 	// Core8 8 core
 	Core8 = "8c"
 	// Core10Cpu3Gb16 10 core, 3 cpu and 16Gb memory
@@ -277,12 +305,24 @@ const (
 	Core10Cpu3Gb32Dvpp = "10c.3cpu.32g.dvpp"
 	// Core10Cpu3Gb32Ndvpp 10 core, 3 cpu, 32GB memory and ndvpp
 	Core10Cpu3Gb32Ndvpp = "10c.3cpu.32g.ndvpp"
+	// Core10Cpu4Gb16 10 core, 4 cpu and 16Gb memory
+	Core10Cpu4Gb16 = "10c.4cpu.16g"
+	// Core10Cpu4Gb16Dvpp 10 core, 4 cpu, 16Gb memory and dvpp
+	Core10Cpu4Gb16Dvpp = "10c.4cpu.16g.dvpp"
+	// Core10Cpu4Gb32 10 core, 4 cpu and 32Gb memory
+	Core10Cpu4Gb32 = "10c.4cpu.32g"
+	// Core10Cpu4Gb32Dvpp 10 core, 4 cpu, 32Gb memory and dvpp
+	Core10Cpu4Gb32Dvpp = "10c.4cpu.32g.dvpp"
 	// Core12Cpu3Gb32 12 core, 3 cpu and 32GB memory
 	Core12Cpu3Gb32 = "12c.3cpu.32g"
 	// Core12Cpu3Gb32Dvpp 12 core, 3 cpu, 32GB memory and dvpp
 	Core12Cpu3Gb32Dvpp = "12c.3cpu.32g.dvpp"
 	// Core12Cpu3Gb32Ndvpp 12 core, 3 cpu, 32GB memory and ndvpp
 	Core12Cpu3Gb32Ndvpp = "12c.3cpu.32g.ndvpp"
+	// Core12Cpu4Gb32 12 core, 4 cpu and 32GB memory
+	Core12Cpu4Gb32 = "12c.4cpu.32g"
+	// Core12Cpu4Gb32Dvpp 12 core, 4 cpu, 32GB memory and dvpp
+	Core12Cpu4Gb32Dvpp = "12c.4cpu.32g.dvpp"
 	// Core16 16 core
 	Core16 = "16c"
 
@@ -294,6 +334,8 @@ const (
 	Vir02C1 = "vir02_1c"
 	// Vir03HCG8 template name vir03_hc_8g
 	Vir03HCG8 = "vir03_hc_8g"
+	// Vir03C1G8 template name vir03_1c_8g
+	Vir03C1G8 = "vir03_1c_8g"
 	// Vir04 template name vir04
 	Vir04 = "vir04"
 	// Vir04C3 template name vir04_3c
@@ -306,8 +348,14 @@ const (
 	Vir05C1G8 = "vir05_1c_8g"
 	// Vir05C1G16 template name vir05_1c_16g
 	Vir05C1G16 = "vir05_1c_16g"
+	// Vir05C2G8 template name vir05_2c_8g
+	Vir05C2G8 = "vir05_2c_8g"
+	// Vir05C2G16 template name vir05_2c_16g
+	Vir05C2G16 = "vir05_2c_16g"
 	// Vir06C1G16 template name vir06_1c_16g
 	Vir06C1G16 = "vir06_1c_16g"
+	// Vir06C2G16 template name vir06_2c_16g
+	Vir06C2G16 = "vir06_2c_16g"
 	// Vir08 template name vir08
 	Vir08 = "vir08"
 	// Vir10C3G16 template name vir10_3c_16g
@@ -322,12 +370,24 @@ const (
 	Vir10C3G32M = "vir10_3c_32g_m"
 	// Vir10C3G32NM template name vir10_3c_32g_nm
 	Vir10C3G32NM = "vir10_3c_32g_nm"
+	// Vir10C4G16 template name vir10_4c_16g
+	Vir10C4G16 = "vir10_4c_16g"
+	// Vir10C4G16M template name vir10_4c_16g_m
+	Vir10C4G16M = "vir10_4c_16g_m"
+	// Vir10C4G32 template name vir10_4c_32g
+	Vir10C4G32 = "vir10_4c_32g"
+	// Vir10C4G32M template name vir10_4c_32g_m
+	Vir10C4G32M = "vir10_4c_32g_m"
 	// Vir12C3G32 template name vir12_3c_32g
 	Vir12C3G32 = "vir12_3c_32g"
 	// Vir12C3G32M template name vir12_3c_32g_m
 	Vir12C3G32M = "vir12_3c_32g_m"
 	// Vir12C3G32NM template name vir12_3c_32g_nm
 	Vir12C3G32NM = "vir12_3c_32g_nm"
+	// Vir12C4G32 template name vir12_4c_32g
+	Vir12C4G32 = "vir12_4c_32g"
+	// Vir12C4G32M template name vir12_4c_32g_m
+	Vir12C4G32M = "vir12_4c_32g_m"
 	// Vir16 template name vir16
 	Vir16 = "vir16"
 
