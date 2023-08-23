@@ -122,18 +122,18 @@ func TestGetPodsUsedNpu(t *testing.T) {
 	}
 	podList := getMockPodList(common.HuaweiAscend310, npuChip310PhyID0)
 	convey.Convey("get used npu on pods without get pod list", t, func() {
-		mockPodList := gomonkey.ApplyMethod(reflect.TypeOf(new(ClientK8s)), "GetActivePodList",
-			func(_ *ClientK8s) ([]v1.Pod, error) {
-				return nil, fmt.Errorf("failed to get pod list")
+		mockPodList := gomonkey.ApplyMethod(reflect.TypeOf(new(ClientK8s)), "GetActivePodListCache",
+			func(_ *ClientK8s) []v1.Pod {
+				return nil
 			})
 		defer mockPodList.Reset()
 		useNpu := utKubeClient.GetPodsUsedNpu(common.Ascend310)
 		convey.So(useNpu, convey.ShouldEqual, sets.String{})
 	})
 	convey.Convey("get used npu on pods", t, func() {
-		mockPodList := gomonkey.ApplyMethod(reflect.TypeOf(new(ClientK8s)), "GetActivePodList",
-			func(_ *ClientK8s) ([]v1.Pod, error) {
-				return podList, nil
+		mockPodList := gomonkey.ApplyMethod(reflect.TypeOf(new(ClientK8s)), "GetActivePodListCache",
+			func(_ *ClientK8s) []v1.Pod {
+				return podList
 			})
 		defer mockPodList.Reset()
 		useNpu := utKubeClient.GetPodsUsedNpu(common.Ascend310)
