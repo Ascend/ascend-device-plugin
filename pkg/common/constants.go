@@ -404,14 +404,21 @@ const (
 	// DefaultIDForCreateVNPU default id for creating vnpu
 	DefaultIDForCreateVNPU = 0xFFFFFFFF
 
-	// ServerTypeLabelKey the node label key of server type
-	ServerTypeLabelKey = "servertype"
 	// ServerTypeInfoMinLen the min len of server type split data
 	ServerTypeInfoMinLen = 2
 	// VGroupAndDevLen a list only contain virtual group and device
 	VGroupAndDevLen = 2
 	// MaxShareDevCount open share device function, max share count is 100
 	MaxShareDevCount = 100
+)
+
+const (
+	// ServerTypeLabelKey the node label key of server type
+	ServerTypeLabelKey = "servertype"
+	// AcceleratorTypeKey the node label key of accelerator type
+	AcceleratorTypeKey = "accelerator-type"
+	// A300IA2Label the value of the A300I A2 node label
+	A300IA2Label = "card-910b-infer"
 )
 
 const (
@@ -498,6 +505,12 @@ const (
 	CenterScene = "center"
 	// EdgeScene deploy the device-plugin component on the edge side
 	EdgeScene = "edge"
+	// A300IA2BoardId board id of A300I A2
+	A300IA2BoardId = 0x28
+	// Infer means device for inference
+	Infer = "infer"
+	// Train means device for training
+	Train = "train"
 )
 
 // Special scene for invoking the dcmi interface

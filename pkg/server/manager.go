@@ -64,6 +64,10 @@ func NewHwDevManager(devM devmanager.DeviceInterface) *HwDevManager {
 		hwlog.RunLog.Errorf("check supported product type failed, err: %v", err)
 		return nil
 	}
+	if err := hdm.UpdateNodeLabel(); err != nil {
+		hwlog.RunLog.Errorf("update node label failed, err: %#v", err)
+		return nil
+	}
 	if err := hdm.initPluginServer(); err != nil {
 		hwlog.RunLog.Errorf("init plugin server failed, err: %v", err)
 		return nil
@@ -101,11 +105,12 @@ func (hdm *HwDevManager) setAscendManager(dmgr devmanager.DeviceInterface) error
 	if err = common.CheckCardUsageMode(common.ParamOption.Use310PMixedInsert, productTypes); err != nil {
 		return err
 	}
-	return hdm.UpdateServerType()
+	return nil
 }
 
-// UpdateServerType update server type, like Ascend910-32
-func (hdm *HwDevManager) UpdateServerType() error {
+// UpdateNodeLabel update server type, like Ascend910-32, and label of 910b infer card
+// other common label will be updated in the future
+func (hdm *HwDevManager) UpdateNodeLabel() error {
 	if common.ParamOption.BuildScene == common.EdgeScene {
 		return nil
 	}
@@ -123,11 +128,10 @@ func (hdm *HwDevManager) UpdateServerType() error {
 		return err
 	}
 	common.ParamOption.AiCoreCount = aiCoreCount
-	return hdm.updateNodeServerType(aiCoreCount)
-
+	return hdm.updateNodeLabels(aiCoreCount)
 }
 
-func (hdm *HwDevManager) updateNodeServerType(aiCoreCount int32) error {
+func (hdm *HwDevManager) updateNodeLabels(aiCoreCount int32) error {
 	oldNode, err := hdm.manager.GetKubeClient().GetNode()
 	if err != nil {
 		hwlog.RunLog.Errorf("failed to get node, err: %#v", err)
@@ -137,21 +141,34 @@ func (hdm *HwDevManager) updateNodeServerType(aiCoreCount int32) error {
 		hwlog.RunLog.Error("invalid node")
 		return fmt.Errorf("invalid node")
 	}
-	if _, ok := oldNode.Labels[common.ServerTypeLabelKey]; ok {
+	newLabelMap := make(map[string]string)
+	if _, ok := oldNode.Labels[common.ServerTypeLabelKey]; !ok {
+		newLabelMap[common.ServerTypeLabelKey] = common.ParamOption.RealCardType +
+			common.MiddelLine + strconv.Itoa(int(aiCoreCount))
+	}
+
+	if common.ParamOption.RealCardType == common.Ascend910B && hdm.manager.GetDeviceUsage() == common.Infer {
+		newLabelMap[common.AcceleratorTypeKey] = common.A300IA2Label
+	}
+
+	if len(newLabelMap) == 0 {
 		return nil
 	}
+
 	newNode := oldNode.DeepCopy()
-	newNode.Labels[common.ServerTypeLabelKey] = common.ParamOption.RealCardType +
-		common.MiddelLine + strconv.Itoa(int(aiCoreCount))
+	for key, value := range newLabelMap {
+		newNode.Labels[key] = value
+	}
+
 	for i := 0; i < common.RetryUpdateCount; i++ {
 		if _, _, err = hdm.manager.GetKubeClient().PatchNodeState(oldNode, newNode); err == nil {
-			hwlog.RunLog.Infof("update server type success")
+			hwlog.RunLog.Infof("update node label success")
 			return nil
 		}
-		hwlog.RunLog.Warnf("failed to patch server type to node, retry count:%d", i+1)
+		hwlog.RunLog.Warnf("failed to patch new label to node, retry count:%d", i+1)
 		time.Sleep(time.Second)
 	}
-	return fmt.Errorf("update server type to node label failed")
+	return fmt.Errorf("update node label failed")
 }
 
 func (hdm *HwDevManager) setAllDeviceAndType() error {
@@ -162,6 +179,10 @@ func (hdm *HwDevManager) setAllDeviceAndType() error {
 	if len(hdm.allInfo.AllDevTypes) == 0 {
 		return fmt.Errorf("no devices type found")
 	}
+	if err = hdm.manager.SetDeviceUsage(hdm.allInfo.AllDevs[0].LogicID); err != nil {
+		return err
+	}
+
 	return nil
 }
 
