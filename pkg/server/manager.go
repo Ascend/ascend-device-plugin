@@ -757,9 +757,18 @@ func (hdm *HwDevManager) graceTolerance(groupDevice map[string][]*common.NpuDevi
 		hwlog.RunLog.Debugf("train device hot reset mode error: %d", common.ParamOption.HotReset)
 		return
 	}
+	if hdm.isSupportGraceTolerance() {
+		hdm.manager.GraceTolerance(groupDevice)
+	}
+}
+
+func (hdm *HwDevManager) isSupportGraceTolerance() bool {
+	if common.ParamOption.RealCardType == common.Ascend910B {
+		return true
+	}
 	if hdm.WorkMode != common.SMPMode {
 		hwlog.RunLog.Debugf("grace tolerance only support SMP chip mode")
-		return
+		return false
 	}
-	hdm.manager.GraceTolerance(groupDevice)
+	return true
 }

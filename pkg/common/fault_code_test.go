@@ -73,9 +73,9 @@ func TestGetFaultTypeByCode(t *testing.T) {
 			faultTypeCode = FaultTypeCode{RestartBusinessCodes: faultCodes}
 			convey.So(GetFaultTypeByCode(faultCodes), convey.ShouldEqual, RestartBusiness)
 		})
-		convey.Convey("fault type RecoverRestartBusiness", func() {
-			faultTypeCode = FaultTypeCode{RecoverRestartBusinessCodes: faultCodes}
-			convey.So(GetFaultTypeByCode(faultCodes), convey.ShouldEqual, RecoverRestartBusiness)
+		convey.Convey("fault type RestartRequestCodes", func() {
+			faultTypeCode = FaultTypeCode{RestartRequestCodes: faultCodes}
+			convey.So(GetFaultTypeByCode(faultCodes), convey.ShouldEqual, RestartRequest)
 		})
 	})
 }
