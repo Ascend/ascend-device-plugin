@@ -190,6 +190,8 @@ const (
 	Ascend910c10Cpu3Gb16Ndvpp = Ascend910 + "-" + Core10Cpu3Gb16Ndvpp
 	// Ascend910c10Cpu3Gb32 Ascend910 10core 3cpu 32Gb memory
 	Ascend910c10Cpu3Gb32 = Ascend910 + "-" + Core10Cpu3Gb32
+	// Ascend910c10Cpu4Gb16Dvpp Ascend910 10core 4cpu 16Gb memory dvpp
+	Ascend910c10Cpu4Gb16Dvpp = Ascend910 + "-" + Core10Cpu4Gb16Dvpp
 
 	// Ascend910c12Cpu3Gb32 Ascend910 12core 3cpu 32Gb memory
 	Ascend910c12Cpu3Gb32 = Ascend910 + "-" + Core12Cpu3Gb32
