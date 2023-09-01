@@ -177,7 +177,7 @@ func GetNetworkFaultTypeByCode(faultCodes []string) string {
 	}
 }
 
-// GetFaultTypeByCode get fault type by fault code. if code not record, default NotHandleFault
+// GetFaultTypeByCode get fault type by fault code. if code not record, default SeparateNPU0
 func GetFaultTypeByCode(faultCodes []int64) string {
 	if len(faultCodes) == 0 {
 		return NormalNPU
@@ -196,8 +196,8 @@ func GetFaultTypeByCode(faultCodes []int64) string {
 	case Int64Tool.SameElement(faultTypeCode.NotHandleFaultCodes, faultCodes):
 		return NotHandleFault
 	default:
-		hwlog.RunLog.Debugf("not record fault code : %d, use default type NotHandleFault", faultCodes)
-		return NotHandleFault
+		hwlog.RunLog.Debugf("not record fault code : %d, use default type SeparateNPU", faultCodes)
+		return SeparateNPU
 	}
 }
 

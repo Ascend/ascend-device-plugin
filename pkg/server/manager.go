@@ -245,12 +245,12 @@ func (hdm *HwDevManager) updateAllInfo() error {
 	if err != nil {
 		return err
 	}
+	if err := hdm.manager.CheckDeviceTypeLabel(); err != nil {
+		hwlog.RunLog.Warnf("device type label may not correct, %v", err)
+	}
 	allInfo, err := hdm.manager.GetNPUs()
 	if err != nil {
 		return err
-	}
-	if err := hdm.manager.CheckDeviceTypeLabel(); err != nil {
-		hwlog.RunLog.Warnf("device type label may not correct, %v", err)
 	}
 	hdm.updateDeviceHealth(allInfo.AllDevs)
 	hdm.groupDevice = device.ClassifyDevices(allInfo.AllDevs, allInfo.AllDevTypes)
@@ -558,7 +558,7 @@ func (hdm *HwDevManager) handleDeleteEvent(deleteFile string) {
 }
 
 func (hdm *HwDevManager) updatePodAnnotation() error {
-	serverID, err := hdm.manager.GetKubeClient().GetNodeServerID()
+	serverID, err := hdm.manager.GetKubeClient().GetNodeServerIDCache()
 	if err != nil {
 		return fmt.Errorf("get node server id failed: %#v", err)
 	}

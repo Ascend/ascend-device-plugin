@@ -54,11 +54,11 @@ func TestGetFaultTypeByCode(t *testing.T) {
 		convey.Convey("fault type NotHandleFault", func() {
 			faultTypeCode = FaultTypeCode{NotHandleFaultCodes: faultCodes}
 			convey.So(GetFaultTypeByCode(faultCodes), convey.ShouldEqual, NotHandleFault)
-			faultTypeCode = FaultTypeCode{}
-			convey.So(GetFaultTypeByCode(faultCodes), convey.ShouldEqual, NotHandleFault)
 		})
 		convey.Convey("fault type SeparateNPU", func() {
 			faultTypeCode = FaultTypeCode{SeparateNPUCodes: faultCodes}
+			convey.So(GetFaultTypeByCode(faultCodes), convey.ShouldEqual, SeparateNPU)
+			faultTypeCode = FaultTypeCode{}
 			convey.So(GetFaultTypeByCode(faultCodes), convey.ShouldEqual, SeparateNPU)
 		})
 		convey.Convey("fault type RestartNPU", func() {

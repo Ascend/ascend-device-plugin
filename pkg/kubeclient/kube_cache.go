@@ -30,6 +30,8 @@ const podUpdateOperator = "update"
 
 var podList []v1.Pod
 var lock sync.Mutex
+var nodeServerIp string
+var nodeDeviceInfoCache *common.NodeDeviceInfoCache
 
 // UpdatePodList update pod list by informer
 func UpdatePodList(oldObj, newObj interface{}, operator string) {
@@ -76,7 +78,7 @@ func (ki *ClientK8s) GetActivePodListCache() []v1.Pod {
 	if len(podList) == 0 {
 		return []v1.Pod{}
 	}
-	var newPodList []v1.Pod
+	newPodList := make([]v1.Pod, 0, common.GeneralMapSize)
 	lock.Lock()
 	defer lock.Unlock()
 	for _, pod := range podList {
@@ -94,4 +96,47 @@ func (ki *ClientK8s) GetActivePodListCache() []v1.Pod {
 		newPodList = append(newPodList, pod)
 	}
 	return newPodList
+}
+
+// GetPodCache get pod by namespace and name with cache
+func (ki *ClientK8s) GetPodCache(namespace, name string) v1.Pod {
+	if len(podList) == 0 {
+		return v1.Pod{}
+	}
+	lock.Lock()
+	defer lock.Unlock()
+	for _, pod := range podList {
+		if pod.Namespace == namespace && pod.Name == name {
+			return pod
+		}
+	}
+	return v1.Pod{}
+}
+
+// GetNodeServerIDCache Get Node Server ID with cache
+func (ki *ClientK8s) GetNodeServerIDCache() (string, error) {
+	if nodeServerIp != "" {
+		return nodeServerIp, nil
+	}
+	serverID, err := ki.GetNodeServerID()
+	if err != nil {
+		return "", err
+	}
+	nodeServerIp = serverID
+	return serverID, nil
+}
+
+// GetDeviceInfoCMCache get device info configMap with cache
+func (ki *ClientK8s) GetDeviceInfoCMCache() *common.NodeDeviceInfoCache {
+	return nodeDeviceInfoCache
+}
+
+// WriteDeviceInfoDataIntoCMCache write deviceinfo into config map with cache
+func (ki *ClientK8s) WriteDeviceInfoDataIntoCMCache(deviceInfo map[string]string) error {
+	newNodeDeviceInfoCache, err := ki.WriteDeviceInfoDataIntoCM(deviceInfo)
+	if err != nil {
+		return err
+	}
+	nodeDeviceInfoCache = newNodeDeviceInfoCache
+	return nil
 }

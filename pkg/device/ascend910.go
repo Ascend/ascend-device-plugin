@@ -156,10 +156,6 @@ func (hnm *HwAscend910Manager) updateDeviceInfo(oldDevInfo, newDevInfo map[strin
 		return fmt.Errorf("invalid new device info")
 	}
 	nodeFmtDevRecover, nodeFmtDevNetRecover := sets.String{}, sets.String{}
-	curNode, err := hnm.getRecoverLabelFromNodeSets(&nodeFmtDevRecover, &nodeFmtDevNetRecover)
-	if err != nil {
-		return err
-	}
 	newDevRecoverLabel, newAscend910 := hnm.getHealthAndRecoverDev(devStatusSet, nodeFmtDevRecover,
 		common.ConvertDevListToSets(oldDevInfo[common.HuaweiUnHealthAscend910], common.CommaSepDev))
 	newNetRecoverSets, newNetUHDevSets := hnm.getNewNetworkRecoverDev(devStatusSet.NetUnHealthyDevice,
@@ -175,6 +171,10 @@ func (hnm *HwAscend910Manager) updateDeviceInfo(oldDevInfo, newDevInfo map[strin
 	newDevInfo[common.HuaweiFaultCodeAscend910] = string(data)
 	if common.ParamOption.AutoStowingDevs {
 		return nil
+	}
+	curNode, err := hnm.getRecoverLabelFromNodeSets(&nodeFmtDevRecover, &nodeFmtDevNetRecover)
+	if err != nil {
+		return err
 	}
 	if err := hnm.update910NodeLabel(curNode, newDevRecoverLabel, hnm.getPatchLabel(newNetRecoverSets)); err != nil {
 		hwlog.RunLog.Errorf("update node label failed, err: %#v", err)
@@ -255,9 +255,6 @@ func (hnm *HwAscend910Manager) getPatchLabel(chips sets.String) string {
 
 func (hnm *HwAscend910Manager) getRecoverLabelFromNodeSets(devRecoverLabel, netRecoverLabel *sets.String) (
 	*v1.Node, error) {
-	if common.ParamOption.AutoStowingDevs {
-		return nil, nil
-	}
 	curNode, err := hnm.client.GetNode()
 	if err != nil {
 		hwlog.RunLog.Error("get node error")
@@ -516,6 +513,10 @@ func (hnm *HwAscend910Manager) restartProcess(taskName string, resetInfo *common
 	if err := hnm.updateResetCMStatus(taskName, common.RestartError, common.RecoveredStatus,
 		devFaultInfoListInReset); err != nil {
 		hwlog.RunLog.Errorf("failed to update reset cm to recovered status, err: %#v", err)
+		return
+	}
+	if err := hnm.hotResetManager.UnSetTaskInReset(taskName); err != nil {
+		hwlog.RunLog.Errorf("failed to unset task in reset, err: %#v", err)
 		return
 	}
 	return
