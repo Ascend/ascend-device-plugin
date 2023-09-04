@@ -30,10 +30,10 @@ import (
 const (
 	// NotHandleFault not handle fault
 	NotHandleFault = "NotHandleFault"
+	// RestartRequest restart request
+	RestartRequest = "RestartRequest"
 	// RestartBusiness restart business
 	RestartBusiness = "RestartBusiness"
-	// RecoverRestartBusiness recover and restart business
-	RecoverRestartBusiness = "RecoverRestartBusiness"
 	// RestartNPU restart NPU
 	RestartNPU = "RestartNPU"
 	// FreeRestartNPU wait free and restart NPU
@@ -75,8 +75,8 @@ var (
 // FaultTypeCode group code by type
 type FaultTypeCode struct {
 	NotHandleFaultCodes           []int64
+	RestartRequestCodes           []int64
 	RestartBusinessCodes          []int64
-	RecoverRestartBusinessCodes   []int64
 	RestartNPUCodes               []int64
 	FreeRestartNPUCodes           []int64
 	SeparateNPUCodes              []int64
@@ -91,8 +91,8 @@ type FaultTypeCode struct {
 // faultFileInfo fault code file data
 type faultFileInfo struct {
 	NotHandleFaultCodes           []string
+	RestartRequestCodes           []string
 	RestartBusinessCodes          []string
-	RecoverRestartBusinessCodes   []string
 	RestartNPUCodes               []string
 	FreeRestartNPUCodes           []string
 	SeparateNPUCodes              []string
@@ -116,8 +116,8 @@ func LoadFaultCodeFromFile() error {
 	}
 	faultTypeCode = FaultTypeCode{
 		NotHandleFaultCodes:           StringTool.HexStringToInt(fileInfo.NotHandleFaultCodes),
+		RestartRequestCodes:           StringTool.HexStringToInt(fileInfo.RestartRequestCodes),
 		RestartBusinessCodes:          StringTool.HexStringToInt(fileInfo.RestartBusinessCodes),
-		RecoverRestartBusinessCodes:   StringTool.HexStringToInt(fileInfo.RecoverRestartBusinessCodes),
 		RestartNPUCodes:               StringTool.HexStringToInt(fileInfo.RestartNPUCodes),
 		FreeRestartNPUCodes:           StringTool.HexStringToInt(fileInfo.FreeRestartNPUCodes),
 		SeparateNPUCodes:              StringTool.HexStringToInt(fileInfo.SeparateNPUCodes),
@@ -191,8 +191,8 @@ func GetFaultTypeByCode(faultCodes []int64) string {
 		return FreeRestartNPU
 	case Int64Tool.SameElement(faultTypeCode.RestartBusinessCodes, faultCodes):
 		return RestartBusiness
-	case Int64Tool.SameElement(faultTypeCode.RecoverRestartBusinessCodes, faultCodes):
-		return RecoverRestartBusiness
+	case Int64Tool.SameElement(faultTypeCode.RestartRequestCodes, faultCodes):
+		return RestartRequest
 	case Int64Tool.SameElement(faultTypeCode.NotHandleFaultCodes, faultCodes):
 		return NotHandleFault
 	default:
