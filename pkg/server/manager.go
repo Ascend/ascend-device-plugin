@@ -767,7 +767,7 @@ func (hdm *HwDevManager) isSupportGraceTolerance() bool {
 		return true
 	}
 	if hdm.WorkMode != common.SMPMode {
-		hwlog.RunLog.Debugf("grace tolerance only support SMP chip mode")
+		hwlog.RunLog.Debug("grace tolerance only support SMP chip mode for 910")
 		return false
 	}
 	return true

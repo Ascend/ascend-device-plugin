@@ -33,7 +33,6 @@ type HotResetManager interface {
 	GetDevIdList(string) []int32
 	GetTaskDevFaultInfoList(string) ([]*common.TaskDevInfo, error)
 	GetTaskPod(string) (v1.Pod, error)
-	GetAllTaskDevList() map[string][]int32
 	GetAllTaskDevFaultInfoList() map[string][]*common.TaskDevInfo
 	GetDevProcessPolicy(string) string
 	GetTaskProcessPolicy(string) (string, int, error)
@@ -108,17 +107,20 @@ func NewHotResetManager(devType, devUsage string) HotResetManager {
 	}
 }
 
+func getChipCountOnRing() int {
+	var ring = map[string]int {
+		common.Ascend910: common.Ascend910RingsNum,
+		common.Ascend910B: common.Ascend910BRingsNumTrain,
+	}
+	return ring[common.ParamOption.RealCardType]
+}
+
 // GetRingNum get device num in a ring
 func (hrt *HotResetTools) GetRingNum() int {
 	if hrt.ringNum == 0 {
-		return common.Ascend910RingsNum
+		return getChipCountOnRing()
 	}
 	return hrt.ringNum
-}
-
-// GetAllTaskDevList return all task device logic id list
-func (hrt *HotResetTools) GetAllTaskDevList() map[string][]int32 {
-	return hrt.allTaskDevList
 }
 
 // GetTaskDevFaultInfoList return task device fault info list
@@ -188,21 +190,16 @@ func (hrt *HotResetTools) GetTaskProcessPolicy(taskName string) (string, int, er
 
 // GetDevIdList convert device str to device logic id list
 func (hrt *HotResetTools) GetDevIdList(devStr string) []int32 {
-	deviceStrList := strings.Split(devStr, common.CommaSepDev)
-	var deviceIdlList []int32
-	for _, deviceStr := range deviceStrList {
-		device := strings.Split(deviceStr, common.MiddelLine)
-		if len(device) <= 1 {
-			continue
-		}
-		deviceId, err := strconv.ParseInt(device[1], common.BaseDec, common.BitSize32)
+	var phyIDs []int32
+	for _, deviceName := range strings.Split(devStr, common.CommaSepDev) {
+		phyID, _, err := common.GetDeviceID(deviceName, common.CommaSepDev)
 		if err != nil {
-			hwlog.RunLog.Errorf("convert device id str to int, err := %#v", err)
+			hwlog.RunLog.Errorf("get phyID failed, err: %#v", err)
 			return nil
 		}
-		deviceIdlList = append(deviceIdlList, int32(deviceId))
+		phyIDs = append(phyIDs, int32(phyID))
 	}
-	return deviceIdlList
+	return phyIDs
 }
 
 // GetNeedRestartDevList return the task list by policy level

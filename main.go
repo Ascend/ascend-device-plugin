@@ -123,11 +123,11 @@ func checkParam() bool {
 		return false
 	}
 	if *use310PMixedInsert && *volcanoType {
-		hwlog.RunLog.Error("use310PMixedInsert is ture, volcanoType should be false")
+		hwlog.RunLog.Error("use310PMixedInsert is true, volcanoType should be false")
 		return false
 	}
 	if *use310PMixedInsert && *shareDevCount > 1 {
-		hwlog.RunLog.Error("use310PMixedInsert is ture, shareDevCount should be 1")
+		hwlog.RunLog.Error("use310PMixedInsert is true, shareDevCount should be 1")
 		return false
 	}
 	if !(*presetVirtualDevice) && *shareDevCount > 1 {
@@ -143,9 +143,6 @@ func checkParam() bool {
 	default:
 		hwlog.RunLog.Error("hot reset mode param invalid")
 		return false
-	}
-	if (*hotReset) == common.HotResetTrain {
-		hwlog.RunLog.Warn("hotReset to 1 is a reserved value")
 	}
 	if (*hotReset) == common.HotResetTrain && *useLargeModel {
 		hwlog.RunLog.Warn("hotReset and useLargeModel can't simultaneous open")

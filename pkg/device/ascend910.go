@@ -103,7 +103,7 @@ func (hnm *HwAscend910Manager) GetNPUs() (common.NpuAllInfo, error) {
 // GraceTolerance process training task with device fault gracefully
 func (hnm *HwAscend910Manager) GraceTolerance(classifyDevs map[string][]*common.NpuDevice) {
 	hotResetManagerInitOnce.Do(func() {
-		hnm.hotResetManager = NewHotResetManager(common.ParamOption.RealCardType, hnm.GetDeviceUsage())
+		hnm.hotResetManager = NewHotResetManager(hnm.GetDeviceUsage())
 	})
 	if hnm.hotResetManager == nil {
 		hwlog.RunLog.Debugf("hot reset manager is nil, devType: %s", common.ParamOption.RealCardType)
@@ -305,19 +305,18 @@ func (hnm *HwAscend910Manager) updateHotResetCache(classifyDevs map[string][]*co
 }
 
 func (hnm *HwAscend910Manager) setTaskDevInfoCache() error {
-	podList := hnm.client.GetAllPodListCache()
+	podList := hnm.client.GetActivePodListCache()
 	newTaskDevListCache := make(map[string][]int32)
 	newTaskDevFaultInfoCache := make(map[string][]*common.TaskDevInfo)
 	newTaskPodCache := make(map[string]v1.Pod)
 	taskListUsedDevice := make(map[string]struct{})
 	for _, pod := range podList {
-		annotationTag := fmt.Sprintf("%s%s", common.ResourceNamePrefix, common.Ascend910)
-		tmpNpu, ok := pod.Annotations[annotationTag]
+		tmpNpu, ok := pod.Annotations[common.HuaweiAscend910]
 		if !ok || len(tmpNpu) == 0 || len(tmpNpu) > common.PodAnnotationMaxLength {
 			continue
 		}
 		devIdList := hnm.hotResetManager.GetDevIdList(tmpNpu)
-		if len(devIdList) < hnm.hotResetManager.GetRingNum() {
+		if hnm.isReSchedulingScene(len(devIdList)) {
 			continue
 		}
 		taskName, ok := pod.Annotations[common.ResetTaskNameKey]
@@ -359,6 +358,16 @@ func (hnm *HwAscend910Manager) setTaskDevInfoCache() error {
 	}
 
 	return nil
+}
+
+func (hnm *HwAscend910Manager) isReSchedulingScene(npuCount int) bool {
+	if common.ParamOption.RealCardType == common.Ascend910 && npuCount < common.Ascend910RingsNum {
+		return true
+	}
+	if common.ParamOption.RealCardType == common.Ascend910B && npuCount < common.Ascend910BRingsNum {
+		return true
+	}
+	return false
 }
 
 func (hnm *HwAscend910Manager) isTaskInReset(taskName string) (bool, error) {
