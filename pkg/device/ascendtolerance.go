@@ -74,9 +74,9 @@ type HotResetTools struct {
 }
 
 // NewHotResetManager create HotResetManager and init data
-func NewHotResetManager(devType, devUsage string) HotResetManager {
+func NewHotResetManager(devUsage string) HotResetManager {
 	var ringNumber int
-	switch devType {
+	switch common.ParamOption.RealCardType {
 	case common.Ascend910:
 		ringNumber = common.Ascend910RingsNum
 	case common.Ascend910B:
