@@ -40,11 +40,16 @@ const (
 // TestTestNewHwDevManager for testTestNewHwDevManager
 func TestNewHwDevManager(t *testing.T) {
 	convey.Convey("test NewHwDevManager", t, func() {
-		mockGetDevType := gomonkey.ApplyMethod(reflect.TypeOf(new(HwDevManager)), "UpdateNodeLabel",
+		mockGetChipAiCoreCount := gomonkey.ApplyMethod(reflect.TypeOf(new(device.AscendTools)), "GetChipAiCoreCount",
+			func(_ *device.AscendTools) (int32, error) {
+				return 8255, nil
+			})
+		defer mockGetChipAiCoreCount.Reset()
+		mockUpdateNodeLabel := gomonkey.ApplyMethod(reflect.TypeOf(new(HwDevManager)), "UpdateNodeLabel",
 			func(_ *HwDevManager) error {
 				return nil
 			})
-		defer mockGetDevType.Reset()
+		defer mockUpdateNodeLabel.Reset()
 		convey.Convey("init HwDevManager", func() {
 			common.ParamOption.UseVolcanoType = true
 			res := NewHwDevManager(&devmanager.DeviceManagerMock{})
@@ -69,11 +74,16 @@ func TestNewHwDevManager(t *testing.T) {
 
 // TestStartAllServer for testStartAllServer
 func TestStartAllServer(t *testing.T) {
-	mockGetDevType := gomonkey.ApplyMethod(reflect.TypeOf(new(HwDevManager)), "UpdateNodeLabel",
+	mockGetChipAiCoreCount := gomonkey.ApplyMethod(reflect.TypeOf(new(device.AscendTools)), "GetChipAiCoreCount",
+		func(_ *device.AscendTools) (int32, error) {
+			return 8255, nil
+		})
+	defer mockGetChipAiCoreCount.Reset()
+	mockUpdateNodeLabel := gomonkey.ApplyMethod(reflect.TypeOf(new(HwDevManager)), "UpdateNodeLabel",
 		func(_ *HwDevManager) error {
 			return nil
 		})
-	defer mockGetDevType.Reset()
+	defer mockUpdateNodeLabel.Reset()
 	convey.Convey("test startAllServer", t, func() {
 		mockStart := gomonkey.ApplyMethod(reflect.TypeOf(new(PluginServer)), "Start",
 			func(_ *PluginServer, socketWatcher *common.FileWatch) error {
@@ -102,11 +112,16 @@ func TestUpdatePodAnnotation(t *testing.T) {
 			RealDevice: []string{""},
 		},
 	}
-	mockGetDevType := gomonkey.ApplyMethod(reflect.TypeOf(new(HwDevManager)), "UpdateNodeLabel",
+	mockGetChipAiCoreCount := gomonkey.ApplyMethod(reflect.TypeOf(new(device.AscendTools)), "GetChipAiCoreCount",
+		func(_ *device.AscendTools) (int32, error) {
+			return 8255, nil
+		})
+	defer mockGetChipAiCoreCount.Reset()
+	mockUpdateNodeLabel := gomonkey.ApplyMethod(reflect.TypeOf(new(HwDevManager)), "UpdateNodeLabel",
 		func(_ *HwDevManager) error {
 			return nil
 		})
-	defer mockGetDevType.Reset()
+	defer mockUpdateNodeLabel.Reset()
 	convey.Convey("test updatePodAnnotation", t, func() {
 		convey.Convey("updatePodAnnotation success", func() {
 			mockNode := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)), "GetNode",
@@ -143,11 +158,16 @@ func TestUpdatePodAnnotation(t *testing.T) {
 
 // TestUpdateDevice for testUpdateDevice
 func TestUpdateDevice(t *testing.T) {
-	mockGetDevType := gomonkey.ApplyMethod(reflect.TypeOf(new(HwDevManager)), "UpdateNodeLabel",
+	mockGetChipAiCoreCount := gomonkey.ApplyMethod(reflect.TypeOf(new(device.AscendTools)), "GetChipAiCoreCount",
+		func(_ *device.AscendTools) (int32, error) {
+			return 8255, nil
+		})
+	defer mockGetChipAiCoreCount.Reset()
+	mockUpdateNodeLabel := gomonkey.ApplyMethod(reflect.TypeOf(new(HwDevManager)), "UpdateNodeLabel",
 		func(_ *HwDevManager) error {
 			return nil
 		})
-	defer mockGetDevType.Reset()
+	defer mockUpdateNodeLabel.Reset()
 	convey.Convey("test UpdateDevice", t, func() {
 		convey.Convey("UpdateDevice success", func() {
 			mockCheckLabel := gomonkey.ApplyMethod(reflect.TypeOf(new(device.AscendTools)),
@@ -172,11 +192,16 @@ func TestUpdateDevice(t *testing.T) {
 
 // TestNotifyToK8s for testNotifyToK8s
 func TestNotifyToK8s(t *testing.T) {
-	mockGetDevType := gomonkey.ApplyMethod(reflect.TypeOf(new(HwDevManager)), "UpdateNodeLabel",
+	mockGetChipAiCoreCount := gomonkey.ApplyMethod(reflect.TypeOf(new(device.AscendTools)), "GetChipAiCoreCount",
+		func(_ *device.AscendTools) (int32, error) {
+			return 8255, nil
+		})
+	defer mockGetChipAiCoreCount.Reset()
+	mockUpdateNodeLabel := gomonkey.ApplyMethod(reflect.TypeOf(new(HwDevManager)), "UpdateNodeLabel",
 		func(_ *HwDevManager) error {
 			return nil
 		})
-	defer mockGetDevType.Reset()
+	defer mockUpdateNodeLabel.Reset()
 	convey.Convey("test NotifyToK8s", t, func() {
 		convey.Convey("NotifyToK8s success", func() {
 			mockUpdateHealth := gomonkey.ApplyMethod(reflect.TypeOf(new(device.AscendTools)), "UpdateHealth",

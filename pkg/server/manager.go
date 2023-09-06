@@ -105,6 +105,15 @@ func (hdm *HwDevManager) setAscendManager(dmgr devmanager.DeviceInterface) error
 	if err = common.CheckCardUsageMode(common.ParamOption.Use310PMixedInsert, productTypes); err != nil {
 		return err
 	}
+
+	if common.ParamOption.BuildScene != common.EdgeScene {
+		aiCoreCount, err := hdm.manager.GetChipAiCoreCount()
+		if err != nil {
+			hwlog.RunLog.Errorf("get chip aicore count failed, err: %#v", err)
+			return err
+		}
+		common.ParamOption.AiCoreCount = aiCoreCount
+	}
 	return nil
 }
 
@@ -122,13 +131,8 @@ func (hdm *HwDevManager) UpdateNodeLabel() error {
 	hdm.manager.SetKubeClient(kubeClient)
 	hdm.manager.GetKubeClient().InitPodInformer()
 	hwlog.RunLog.Info("init kube client success")
-	aiCoreCount, err := hdm.manager.GetChipAiCoreCount()
-	if err != nil {
-		hwlog.RunLog.Errorf("get chip aicore count failed, err: %#v", err)
-		return err
-	}
-	common.ParamOption.AiCoreCount = aiCoreCount
-	return hdm.updateNodeLabels(aiCoreCount)
+
+	return hdm.updateNodeLabels(common.ParamOption.AiCoreCount)
 }
 
 func (hdm *HwDevManager) updateNodeLabels(aiCoreCount int32) error {
