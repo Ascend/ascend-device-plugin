@@ -70,10 +70,6 @@ func (ki *ClientK8s) createOrUpdateDeviceCM(cm *v1.ConfigMap) error {
 
 // WriteDeviceInfoDataIntoCM write deviceinfo into config map
 func (ki *ClientK8s) WriteDeviceInfoDataIntoCM(deviceInfo map[string]string) (*common.NodeDeviceInfoCache, error) {
-	nodeDeviceInfoCache := ki.GetDeviceInfoCMCache()
-	if isNotChangeOrLessOneHour(nodeDeviceInfoCache, deviceInfo) {
-		return nodeDeviceInfoCache, nil
-	}
 
 	var nodeDeviceData = common.NodeDeviceInfoCache{
 		DeviceInfo: common.NodeDeviceInfo{
