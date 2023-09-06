@@ -31,6 +31,8 @@ import (
 	"Ascend-device-plugin/pkg/common"
 )
 
+const waitKubectlSockCreateTime = 5 * 60
+
 // Start starts the gRPC server, registers the device plugin with the Kubelet
 func (ps *PluginServer) Start(socketWatcher *common.FileWatch) error {
 	// clean
@@ -104,7 +106,7 @@ func (ps *PluginServer) serve(socketWatcher *common.FileWatch) error {
 
 // register function is use to register k8s devicePlugin to kubelet.
 func (ps *PluginServer) register() error {
-	realKubeletSockPath, ok := common.VerifyPathAndPermission(v1beta1.KubeletSocket)
+	realKubeletSockPath, ok := common.VerifyPathAndPermission(v1beta1.KubeletSocket, 0)
 	if !ok {
 		return fmt.Errorf("check kubelet socket file path failed")
 	}
@@ -142,7 +144,7 @@ func (ps *PluginServer) register() error {
 
 // need privilege
 func createNetListener(socketWatcher *common.FileWatch, deviceType string) (net.Listener, error) {
-	realSocketPath, ok := common.VerifyPathAndPermission(v1beta1.DevicePluginPath)
+	realSocketPath, ok := common.VerifyPathAndPermission(v1beta1.DevicePluginPath, waitKubectlSockCreateTime)
 	if !ok {
 		hwlog.RunLog.Error("socket path verify failed!")
 		return nil, fmt.Errorf("socket path verify failed")

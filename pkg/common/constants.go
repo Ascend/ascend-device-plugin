@@ -190,6 +190,8 @@ const (
 	Ascend910c10Cpu3Gb16Ndvpp = Ascend910 + "-" + Core10Cpu3Gb16Ndvpp
 	// Ascend910c10Cpu3Gb32 Ascend910 10core 3cpu 32Gb memory
 	Ascend910c10Cpu3Gb32 = Ascend910 + "-" + Core10Cpu3Gb32
+	// Ascend910c10Cpu4Gb16Dvpp Ascend910 10core 4cpu 16Gb memory dvpp
+	Ascend910c10Cpu4Gb16Dvpp = Ascend910 + "-" + Core10Cpu4Gb16Dvpp
 
 	// Ascend910c12Cpu3Gb32 Ascend910 12core 3cpu 32Gb memory
 	Ascend910c12Cpu3Gb32 = Ascend910 + "-" + Core12Cpu3Gb32
@@ -460,10 +462,16 @@ const (
 const (
 	// Ascend910RingsNum indicates the number of devices in a ring
 	Ascend910RingsNum = 4
+	// Ascend910BRingsNumTrain indicates the number of devices in a ring
+	Ascend910BRingsNumTrain = 8
+	// Ascend910BRingsNumInfer indicates the number of devices in a ring
+	Ascend910BRingsNumInfer = 1
 	// RingSum indicates the max number of ring
 	RingSum = 2
 	// RankIndexKey for obtain the rank index in the pod
 	RankIndexKey = "hccl/rankIndex"
+	// InferRankIndex indecates the rank index of infer situation (rank index is meaningless in infer situation)
+	InferRankIndex = "-1"
 	// WaitFlushCMTime for wait for cm info to flush in container
 	WaitFlushCMTime = 90
 	// WaitResetEndTime for wait device reset to complete
@@ -499,6 +507,8 @@ const (
 	EmptyError = "empty"
 	// IgnoreError indicates that the current fault can be ignored
 	IgnoreError = "ignore"
+	// RestartRequestError indicates that the task only needs to re-execute this request
+	RestartRequestError = "restart_request"
 	// RestartError indicates that the training needs to be re-executed for the current fault
 	RestartError = "restart"
 	// ResetError indicates that the current fault requires resetting the chip and re-executing the training
@@ -512,6 +522,8 @@ const (
 	EmptyErrorLevel = iota
 	// IgnoreErrorLevel indicates the level of a fault that can be ignored
 	IgnoreErrorLevel
+	// RestartRequestError indicates that the task only needs to re-execute this request
+	RestartRequestErrorLevel
 	// RestartErrorLevel indicates the level of the fault that needs to be re-executed
 	RestartErrorLevel
 	// ResetErrorLevel indicates the fault level of the device to be reset

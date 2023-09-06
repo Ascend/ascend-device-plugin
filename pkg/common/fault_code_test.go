@@ -54,11 +54,11 @@ func TestGetFaultTypeByCode(t *testing.T) {
 		convey.Convey("fault type NotHandleFault", func() {
 			faultTypeCode = FaultTypeCode{NotHandleFaultCodes: faultCodes}
 			convey.So(GetFaultTypeByCode(faultCodes), convey.ShouldEqual, NotHandleFault)
-			faultTypeCode = FaultTypeCode{}
-			convey.So(GetFaultTypeByCode(faultCodes), convey.ShouldEqual, NotHandleFault)
 		})
 		convey.Convey("fault type SeparateNPU", func() {
 			faultTypeCode = FaultTypeCode{SeparateNPUCodes: faultCodes}
+			convey.So(GetFaultTypeByCode(faultCodes), convey.ShouldEqual, SeparateNPU)
+			faultTypeCode = FaultTypeCode{}
 			convey.So(GetFaultTypeByCode(faultCodes), convey.ShouldEqual, SeparateNPU)
 		})
 		convey.Convey("fault type RestartNPU", func() {
@@ -73,9 +73,9 @@ func TestGetFaultTypeByCode(t *testing.T) {
 			faultTypeCode = FaultTypeCode{RestartBusinessCodes: faultCodes}
 			convey.So(GetFaultTypeByCode(faultCodes), convey.ShouldEqual, RestartBusiness)
 		})
-		convey.Convey("fault type RecoverRestartBusiness", func() {
-			faultTypeCode = FaultTypeCode{RecoverRestartBusinessCodes: faultCodes}
-			convey.So(GetFaultTypeByCode(faultCodes), convey.ShouldEqual, RecoverRestartBusiness)
+		convey.Convey("fault type RestartRequestCodes", func() {
+			faultTypeCode = FaultTypeCode{RestartRequestCodes: faultCodes}
+			convey.So(GetFaultTypeByCode(faultCodes), convey.ShouldEqual, RestartRequest)
 		})
 	})
 }

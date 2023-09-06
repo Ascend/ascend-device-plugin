@@ -29,6 +29,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"huawei.com/npu-exporter/v5/common-utils/hwlog"
@@ -36,16 +37,20 @@ import (
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
-// GetPattern return pattern map
-func GetPattern() map[string]string {
-	return map[string]string{
-		"nodeName":    `^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`,
-		"podName":     "^[a-z0-9]+[a-z0-9\\-]*[a-z0-9]+$",
-		"fullPodName": "^[a-z0-9]+([a-z0-9\\-.]*)[a-z0-9]+$",
-		"vir910":      "Ascend910-([2-6]|8|10|12|16)c",
-		"vir310p":     "Ascend310P-(1|2|4)c",
-		"ascend910":   `^Ascend910-\d+`,
+var (
+	dpRegexp = map[string]*regexp.Regexp{
+		"nodeName":    regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`),
+		"podName":     regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-]*[a-z0-9]+$"),
+		"fullPodName": regexp.MustCompile("^[a-z0-9]+([a-z0-9\\-.]*)[a-z0-9]+$"),
+		"vir910":      regexp.MustCompile("Ascend910-([2-6]|8|10|12|16)c"),
+		"vir310p":     regexp.MustCompile("Ascend310P-(1|2|4)c"),
+		"ascend910":   regexp.MustCompile(`^Ascend910-\d+`),
 	}
+)
+
+// GetPattern return pattern map
+func GetPattern() map[string]*regexp.Regexp {
+	return dpRegexp
 }
 
 var (
@@ -342,7 +347,7 @@ func FilterPods(pods []v1.Pod, deviceType string, conditionFunc func(pod *v1.Pod
 }
 
 // VerifyPathAndPermission used to verify the validity of the path and permission and return resolved absolute path
-func VerifyPathAndPermission(verifyPath string) (string, bool) {
+func VerifyPathAndPermission(verifyPath string, waitSecond int) (string, bool) {
 	hwlog.RunLog.Debug("starting check device socket file path.")
 	absVerifyPath, err := filepath.Abs(verifyPath)
 	if err != nil {
@@ -351,8 +356,17 @@ func VerifyPathAndPermission(verifyPath string) (string, bool) {
 	}
 	pathInfo, err := os.Stat(absVerifyPath)
 	if err != nil {
-		hwlog.RunLog.Error("file path not exist")
-		return "", false
+		for i := 0; i < waitSecond; i++ {
+			time.Sleep(time.Second)
+			pathInfo, err = os.Stat(absVerifyPath)
+			if err == nil {
+				break
+			}
+		}
+		if err != nil {
+			hwlog.RunLog.Error("file path not exist")
+			return "", false
+		}
 	}
 	realPath, err := filepath.EvalSymlinks(absVerifyPath)
 	if err != nil || absVerifyPath != realPath {
@@ -378,8 +392,8 @@ func CheckPodNameAndSpace(podPara string, maxLength int) error {
 		pattern = patternMap["fullPodName"]
 	}
 
-	if match, err := regexp.MatchString(pattern, podPara); !match || err != nil {
-		return fmt.Errorf("podPara is illegal")
+	if match := pattern.MatchString(podPara); !match {
+		return fmt.Errorf("podPara %s is illegal", podPara)
 	}
 	return nil
 }

@@ -19,7 +19,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"regexp"
 
 	"huawei.com/npu-exporter/v5/common-utils/hwlog"
 	"k8s.io/api/core/v1"
@@ -28,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-	nodeutil "k8s.io/component-helpers/node/util"
+	"k8s.io/component-helpers/node/util"
 
 	"Ascend-device-plugin/pkg/common"
 )
@@ -74,7 +73,7 @@ func (ki *ClientK8s) GetNode() (*v1.Node, error) {
 
 // PatchNodeState patch node state
 func (ki *ClientK8s) PatchNodeState(curNode, newNode *v1.Node) (*v1.Node, []byte, error) {
-	return nodeutil.PatchNodeStatus(ki.Clientset.CoreV1(), types.NodeName(ki.NodeName), curNode, newNode)
+	return util.PatchNodeStatus(ki.Clientset.CoreV1(), types.NodeName(ki.NodeName), curNode, newNode)
 }
 
 // GetPod get pod by namespace and name
@@ -180,7 +179,7 @@ func (ki *ClientK8s) resetNodeAnnotations(node *v1.Node) {
 // ResetDeviceInfo reset device info
 func (ki *ClientK8s) ResetDeviceInfo() {
 	deviceList := make(map[string]string, 1)
-	if _, err := ki.WriteDeviceInfoDataIntoCM(deviceList); err != nil {
+	if err := ki.WriteDeviceInfoDataIntoCMCache(deviceList); err != nil {
 		hwlog.RunLog.Errorf("write device info failed, error is %#v", err)
 	}
 }
@@ -213,7 +212,7 @@ func checkNodeName(nodeName string) error {
 		return fmt.Errorf("node name length %d is bigger than %d", len(nodeName), common.KubeEnvMaxLength)
 	}
 	pattern := common.GetPattern()["nodeName"]
-	if match, err := regexp.MatchString(pattern, nodeName); !match || err != nil {
+	if match := pattern.MatchString(nodeName); !match {
 		return fmt.Errorf("node name %s is illegal", nodeName)
 	}
 	return nil

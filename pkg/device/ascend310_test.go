@@ -26,7 +26,6 @@ import (
 	"github.com/smartystreets/goconvey/convey"
 	"huawei.com/npu-exporter/v5/common-utils/hwlog"
 	"huawei.com/npu-exporter/v5/devmanager"
-	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	"Ascend-device-plugin/pkg/common"
@@ -86,7 +85,7 @@ func TestDoWithVolcanoListAndWatch310(t *testing.T) {
 				return nil
 			})
 		mockGetConfigMap := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)),
-			"GetConfigMap", func(_ *kubeclient.ClientK8s, _ string, _ string) (*v1.ConfigMap, error) {
+			"GetDeviceInfoCMCache", func(_ *kubeclient.ClientK8s) *common.NodeDeviceInfoCache {
 				nodeDeviceData := common.NodeDeviceInfoCache{
 					DeviceInfo: common.NodeDeviceInfo{
 						DeviceList: map[string]string{common.Ascend310: "Ascend310-1"},
@@ -94,16 +93,13 @@ func TestDoWithVolcanoListAndWatch310(t *testing.T) {
 					},
 				}
 				nodeDeviceData.CheckCode = common.MakeDataHash(nodeDeviceData.DeviceInfo)
-				data := common.MarshalData(nodeDeviceData)
 
-				return &v1.ConfigMap{Data: map[string]string{
-					common.DeviceInfoCMDataKey: string(data)},
-				}, nil
+				return &nodeDeviceData
 			})
 		mockCreateConfigMap := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)),
-			"WriteDeviceInfoDataIntoCM", func(_ *kubeclient.ClientK8s,
-				deviceInfo map[string]string) (*v1.ConfigMap, error) {
-				return &v1.ConfigMap{}, nil
+			"WriteDeviceInfoDataIntoCMCache", func(_ *kubeclient.ClientK8s,
+				deviceInfo map[string]string) error {
+				return nil
 			})
 		defer func() {
 			mockGetPodsUsedNpu.Reset()

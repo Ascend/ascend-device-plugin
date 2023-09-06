@@ -18,7 +18,6 @@ package kubeclient
 import (
 	"fmt"
 	"net"
-	"reflect"
 	"strings"
 	"time"
 
@@ -31,67 +30,47 @@ import (
 	"Ascend-device-plugin/pkg/common"
 )
 
+var tryUpdatePodWaitTime = 200 * time.Millisecond
+var deviceInfoFlushTime = int64(60 * 60)
+
 // TryUpdatePodAnnotation is to try updating pod annotation
 func (ki *ClientK8s) TryUpdatePodAnnotation(pod *v1.Pod, annotation map[string]string) error {
-	if pod == nil {
-		return fmt.Errorf("invalid pod")
+	if annotation == nil {
+		return fmt.Errorf("invalid annotation")
 	}
 	for i := 0; i < common.RetryUpdateCount; i++ {
-		podNew, err := ki.GetPod(pod)
-		if err != nil || podNew == nil {
-			hwlog.RunLog.Errorf("query pod info failed. %#v", err)
-			continue
+		if pod.Name != "" {
+			for k, v := range annotation {
+				pod.Annotations[k] = v
+			}
+			if _, err := ki.UpdatePod(pod); err == nil {
+				return nil
+			} else {
+				hwlog.RunLog.Warnf("update pod annotation failed, times: %d, error is %#v", i+1, err)
+			}
 		}
-		if podNew.Annotations == nil {
-			return fmt.Errorf("invalid pod Annotations")
-		}
-		for k, v := range annotation {
-			podNew.Annotations[k] = v
-		}
-
-		if _, err = ki.UpdatePod(podNew); err == nil {
-			return nil
-		}
-		hwlog.RunLog.Warnf("update pod annotation failed, times: %d, error is %#v", i+1, err)
-		time.Sleep(time.Second)
+		time.Sleep(tryUpdatePodWaitTime)
+		podNew := ki.GetPodCache(pod.Namespace, pod.Name)
+		pod = &podNew
 	}
 	return fmt.Errorf("update pod annotation failed, exceeded max number of retries")
 }
 
-func (ki *ClientK8s) isConfigMapChanged(cm *v1.ConfigMap) bool {
-	cmData, err := ki.GetConfigMap(ki.DeviceInfoName, common.DeviceInfoCMNameSpace)
-	if err != nil {
-		hwlog.RunLog.Infof("get device info configmap failed, error is: %#v", err)
-		return true
+func (ki *ClientK8s) createOrUpdateDeviceCM(cm *v1.ConfigMap) error {
+	// use update first
+	if _, err := ki.UpdateConfigMap(cm); errors.IsNotFound(err) {
+		if _, err := ki.CreateConfigMap(cm); err != nil {
+			return fmt.Errorf("unable to create configmap, %#v", err)
+		}
+		return nil
+	} else {
+		return err
 	}
-	return !reflect.DeepEqual(cmData, cm)
-}
-
-func (ki *ClientK8s) createOrUpdateConfigMap(cm *v1.ConfigMap) (*v1.ConfigMap, error) {
-	newCM, err := ki.CreateConfigMap(cm)
-	if err != nil {
-		if !ki.IsCMExist(err) {
-			return nil, fmt.Errorf("unable to create configmap, %#v", err)
-		}
-		// To reduce the cm write operations
-		if !ki.isConfigMapChanged(cm) {
-			hwlog.RunLog.Info("configmap not changed, no need update")
-			return cm, nil
-		}
-		if newCM, err = ki.UpdateConfigMap(cm); err != nil {
-			return nil, fmt.Errorf("unable to update ConfigMap, %#v", err)
-		}
-	}
-	return newCM, nil
-}
-
-// IsCMExist judge cm is exist
-func (ki *ClientK8s) IsCMExist(err error) bool {
-	return errors.IsAlreadyExists(err)
 }
 
 // WriteDeviceInfoDataIntoCM write deviceinfo into config map
-func (ki *ClientK8s) WriteDeviceInfoDataIntoCM(deviceInfo map[string]string) (*v1.ConfigMap, error) {
+func (ki *ClientK8s) WriteDeviceInfoDataIntoCM(deviceInfo map[string]string) (*common.NodeDeviceInfoCache, error) {
+
 	var nodeDeviceData = common.NodeDeviceInfoCache{
 		DeviceInfo: common.NodeDeviceInfo{
 			DeviceList: deviceInfo,
@@ -113,7 +92,22 @@ func (ki *ClientK8s) WriteDeviceInfoDataIntoCM(deviceInfo map[string]string) (*v
 	}
 
 	hwlog.RunLog.Debugf("write device info cache into cm: %s/%s.", deviceInfoCM.Namespace, deviceInfoCM.Name)
-	return ki.createOrUpdateConfigMap(deviceInfoCM)
+	if err := ki.createOrUpdateDeviceCM(deviceInfoCM); err != nil {
+		return nil, err
+	}
+	return &nodeDeviceData, nil
+}
+
+func isNotChangeOrLessOneHour(cache *common.NodeDeviceInfoCache, deviceMap map[string]string) bool {
+	if cache == nil || len(cache.DeviceInfo.DeviceList) != len(deviceMap) {
+		return false
+	}
+	for key, oldDeviceInfo := range cache.DeviceInfo.DeviceList {
+		if deviceMap[key] != oldDeviceInfo {
+			return false
+		}
+	}
+	return time.Now().Unix()-cache.DeviceInfo.UpdateTime < deviceInfoFlushTime
 }
 
 // WriteResetInfoDataIntoCM write reset info into config map
