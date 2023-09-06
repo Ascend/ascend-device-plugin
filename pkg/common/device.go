@@ -17,7 +17,6 @@ package common
 
 import (
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -91,10 +90,7 @@ func ShareDev() bool {
 
 // IsVirtualDev used to judge whether a physical device or a virtual device
 func IsVirtualDev(devType string) bool {
-	patternMap := GetPattern()
-	reg910 := regexp.MustCompile(patternMap["vir910"])
-	reg310P := regexp.MustCompile(patternMap["vir310p"])
-	return reg910.MatchString(devType) || reg310P.MatchString(devType)
+	return GetPattern()["vir910"].MatchString(devType) || GetPattern()["vir310p"].MatchString(devType)
 }
 
 // ToString convert input data to string
@@ -134,8 +130,8 @@ func deviceInfoToSets(deviceInfo []string) sets.String {
 	// pattern no need to defined as global variable, only used here
 	deviceSets := sets.String{}
 	for _, device := range deviceInfo {
-		if match, err := regexp.MatchString(GetPattern()["ascend910"], device); !match || err != nil {
-			hwlog.RunLog.Warnf("current device %s format err: %#v", device, err)
+		if match := GetPattern()["ascend910"].MatchString(device); !match {
+			hwlog.RunLog.Warnf("device %s is illegal ", device)
 			continue
 		}
 		deviceSets.Insert(device)

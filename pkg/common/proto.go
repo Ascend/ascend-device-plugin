@@ -117,6 +117,7 @@ func GetAllDeviceInfoTypeList() map[string]struct{} {
 		ResourceNamePrefix + Ascend910c5Cpu1Gb16: {}, ResourceNamePrefix + Ascend910c6Cpu1Gb16: {},
 		ResourceNamePrefix + Ascend910c10Cpu3Gb16: {}, ResourceNamePrefix + Ascend910c3Cpu1Gb8: {},
 		ResourceNamePrefix + Ascend910c10Cpu3Gb16Ndvpp: {}, ResourceNamePrefix + Ascend910c10Cpu3Gb32: {},
+		ResourceNamePrefix + Ascend910c10Cpu4Gb16Dvpp: {},
 		ResourceNamePrefix + Ascend910c12Cpu3Gb32: {}, ResourceNamePrefix + Ascend310: {},
 		ResourceNamePrefix + Ascend310P: {}, ResourceNamePrefix + Ascend310Pc1: {},
 		ResourceNamePrefix + Ascend310Pc2: {}, ResourceNamePrefix + Ascend310Pc4: {},

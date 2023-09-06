@@ -37,7 +37,7 @@ const (
 // start starts the gRPC server, registers the pod resource with the Kubelet
 func (pr *PodResource) start() error {
 	pr.stop()
-	realKubeletSockPath, isOk := common.VerifyPathAndPermission(socketPath)
+	realKubeletSockPath, isOk := common.VerifyPathAndPermission(socketPath, 0)
 	if !isOk {
 		return fmt.Errorf("check kubelet socket file path failed")
 	}

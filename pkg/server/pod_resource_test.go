@@ -55,16 +55,16 @@ func TestPodResourceStart1(t *testing.T) {
 	pr := NewPodResource()
 	convey.Convey("test start", t, func() {
 		convey.Convey("VerifyPath failed", func() {
-			mockVerifyPath := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(verifyPath string) (string,
-				bool) {
+			mockVerifyPath := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(verifyPath string,
+				waitSecond int) (string, bool) {
 				return "", false
 			})
 			defer mockVerifyPath.Reset()
 			convey.So(pr.start(), convey.ShouldNotBeNil)
 		})
 		convey.Convey("VerifyPath ok", func() {
-			mockVerifyPath := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(verifyPath string) (string,
-				bool) {
+			mockVerifyPath := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(verifyPath string,
+				waitSecond int) (string, bool) {
 				return "", true
 			})
 			defer mockVerifyPath.Reset()
@@ -95,7 +95,9 @@ func TestPodResourceStart2(t *testing.T) {
 			})
 			defer mockGetClient.Reset()
 			funcStub := gomonkey.ApplyFunc(common.VerifyPathAndPermission,
-				func(verifyPathAndPermission string) (string, bool) { return verifyPathAndPermission, true })
+				func(verifyPathAndPermission string, waitSecond int) (string, bool) {
+					return verifyPathAndPermission, true
+				})
 			defer funcStub.Reset()
 			convey.So(pr.start(), convey.ShouldBeNil)
 		})

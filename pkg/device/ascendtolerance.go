@@ -33,12 +33,11 @@ type HotResetManager interface {
 	GetDevIdList(string) []int32
 	GetTaskDevFaultInfoList(string) ([]*common.TaskDevInfo, error)
 	GetTaskPod(string) (v1.Pod, error)
-	GetAllTaskDevList() map[string][]int32
 	GetAllTaskDevFaultInfoList() map[string][]*common.TaskDevInfo
 	GetDevProcessPolicy(string) string
 	GetTaskProcessPolicy(string) (string, int, error)
 	GetDevListInReset() map[int32]struct{}
-	GetNeedRestartDevList([]*common.TaskDevInfo) (map[int32]struct{}, error)
+	GetDevListByPolicyLevel([]*common.TaskDevInfo, int) (map[int32]struct{}, error)
 	GetNeedResetDevList([]*common.TaskDevInfo) (map[int32]struct{}, error)
 	GetTaskResetInfo([]*common.TaskDevInfo, string, string) (*common.TaskResetInfo, error)
 	GetTaskFaultRankInfo([]*common.TaskDevInfo) (*common.TaskFaultInfo, error)
@@ -75,38 +74,53 @@ type HotResetTools struct {
 }
 
 // NewHotResetManager create HotResetManager and init data
-func NewHotResetManager(devType string) HotResetManager {
-	switch devType {
+func NewHotResetManager(devUsage string) HotResetManager {
+	var ringNumber int
+	switch common.ParamOption.RealCardType {
 	case common.Ascend910:
-		return &HotResetTools{
-			ringNum:         common.Ascend910RingsNum,
-			resetTask:       map[string]struct{}{},
-			resetDev:        map[int32]struct{}{},
-			faultDev2PodMap: map[int32]v1.Pod{},
-			processPolicyTable: map[string]int{
-				common.EmptyError:   common.EmptyErrorLevel,
-				common.IgnoreError:  common.IgnoreErrorLevel,
-				common.RestartError: common.RestartErrorLevel,
-				common.ResetError:   common.ResetErrorLevel,
-				common.IsolateError: common.IsolateErrorLevel,
-			},
+		ringNumber = common.Ascend910RingsNum
+	case common.Ascend910B:
+		switch devUsage {
+		case common.Infer:
+			ringNumber = common.Ascend910BRingsNumInfer
+		case common.Train:
+			ringNumber = common.Ascend910BRingsNumTrain
+		default:
+			return nil
 		}
 	default:
 		return nil
 	}
+	return &HotResetTools{
+		ringNum:         ringNumber,
+		resetTask:       map[string]struct{}{},
+		resetDev:        map[int32]struct{}{},
+		faultDev2PodMap: map[int32]v1.Pod{},
+		processPolicyTable: map[string]int{
+			common.EmptyError:          common.EmptyErrorLevel,
+			common.IgnoreError:         common.IgnoreErrorLevel,
+			common.RestartRequestError: common.RestartRequestErrorLevel,
+			common.RestartError:        common.RestartErrorLevel,
+			common.ResetError:          common.ResetErrorLevel,
+			common.IsolateError:        common.IsolateErrorLevel,
+		},
+	}
+}
+
+func getChipCountOnRing() int {
+	var ring = map[string]int {
+		common.Ascend910: common.Ascend910RingsNum,
+		common.Ascend910B: common.Ascend910BRingsNumTrain,
+	}
+	return ring[common.ParamOption.RealCardType]
 }
 
 // GetRingNum get device num in a ring
 func (hrt *HotResetTools) GetRingNum() int {
 	if hrt.ringNum == 0 {
-		return common.Ascend910RingsNum
+		return getChipCountOnRing()
 	}
 	return hrt.ringNum
-}
-
-// GetAllTaskDevList return all task device logic id list
-func (hrt *HotResetTools) GetAllTaskDevList() map[string][]int32 {
-	return hrt.allTaskDevList
 }
 
 // GetTaskDevFaultInfoList return task device fault info list
@@ -142,7 +156,9 @@ func (hrt *HotResetTools) GetDevProcessPolicy(faultType string) string {
 	switch faultType {
 	case common.NormalNPU, common.NotHandleFault:
 		return common.EmptyError
-	case common.RestartBusiness, common.RecoverRestartBusiness:
+	case common.RestartRequest:
+		return common.RestartRequestError
+	case common.RestartBusiness:
 		return common.RestartError
 	case common.FreeRestartNPU, common.RestartNPU:
 		return common.ResetError
@@ -174,26 +190,22 @@ func (hrt *HotResetTools) GetTaskProcessPolicy(taskName string) (string, int, er
 
 // GetDevIdList convert device str to device logic id list
 func (hrt *HotResetTools) GetDevIdList(devStr string) []int32 {
-	deviceStrList := strings.Split(devStr, common.CommaSepDev)
-	var deviceIdlList []int32
-	for _, deviceStr := range deviceStrList {
-		device := strings.Split(deviceStr, common.MiddelLine)
-		if len(device) <= 1 {
-			continue
-		}
-		deviceId, err := strconv.ParseInt(device[1], common.BaseDec, common.BitSize32)
+	var phyIDs []int32
+	for _, deviceName := range strings.Split(devStr, common.CommaSepDev) {
+		phyID, _, err := common.GetDeviceID(deviceName, common.CommaSepDev)
 		if err != nil {
-			hwlog.RunLog.Errorf("convert device id str to int, err := %#v", err)
+			hwlog.RunLog.Errorf("get phyID failed, err: %#v", err)
 			return nil
 		}
-		deviceIdlList = append(deviceIdlList, int32(deviceId))
+		phyIDs = append(phyIDs, int32(phyID))
 	}
-	return deviceIdlList
+	return phyIDs
 }
 
-// GetNeedRestartDevList return the task list to be restarted
-func (hrt *HotResetTools) GetNeedRestartDevList(devFaultInfoList []*common.TaskDevInfo) (map[int32]struct{}, error) {
-	needRestartDevList := make(map[int32]struct{})
+// GetNeedRestartDevList return the task list by policy level
+func (hrt *HotResetTools) GetDevListByPolicyLevel(devFaultInfoList []*common.TaskDevInfo,
+	policyLevel int) (map[int32]struct{}, error) {
+	devList := make(map[int32]struct{})
 	for _, devFaultInfo := range devFaultInfoList {
 		policyType, ok := hrt.processPolicyTable[devFaultInfo.Policy]
 		if !ok {
@@ -201,13 +213,13 @@ func (hrt *HotResetTools) GetNeedRestartDevList(devFaultInfoList []*common.TaskD
 			hwlog.RunLog.Error(err)
 			return nil, err
 		}
-		if policyType == common.RestartErrorLevel {
-			if _, ok := needRestartDevList[devFaultInfo.LogicId]; !ok {
-				needRestartDevList[devFaultInfo.LogicId] = struct{}{}
+		if policyType == policyLevel {
+			if _, ok := devList[devFaultInfo.LogicId]; !ok {
+				devList[devFaultInfo.LogicId] = struct{}{}
 			}
 		}
 	}
-	return needRestartDevList, nil
+	return devList, nil
 }
 
 // GetNeedResetDevList return device logic id list to be reset
@@ -221,7 +233,8 @@ func (hrt *HotResetTools) GetNeedResetDevList(devFaultInfoList []*common.TaskDev
 			hwlog.RunLog.Error(err)
 			return nil, err
 		}
-		if policyType == common.RestartErrorLevel || policyType == common.ResetErrorLevel {
+		if policyType == common.RestartErrorLevel || policyType == common.ResetErrorLevel ||
+			policyType == common.RestartRequestErrorLevel {
 			resetIndex := devFaultInfo.LogicId / int32(hrt.GetRingNum())
 			if _, ok := needResetDevList[devFaultInfo.LogicId]; !ok {
 				needResetDevList[resetIndex*int32(hrt.GetRingNum())] = struct{}{}
@@ -238,7 +251,8 @@ func (hrt *HotResetTools) GetTaskResetInfo(devFaultInfoList []*common.TaskDevInf
 	var rankList []*common.TaskDevInfo
 	for _, devFaultInfo := range devFaultInfoList {
 		policy := hrt.processPolicyTable[devFaultInfo.Policy]
-		if policy != common.RestartErrorLevel && policy != common.ResetErrorLevel {
+		if policy != common.RestartErrorLevel && policy != common.ResetErrorLevel &&
+			policy != common.RestartRequestErrorLevel {
 			continue
 		}
 		ringStartIndex := int(devFaultInfo.LogicId) / hrt.GetRingNum()
@@ -267,7 +281,8 @@ func (hrt *HotResetTools) GetTaskFaultRankInfo(devFaultInfoList []*common.TaskDe
 	faultRing := make(map[int]struct{}, common.RingSum)
 	for _, devFaultInfo := range devFaultInfoList {
 		policy := hrt.processPolicyTable[devFaultInfo.Policy]
-		if policy != common.RestartErrorLevel && policy != common.ResetErrorLevel {
+		if policy != common.RestartErrorLevel && policy != common.ResetErrorLevel &&
+			policy != common.RestartRequestErrorLevel {
 			continue
 		}
 		ringStartIndex := int(devFaultInfo.LogicId) / hrt.GetRingNum()
@@ -304,7 +319,13 @@ func (hrt *HotResetTools) GenerateTaskDevFaultInfoList(devIdList []int32,
 	devNum := len(devIdList)
 	taskDevInfoList := make([]*common.TaskDevInfo, 0, len(devIdList))
 	for _, devId := range devIdList {
-		rankId := rankStart*devNum + len(taskDevInfoList)
+		var rankId int
+		switch rankIndex {
+		case common.InferRankIndex:
+			rankId = rankStart
+		default:
+			rankId = rankStart*devNum + len(taskDevInfoList)
+		}
 		faultInfo, ok := hrt.globalDevFaultInfo[devId]
 		if !ok {
 			return nil, fmt.Errorf("device %d is not in global cache", devId)

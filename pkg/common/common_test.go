@@ -320,7 +320,7 @@ func TestVerifyPath(t *testing.T) {
 				return "", fmt.Errorf("err")
 			})
 			defer mock.Reset()
-			_, ret := VerifyPathAndPermission("")
+			_, ret := VerifyPathAndPermission("", 0)
 			convey.So(ret, convey.ShouldBeFalse)
 		})
 		convey.Convey("os.Stat failed", func() {
@@ -328,7 +328,7 @@ func TestVerifyPath(t *testing.T) {
 				return nil, fmt.Errorf("err")
 			})
 			defer mock.Reset()
-			_, ret := VerifyPathAndPermission("./")
+			_, ret := VerifyPathAndPermission("./", 0)
 			convey.So(ret, convey.ShouldBeFalse)
 		})
 		convey.Convey("filepath.EvalSymlinks failed", func() {
@@ -336,7 +336,7 @@ func TestVerifyPath(t *testing.T) {
 				return "", fmt.Errorf("err")
 			})
 			defer mock.Reset()
-			_, ret := VerifyPathAndPermission("./")
+			_, ret := VerifyPathAndPermission("./", 0)
 			convey.So(ret, convey.ShouldBeFalse)
 		})
 	})

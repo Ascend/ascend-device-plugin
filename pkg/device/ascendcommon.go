@@ -46,6 +46,10 @@ const subscribe = "subscribe"
 
 const polling = "polling"
 
+var lastCheckNodeLabel int64
+
+const checkNodeLabelPolling = 60 * 60
+
 // AscendTools struct definition
 type AscendTools struct {
 	client       *kubeclient.ClientK8s
@@ -114,19 +118,15 @@ func (tool *AscendTools) GetName() string {
 func (tool *AscendTools) UpdateNodeDeviceInfo(devStatusSet common.DevStatusSet,
 	updateDeviceInfoFunc func(map[string]string, map[string]string, common.DevStatusSet) error) error {
 	waitErr := wait.PollImmediate(common.Interval*time.Second, common.Timeout*time.Second, func() (bool, error) {
-		deviceList, err := tool.getDeviceListFromConfigMap()
-		if err != nil {
-			hwlog.RunLog.Warnf("get device list from config map failed, %#v", err)
-			tool.client.ResetDeviceInfo()
-			return false, nil
-		}
+		nodeDeviceInfo := tool.GetKubeClient().GetDeviceInfoCMCache()
+		deviceList := nodeDeviceInfo.DeviceInfo.DeviceList
 		newDeviceList := common.MapDeepCopy(deviceList)
 		if err := updateDeviceInfoFunc(deviceList, newDeviceList, devStatusSet); err != nil {
 			hwlog.RunLog.Errorf("update device info failed, err: %#v", err)
 			return false, nil
 		}
 		tool.delVirDevInfo(newDeviceList)
-		if _, err := tool.client.WriteDeviceInfoDataIntoCM(newDeviceList); err != nil {
+		if err := tool.client.WriteDeviceInfoDataIntoCMCache(newDeviceList); err != nil {
 			hwlog.RunLog.Errorf("write device info failed: %#v", err)
 			return false, nil
 		}
@@ -229,36 +229,6 @@ func (tool *AscendTools) removeDuplicate(allDeviceTypes *[]string) []string {
 		rmDupDeviceTypes = append(rmDupDeviceTypes, deviType)
 	}
 	return rmDupDeviceTypes
-}
-
-func (tool *AscendTools) getDeviceListFromConfigMap() (map[string]string, error) {
-	deviceInfo, err := tool.client.GetConfigMap(tool.client.DeviceInfoName, common.DeviceInfoCMNameSpace)
-	if err != nil || deviceInfo == nil {
-		return nil, fmt.Errorf("get configmap failed. %#v", err)
-	}
-	deviceInfoData, err := getDeviceInfoData(deviceInfo)
-	if err != nil || deviceInfoData == nil {
-		return nil, fmt.Errorf("get invalid device list. %#v", err)
-	}
-	return deviceInfoData, nil
-}
-
-func getDeviceInfoData(deviceInfo *v1.ConfigMap) (map[string]string, error) {
-	data, ok := deviceInfo.Data[common.DeviceInfoCMDataKey]
-	if !ok {
-		return nil, fmt.Errorf("%s not exist", common.DeviceInfoCMDataKey)
-	}
-	if len(data) > common.CMDataMaxLength {
-		return nil, fmt.Errorf("configMap data size is out of memory")
-	}
-	var nodeDeviceInfo common.NodeDeviceInfoCache
-	if err := json.Unmarshal([]byte(data), &nodeDeviceInfo); err != nil {
-		return nil, fmt.Errorf("unmarshal configmap data failed, err: %#v", err)
-	}
-	if nodeDeviceInfo.CheckCode != common.MakeDataHash(nodeDeviceInfo.DeviceInfo) {
-		return nil, fmt.Errorf("configmap check hash code error")
-	}
-	return nodeDeviceInfo.DeviceInfo.DeviceList, nil
 }
 
 func getResetInfoData(resetInfo *v1.ConfigMap) ([]*common.TaskDevInfo, error) {
@@ -653,6 +623,9 @@ func (tool *AscendTools) AppendVGroupInfo(allocateDevice []string) {
 
 // CheckDeviceTypeLabel check device type label
 func (tool *AscendTools) CheckDeviceTypeLabel() error {
+	if time.Now().Unix()-lastCheckNodeLabel < checkNodeLabelPolling {
+		return nil
+	}
 	curNode, err := tool.client.GetNode()
 	if err != nil {
 		return err
@@ -858,7 +831,7 @@ func (tool *AscendTools) SetDeviceUsage(devLogicID int32) error {
 		hwlog.RunLog.Errorf("%#v", err)
 		return fmt.Errorf("set device usage error")
 	}
-	if boardInfo.BoardId == common.A300IA2BoardId {
+	if devType == common.Ascend910B && boardInfo.BoardId == common.A300IA2BoardId {
 		tool.deviceUsage = common.Infer
 		return nil
 	}
