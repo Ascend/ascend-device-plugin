@@ -831,7 +831,7 @@ func (tool *AscendTools) SetDeviceUsage(devLogicID int32) error {
 		hwlog.RunLog.Errorf("%#v", err)
 		return fmt.Errorf("set device usage error")
 	}
-	if boardInfo.BoardId == common.A300IA2BoardId {
+	if devType == common.Ascend910B && boardInfo.BoardId == common.A300IA2BoardId {
 		tool.deviceUsage = common.Infer
 		return nil
 	}
