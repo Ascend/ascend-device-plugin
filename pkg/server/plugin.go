@@ -308,7 +308,7 @@ func (ps *PluginServer) getOldestPod(pods []v1.Pod) *v1.Pod {
 	}
 	oldest := pods[0]
 	for _, pod := range pods {
-		hwlog.RunLog.Debugf("pod %s, predicate time: %s", oldest.Name, pod.Annotations[common.PodPredicateTime])
+		hwlog.RunLog.Debugf("pod %s, predicate time: %s", pod.Name, pod.Annotations[common.PodPredicateTime])
 		if getPredicateTimeFromPodAnnotation(&oldest) > getPredicateTimeFromPodAnnotation(&pod) {
 			oldest = pod
 		}
@@ -507,6 +507,12 @@ func (ps *PluginServer) removeVGroup(podDeviceInfo []PodDeviceInfo) sets.String 
 }
 
 func checkAnnotationAllocateValid(requestDevices []string, deviceType string, pod *v1.Pod, chipAICore int32) bool {
+	if predicateTime, ok := pod.Annotations[common.PodPredicateTime]; ok {
+		if predicateTime == strconv.FormatUint(math.MaxUint64, common.BaseDec) {
+			hwlog.RunLog.Warnf("The pod has been mounted to a device, pod name: %s", pod.Name)
+			return false
+		}
+	}
 	if common.ParamOption.PresetVDevice {
 		allocateDevice, err := common.GetDeviceFromPodAnnotation(pod, deviceType)
 		if err != nil {
@@ -605,16 +611,28 @@ func (ps *PluginServer) doWithVolcanoSchedule(requestDevices []string) ([]string
 	conditionFunc := func(pod *v1.Pod) bool {
 		return checkAnnotationAllocateValid(requestDevices, ps.deviceType, pod, ps.manager.GetChipAICore())
 	}
-	var pods []v1.Pod
+	var filteredPods []v1.Pod
+	var allPods []v1.Pod
 	for i := 0; i < common.GetPodFromInformerTime; i++ {
-		allPods := ps.manager.GetKubeClient().GetActivePodListCache()
-		pods = common.FilterPods(allPods, ps.deviceType, conditionFunc)
-		if len(pods) != 0 {
+		if i == common.GetPodFromInformerTime-1 {
+			// in the last time of retry, get the pod from api server instead of cache
+			noneCachedPod, err := ps.manager.GetKubeClient().GetActivePodList()
+			if err != nil {
+				hwlog.RunLog.Errorf("get active pod from api server failed")
+				return nil, err
+			}
+			allPods = noneCachedPod
+		} else {
+			allPods = ps.manager.GetKubeClient().GetActivePodListCache()
+		}
+		filteredPods = common.FilterPods(allPods, ps.deviceType, conditionFunc)
+		if len(filteredPods) != 0 {
 			break
 		}
+		hwlog.RunLog.Warnf("no log passed the filter, request device: %v, retry: %d", requestDevices, i)
 		time.Sleep(time.Second)
 	}
-	oldestPod := ps.getOldestPod(pods)
+	oldestPod := ps.getOldestPod(filteredPods)
 	if oldestPod == nil {
 		return nil, fmt.Errorf("not get valid pod")
 	}
