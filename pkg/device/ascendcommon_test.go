@@ -182,7 +182,8 @@ func TestAddPodAnnotation2(t *testing.T) {
 		defer mockGetLogicIDFromPhysicID.Reset()
 		convey.Convey("GetDeviceIPAddress failed", func() {
 			mockGetDeviceIPAddress := gomonkey.ApplyMethod(reflect.TypeOf(new(devmanager.DeviceManagerMock)),
-				"GetDeviceIPAddress", func(_ *devmanager.DeviceManagerMock, logicID int32) (string, error) {
+				"GetDeviceIPAddress", func(_ *devmanager.DeviceManagerMock, logicID, ipType int32) (
+					string, error) {
 					return "", fmt.Errorf("error")
 				})
 			defer mockGetDeviceIPAddress.Reset()
@@ -191,7 +192,8 @@ func TestAddPodAnnotation2(t *testing.T) {
 		})
 		convey.Convey("GetDeviceIPAddress ok", func() {
 			mockGetDeviceIPAddress := gomonkey.ApplyMethod(reflect.TypeOf(new(devmanager.DeviceManagerMock)),
-				"GetDeviceIPAddress", func(_ *devmanager.DeviceManagerMock, logicID int32) (string, error) {
+				"GetDeviceIPAddress", func(_ *devmanager.DeviceManagerMock, logicID, ipType int32) (
+					string, error) {
 					return "", nil
 				})
 			defer mockGetDeviceIPAddress.Reset()

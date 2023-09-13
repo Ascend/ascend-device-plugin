@@ -50,6 +50,12 @@ var lastCheckNodeLabel int64
 
 const checkNodeLabelPolling = 60 * 60
 
+const (
+	ipAddrTypeV4       = 0
+	ipAddrTypeV6       = 1
+	ipv6LinkTypePrefix = "fe80"
+)
+
 // AscendTools struct definition
 type AscendTools struct {
 	client       *kubeclient.ClientK8s
@@ -381,7 +387,21 @@ func (tool *AscendTools) getDeviceIP(deviceType string, phyID int) (string, erro
 	if strings.Contains(chip.Name, common.VirMark) {
 		return common.DefaultDeviceIP, nil
 	}
-	return tool.dmgr.GetDeviceIPAddress(logicID)
+	return tool.getDcmiDeviceIP(logicID)
+}
+
+func (tool *AscendTools) getDcmiDeviceIP(logicID int32) (string, error) {
+	if ipv4, err := tool.dmgr.GetDeviceIPAddress(logicID, ipAddrTypeV4); err == nil {
+		return ipv4, nil
+	}
+	ipv6, err := tool.dmgr.GetDeviceIPAddress(logicID, ipAddrTypeV6)
+	if err != nil {
+		return "", err
+	}
+	if strings.Index(ipv6, ipv6LinkTypePrefix) == 0 {
+		return "", fmt.Errorf("logicID(%d) ip is a link type ipv6 address", logicID)
+	}
+	return ipv6, nil
 }
 
 func (tool *AscendTools) getDeviceListIP(devices []string, deviceType string) (map[int]string, error) {
