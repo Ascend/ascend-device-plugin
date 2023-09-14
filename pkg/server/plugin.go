@@ -509,7 +509,7 @@ func (ps *PluginServer) removeVGroup(podDeviceInfo []PodDeviceInfo) sets.String 
 func checkAnnotationAllocateValid(requestDevices []string, deviceType string, pod *v1.Pod, chipAICore int32) bool {
 	if predicateTime, ok := pod.Annotations[common.PodPredicateTime]; ok {
 		if predicateTime == strconv.FormatUint(math.MaxUint64, common.BaseDec) {
-			hwlog.RunLog.Warnf("The pod has been mounted to a device, pod name: %s", pod.Name)
+			hwlog.RunLog.Debugf("The pod has been mounted to a device, pod name: %s", pod.Name)
 			return false
 		}
 	}
