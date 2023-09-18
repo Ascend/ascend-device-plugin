@@ -171,6 +171,7 @@ type DevFaultInfo struct {
 	LogicId      int32
 	Status       string
 	Policy       string
+	InitialPolicy string
 	ErrorCode    []int64
 	ErrorCodeHex string
 }

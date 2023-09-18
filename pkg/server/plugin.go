@@ -629,7 +629,7 @@ func (ps *PluginServer) doWithVolcanoSchedule(requestDevices []string) ([]string
 		if len(filteredPods) != 0 {
 			break
 		}
-		hwlog.RunLog.Warnf("no log passed the filter, request device: %v, retry: %d", requestDevices, i)
+		hwlog.RunLog.Warnf("no pod passed the filter, request device: %v, retry: %d", requestDevices, i)
 		time.Sleep(time.Second)
 	}
 	oldestPod := ps.getOldestPod(filteredPods)

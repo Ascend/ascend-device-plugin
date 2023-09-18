@@ -43,11 +43,11 @@ func (ki *ClientK8s) TryUpdatePodAnnotation(pod *v1.Pod, annotation map[string]s
 			for k, v := range annotation {
 				pod.Annotations[k] = v
 			}
-			if _, err := ki.UpdatePod(pod); err == nil {
+			_, err := ki.UpdatePod(pod)
+			if err == nil {
 				return nil
-			} else {
-				hwlog.RunLog.Warnf("update pod annotation failed, times: %d, error is %#v", i+1, err)
 			}
+			hwlog.RunLog.Debugf("update pod annotation failed, times: %d, error is %#v", i+1, err)
 		}
 		time.Sleep(tryUpdatePodWaitTime)
 		podNew := ki.GetPodCache(pod.Namespace, pod.Name)
