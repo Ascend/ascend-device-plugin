@@ -40,13 +40,6 @@ const (
 	// minListWatchPeriod is the min listening device state's period
 	minListWatchPeriod = 3
 	maxLogLineLength   = 1024
-
-	// defaultCacheExpirePeriod is the default k8s cache expire period
-	defaultCacheExpirePeriod = 30
-	// maxCacheExpirePeriod is the max k8s cache expire period
-	maxCacheExpirePeriod = 60
-	// minCacheExpirePeriod is the min k8s cache expire period
-	minCacheExpirePeriod = 0
 )
 
 var (
@@ -77,8 +70,6 @@ var (
 	useLargeModel = flag.Bool("useLargeModel", false, "Whether to use large model")
 	shareDevCount = flag.Uint("shareDevCount", 1, "share device function, enable the func by setting "+
 		"a value greater than 1, range is [1, 100], only support 310B")
-	cacheExpirePeriod = flag.Int64("cacheExpirePeriod", defaultCacheExpirePeriod, "k8s resource cache expire period, "+
-		"second unit, 0 means not to use cache, range [0, 60]")
 )
 
 var (
@@ -152,10 +143,6 @@ func checkParam() bool {
 		hwlog.RunLog.Error("unSupport build scene, only support edge and center")
 		return false
 	}
-	if (*cacheExpirePeriod) < minCacheExpirePeriod || (*cacheExpirePeriod) > maxCacheExpirePeriod {
-		hwlog.RunLog.Warn("cacheExpirePeriod period out of range")
-		return false
-	}
 	return checkShareDevCount()
 }
 
@@ -218,7 +205,6 @@ func setParameters() {
 		PresetVDevice:      *presetVirtualDevice,
 		Use310PMixedInsert: *use310PMixedInsert,
 		HotReset:           *hotReset,
-		CacheExpirePeriod:  *cacheExpirePeriod,
 		UseLargeModel:      *useLargeModel,
 		BuildScene:         BuildScene,
 		ShareCount:         *shareDevCount,

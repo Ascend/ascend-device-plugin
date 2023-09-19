@@ -118,22 +118,20 @@ func (ki *ClientK8s) WriteResetInfoDataIntoCM(taskName string, namespace string,
 		hwlog.RunLog.Errorf("failed to get reset cm of task %s, err: %#v", taskName, err)
 		return nil, err
 	}
-	taskResetInfo := &common.TaskResetInfoCache{
-		ResetInfo: taskInfo,
-	}
 
 	oldResetInfoData, ok := oldCM.Data[common.ResetInfoCMDataKey]
 	if !ok {
 		return nil, fmt.Errorf("invalid reset info data")
 	}
-	if strings.Contains(oldResetInfoData, common.IsolateError) && len(taskResetInfo.ResetInfo.RankList) != 0 {
+	if strings.Contains(oldResetInfoData, common.IsolateError) && len(taskInfo.RankList) != 0 {
 		return nil, fmt.Errorf("task should be rescheduled")
 	}
 
-	taskResetInfo.ResetInfo.UpdateTime = time.Now().Unix()
-	checkCode := common.MakeDataHash(taskResetInfo.ResetInfo)
+	newTaskInfo := setNewTaskInfoWithHexString(taskInfo)
+	newTaskInfo.UpdateTime = time.Now().Unix()
+	checkCode := common.MakeDataHash(newTaskInfo)
 	var data []byte
-	if data = common.MarshalData(taskResetInfo.ResetInfo); len(data) == 0 {
+	if data = common.MarshalData(newTaskInfo); len(data) == 0 {
 		return nil, fmt.Errorf("marshal task reset data failed")
 	}
 	resetInfoCM := &v1.ConfigMap{
@@ -147,6 +145,17 @@ func (ki *ClientK8s) WriteResetInfoDataIntoCM(taskName string, namespace string,
 
 	hwlog.RunLog.Debugf("write reset info cache into cm: %s/%s.", resetInfoCM.Namespace, resetInfoCM.Name)
 	return ki.UpdateConfigMap(resetInfoCM)
+}
+
+func setNewTaskInfoWithHexString(taskInfo *common.TaskResetInfo) *common.TaskResetInfo {
+	var newTaskInfo common.TaskResetInfo
+	for _, deviceInfo := range taskInfo.RankList {
+		newDeviceInfo := *deviceInfo
+		newDeviceInfo.ErrorCodeHex = strings.ToUpper(common.Int64Tool.ToHexString(newDeviceInfo.ErrorCode))
+		newDeviceInfo.ErrorCode = []int64{}
+		newTaskInfo.RankList = append(newTaskInfo.RankList, &newDeviceInfo)
+	}
+	return &newTaskInfo
 }
 
 // WriteFaultInfoDataIntoCM write fault info into config map

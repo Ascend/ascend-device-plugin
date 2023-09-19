@@ -322,7 +322,7 @@ func (tool *AscendTools) groupDevsByStatus(subClassDevices []*common.NpuDevice, 
 				NPUName:              device.DeviceName,
 				LargeModelFaultLevel: common.GetLargeModelFaultTypeByCode(device.FaultCodes),
 				FaultLevel:           common.GetFaultTypeByCode(device.FaultCodes),
-				FaultCode:            common.Int64Tool.ToHexString(device.FaultCodes),
+				FaultCode:            strings.ToUpper(common.Int64Tool.ToHexString(device.FaultCodes)),
 			})
 		}
 		if device.Health == v1beta1.Healthy {

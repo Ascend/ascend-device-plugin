@@ -105,7 +105,6 @@ type Option struct {
 	BuildScene         string   // build scene judge device-plugin start scene
 	ProductTypes       []string // all product types
 	RealCardType       string   // real card type
-	CacheExpirePeriod  int64    // k8s resource expire period
 }
 
 // GetAllDeviceInfoTypeList Get All Device Info Type List
@@ -113,12 +112,12 @@ func GetAllDeviceInfoTypeList() map[string]struct{} {
 	return map[string]struct{}{HuaweiUnHealthAscend910: {}, HuaweiNetworkUnHealthAscend910: {},
 		ResourceNamePrefix + Ascend910: {}, ResourceNamePrefix + Ascend910c2: {},
 		ResourceNamePrefix + Ascend910c4: {}, ResourceNamePrefix + Ascend910c8: {},
-		ResourceNamePrefix + Ascend910c16: {}, ResourceNamePrefix + Ascend910c5Cpu1Gb8:  {},
+		ResourceNamePrefix + Ascend910c16: {}, ResourceNamePrefix + Ascend910c5Cpu1Gb8: {},
 		ResourceNamePrefix + Ascend910c5Cpu1Gb16: {}, ResourceNamePrefix + Ascend910c6Cpu1Gb16: {},
 		ResourceNamePrefix + Ascend910c10Cpu3Gb16: {}, ResourceNamePrefix + Ascend910c3Cpu1Gb8: {},
 		ResourceNamePrefix + Ascend910c10Cpu3Gb16Ndvpp: {}, ResourceNamePrefix + Ascend910c10Cpu3Gb32: {},
 		ResourceNamePrefix + Ascend910c10Cpu4Gb16Dvpp: {},
-		ResourceNamePrefix + Ascend910c12Cpu3Gb32: {}, ResourceNamePrefix + Ascend310: {},
+		ResourceNamePrefix + Ascend910c12Cpu3Gb32:     {}, ResourceNamePrefix + Ascend310: {},
 		ResourceNamePrefix + Ascend310P: {}, ResourceNamePrefix + Ascend310Pc1: {},
 		ResourceNamePrefix + Ascend310Pc2: {}, ResourceNamePrefix + Ascend310Pc4: {},
 		ResourceNamePrefix + Ascend310Pc2Cpu1: {}, ResourceNamePrefix + Ascend310Pc4Cpu3: {},
@@ -169,10 +168,11 @@ type TaskDevInfo struct {
 
 // DevFaultInfo is the fault info of device
 type DevFaultInfo struct {
-	LogicId   int32
-	Status    string
-	Policy    string
-	ErrorCode []int64
+	LogicId      int32
+	Status       string
+	Policy       string
+	ErrorCode    []int64
+	ErrorCodeHex string
 }
 
 // TaskFaultInfoCache record task fault rank information cache
