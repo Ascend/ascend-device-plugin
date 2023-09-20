@@ -39,7 +39,7 @@ type HotResetManager interface {
 	GetDevListInReset() map[int32]struct{}
 	GetDevListByPolicyLevel([]*common.TaskDevInfo, int) (map[int32]struct{}, error)
 	GetNeedResetDevList([]*common.TaskDevInfo) (map[int32]struct{}, error)
-	GetTaskResetInfo([]*common.TaskDevInfo, string, string) (*common.TaskResetInfo, error)
+	GetTaskResetInfo([]*common.TaskDevInfo, string, string, string) (*common.TaskResetInfo, error)
 	GetTaskFaultRankInfo([]*common.TaskDevInfo) (*common.TaskFaultInfo, error)
 	GetFaultDev2PodMap() (map[int32]v1.Pod, error)
 	GenerateTaskDevFaultInfoList(devIdList []int32, rankIndex string) ([]*common.TaskDevInfo, error)
@@ -108,8 +108,8 @@ func NewHotResetManager(devUsage string) HotResetManager {
 }
 
 func getChipCountOnRing() int {
-	var ring = map[string]int {
-		common.Ascend910: common.Ascend910RingsNum,
+	var ring = map[string]int{
+		common.Ascend910:  common.Ascend910RingsNum,
 		common.Ascend910B: common.Ascend910BRingsNumTrain,
 	}
 	return ring[common.ParamOption.RealCardType]
@@ -213,7 +213,7 @@ func (hrt *HotResetTools) GetDevListByPolicyLevel(devFaultInfoList []*common.Tas
 			hwlog.RunLog.Error(err)
 			return nil, err
 		}
-		if policyType == policyLevel {
+		if policyType >= policyLevel {
 			if _, ok := devList[devFaultInfo.LogicId]; !ok {
 				devList[devFaultInfo.LogicId] = struct{}{}
 			}
@@ -245,7 +245,7 @@ func (hrt *HotResetTools) GetNeedResetDevList(devFaultInfoList []*common.TaskDev
 }
 
 // GetTaskResetInfo return the detail reset info of task to process
-func (hrt *HotResetTools) GetTaskResetInfo(devFaultInfoList []*common.TaskDevInfo, policyType,
+func (hrt *HotResetTools) GetTaskResetInfo(devFaultInfoList []*common.TaskDevInfo, policy, initPolicy,
 	status string) (*common.TaskResetInfo, error) {
 	faultRing := make(map[int]struct{}, common.RingSum)
 	var rankList []*common.TaskDevInfo
@@ -264,7 +264,8 @@ func (hrt *HotResetTools) GetTaskResetInfo(devFaultInfoList []*common.TaskDevInf
 			continue
 		}
 		newDevInfo := hrt.DeepCopyDevInfo(devInfo)
-		newDevInfo.Policy = policyType
+		newDevInfo.Policy = policy
+		newDevInfo.InitialPolicy = initPolicy
 		newDevInfo.Status = status
 		rankList = append(rankList, newDevInfo)
 	}

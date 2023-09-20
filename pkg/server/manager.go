@@ -727,7 +727,7 @@ func (hdm *HwDevManager) execResetChip(logicID int32, isResetExec *bool) error {
 func (hdm *HwDevManager) subscribeFaultEvent() {
 	if err := common.LoadFaultCodeFromFile(); err != nil {
 		common.SubscribeFailed = true
-		hwlog.RunLog.Errorf("load faultCode.json failed, the subscribe way is closed")
+		hwlog.RunLog.Errorf("load faultCode.json failed, the subscribe way is closed, err: %v", err)
 		return
 	}
 	if hdm.RunMode != common.Ascend910 {
@@ -737,7 +737,7 @@ func (hdm *HwDevManager) subscribeFaultEvent() {
 	}
 	if err := hdm.manager.GetDmgr().SetFaultEventCallFunc(common.SaveDevFaultInfo); err != nil {
 		common.SubscribeFailed = true
-		hwlog.RunLog.Errorf("set fault event call back function failed, the subscribe way is closed")
+		hwlog.RunLog.Errorf("set fault event call back function failed, the subscribe way is closed, err: %v", err)
 		return
 	}
 	for i := 0; i < common.GeneralSubscribeTime; i++ {

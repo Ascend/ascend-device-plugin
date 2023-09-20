@@ -250,7 +250,7 @@ func getResetInfoData(resetInfo *v1.ConfigMap) ([]*common.TaskDevInfo, error) {
 		return nil, fmt.Errorf("unmarshal configmap data failed, err: %#v", err)
 	}
 	if taskResetInfo.UpdateTime == 0 {
-		hwlog.RunLog.Info(" reset configmap is initializing")
+		hwlog.RunLog.Debugf("reset configmap is initializing")
 		return nil, nil
 	}
 	checkCode, ok := resetInfo.Data[common.ResetInfoCMCheckCodeKey]
