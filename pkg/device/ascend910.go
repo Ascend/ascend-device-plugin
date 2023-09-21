@@ -387,6 +387,10 @@ func (hnm *HwAscend910Manager) isReSchedulingScene(npuCount int) bool {
 		npuCount < common.Ascend910BRingsNumTrain {
 		return true
 	}
+	if common.ParamOption.RealCardType == common.Ascend910B && hnm.GetDeviceUsage() == common.Infer &&
+		npuCount > common.Ascend910BRingsNumInfer {
+		return true
+	}
 	return false
 }
 
