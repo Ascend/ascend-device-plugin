@@ -95,3 +95,25 @@ func (ki *ClientK8s) GetActivePodListCache() []v1.Pod {
 	}
 	return newPodList
 }
+
+// TryUpdatePodCacheAnnotation is to try updating pod annotation in both api server and cache
+func (ki *ClientK8s) TryUpdatePodCacheAnnotation(pod *v1.Pod, annotation map[string]string) error {
+	if err := ki.TryUpdatePodAnnotation(pod, annotation); err != nil {
+		hwlog.RunLog.Errorf("update pod annotation in api server failed, err: %v", err)
+		return err
+	}
+	// update cache
+	lock.Lock()
+	defer lock.Unlock()
+	for i, podInCache := range podList {
+		if podInCache.Namespace == pod.Namespace && podInCache.Name == pod.Name {
+			for k, v := range annotation {
+				podList[i].Annotations[k] = v
+			}
+			hwlog.RunLog.Debugf("update annotation in pod cache success, name: %s, namespace: %s", pod.Name, pod.Namespace)
+			return nil
+		}
+	}
+	hwlog.RunLog.Warnf("no pod found in cache when update annotation, name: %s, namespace: %s", pod.Name, pod.Namespace)
+	return nil
+}

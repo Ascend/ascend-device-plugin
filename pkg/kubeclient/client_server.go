@@ -221,8 +221,7 @@ func (ki *ClientK8s) GetPodsUsedNpu(devType string) sets.String {
 	podList := ki.GetActivePodListCache()
 	var useNpu []string
 	for _, pod := range podList {
-		annotationTag := fmt.Sprintf("%s%s", common.ResourceNamePrefix, devType)
-		tmpNpu, ok := pod.Annotations[annotationTag]
+		tmpNpu, ok := pod.Annotations[common.ResourceNamePrefix+common.PodRealAlloc]
 		if !ok || len(tmpNpu) == 0 || len(tmpNpu) > common.PodAnnotationMaxLength {
 			continue
 		}
