@@ -137,6 +137,10 @@ const (
 	GeneralSubscribeTime = 3
 	// Hex hexadecimal
 	Hex = 16
+	// LinkupRecoverTime is the linkup duration for restoring NPU network health
+	LinkupRecoverTime = 60
+	// SecondMagnification is second-level unit magnification
+	SecondMagnification = 1000
 )
 
 const (

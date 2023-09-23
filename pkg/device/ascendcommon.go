@@ -553,7 +553,7 @@ func classifyDevByType(allDevs []common.NpuDevice, suffix string) []*common.NpuD
 	return classifyDev
 }
 
-func isHealthy(device *common.NpuDevice, podList []v1.Pod) string {
+func (tool *AscendTools) isHealthy(device *common.NpuDevice) string {
 	// in large model, NotHandleFault: Healthy, SeparateNPU: Unhealthy,
 	// PreSeparateNPU and npu used: Healthy, PreSeparateNPU and npu free: Unhealthy
 	if common.ParamOption.UseLargeModel && common.ParamOption.HotReset != common.HotResetTrain {
@@ -564,7 +564,7 @@ func isHealthy(device *common.NpuDevice, podList []v1.Pod) string {
 		if faultType == common.SeparateNPU {
 			return v1beta1.Unhealthy
 		}
-		if npuIsUsedNow(device.DeviceName, podList) {
+		if tool.npuIsUsedNow(device.DeviceName) {
 			return v1beta1.Healthy
 		}
 		return v1beta1.Unhealthy
@@ -576,7 +576,8 @@ func isHealthy(device *common.NpuDevice, podList []v1.Pod) string {
 	return v1beta1.Unhealthy
 }
 
-func npuIsUsedNow(deviceName string, podList []v1.Pod) bool {
+func (tool *AscendTools) npuIsUsedNow(deviceName string) bool {
+	podList := tool.client.GetActivePodListCache()
 	for _, pod := range podList {
 		annotationTag := fmt.Sprintf("%s%s", common.ResourceNamePrefix, common.Ascend910)
 		tmpNpu, ok := pod.Annotations[annotationTag]
@@ -752,15 +753,12 @@ func (tool *AscendTools) writeNewFaultCode(deviceMap map[string][]*common.NpuDev
 	initLogicIDs := common.GetAndCleanLogicID()
 	devFaultInfoMap := common.GetAndCleanFaultInfo()
 	var podList []v1.Pod
-	if common.ParamOption.UseLargeModel && common.ParamOption.HotReset != common.HotResetTrain {
-		podList = tool.client.GetAllPodListCache()
-	}
 	for _, devices := range deviceMap {
-		for idx, device := range devices {
+		for _, device := range devices {
 			tool.flushFaultCodesWithInit(device, initLogicIDs, devFaultInfoMap)
-			device.Health = isHealthy(device, podList)
+			device.Health = tool.isHealthy(device)
 			if runMode == common.Ascend910 && tool.deviceUsage == common.Train {
-				devices[idx].NetworkHealth = tool.getDeviceNetworkState(device.LogicID)
+				tool.handleDeviceNetworkFault(device, devFaultInfoMap, podList)
 			}
 		}
 	}
@@ -863,4 +861,22 @@ func (tool *AscendTools) SetDeviceUsage(devLogicID int32) error {
 // GetDeviceUsage return usage of device, infer or train
 func (tool *AscendTools) GetDeviceUsage() string {
 	return tool.deviceUsage
+}
+
+func (tool *AscendTools) handleDeviceNetworkFault(device *common.NpuDevice,
+	devFaultInfoMap map[int32][]npuCommon.DevFaultInfo, podList []v1.Pod) {
+	if isFirstFlushFault {
+		device.NetworkHealth = v1beta1.Healthy
+		device.NetworkRealHealth = v1beta1.Healthy
+	}
+
+	common.GetLinkdownLinkupFaultEvents(device.LogicID, devFaultInfoMap[device.LogicID])
+
+	deviceNetworkHealth := tool.getDeviceNetworkState(device.LogicID)
+	common.GetCurrentDeviceNetWorkHealth(device.LogicID, deviceNetworkHealth)
+
+	common.SortMergeFaultQueue(device)
+
+	npuIsUsedOnDevice := tool.npuIsUsedNow(device.DeviceName)
+	common.LinkDownTimeoutCheck(device, npuIsUsedOnDevice)
 }

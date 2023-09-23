@@ -96,6 +96,16 @@ func (i int64Tool) ToHexString(sources []int64) string {
 	return target
 }
 
+// Index slice for string search the index with target
+func (s stringTool) Index(sources []string, target string) int {
+	for i, source := range sources {
+		if source == target {
+			return i
+		}
+	}
+	return -1
+}
+
 // SameElement string slice has same element with others slice
 func (s stringTool) SameElement(sources, targets []string) bool {
 	for _, source := range sources {

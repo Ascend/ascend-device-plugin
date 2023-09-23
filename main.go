@@ -40,6 +40,13 @@ const (
 	// minListWatchPeriod is the min listening device state's period
 	minListWatchPeriod = 3
 	maxLogLineLength   = 1024
+
+	// defaultLinkdownTimeout is the default linkdown timeout duration
+	defaultLinkdownTimeout = 30
+	// maxLinkdownTimeout is the max linkdown timeout duration
+	maxLinkdownTimeout = 30
+	// minLinkdownTimeout is the min linkdown timeout duration
+	minLinkdownTimeout = 1
 )
 
 var (
@@ -70,6 +77,8 @@ var (
 	useLargeModel = flag.Bool("useLargeModel", false, "Whether to use large model")
 	shareDevCount = flag.Uint("shareDevCount", 1, "share device function, enable the func by setting "+
 		"a value greater than 1, range is [1, 100], only support 310B")
+	linkdownTimeout = flag.Int64("linkdownTimeout", defaultLinkdownTimeout, "linkdown timeout duration, "+
+		", range [1, 30]")
 )
 
 var (
@@ -143,6 +152,12 @@ func checkParam() bool {
 		hwlog.RunLog.Error("unSupport build scene, only support edge and center")
 		return false
 	}
+
+	if (*linkdownTimeout) < minLinkdownTimeout || (*linkdownTimeout) > maxLinkdownTimeout {
+		hwlog.RunLog.Warn("linkdown timeout duration out of range")
+		return false
+	}
+
 	return checkShareDevCount()
 }
 
@@ -208,6 +223,7 @@ func setParameters() {
 		UseLargeModel:      *useLargeModel,
 		BuildScene:         BuildScene,
 		ShareCount:         *shareDevCount,
+		LinkdownTimeout:    *linkdownTimeout,
 	}
 }
 

@@ -57,16 +57,17 @@ type NpuAllInfo struct {
 
 // NpuDevice npu device description
 type NpuDevice struct {
-	FaultCodes      []int64
-	AlarmRaisedTime int64
-	DevType         string
-	DeviceName      string
-	Health          string
-	NetworkHealth   string
-	IP              string
-	LogicID         int32
-	PhyID           int32
-	CardID          int32
+	FaultCodes        []int64
+	AlarmRaisedTime   int64
+	DevType           string
+	DeviceName        string
+	Health            string
+	NetworkRealHealth string
+	NetworkHealth     string
+	IP                string
+	LogicID           int32
+	PhyID             int32
+	CardID            int32
 }
 
 // DavinCiDev davinci device
@@ -105,6 +106,7 @@ type Option struct {
 	BuildScene         string   // build scene judge device-plugin start scene
 	ProductTypes       []string // all product types
 	RealCardType       string   // real card type
+	LinkdownTimeout    int64    // linkdown timeout duration
 }
 
 // GetAllDeviceInfoTypeList Get All Device Info Type List
@@ -168,12 +170,12 @@ type TaskDevInfo struct {
 
 // DevFaultInfo is the fault info of device
 type DevFaultInfo struct {
-	LogicId      int32
-	Status       string
-	Policy       string
+	LogicId       int32
+	Status        string
+	Policy        string
 	InitialPolicy string
-	ErrorCode    []int64
-	ErrorCodeHex string
+	ErrorCode     []int64
+	ErrorCodeHex  string
 }
 
 // TaskFaultInfoCache record task fault rank information cache
