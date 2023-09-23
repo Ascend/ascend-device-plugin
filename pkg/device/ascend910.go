@@ -25,6 +25,7 @@ import (
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/pkg/common"
@@ -344,6 +345,7 @@ func (hnm *HwAscend910Manager) setTaskDevInfoCache() error {
 			hwlog.RunLog.Errorf("failed to get task device fault info list, err: %#v", err)
 			return err
 		}
+		// podAntiAffinity make sure that there won't be multi pod in single node of one task
 		newTaskDevFaultInfoCache[taskName] = taskDevFaultInfoList
 		newTaskPodCache[taskName] = pod
 		if err = hnm.hotResetManager.UpdateFaultDev2PodMap(devIdList, pod); err != nil {
@@ -385,10 +387,6 @@ func (hnm *HwAscend910Manager) isReSchedulingScene(npuCount int) bool {
 	}
 	if common.ParamOption.RealCardType == common.Ascend910B && hnm.GetDeviceUsage() == common.Train &&
 		npuCount < common.Ascend910BRingsNumTrain {
-		return true
-	}
-	if common.ParamOption.RealCardType == common.Ascend910B && hnm.GetDeviceUsage() == common.Infer &&
-		npuCount > common.Ascend910BRingsNumInfer {
 		return true
 	}
 	return false
@@ -839,7 +837,6 @@ func (hnm *HwAscend910Manager) resetDeviceOnce(devFaultInfoList []*common.TaskDe
 		hwlog.RunLog.Errorf("failed to exec reset device list, err: %#v", err)
 		return err
 	}
-	time.Sleep(common.WaitFlushCMTime * time.Second)
 	for _, devInfo := range devFaultInfoList {
 		common.SetDeviceInit(devInfo.LogicId)
 	}
@@ -860,7 +857,14 @@ func (hnm *HwAscend910Manager) execResetDevice(devList map[int32]struct{}) error
 		}
 		if err := hnm.tryResetDevice(cardId, deviceId); err != nil {
 			errList = append(errList, err)
+			continue
 		}
+		// wait for the device to reset completely
+		if err := hnm.waitDeviceResetComplete(deviceId); err != nil {
+			errList = append(errList, err)
+			continue
+		}
+		hwlog.RunLog.Infof("hot reset complete, deviceId: %d", deviceId)
 	}
 	if len(errList) == 0 {
 		return nil
@@ -868,12 +872,31 @@ func (hnm *HwAscend910Manager) execResetDevice(devList map[int32]struct{}) error
 	return errList[0]
 }
 
+func (hnm *HwAscend910Manager) waitDeviceResetComplete(deviceId int32) error {
+	if err := wait.PollImmediate(time.Second, time.Minute, func() (bool, error) {
+		bootState, err := hnm.GetDmgr().GetDeviceBootStatus(deviceId)
+		if err != nil {
+			hwlog.RunLog.Errorf("get device boot status failed, logic id: %d, err: %#v", deviceId, err)
+			return false, err
+		}
+		if bootState != common.BootStartFinish {
+			hwlog.RunLog.Debugf("device bootState(%d), starting...", bootState)
+			return false, nil
+		}
+		return true, nil
+	}); err != nil {
+		hwlog.RunLog.Errorf("hot reset failed, timeout or err: %#v, device id: %d", err, deviceId)
+		return err
+	}
+	return nil
+}
+
 func (hnm *HwAscend910Manager) tryResetDevice(cardId, deviceId int32) error {
 	var realError error
 	for i := 0; i < common.ResetRetryTimes; i++ {
 		err := hnm.GetDmgr().SetDeviceReset(cardId, deviceId)
 		if err == nil {
-			hwlog.RunLog.Infof("reset cardId %d success", cardId)
+			hwlog.RunLog.Infof("execute reset cardId %d success", cardId)
 			return nil
 		}
 		hwlog.RunLog.Errorf("cardId(%d) failed to reset device, err: %#v", cardId, err)
