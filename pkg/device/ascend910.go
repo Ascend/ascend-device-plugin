@@ -860,11 +860,11 @@ func (hnm *HwAscend910Manager) execResetDevice(devList map[int32]struct{}) error
 			continue
 		}
 		// wait for the device to reset completely
-		if err := hnm.waitDeviceResetComplete(deviceId); err != nil {
+		if err := hnm.waitDeviceResetComplete(devLogicId); err != nil {
 			errList = append(errList, err)
 			continue
 		}
-		hwlog.RunLog.Infof("hot reset complete, deviceId: %d", deviceId)
+		hwlog.RunLog.Infof("hot reset complete, cardId: %d, logicId: %d", cardId, devLogicId)
 	}
 	if len(errList) == 0 {
 		return nil
@@ -872,11 +872,11 @@ func (hnm *HwAscend910Manager) execResetDevice(devList map[int32]struct{}) error
 	return errList[0]
 }
 
-func (hnm *HwAscend910Manager) waitDeviceResetComplete(deviceId int32) error {
+func (hnm *HwAscend910Manager) waitDeviceResetComplete(logicId int32) error {
 	if err := wait.PollImmediate(time.Second, time.Minute, func() (bool, error) {
-		bootState, err := hnm.GetDmgr().GetDeviceBootStatus(deviceId)
+		bootState, err := hnm.GetDmgr().GetDeviceBootStatus(logicId)
 		if err != nil {
-			hwlog.RunLog.Errorf("get device boot status failed, logic id: %d, err: %#v", deviceId, err)
+			hwlog.RunLog.Errorf("get device boot status failed, logic id: %d, err: %#v", logicId, err)
 			return false, err
 		}
 		if bootState != common.BootStartFinish {
@@ -885,7 +885,7 @@ func (hnm *HwAscend910Manager) waitDeviceResetComplete(deviceId int32) error {
 		}
 		return true, nil
 	}); err != nil {
-		hwlog.RunLog.Errorf("hot reset failed, timeout or err: %#v, device id: %d", err, deviceId)
+		hwlog.RunLog.Errorf("hot reset failed, timeout or err: %#v, logic id: %d", err, logicId)
 		return err
 	}
 	return nil
