@@ -75,37 +75,22 @@
 <a name="table7854542104414"></a>
 <table><thead align="left"><tr id="zh-cn_topic_0280467800_row785512423445"><th class="cellrowborder" valign="top" width="33.33333333333333%" id="mcps1.1.4.1.1"><p id="zh-cn_topic_0280467800_p19856144274419"><a name="zh-cn_topic_0280467800_p19856144274419"></a><a name="zh-cn_topic_0280467800_p19856144274419"></a>版本</p>
 </th>
-<th class="cellrowborder" valign="top" width="33.33333333333333%" id="mcps1.1.4.1.2"><p id="zh-cn_topic_0280467800_p3856134219446"><a name="zh-cn_topic_0280467800_p3856134219446"></a><a name="zh-cn_topic_0280467800_p3856134219446"></a>发布日期</p>
-</th>
 <th class="cellrowborder" valign="top" width="33.33333333333333%" id="mcps1.1.4.1.3"><p id="zh-cn_topic_0280467800_p585634218445"><a name="zh-cn_topic_0280467800_p585634218445"></a><a name="zh-cn_topic_0280467800_p585634218445"></a>修改说明</p>
 </th>
 </tr>
 </thead>
 <tbody>
-<tr id="row7293189122012"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="p9235101416201"><a name="p9235101416201"></a><a name="p9235101416201"></a>v5.0.RC3</p>
-</td>
-<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.2 "><p id="p1523518145208"><a name="p1523518145208"></a><a name="p1523518145208"></a>2023-930</p>
-</td>
-<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.3 "><a name="ul162558202525"></a><a name="ul162558202525"></a><ul id="ul162558202525"><li>支持IPV6</li></ul>
-</td>
-</tr>
 <tr id="row7293189122012"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="p9235101416201"><a name="p9235101416201"></a><a name="p9235101416201"></a>v5.0.RC2</p>
 </td>
-<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.2 "><p id="p1523518145208"><a name="p1523518145208"></a><a name="p1523518145208"></a>2023-630</p>
-</td>
-<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.3 "><a name="ul162558202525"></a><a name="ul162558202525"></a><ul id="ul162558202525"><li>支持断点续续热复位</li></ul>
+<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.3 "><a name="ul162558202525"></a><a name="ul162558202525"></a><ul id="ul162558202525"><li>支持断点续训热复位</li></ul>
 </td>
 </tr>
 <tr id="row7293189122012"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="p9235101416201"><a name="p9235101416201"></a><a name="p9235101416201"></a>v5.0.RC1</p>
-</td>
-<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.2 "><p id="p1523518145208"><a name="p1523518145208"></a><a name="p1523518145208"></a>2023-330</p>
 </td>
 <td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.3 "><a name="ul162558202525"></a><a name="ul162558202525"></a><ul id="ul162558202525"><li>新硬件适配</li></ul>
 </td>
 </tr>
 <tr id="row7293189122012"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="p9235101416201"><a name="p9235101416201"></a><a name="p9235101416201"></a>v3.0.0</p>
-</td>
-<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.2 "><p id="p1523518145208"><a name="p1523518145208"></a><a name="p1523518145208"></a>2022-1230</p>
 </td>
 <td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.3 "><a name="ul162558202525"></a><a name="ul162558202525"></a><ul id="ul162558202525"><li>首次发布</li></ul>
 </td>
