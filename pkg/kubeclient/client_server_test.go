@@ -120,7 +120,7 @@ func TestGetPodsUsedNpu(t *testing.T) {
 	if err != nil {
 		t.Fatal("TestGetPodsUsedNpu init kubernetes failed")
 	}
-	podList := getMockPodList(common.HuaweiAscend310, npuChip310PhyID0)
+	podList := getMockPodList(common.ResourceNamePrefix+common.PodRealAlloc, npuChip310PhyID0)
 	convey.Convey("get used npu on pods without get pod list", t, func() {
 		mockPodList := gomonkey.ApplyMethod(reflect.TypeOf(new(ClientK8s)), "GetActivePodListCache",
 			func(_ *ClientK8s) []v1.Pod {
