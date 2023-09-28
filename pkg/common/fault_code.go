@@ -534,11 +534,11 @@ func LinkDownTimeoutCheck(device *NpuDevice, npuIsUsedOnDevice bool) {
 
 	if npuIsUsedOnDevice {
 		device.NetworkHealth = v1beta1.Healthy
-		hwlog.RunLog.Debugf("a training pod is running on NPU %v, device network health status set %v, "+
+		hwlog.RunLog.Infof("a training pod is running on NPU %v, device network health status set %v, "+
 			"network real health status is %v", device.LogicID, device.NetworkHealth, device.NetworkRealHealth)
 	} else {
 		device.NetworkHealth = device.NetworkRealHealth
-		hwlog.RunLog.Debugf("no training pod is running on NPU %v, device network health status set %v",
+		hwlog.RunLog.Infof("no training pod is running on NPU %v, device network health status set %v",
 			device.LogicID, device.NetworkHealth)
 	}
 }
