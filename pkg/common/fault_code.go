@@ -244,11 +244,11 @@ func GetAndCleanLogicID() []int32 {
 // SetFaultCodes set fault codes, all fault code write operate should package into this file for safe
 func SetFaultCodes(device *NpuDevice, faultCodes []int64) {
 	newFaultCodes := make([]int64, 0, common.MaxErrorCodeCount)
-	for faultCode := range faultCodes {
+	for _, faultCode := range faultCodes {
 		if faultCode == LinkDownFaultCode {
 			continue
 		}
-		newFaultCodes = append(newFaultCodes, int64(faultCode))
+		newFaultCodes = append(newFaultCodes, faultCode)
 	}
 	device.FaultCodes = newFaultCodes
 	setAlarmRaisedTime(device)
