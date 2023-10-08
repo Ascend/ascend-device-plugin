@@ -398,6 +398,10 @@ func (hnm *HwAscend910Manager) isTaskInReset(taskName string) (bool, error) {
 		hwlog.RunLog.Errorf("failed to get task pod, err: %#v", err)
 		return false, err
 	}
+	if hnm.hotResetManager.IsCurNodeTaskInReset(taskName) {
+		hwlog.RunLog.Infof("this node task %s is resetting, skip once process", taskName)
+		return true, nil
+	}
 	resetCM, err := hnm.client.GetConfigMap(common.ResetInfoCMNamePrefix+taskName, pod.Namespace)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -406,10 +410,6 @@ func (hnm *HwAscend910Manager) isTaskInReset(taskName string) (bool, error) {
 		}
 		hwlog.RunLog.Errorf("failed to get reset info cm, err: %#v", err)
 		return false, err
-	}
-	if hnm.hotResetManager.IsCurNodeTaskInReset(taskName) {
-		hwlog.RunLog.Infof("this node task %s is resetting, skip once process", taskName)
-		return true, nil
 	}
 	resetInfoData, err := getResetInfoData(resetCM)
 	if err != nil {
@@ -539,6 +539,8 @@ func (hnm *HwAscend910Manager) restartRequestProcess(taskName string, resetInfo 
 		hwlog.RunLog.Errorf("failed to get task device fault info list, err %#v", err)
 		return
 	}
+	hwlog.RunLog.Infof("start handle L2 fault, task name: %s", taskName)
+	common.RecordFaultInfoList(devFaultInfoList)
 	devFaultInfoListInReset := hnm.hotResetManager.DeepCopyDevFaultInfoList(devFaultInfoList)
 	// wait L2 fault to self-healing
 	time.Sleep(common.WaitFlushCMTime * time.Second)
@@ -577,6 +579,8 @@ func (hnm *HwAscend910Manager) restartProcess(taskName string, resetInfo *common
 		hwlog.RunLog.Errorf("failed to get task device fault info list, err %#v", err)
 		return
 	}
+	hwlog.RunLog.Infof("start handle L3 fault, task name: %s", taskName)
+	common.RecordFaultInfoList(devFaultInfoList)
 	devFaultInfoListInReset := hnm.hotResetManager.DeepCopyDevFaultInfoList(devFaultInfoList)
 	time.Sleep(common.WaitFlushCMTime * time.Second)
 	if err := hnm.refreshDevFaultInfo(devFaultInfoList); err != nil {
@@ -715,6 +719,8 @@ func (hnm *HwAscend910Manager) resetProcess(taskName string, resetInfo *common.T
 		hwlog.RunLog.Errorf("failed to get task device fault info list, err: %#v", err)
 		return
 	}
+	hwlog.RunLog.Infof("start handle L5 fault, task name: %s", taskName)
+	common.RecordFaultInfoList(devFaultInfoList)
 	devFaultInfoListInReset := hnm.hotResetManager.DeepCopyDevFaultInfoList(devFaultInfoList)
 	time.Sleep(common.WaitFlushCMTime * time.Second)
 	if err := hnm.resetDeviceOnce(devFaultInfoList); err != nil {
@@ -812,6 +818,7 @@ func (hnm *HwAscend910Manager) postProcess(taskName string, resetInfo *common.Ta
 		hwlog.RunLog.Errorf("failed to clear reset info, err: %#v", err)
 		return err
 	}
+	hwlog.RunLog.Infof("grace tolerance process complete, task name: %s", taskName)
 	return nil
 }
 func (hnm *HwAscend910Manager) refreshDevFaultInfo(devFaultInfo []*common.TaskDevInfo) error {

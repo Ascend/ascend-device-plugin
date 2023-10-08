@@ -496,3 +496,11 @@ func IsContainAtlas300IDuo() bool {
 	}
 	return false
 }
+
+func RecordFaultInfoList(devFaultInfoList []*TaskDevInfo) {
+	for _, devFaultInfo := range devFaultInfoList {
+		hexErrorCode := strings.ToUpper(Int64Tool.ToHexString(devFaultInfo.ErrorCode))
+		hwlog.RunLog.Infof("rank id: %d, log id: %d, policy: %s, error code: %s",
+			devFaultInfo.RankId, devFaultInfo.LogicId, devFaultInfo.Policy, hexErrorCode)
+	}
+}
