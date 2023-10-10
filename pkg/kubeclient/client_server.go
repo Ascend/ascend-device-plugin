@@ -38,6 +38,9 @@ func (ki *ClientK8s) TryUpdatePodAnnotation(pod *v1.Pod, annotation map[string]s
 	if annotation == nil {
 		return fmt.Errorf("invalid annotation")
 	}
+	if pod.Annotations == nil {
+		pod.Annotations = make(map[string]string, len(annotation))
+	}
 	for i := 0; i < common.RetryUpdateCount; i++ {
 		if pod.Name != "" {
 			for k, v := range annotation {
