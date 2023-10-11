@@ -508,10 +508,12 @@ func checkLinkupRecoverWhenNetworkUnhealth(device *NpuDevice, exitTag *bool) {
 }
 
 // LinkDownTimeoutCheck check whether the NPU linkdown timeout happened and NPU network recovered
-func LinkDownTimeoutCheck(device *NpuDevice, npuIsUsedOnDevice bool) {
+func LinkDownTimeoutCheck(device *NpuDevice) {
 	// check whether the NPU linkdown timeout happened based on the fault queue
 	// check whether the NPU network needs to be restored based on the fault queue
 	timeoutFaultInfoMapLen := len(timeoutFaultInfoMap[device.LogicID])
+
+	hwlog.RunLog.Infof("NPU logic id: %v, network health status is %v", device.LogicID, device.NetworkRealHealth)
 
 	if timeoutFaultInfoMapLen == 0 && device.NetworkHealth == device.NetworkRealHealth {
 		hwlog.RunLog.Debugf("NPU logic id: %v, fault queue is empty and NPU network health status not change, "+
@@ -532,13 +534,10 @@ func LinkDownTimeoutCheck(device *NpuDevice, npuIsUsedOnDevice bool) {
 	hwlog.RunLog.Debugf("NPU logic id: %v, network health status: %v, fault queue after linkDown timeout "+
 		"check and recover: %v", device.LogicID, device.NetworkHealth, timeoutFaultInfoMap[device.LogicID])
 
-	if npuIsUsedOnDevice {
-		device.NetworkHealth = v1beta1.Healthy
-		hwlog.RunLog.Infof("a training pod is running on NPU %v, device network health status set %v, "+
-			"network real health status is %v", device.LogicID, device.NetworkHealth, device.NetworkRealHealth)
-	} else {
-		device.NetworkHealth = device.NetworkRealHealth
-		hwlog.RunLog.Infof("no training pod is running on NPU %v, device network health status set %v",
-			device.LogicID, device.NetworkHealth)
+	if device.NetworkHealth != device.NetworkRealHealth {
+		hwlog.RunLog.Infof("NPU logic id: %v, after handling, network health status change, now network health set %v",
+			device.LogicID, device.NetworkRealHealth)
 	}
+
+	device.NetworkHealth = device.NetworkRealHealth
 }

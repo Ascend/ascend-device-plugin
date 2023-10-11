@@ -877,6 +877,5 @@ func (tool *AscendTools) handleDeviceNetworkFault(device *common.NpuDevice,
 
 	common.SortMergeFaultQueue(device)
 
-	npuIsUsedOnDevice := tool.npuIsUsedNow(device.DeviceName)
-	common.LinkDownTimeoutCheck(device, npuIsUsedOnDevice)
+	common.LinkDownTimeoutCheck(device)
 }
