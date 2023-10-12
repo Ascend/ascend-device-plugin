@@ -867,7 +867,7 @@ func (hnm *HwAscend910Manager) execResetDevice(devList map[int32]struct{}) error
 			continue
 		}
 		// wait for the device to reset completely
-		if err := hnm.waitDeviceResetComplete(devLogicId); err != nil {
+		if err := hnm.isRingResetComplete(devLogicId); err != nil {
 			errList = append(errList, err)
 			continue
 		}
@@ -879,8 +879,12 @@ func (hnm *HwAscend910Manager) execResetDevice(devList map[int32]struct{}) error
 	return errList[0]
 }
 
-func (hnm *HwAscend910Manager) waitDeviceResetComplete(logicId int32) error {
+func (hnm *HwAscend910Manager) waitDeviceResetComplete(logicId int32, totalTime *int) error {
 	if err := wait.PollImmediate(time.Second, time.Minute, func() (bool, error) {
+		*totalTime += 1
+		if *totalTime > common.MaxResetWaitRecoverTime {
+			return true, fmt.Errorf("wait device reset recover timeout")
+		}
 		bootState, err := hnm.GetDmgr().GetDeviceBootStatus(logicId)
 		if err != nil {
 			hwlog.RunLog.Errorf("get device boot status failed, logic id: %d, err: %#v", logicId, err)
@@ -896,6 +900,43 @@ func (hnm *HwAscend910Manager) waitDeviceResetComplete(logicId int32) error {
 		return err
 	}
 	return nil
+}
+
+func (hnm *HwAscend910Manager) isRingResetComplete(oriLogicID int32) error {
+	var ringType = -1
+	switch common.ParamOption.RealCardType {
+	case common.Ascend910:
+		ringType = common.LeftRingOf910
+		if oriLogicID >= common.Ascend910RingsNum {
+			ringType = common.RightRingOf910
+		}
+	case common.Ascend910B:
+		ringType = common.RingOf910B
+	}
+	if ringType == -1 {
+		hwlog.RunLog.Error("device type cannot be identified")
+		return fmt.Errorf("device type cannot be identified")
+	}
+	// totalTime, statistic chip reset recover time
+	var totalTime int
+	leftRingID, rightRingID := hnm.getLogicIDOnRing(ringType)
+	for ringLogicID := leftRingID; ringLogicID <= rightRingID; ringLogicID++ {
+		if err := hnm.waitDeviceResetComplete(ringLogicID, &totalTime); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (hnm *HwAscend910Manager) getLogicIDOnRing(ringType int) (int32, int32) {
+	switch ringType {
+	case common.LeftRingOf910:
+		return common.LogicID0, common.LogicID3
+	case common.RightRingOf910:
+		return common.LogicID4, common.LogicID7
+	default:
+		return common.LogicID0, common.LogicID7
+	}
 }
 
 func (hnm *HwAscend910Manager) tryResetDevice(cardId, deviceId int32) error {

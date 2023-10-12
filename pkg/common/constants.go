@@ -544,3 +544,22 @@ const (
 	// RecoverFailedStatus indicates that the recovery fails
 	RecoverFailedStatus = "failed"
 )
+
+const (
+	// LeftRingOf910 means id contains [0, 1, 2, 3]
+	LeftRingOf910 = 0
+	// RightRingOf910 means id contains [4, 5, 6, 7]
+	RightRingOf910 = 1
+	// RingOf910B means id contains [0, 1, 2, 3, 4, 5, 6, 7]
+	RingOf910B = 2
+	// MaxResetWaitRecoverTime max reset wait chip recover time is 150s
+	MaxResetWaitRecoverTime = 150
+)
+
+// LogicID list for reset, get id list of ring
+const (
+	LogicID0 = 0
+	LogicID3 = 3
+	LogicID4 = 4
+	LogicID7 = 7
+)
