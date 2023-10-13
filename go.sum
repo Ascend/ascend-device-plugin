@@ -1,6 +1,6 @@
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
-gitee.com/ascend/ascend-npu-exporter/v5 v5.0.0-RC3.b007 h1:0HOU2GXqhCR+FTnWCHbOtvpBF9VKeKew5ALHbfEN+Wc=
-gitee.com/ascend/ascend-npu-exporter/v5 v5.0.0-RC3.b007/go.mod h1:OPXKhLoMH95bob2ASp/eWVfLIX1JnkdVsM5UHZEy2d4=
+gitee.com/ascend/ascend-npu-exporter/v5 v5.0.0-RC3 h1:pkY5fpsXDjrkeGpNVBFfiFNDh9uS1U7/K7RRGH1yDOs=
+gitee.com/ascend/ascend-npu-exporter/v5 v5.0.0-RC3/go.mod h1:OPXKhLoMH95bob2ASp/eWVfLIX1JnkdVsM5UHZEy2d4=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/Microsoft/go-winio v0.4.17 h1:iT12IBVClFevaf8PuVyi3UmZOVh4OqnaLxDTW2O6j3w=
 github.com/Microsoft/go-winio v0.4.17/go.mod h1:JPGBdM1cNvN/6ISo+n8V5iA4v8pBzdOpzfwIujj1a84=
