@@ -48,7 +48,7 @@ type HotResetManager interface {
 	UpdateTaskDevListCache(map[string][]int32) error
 	UpdateTaskDevFaultInfoCache(map[string][]*common.TaskDevInfo) error
 	UpdateTaskPodCache(map[string]v1.Pod) error
-	UpdateFreeTask(map[string]struct{})
+	UpdateFreeTask(map[string]struct{}, map[string][]int32)
 	SetTaskInReset(string) error
 	SetDevInReset(int32) error
 	SetAllDevInReset(info *common.TaskResetInfo) error
@@ -406,12 +406,22 @@ func (hrt *HotResetTools) UpdateTaskPodCache(taskPod map[string]v1.Pod) error {
 }
 
 // UpdateFreeTask unset task in reset task after delete task
-func (hrt *HotResetTools) UpdateFreeTask(taskListUsedDevice map[string]struct{}) {
+func (hrt *HotResetTools) UpdateFreeTask(taskListUsedDevice map[string]struct{}, newTaskDevList map[string][]int32) {
 	for taskName := range hrt.resetTask {
-		if _, ok := taskListUsedDevice[taskName]; !ok {
+		if _, ok := taskListUsedDevice[taskName]; !ok || hrt.isTaskDevListChange(taskName, newTaskDevList) {
 			delete(hrt.resetTask, taskName)
+			hwlog.RunLog.Infof("success to delete task reset cache for %s, is in used list: %v", taskName, ok)
 		}
 	}
+}
+
+func (hrt *HotResetTools) isTaskDevListChange(taskName string, newTaskDevList map[string][]int32) bool {
+	if originalDev, ok := hrt.allTaskDevList[taskName]; ok {
+		if newDev, okNew := newTaskDevList[taskName]; okNew {
+			return common.Int32Join(originalDev, common.UnderLine) != common.Int32Join(newDev, common.UnderLine)
+		}
+	}
+	return false
 }
 
 // IsCurNodeTaskInReset check whether the current task is being reset on the current node

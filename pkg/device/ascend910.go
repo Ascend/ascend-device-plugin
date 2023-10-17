@@ -352,7 +352,7 @@ func (hnm *HwAscend910Manager) setTaskDevInfoCache() error {
 			hwlog.RunLog.Errorf("update faultDev2PodMap error: %#v", err)
 		}
 	}
-	hnm.hotResetManager.UpdateFreeTask(taskListUsedDevice)
+	hnm.hotResetManager.UpdateFreeTask(taskListUsedDevice, newTaskDevListCache)
 	if err := hnm.hotResetManager.UpdateTaskDevListCache(newTaskDevListCache); err != nil {
 		return err
 	}
