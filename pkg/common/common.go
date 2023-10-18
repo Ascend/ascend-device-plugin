@@ -497,10 +497,20 @@ func IsContainAtlas300IDuo() bool {
 	return false
 }
 
+// RecordFaultInfoList record the fault info
 func RecordFaultInfoList(devFaultInfoList []*TaskDevInfo) {
 	for _, devFaultInfo := range devFaultInfoList {
 		hexErrorCode := strings.ToUpper(Int64Tool.ToHexString(devFaultInfo.ErrorCode))
 		hwlog.RunLog.Infof("rank id: %d, log id: %d, policy: %s, error code: %s",
 			devFaultInfo.RankId, devFaultInfo.LogicId, devFaultInfo.Policy, hexErrorCode)
 	}
+}
+
+// Int32Join int32 join to string
+func Int32Join(data []int32, sep string) string {
+	strData := make([]string, 0, len(data))
+	for _, val := range data {
+		strData = append(strData, strconv.Itoa(int(val)))
+	}
+	return strings.Join(strData, sep)
 }
