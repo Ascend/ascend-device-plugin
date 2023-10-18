@@ -416,12 +416,14 @@ func (hrt *HotResetTools) UpdateFreeTask(taskListUsedDevice map[string]struct{},
 }
 
 func (hrt *HotResetTools) isTaskDevListChange(taskName string, newTaskDevList map[string][]int32) bool {
-	if originalDev, ok := hrt.allTaskDevList[taskName]; ok {
-		if newDev, okNew := newTaskDevList[taskName]; okNew {
-			return common.Int32Join(originalDev, common.UnderLine) != common.Int32Join(newDev, common.UnderLine)
-		}
+	if _, ok := hrt.allTaskDevList[taskName]; !ok {
+		return false
 	}
-	return false
+	if _, ok := newTaskDevList[taskName]; !ok {
+		return false
+	}
+	return common.Int32Join(hrt.allTaskDevList[taskName], common.UnderLine) !=
+		common.Int32Join(newTaskDevList[taskName], common.UnderLine)
 }
 
 // IsCurNodeTaskInReset check whether the current task is being reset on the current node
