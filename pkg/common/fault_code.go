@@ -243,6 +243,10 @@ func GetAndCleanLogicID() []int32 {
 
 // SetFaultCodes set fault codes, all fault code write operate should package into this file for safe
 func SetFaultCodes(device *NpuDevice, faultCodes []int64) {
+	if device == nil {
+		hwlog.RunLog.Error("param device is nil")
+		return
+	}
 	newFaultCodes := make([]int64, 0, common.MaxErrorCodeCount)
 	for _, faultCode := range faultCodes {
 		if faultCode == LinkDownFaultCode {
@@ -265,6 +269,10 @@ func setAlarmRaisedTime(device *NpuDevice) {
 
 // SetNewFaultAndCacheOnceRecoverFault set new fault code and cache once recover fault
 func SetNewFaultAndCacheOnceRecoverFault(logicID int32, faultInfos []common.DevFaultInfo, device *NpuDevice) {
+	if device == nil {
+		hwlog.RunLog.Error("param device is nil")
+		return
+	}
 	// it must deal with two 'for', because the fault may recover one moment, in this case,
 	// the recover message and occur message both in faultInfos, this fault cannot be reports outside.
 	for _, faultInfo := range faultInfos {
@@ -375,6 +383,10 @@ func mergeContinuousElementBasedAssertion(devFaultInfo *[]common.DevFaultInfo) {
 
 // SortMergeFaultQueue sort fault queue based on alarmRaisedTime and merge continuous element based on assertion
 func SortMergeFaultQueue(device *NpuDevice) {
+	if device == nil {
+		hwlog.RunLog.Error("param device is nil")
+		return
+	}
 	faultInfos := timeoutFaultInfoMap[device.LogicID]
 
 	sort.Sort(DevFaultInfoBasedTimeAscend(faultInfos))
@@ -509,6 +521,10 @@ func checkLinkupRecoverWhenNetworkUnhealth(device *NpuDevice, exitTag *bool) {
 
 // LinkDownTimeoutCheck check whether the NPU linkdown timeout happened and NPU network recovered
 func LinkDownTimeoutCheck(device *NpuDevice) {
+	if device == nil {
+		hwlog.RunLog.Error("param device is nil")
+		return
+	}
 	// check whether the NPU linkdown timeout happened based on the fault queue
 	// check whether the NPU network needs to be restored based on the fault queue
 	timeoutFaultInfoMapLen := len(timeoutFaultInfoMap[device.LogicID])

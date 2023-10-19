@@ -145,6 +145,9 @@ func GetPodAnnotationByDeviceType(pod *v1.Pod, deviceType string) (string, error
 
 // GetDeviceFromPodAnnotation get devices from pod annotation
 func GetDeviceFromPodAnnotation(pod *v1.Pod, deviceType string) ([]string, error) {
+	if pod == nil {
+		return nil, fmt.Errorf("param pod is nil")
+	}
 	annotation, err := GetPodAnnotationByDeviceType(pod, deviceType)
 	if err != nil {
 		return nil, err
