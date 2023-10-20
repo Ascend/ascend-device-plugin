@@ -35,6 +35,9 @@ const waitKubectlSockCreateTime = 5 * 60
 
 // Start starts the gRPC server, registers the device plugin with the Kubelet
 func (ps *PluginServer) Start(socketWatcher *common.FileWatch) error {
+	if socketWatcher == nil {
+		return fmt.Errorf("param socketWatcher is nil pointer")
+	}
 	// clean
 	ps.Stop()
 

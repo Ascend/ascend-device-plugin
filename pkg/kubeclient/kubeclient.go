@@ -78,6 +78,9 @@ func (ki *ClientK8s) PatchNodeState(curNode, newNode *v1.Node) (*v1.Node, []byte
 
 // GetPod get pod by namespace and name
 func (ki *ClientK8s) GetPod(pod *v1.Pod) (*v1.Pod, error) {
+	if pod == nil {
+		return nil, fmt.Errorf("param pod is nil")
+	}
 	return ki.Clientset.CoreV1().Pods(pod.Namespace).Get(context.Background(), pod.Name, metav1.GetOptions{
 		ResourceVersion: "0",
 	})
@@ -150,6 +153,9 @@ func checkPodList(podList *v1.PodList) ([]v1.Pod, error) {
 
 // CreateConfigMap create device info, which is cm
 func (ki *ClientK8s) CreateConfigMap(cm *v1.ConfigMap) (*v1.ConfigMap, error) {
+	if cm == nil {
+		return nil, fmt.Errorf("param cm is nil")
+	}
 	return ki.Clientset.CoreV1().ConfigMaps(cm.ObjectMeta.Namespace).Create(context.TODO(), cm, metav1.CreateOptions{})
 }
 
@@ -162,6 +168,9 @@ func (ki *ClientK8s) GetConfigMap(cmName, cmNameSpace string) (*v1.ConfigMap, er
 
 // UpdateConfigMap update device info, which is cm
 func (ki *ClientK8s) UpdateConfigMap(cm *v1.ConfigMap) (*v1.ConfigMap, error) {
+	if cm == nil {
+		return nil, fmt.Errorf("param cm is nil")
+	}
 	return ki.Clientset.CoreV1().ConfigMaps(cm.ObjectMeta.Namespace).Update(context.TODO(), cm, metav1.UpdateOptions{})
 }
 

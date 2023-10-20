@@ -35,6 +35,9 @@ var deviceInfoFlushTime = int64(60 * 60)
 
 // TryUpdatePodAnnotation is to try updating pod annotation
 func (ki *ClientK8s) TryUpdatePodAnnotation(pod *v1.Pod, annotation map[string]string) error {
+	if pod == nil {
+		return fmt.Errorf("param pod is nil")
+	}
 	if annotation == nil {
 		return fmt.Errorf("invalid annotation")
 	}
@@ -61,6 +64,9 @@ func (ki *ClientK8s) TryUpdatePodAnnotation(pod *v1.Pod, annotation map[string]s
 
 // TryUpdatePodCacheAnnotation is to try updating pod annotation in both api server and cache
 func (ki *ClientK8s) TryUpdatePodCacheAnnotation(pod *v1.Pod, annotation map[string]string) error {
+	if pod == nil {
+		return fmt.Errorf("param pod is nil")
+	}
 	if err := ki.TryUpdatePodAnnotation(pod, annotation); err != nil {
 		hwlog.RunLog.Errorf("update pod annotation in api server failed, err: %v", err)
 		return err
