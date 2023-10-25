@@ -129,18 +129,6 @@ func (ki *ClientK8s) WriteDeviceInfoDataIntoCM(deviceInfo map[string]string) (*c
 	return &nodeDeviceData, nil
 }
 
-func isNotChangeOrLessOneHour(cache *common.NodeDeviceInfoCache, deviceMap map[string]string) bool {
-	if cache == nil || len(cache.DeviceInfo.DeviceList) != len(deviceMap) {
-		return false
-	}
-	for key, oldDeviceInfo := range cache.DeviceInfo.DeviceList {
-		if deviceMap[key] != oldDeviceInfo {
-			return false
-		}
-	}
-	return time.Now().Unix()-cache.DeviceInfo.UpdateTime < deviceInfoFlushTime
-}
-
 // WriteResetInfoDataIntoCM write reset info into config map
 func (ki *ClientK8s) WriteResetInfoDataIntoCM(taskName string, namespace string,
 	taskInfo *common.TaskResetInfo) (*v1.ConfigMap, error) {
