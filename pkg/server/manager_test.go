@@ -223,7 +223,8 @@ func TestNotifyToK8s(t *testing.T) {
 			common.ParamOption.PresetVDevice = true
 			hdm := NewHwDevManager(&devmanager.DeviceManagerMock{})
 			hdm.ServerMap[common.AiCoreResourceName] = NewPluginServer(common.Ascend310P, nil, nil, nil)
-			hdm.notifyToK8s(time.Now())
+			initTime := time.Now()
+			hdm.notifyToK8s(&initTime)
 			convey.So(len(hdm.ServerMap), convey.ShouldEqual, serverNum)
 		})
 	})
