@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/smartystreets/goconvey/convey"
@@ -222,7 +223,7 @@ func TestNotifyToK8s(t *testing.T) {
 			common.ParamOption.PresetVDevice = true
 			hdm := NewHwDevManager(&devmanager.DeviceManagerMock{})
 			hdm.ServerMap[common.AiCoreResourceName] = NewPluginServer(common.Ascend310P, nil, nil, nil)
-			hdm.notifyToK8s()
+			hdm.notifyToK8s(time.Now())
 			convey.So(len(hdm.ServerMap), convey.ShouldEqual, serverNum)
 		})
 	})
