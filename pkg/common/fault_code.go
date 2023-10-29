@@ -528,8 +528,9 @@ func LinkDownTimeoutCheck(device *NpuDevice) {
 	// check whether the NPU linkdown timeout happened based on the fault queue
 	// check whether the NPU network needs to be restored based on the fault queue
 	timeoutFaultInfoMapLen := len(timeoutFaultInfoMap[device.LogicID])
-
-	hwlog.RunLog.Infof("NPU logic id: %v, network health status is %v", device.LogicID, device.NetworkRealHealth)
+	if device.NetworkRealHealth == v1beta1.Unhealthy {
+		hwlog.RunLog.Infof("NPU logic id: %v, network health status is %v", device.LogicID, device.NetworkRealHealth)
+	}
 
 	if timeoutFaultInfoMapLen == 0 && device.NetworkHealth == device.NetworkRealHealth {
 		hwlog.RunLog.Debugf("NPU logic id: %v, fault queue is empty and NPU network health status not change, "+
