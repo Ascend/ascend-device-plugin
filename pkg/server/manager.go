@@ -268,13 +268,14 @@ func (hdm *HwDevManager) updateAllInfo() error {
 func (hdm *HwDevManager) ListenDevice(ctx context.Context) {
 	hwlog.RunLog.Info("starting the listen device")
 	hdm.subscribeFaultEvent()
+	go hdm.pollFaultCodeCM(ctx)
 	go hdm.Serve(ctx)
 	initTime := time.Now()
 	for {
 		select {
 		case _, ok := <-ctx.Done():
 			if !ok {
-				hwlog.RunLog.Info("catch stop signal channel is closed")
+				hwlog.RunLog.Info("catch stop signal channel closed")
 			}
 			hwlog.RunLog.Info("listen device stop")
 			return
@@ -779,4 +780,80 @@ func (hdm *HwDevManager) isSupportGraceTolerance() bool {
 		return false
 	}
 	return true
+}
+
+func (hdm *HwDevManager) pollFaultCodeCM(ctx context.Context) {
+	var resourceVersion = ""
+	var interval = common.PollFaultCodeCMInterval
+	for {
+		select {
+		case _, ok := <-ctx.Done():
+			if !ok {
+				hwlog.RunLog.Info("stop signal chanel closed")
+			}
+			hwlog.RunLog.Info("poll fault code cm stop")
+			return
+		default:
+			hwlog.RunLog.Debugf("polling '%s' configmap", common.FaultCodeCMName)
+			configMap, err := hdm.manager.GetKubeClient().GetConfigMap(common.FaultCodeCMName,
+				common.FaultCodeCMNameSpace)
+			if err != nil {
+				hwlog.RunLog.Infof("cannot find '%s' configmap, err: %v", common.FaultCodeCMName, err)
+				if err = common.LoadFaultCodeFromFile(); err != nil {
+					hwlog.RunLog.Errorf("load fault code from file failed, err: %v", err)
+				}
+				time.Sleep(time.Duration(common.PollFaultCodeCMInterval) * time.Second)
+				continue
+			}
+			if resourceVersion != configMap.ResourceVersion {
+				hwlog.RunLog.Infof("detect '%s' configmap changed", common.FaultCodeCMName)
+				interval = getFaultCodeCMPollInterval(configMap)
+				resourceVersion = configMap.ResourceVersion
+				if err = handleFaultCodeCMChange(configMap); err != nil {
+					hwlog.RunLog.Errorf("handling '%s' configmap change failed, err: %v", common.FaultCodeCMName, err)
+				} else {
+					hwlog.RunLog.Infof("handling '%s' configmap change succeed", common.FaultCodeCMName)
+				}
+			}
+			time.Sleep(time.Duration(interval) * time.Second)
+		}
+	}
+}
+
+func handleFaultCodeCMChange(configMap *v1.ConfigMap) error {
+	faultCode, ok := configMap.Data[common.FaultCodeKey]
+	if !ok {
+		hwlog.RunLog.Errorf("cannot find key '%s' in CM", common.FaultCodeKey)
+		if err := common.LoadFaultCodeFromFile(); err != nil {
+			return err
+		}
+		return fmt.Errorf("cannot find key '%s' in CM", common.FaultCodeKey)
+	}
+	if err := common.LoadFaultCode([]byte(faultCode)); err != nil {
+		hwlog.RunLog.Errorf("load fault code from CM failed, err: %v", err)
+		if err = common.LoadFaultCodeFromFile(); err != nil {
+			return err
+		}
+		return fmt.Errorf("load fault code from CM failed")
+	}
+	return nil
+}
+
+func getFaultCodeCMPollInterval(configMap *v1.ConfigMap) int {
+	intervalStr, ok := configMap.Data[common.PollIntervalKey]
+	if !ok {
+		hwlog.RunLog.Infof("cannot find 'PollInterval', use default interval")
+		return common.PollFaultCodeCMInterval
+	}
+	interval, err := strconv.Atoi(intervalStr)
+	if err != nil {
+		hwlog.RunLog.Errorf("failed to parse 'PollInterval': %s", intervalStr)
+		return common.PollFaultCodeCMInterval
+	}
+	if interval < common.PollFaultCodeCMMinInterval || interval > common.PollFaultCodeCMMaxInterval {
+		hwlog.RunLog.Errorf("'PollInterval' exceed limit (%d~%d), 'PollInterval': %d",
+			common.PollFaultCodeCMMinInterval, common.PollFaultCodeCMMaxInterval, interval)
+		return common.PollFaultCodeCMInterval
+	}
+	return interval
 }

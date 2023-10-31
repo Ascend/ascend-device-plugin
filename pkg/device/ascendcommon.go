@@ -320,7 +320,7 @@ func (tool *AscendTools) groupDevsByStatus(subClassDevices []*common.NpuDevice, 
 			deviceFaults = append(deviceFaults, common.DeviceFault{
 				FaultType:            common.CardUnhealthy,
 				NPUName:              device.DeviceName,
-				LargeModelFaultLevel: common.GetLargeModelFaultTypeByCode(device.FaultCodes),
+				LargeModelFaultLevel: common.GetFaultTypeByCode(device.FaultCodes),
 				FaultLevel:           common.GetFaultTypeByCode(device.FaultCodes),
 				FaultCode:            strings.ToUpper(common.Int64Tool.ToHexString(device.FaultCodes)),
 			})
@@ -555,23 +555,12 @@ func classifyDevByType(allDevs []common.NpuDevice, suffix string) []*common.NpuD
 }
 
 func (tool *AscendTools) isHealthy(device *common.NpuDevice) string {
-	// in large model, NotHandleFault: Healthy, SeparateNPU: Unhealthy,
-	// PreSeparateNPU and npu used: Healthy, PreSeparateNPU and npu free: Unhealthy
-	if common.ParamOption.UseLargeModel && common.ParamOption.HotReset != common.HotResetTrain {
-		faultType := common.GetLargeModelFaultTypeByCode(device.FaultCodes)
-		if faultType == common.NormalNPU || faultType == common.NotHandleFault {
-			return v1beta1.Healthy
-		}
-		if faultType == common.SeparateNPU {
-			return v1beta1.Unhealthy
-		}
-		if tool.npuIsUsedNow(device.DeviceName) {
-			return v1beta1.Healthy
-		}
-		return v1beta1.Unhealthy
-	}
 	faultType := common.GetFaultTypeByCode(device.FaultCodes)
 	if faultType == common.NormalNPU || faultType == common.NotHandleFault {
+		return v1beta1.Healthy
+	}
+	if faultType == common.PreSeparateNPU && tool.npuIsUsedNow(device.DeviceName) {
+		hwlog.RunLog.Infof("detect PreSeparateNPU but device is in use, device name: %s", device.DeviceName)
 		return v1beta1.Healthy
 	}
 	return v1beta1.Unhealthy

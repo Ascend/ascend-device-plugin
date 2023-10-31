@@ -136,7 +136,7 @@ func (pr *PodResource) assemblePodResource() (map[string]PodDevice, error) {
 	defer cancel()
 	resp, err := pr.client.List(ctx, &v1alpha1.ListPodResourcesRequest{})
 	if err != nil {
-		return nil, fmt.Errorf("list pod resource failed, err: %#v", err)
+		return nil, fmt.Errorf("list pod resource failed, err: %v", err)
 	}
 	if resp == nil {
 		return nil, fmt.Errorf("invalid list response")

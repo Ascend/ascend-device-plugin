@@ -141,6 +141,21 @@ const (
 	LinkupRecoverTime = 60
 	// SecondMagnification is second-level unit magnification
 	SecondMagnification = 1000
+
+	// PollFaultCodeCMInterval is the default interval(second) of polling fault code CM
+	PollFaultCodeCMInterval = 300
+	// PollFaultCodeCMMaxInterval is the max interval(second) of polling fault code CM
+	PollFaultCodeCMMaxInterval = 1000000
+	// PollFaultCodeCMMinInterval is the min interval(second) of polling fault code CM
+	PollFaultCodeCMMinInterval = 30
+	// FaultCodeCMName is the name of the configmap that is used to save fault code
+	FaultCodeCMName = "mindx-dl-fault-config"
+	// FaultCodeCMNameSpace is the namespace of the fault code configmap
+	FaultCodeCMNameSpace = "kube-system"
+	// FaultCodeKey is the key to find fault code in cm
+	FaultCodeKey = "faultCode.json"
+	// PollIntervalKey is the key to find poll interval in cm
+	PollIntervalKey = "PollInterval"
 )
 
 const (
