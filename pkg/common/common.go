@@ -81,13 +81,13 @@ func SetAscendRuntimeEnv(devices []int, ascendRuntimeOptions string,
 	for _, id := range devices {
 		deviceStr = append(deviceStr, strconv.Itoa(id))
 	}
-	(*resp).Envs[ascendVisibleDevicesEnv] = strings.Join(deviceStr, ",")
+	(*resp).Envs[AscendVisibleDevicesEnv] = strings.Join(deviceStr, ",")
 	(*resp).Envs[ascendRuntimeOptionsEnv] = ascendRuntimeOptions
 	if ParamOption.RealCardType == Ascend310B {
 		(*resp).Envs[ascendAllowLinkEnv] = "True"
 	}
 
-	hwlog.RunLog.Infof("allocate resp env: %s; %s", (*resp).Envs[ascendVisibleDevicesEnv], ascendRuntimeOptions)
+	hwlog.RunLog.Infof("allocate resp env: %s; %s", (*resp).Envs[AscendVisibleDevicesEnv], ascendRuntimeOptions)
 }
 
 // MakeDataHash Make Data Hash
