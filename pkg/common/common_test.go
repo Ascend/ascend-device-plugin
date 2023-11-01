@@ -61,7 +61,7 @@ func TestSetAscendRuntimeEnv(t *testing.T) {
 		devices := []int{id}
 		resp := v1beta1.ContainerAllocateResponse{}
 		SetAscendRuntimeEnv(devices, "", &resp)
-		convey.So(resp.Envs[ascendVisibleDevicesEnv], convey.ShouldEqual, strconv.Itoa(id))
+		convey.So(resp.Envs[AscendVisibleDevicesEnv], convey.ShouldEqual, strconv.Itoa(id))
 	})
 }
 

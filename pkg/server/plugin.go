@@ -405,10 +405,11 @@ func (ps *PluginServer) updatePresetAllocMap(realAlloc, kltAlloc []string) {
 	ps.allocMapLock.Unlock()
 }
 
-// GetRealAllocateDevices is convert kubelet allocate device list to volcano allocate device list
-func (ps *PluginServer) GetRealAllocateDevices(kltAllocate []string) ([]string, error) {
+// GetRealAllocateDevicesFromMap converts devices allocated by kubelet
+// to devices allocated by volcano according to klt2RealDevMap
+func (ps *PluginServer) GetRealAllocateDevicesFromMap(kltAllocate []string) ([]string, error) {
 	if ps == nil {
-		return nil, fmt.Errorf("invalid interface receiver")
+		return nil, fmt.Errorf("invalid interface receiver when get real dev from map")
 	}
 	ps.allocMapLock.RLock()
 	defer ps.allocMapLock.RUnlock()
@@ -426,8 +427,55 @@ func (ps *PluginServer) GetRealAllocateDevices(kltAllocate []string) ([]string, 
 	return realAllocate.List(), nil
 }
 
+// GetRealAllocateDevicesFromEnv get real allocated devices from downward api,
+// whose value is annotation updated by volcano
+func (ps *PluginServer) GetRealAllocateDevicesFromEnv(pod v1.Pod) []string {
+	if ps == nil {
+		hwlog.RunLog.Error("invalid interface receiver when get real dev from env")
+		return nil
+	}
+	containers := pod.Spec.Containers
+	if len(containers) == 0 {
+		hwlog.RunLog.Error("no container here")
+		return nil
+	}
+
+	for _, container := range containers {
+		if len(container.Env) == 0 {
+			hwlog.RunLog.Debug("no env setting here")
+			continue
+		}
+		for _, env := range container.Env {
+			if env.Name != common.AscendVisibleDevicesEnv ||
+				env.ValueFrom == nil || env.ValueFrom.FieldRef == nil {
+				continue
+			}
+			// fieldPath is key of annotation updated by volcano,
+			// for example, metadata.annotations['huawei.com/Ascend910']
+			fieldPath := fmt.Sprintf("%s['%s%s']",
+				common.MetaDataAnnotation, common.ResourceNamePrefix, ps.deviceType)
+			if env.ValueFrom.FieldRef.FieldPath != fieldPath {
+				continue
+			}
+			volAllocateDevice, err := common.GetDeviceFromPodAnnotation(&pod, ps.deviceType)
+			if err != nil {
+				hwlog.RunLog.Errorf("get volcano device err: %v", err)
+				return nil
+			}
+			return volAllocateDevice
+		}
+	}
+
+	hwlog.RunLog.Debug("maybe no downward api setting here")
+	return nil
+}
+
 // GetKltAndRealAllocateDev get kubelet and real allocate device of pod
 func (ps *PluginServer) GetKltAndRealAllocateDev(podList []v1.Pod) ([]PodDeviceInfo, error) {
+	if ps == nil {
+		return nil, fmt.Errorf("invalid interface receiver")
+	}
+
 	prClient := NewPodResource()
 	podDevice, err := prClient.GetPodResource()
 	if err != nil {
@@ -450,8 +498,10 @@ func (ps *PluginServer) GetKltAndRealAllocateDev(podList []v1.Pod) ([]PodDeviceI
 				RealDevice: podResource.DeviceIds})
 			continue
 		}
-		realDeviceList, err := ps.GetRealAllocateDevices(podResource.DeviceIds)
+
+		realDeviceList, err := ps.GetRealAllocateDevicesFromMap(podResource.DeviceIds)
 		if err != nil {
+			hwlog.RunLog.Warnf("get real allocate devices err: %v", err)
 			realDevice, exist := pod.Annotations[common.ResourceNamePrefix+common.PodRealAlloc]
 			if exist {
 				realDeviceList = strings.Split(realDevice, common.CommaSepDev)
@@ -461,6 +511,14 @@ func (ps *PluginServer) GetKltAndRealAllocateDev(podList []v1.Pod) ([]PodDeviceI
 				continue
 			}
 		}
+
+		volAllocatedDevices := ps.GetRealAllocateDevicesFromEnv(pod)
+		if len(volAllocatedDevices) != 0 {
+			realDeviceList = volAllocatedDevices
+			ps.updateAllocMap(realDeviceList, podResource.DeviceIds)
+			hwlog.RunLog.Debugf("get real devices:%v from env successfully", realDeviceList)
+		}
+
 		podDeviceInfo = append(podDeviceInfo, PodDeviceInfo{Pod: pod, KltDevice: podResource.DeviceIds,
 			RealDevice: realDeviceList})
 	}
