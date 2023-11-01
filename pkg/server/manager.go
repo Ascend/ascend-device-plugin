@@ -654,6 +654,10 @@ func (hdm *HwDevManager) updateSpecTypePodAnnotation(deviceType, serverID string
 			hwlog.RunLog.Infof("update pod %s_%s annotation success", deviceInfo.Pod.Namespace, deviceInfo.Pod.Name)
 		}
 
+		if common.ParamOption.HotReset != common.HotResetTrain {
+			continue
+		}
+
 		// need to clear reset info config map after rescheduling
 		if err = hdm.tryToClearResetInfoCM(deviceInfo.Pod); err != nil {
 			hwlog.RunLog.Warnf("try to clear configMap failed, err is: %#v", err)

@@ -70,7 +70,7 @@ func TestDoWithVolcanoListAndWatch910(t *testing.T) {
 		groupDevice := ClassifyDevices(allInfo.AllDevs, allInfo.AllDevTypes)
 
 		mockGetPodsUsedNpu := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)),
-			"GetPodsUsedNpu", func(_ *kubeclient.ClientK8s, devType string) sets.String {
+			"GetPodsUsedNpu", func(_ *kubeclient.ClientK8s) sets.String {
 				return nil
 			})
 		mockGetConfigMap := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)),
