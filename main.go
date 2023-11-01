@@ -144,10 +144,6 @@ func checkParam() bool {
 		hwlog.RunLog.Error("hot reset mode param invalid")
 		return false
 	}
-	if (*hotReset) == common.HotResetTrain && *useLargeModel {
-		hwlog.RunLog.Warn("hotReset and useLargeModel can't simultaneous open")
-		return false
-	}
 	if BuildScene != common.EdgeScene && BuildScene != common.CenterScene {
 		hwlog.RunLog.Error("unSupport build scene, only support edge and center")
 		return false
