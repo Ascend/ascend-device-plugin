@@ -239,7 +239,7 @@ func (ki *ClientK8s) AnnotationReset() error {
 }
 
 // GetPodsUsedNpu get npu by status
-func (ki *ClientK8s) GetPodsUsedNpu(devType string) sets.String {
+func (ki *ClientK8s) GetPodsUsedNpu() sets.String {
 	podList := ki.GetActivePodListCache()
 	var useNpu []string
 	for _, pod := range podList {

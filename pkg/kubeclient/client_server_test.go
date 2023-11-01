@@ -127,7 +127,7 @@ func TestGetPodsUsedNpu(t *testing.T) {
 				return nil
 			})
 		defer mockPodList.Reset()
-		useNpu := utKubeClient.GetPodsUsedNpu(common.Ascend310)
+		useNpu := utKubeClient.GetPodsUsedNpu()
 		convey.So(useNpu, convey.ShouldEqual, sets.String{})
 	})
 	convey.Convey("get used npu on pods", t, func() {
@@ -136,7 +136,7 @@ func TestGetPodsUsedNpu(t *testing.T) {
 				return podList
 			})
 		defer mockPodList.Reset()
-		useNpu := utKubeClient.GetPodsUsedNpu(common.Ascend310)
+		useNpu := utKubeClient.GetPodsUsedNpu()
 		convey.So(strings.Join(useNpu.List(), ","), convey.ShouldEqual, npuChip310PhyID0)
 	})
 }

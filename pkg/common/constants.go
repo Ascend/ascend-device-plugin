@@ -64,8 +64,8 @@ const (
 	DeviceInfoCMDataKey = "DeviceInfoCfg"
 
 	runtimeEnvNum = 3
-	// ascendVisibleDevicesEnv visible devices env
-	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"
+	// AscendVisibleDevicesEnv visible devices env
+	AscendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"
 	// ascendRuntimeOptionsEnv virtual runtime option env
 	ascendRuntimeOptionsEnv = "ASCEND_RUNTIME_OPTIONS"
 	// ascendAllowLinkEnv a500a2 need mount softlink
@@ -78,6 +78,8 @@ const (
 	PodRealAlloc = "AscendReal"
 	// Pod910DeviceKey pod annotation key, for generate 910 hccl rank table
 	Pod910DeviceKey = "ascend.kubectl.kubernetes.io/ascend-910-configuration"
+	// MetaDataAnnotation downward api which map annotation from volcano to container's env
+	MetaDataAnnotation = "metadata.annotations"
 
 	// PodResourceSeverKey for pod resource key
 	PodResourceSeverKey = "podResource"

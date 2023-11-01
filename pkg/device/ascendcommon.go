@@ -285,7 +285,7 @@ func (tool *AscendTools) getDevStatesDevSet(classifyDevs map[string][]*common.Np
 	}
 	for devType, classifyDev := range classifyDevs {
 		partDevStatusSet := tool.groupDevsByStatus(classifyDev, tool.name)
-		usedDevices := tool.client.GetPodsUsedNpu(devType)
+		usedDevices := tool.client.GetPodsUsedNpu()
 		totalFreeDevices[devType] = partDevStatusSet.HealthDevices.Difference(usedDevices)
 		if !common.ParamOption.PresetVDevice {
 			totalFreeDevices[devType] = totalFreeDevices[devType].Difference(allTypeUsedDevice)
