@@ -4,11 +4,7 @@ RUN useradd -d /home/HwHiAiUser -u 1000 -m -s /usr/sbin/nologin HwHiAiUser && \
     useradd -d /home/hwMindX -u 9000 -m -s /usr/sbin/nologin hwMindX &&\
     usermod root -s /usr/sbin/nologin
 
-ENV USE_ASCEND_DOCKER true
-
-ENV LD_LIBRARY_PATH  /usr/local/Ascend/driver/lib64/driver:/usr/local/Ascend/driver/lib64/common
-
-ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/Ascend/driver/lib64
+ENV LD_LIBRARY_PATH /usr/local/Ascend/driver/lib64:/usr/local/Ascend/driver/lib64/driver:/usr/local/Ascend/driver/lib64/common
 
 COPY ./device-plugin /usr/local/bin/
 COPY ./faultCode.json /usr/local/
