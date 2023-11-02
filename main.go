@@ -74,7 +74,6 @@ var (
 	use310PMixedInsert = flag.Bool("use310PMixedInsert", false, "Whether to use mixed insert "+
 		"ascend310P-V, ascend310P-VPro, ascend310P-IPro card mode")
 	hotReset      = flag.Int("hotReset", -1, "set hot reset mode: -1-close, 0-infer, 1-train")
-	useLargeModel = flag.Bool("useLargeModel", false, "Whether to use large model")
 	shareDevCount = flag.Uint("shareDevCount", 1, "share device function, enable the func by setting "+
 		"a value greater than 1, range is [1, 100], only support 310B")
 	linkdownTimeout = flag.Int64("linkdownTimeout", defaultLinkdownTimeout, "linkdown timeout duration, "+
@@ -216,7 +215,6 @@ func setParameters() {
 		PresetVDevice:      *presetVirtualDevice,
 		Use310PMixedInsert: *use310PMixedInsert,
 		HotReset:           *hotReset,
-		UseLargeModel:      *useLargeModel,
 		BuildScene:         BuildScene,
 		ShareCount:         *shareDevCount,
 		LinkdownTimeout:    *linkdownTimeout,
