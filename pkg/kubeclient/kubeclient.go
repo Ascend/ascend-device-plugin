@@ -43,13 +43,13 @@ type ClientK8s struct {
 func NewClientK8s() (*ClientK8s, error) {
 	clientCfg, err := clientcmd.BuildConfigFromFlags("", "")
 	if err != nil {
-		hwlog.RunLog.Errorf("build client config err: %#v", err)
+		hwlog.RunLog.Errorf("build client config err: %v", err)
 		return nil, err
 	}
 
 	client, err := kubernetes.NewForConfig(clientCfg)
 	if err != nil {
-		hwlog.RunLog.Errorf("get client err: %#v", err)
+		hwlog.RunLog.Errorf("get client err: %v", err)
 		return nil, err
 	}
 	nodeName, err := getNodeNameFromEnv()
@@ -110,7 +110,7 @@ func (ki *ClientK8s) GetAllPodList() (*v1.PodList, error) {
 	selector := fields.SelectorFromSet(fields.Set{"spec.nodeName": ki.NodeName})
 	podList, err := ki.getPodListByCondition(selector)
 	if err != nil {
-		hwlog.RunLog.Errorf("get pod list failed, err: %#v", err)
+		hwlog.RunLog.Errorf("get pod list failed, err: %v", err)
 		return nil, err
 	}
 	if len(podList.Items) >= common.MaxPodLimit {
@@ -189,7 +189,7 @@ func (ki *ClientK8s) resetNodeAnnotations(node *v1.Node) {
 func (ki *ClientK8s) ResetDeviceInfo() {
 	deviceList := make(map[string]string, 1)
 	if err := ki.WriteDeviceInfoDataIntoCMCache(deviceList); err != nil {
-		hwlog.RunLog.Errorf("write device info failed, error is %#v", err)
+		hwlog.RunLog.Errorf("write device info failed, error is %v", err)
 	}
 }
 
@@ -199,7 +199,7 @@ func (ki *ClientK8s) ClearResetInfo(taskName, namespace string) error {
 		RankList: make([]*common.TaskDevInfo, 0),
 	}
 	if _, err := ki.WriteResetInfoDataIntoCM(taskName, namespace, taskInfo); err != nil {
-		hwlog.RunLog.Errorf("failed to clear reset info, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to clear reset info, err: %v", err)
 		return err
 	}
 	return nil

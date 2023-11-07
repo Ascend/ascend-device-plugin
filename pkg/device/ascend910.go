@@ -326,8 +326,11 @@ func (hnm *HwAscend910Manager) setTaskDevInfoCache() error {
 		}
 		taskName, ok := pod.Annotations[common.ResetTaskNameKey]
 		if !ok {
-			hwlog.RunLog.Error("failed to get task name by task key")
-			continue
+			taskName, ok = pod.Labels[common.ResetTaskNameKeyInLabel]
+			if !ok {
+				hwlog.RunLog.Error("failed to get task name by task key")
+				continue
+			}
 		}
 		rankIndex, ok := pod.Annotations[common.RankIndexKey]
 		if common.ParamOption.RealCardType == common.Ascend910B && hnm.GetDeviceUsage() == common.Infer {
@@ -408,7 +411,7 @@ func (hnm *HwAscend910Manager) isTaskInReset(taskName string) (bool, error) {
 			hwlog.RunLog.Debugf("task %s does not have reset info cm, skip this choice", taskName)
 			return false, err
 		}
-		hwlog.RunLog.Errorf("failed to get reset info cm, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to get reset info cm, err: %v", err)
 		return false, err
 	}
 	resetInfoData, err := getResetInfoData(resetCM)
@@ -468,7 +471,7 @@ func (hnm *HwAscend910Manager) refreshNormalPodAnnotation(taskName string) {
 
 	annotation := map[string]string{podDevStatusAnnotation: "normal"}
 	if err = hnm.GetKubeClient().TryUpdatePodAnnotation(&pod, annotation); err != nil {
-		hwlog.RunLog.Errorf("update add annotation %#v to pod %s failed, err: %#v", annotation, pod.Name, err)
+		hwlog.RunLog.Errorf("update add annotation %v to pod %s failed, err: %v", annotation, pod.Name, err)
 		return
 	}
 

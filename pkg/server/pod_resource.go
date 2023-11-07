@@ -44,7 +44,7 @@ func (pr *PodResource) start() error {
 	var err error
 	if pr.client, pr.conn, err = podresources.GetV1alpha1Client("unix://"+realKubeletSockPath, callTimeout,
 		defaultPodResourcesMaxSize); err != nil {
-		hwlog.RunLog.Errorf("get pod resource client failed, %#v", err)
+		hwlog.RunLog.Errorf("get pod resource client failed, %v", err)
 		return err
 	}
 	hwlog.RunLog.Debug("pod resource client init success.")
@@ -178,7 +178,7 @@ func (pr *PodResource) stop() {
 	}
 	if pr.conn != nil {
 		if err := pr.conn.Close(); err != nil {
-			hwlog.RunLog.Errorf("stop connect failed, err: %#v", err)
+			hwlog.RunLog.Errorf("stop connect failed, err: %v", err)
 		}
 		pr.conn = nil
 		pr.client = nil

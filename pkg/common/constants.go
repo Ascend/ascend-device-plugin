@@ -512,6 +512,8 @@ const (
 	ResetInfoCMCheckCodeKey = "checkCode"
 	// ResetTaskNameKey for obtain the reset task name
 	ResetTaskNameKey = "volcano.sh/job-name"
+	// ResetTaskNameKeyInLabel for obtain the reset task name when using operator
+	ResetTaskNameKeyInLabel = "job-name"
 )
 
 const (

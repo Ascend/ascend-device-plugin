@@ -127,7 +127,7 @@ func (hdm *HwDevManager) UpdateNodeLabel() error {
 	}
 	kubeClient, err := kubeclient.NewClientK8s()
 	if err != nil {
-		hwlog.RunLog.Errorf("init k8s client failed err: %#v", err.Error())
+		hwlog.RunLog.Errorf("init k8s client failed err: %v", err.Error())
 		return err
 	}
 	hdm.manager.SetKubeClient(kubeClient)
@@ -140,7 +140,7 @@ func (hdm *HwDevManager) UpdateNodeLabel() error {
 func (hdm *HwDevManager) updateNodeLabels(aiCoreCount int32) error {
 	oldNode, err := hdm.manager.GetKubeClient().GetNode()
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get node, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to get node, err: %v", err)
 		return err
 	}
 	if oldNode == nil {
@@ -478,7 +478,7 @@ func (hdm *HwDevManager) Serve(ctx context.Context) {
 			return
 		}
 		if err := watcher.FileWatcher.Close(); err != nil {
-			hwlog.RunLog.Errorf("close file watcher, err: %#v", err)
+			hwlog.RunLog.Errorf("close file watcher, err: %v", err)
 		}
 	}()
 
@@ -569,7 +569,7 @@ func (hdm *HwDevManager) handleDeleteEvent(deleteFile string) {
 func (hdm *HwDevManager) updatePodAnnotation() error {
 	serverID, err := hdm.manager.GetKubeClient().GetNodeServerIDCache()
 	if err != nil {
-		return fmt.Errorf("get node server id failed: %#v", err)
+		return fmt.Errorf("get node server id failed: %v", err)
 	}
 	if !common.ParamOption.PresetVDevice {
 		return hdm.updateSpecTypePodAnnotation(common.AiCoreResourceName, serverID)
@@ -580,7 +580,7 @@ func (hdm *HwDevManager) updatePodAnnotation() error {
 			continue
 		}
 		if err := hdm.updateSpecTypePodAnnotation(devType, serverID); err != nil {
-			hwlog.RunLog.Warnf("update pod annotation failed, %#v", err)
+			hwlog.RunLog.Warnf("update pod annotation failed, %v", err)
 		}
 	}
 	return nil
@@ -592,7 +592,7 @@ func (hdm *HwDevManager) tryToClearResetInfoCM(pod v1.Pod) error {
 	resetInfo, err := hdm.manager.GetKubeClient().GetConfigMap(
 		common.ResetInfoCMNamePrefix+taskName, pod.Namespace)
 	if err != nil {
-		hwlog.RunLog.Warnf("get reset configMap failed, because: %#v", err)
+		hwlog.RunLog.Warnf("get reset configMap failed, because: %v", err)
 		return err
 	}
 
@@ -605,7 +605,7 @@ func (hdm *HwDevManager) tryToClearResetInfoCM(pod v1.Pod) error {
 	}
 	var taskResetInfo common.TaskResetInfo
 	if err := json.Unmarshal([]byte(data), &taskResetInfo); err != nil {
-		return fmt.Errorf("unmarshal configmap data failed, err: %#v", err)
+		return fmt.Errorf("unmarshal configmap data failed, err: %v", err)
 	}
 	// skip it when the reset info config map is initialized
 	if taskResetInfo.UpdateTime == 0 {
@@ -613,7 +613,7 @@ func (hdm *HwDevManager) tryToClearResetInfoCM(pod v1.Pod) error {
 	}
 
 	if err := hdm.manager.GetKubeClient().ClearResetInfo(taskName, pod.Namespace); err != nil {
-		return fmt.Errorf("clear reset configMap failed err is: %#v", err)
+		return fmt.Errorf("clear reset configMap failed err is: %v", err)
 	}
 	return nil
 }
@@ -649,7 +649,7 @@ func (hdm *HwDevManager) updateSpecTypePodAnnotation(deviceType, serverID string
 		hwlog.RunLog.Debugf("%s, %d, %v", deviceInfo.Pod.Name, len(deviceInfo.KltDevice), deviceInfo.RealDevice)
 		if err := hdm.manager.AddPodAnnotation(&deviceInfo.Pod, deviceInfo.KltDevice, deviceInfo.RealDevice,
 			deviceType, serverID); err != nil {
-			hwlog.RunLog.Errorf("update pod %s_%s annotation failed, %#v", deviceInfo.Pod.Namespace,
+			hwlog.RunLog.Errorf("update pod %s_%s annotation failed, %v", deviceInfo.Pod.Namespace,
 				deviceInfo.Pod.Name, err)
 		} else {
 			hwlog.RunLog.Infof("update pod %s_%s annotation success", deviceInfo.Pod.Namespace, deviceInfo.Pod.Name)

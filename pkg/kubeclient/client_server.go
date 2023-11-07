@@ -53,7 +53,7 @@ func (ki *ClientK8s) TryUpdatePodAnnotation(pod *v1.Pod, annotation map[string]s
 			if err == nil {
 				return nil
 			}
-			hwlog.RunLog.Debugf("update pod annotation failed, times: %d, error is %#v", i+1, err)
+			hwlog.RunLog.Debugf("update pod annotation failed, times: %d, error is %v", i+1, err)
 		}
 		time.Sleep(tryUpdatePodWaitTime)
 		podNew := ki.GetPodCache(pod.Namespace, pod.Name)
@@ -91,7 +91,7 @@ func (ki *ClientK8s) createOrUpdateDeviceCM(cm *v1.ConfigMap) error {
 	// use update first
 	if _, err := ki.UpdateConfigMap(cm); errors.IsNotFound(err) {
 		if _, err := ki.CreateConfigMap(cm); err != nil {
-			return fmt.Errorf("unable to create configmap, %#v", err)
+			return fmt.Errorf("unable to create configmap, %v", err)
 		}
 		return nil
 	} else {
@@ -134,7 +134,7 @@ func (ki *ClientK8s) WriteResetInfoDataIntoCM(taskName string, namespace string,
 	taskInfo *common.TaskResetInfo) (*v1.ConfigMap, error) {
 	oldCM, err := ki.GetConfigMap(common.ResetInfoCMNamePrefix+taskName, namespace)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get reset cm of task %s, err: %#v", taskName, err)
+		hwlog.RunLog.Errorf("failed to get reset cm of task %s, err: %v", taskName, err)
 		return nil, err
 	}
 
@@ -186,7 +186,7 @@ func (ki *ClientK8s) WriteFaultInfoDataIntoCM(taskName string, namespace string,
 			hwlog.RunLog.Infof("fault config map in task %s is not found", taskName)
 			return nil, nil
 		}
-		hwlog.RunLog.Errorf("failed to get fault cm of task %s, err: %#v", taskName, err)
+		hwlog.RunLog.Errorf("failed to get fault cm of task %s, err: %v", taskName, err)
 		return nil, err
 	}
 	taskFaultInfo := &common.TaskFaultInfoCache{
@@ -215,7 +215,7 @@ func (ki *ClientK8s) WriteFaultInfoDataIntoCM(taskName string, namespace string,
 func (ki *ClientK8s) AnnotationReset() error {
 	curNode, err := ki.GetNode()
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get node, nodeName: %s, err: %#v", ki.NodeName, err)
+		hwlog.RunLog.Errorf("failed to get node, nodeName: %s, err: %v", ki.NodeName, err)
 		return err
 	}
 	if curNode == nil {
@@ -234,7 +234,7 @@ func (ki *ClientK8s) AnnotationReset() error {
 		time.Sleep(time.Second)
 		continue
 	}
-	hwlog.RunLog.Errorf("failed to patch volcano npu resource: %#v", err)
+	hwlog.RunLog.Errorf("failed to patch volcano npu resource: %v", err)
 	return err
 }
 
