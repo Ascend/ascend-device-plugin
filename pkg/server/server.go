@@ -54,7 +54,7 @@ func (ps *PluginServer) Start(socketWatcher *common.FileWatch) error {
 		return nil
 	}
 	ps.Stop()
-	hwlog.RunLog.Errorf("register to kubelet failed, err: %#v", err)
+	hwlog.RunLog.Errorf("register to kubelet failed, err: %v", err)
 	return err
 }
 
@@ -94,7 +94,7 @@ func (ps *PluginServer) serve(socketWatcher *common.FileWatch) error {
 	v1beta1.RegisterDevicePluginServer(ps.grpcServer, ps)
 	go func() {
 		if err := ps.grpcServer.Serve(netListener); err != nil {
-			hwlog.RunLog.Errorf("GRPC server for '%s' crashed with error: %#v", ps.deviceType, err)
+			hwlog.RunLog.Errorf("GRPC server for '%s' crashed with error: %v", ps.deviceType, err)
 		}
 	}()
 
@@ -124,12 +124,12 @@ func (ps *PluginServer) register() error {
 			}))
 
 	if err != nil {
-		hwlog.RunLog.Errorf("connect to kubelet failed, err: %#v", err)
-		return fmt.Errorf("connect to kubelet fail: %#v", err)
+		hwlog.RunLog.Errorf("connect to kubelet failed, err: %v", err)
+		return fmt.Errorf("connect to kubelet fail: %v", err)
 	}
 	defer func() {
 		if err := conn.Close(); err != nil {
-			hwlog.RunLog.Errorf("close kubelet connect failed, err: %#v", err)
+			hwlog.RunLog.Errorf("close kubelet connect failed, err: %v", err)
 		}
 	}()
 
@@ -140,7 +140,7 @@ func (ps *PluginServer) register() error {
 		ResourceName: common.ResourceNamePrefix + ps.deviceType,
 	}
 	if _, err = client.Register(context.Background(), reqt); err != nil {
-		return fmt.Errorf("register to kubelet fail: %#v", err)
+		return fmt.Errorf("register to kubelet fail: %v", err)
 	}
 	return nil
 }
@@ -154,7 +154,7 @@ func createNetListener(socketWatcher *common.FileWatch, deviceType string) (net.
 	}
 
 	if err := socketWatcher.WatchFile(realSocketPath); err != nil {
-		hwlog.RunLog.Errorf("failed to create file watcher, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to create file watcher, err: %v", err)
 		return nil, err
 	}
 
@@ -168,7 +168,7 @@ func createNetListener(socketWatcher *common.FileWatch, deviceType string) (net.
 	}
 	netListen, err := net.Listen("unix", pluginSocketPath)
 	if err != nil {
-		hwlog.RunLog.Errorf("device plugin start failed, err: %#v", err)
+		hwlog.RunLog.Errorf("device plugin start failed, err: %v", err)
 		return nil, err
 	}
 

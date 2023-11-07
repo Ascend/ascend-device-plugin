@@ -133,7 +133,7 @@ func (tool *AscendTools) UpdateNodeDeviceInfo(devStatusSet common.DevStatusSet,
 		}
 		tool.delVirDevInfo(newDeviceList)
 		if err := tool.client.WriteDeviceInfoDataIntoCMCache(newDeviceList); err != nil {
-			hwlog.RunLog.Errorf("write device info failed: %#v", err)
+			hwlog.RunLog.Errorf("write device info failed: %v", err)
 			return false, nil
 		}
 
@@ -247,7 +247,7 @@ func getResetInfoData(resetInfo *v1.ConfigMap) ([]*common.TaskDevInfo, error) {
 	}
 	var taskResetInfo common.TaskResetInfo
 	if err := json.Unmarshal([]byte(data), &taskResetInfo); err != nil {
-		return nil, fmt.Errorf("unmarshal configmap data failed, err: %#v", err)
+		return nil, fmt.Errorf("unmarshal configmap data failed, err: %v", err)
 	}
 	if taskResetInfo.UpdateTime == 0 {
 		hwlog.RunLog.Debugf("reset configmap is initializing")

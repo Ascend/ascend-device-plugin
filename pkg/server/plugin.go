@@ -324,7 +324,7 @@ func (ps *PluginServer) getOldestPod(pods []v1.Pod) *v1.Pod {
 		oldest.Annotations[common.PodPredicateTime])
 	annotation := map[string]string{common.PodPredicateTime: strconv.FormatUint(math.MaxUint64, common.BaseDec)}
 	if err := ps.manager.GetKubeClient().TryUpdatePodCacheAnnotation(&oldest, annotation); err != nil {
-		hwlog.RunLog.Errorf("update pod %s failed, err: %#v", oldest.Name, err)
+		hwlog.RunLog.Errorf("update pod %s failed, err: %v", oldest.Name, err)
 		return nil
 	}
 	return &oldest
@@ -455,6 +455,8 @@ func (ps *PluginServer) GetRealAllocateDevicesFromEnv(pod v1.Pod) []string {
 			fieldPath := fmt.Sprintf("%s['%s%s']",
 				common.MetaDataAnnotation, common.ResourceNamePrefix, ps.deviceType)
 			if env.ValueFrom.FieldRef.FieldPath != fieldPath {
+				hwlog.RunLog.Errorf("fieldPath in downward api is different from %v, "+
+					"which may affect the mounting of device", ps.deviceType)
 				continue
 			}
 			volAllocateDevice, err := common.GetDeviceFromPodAnnotation(&pod, ps.deviceType)
@@ -479,7 +481,7 @@ func (ps *PluginServer) GetKltAndRealAllocateDev(podList []v1.Pod) ([]PodDeviceI
 	prClient := NewPodResource()
 	podDevice, err := prClient.GetPodResource()
 	if err != nil {
-		return nil, fmt.Errorf("get pod resource failed, %#v", err)
+		return nil, fmt.Errorf("get pod resource failed, %v", err)
 	}
 	var podDeviceInfo []PodDeviceInfo
 	for _, pod := range podList {
