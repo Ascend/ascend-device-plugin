@@ -475,6 +475,7 @@ func (tool *AscendTools) UpdateHealth(groupDevice map[string][]*common.NpuDevice
 func (tool *AscendTools) GetChange(groupDevice, oldGroupDevice map[string][]*common.NpuDevice) map[string]bool {
 	isStateChange := make(map[string]bool, len(groupDevice))
 	for devType, devices := range groupDevice {
+		isStateChange[devType] = false
 		for idx, device := range devices {
 			if device.Health != oldGroupDevice[devType][idx].Health {
 				isStateChange[devType] = true

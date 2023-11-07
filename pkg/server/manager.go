@@ -39,6 +39,8 @@ import (
 	"Ascend-device-plugin/pkg/kubeclient"
 )
 
+var lastStatus = common.NewAtomicBool(false)
+
 // HwDevManager manages huawei device devices.
 type HwDevManager struct {
 	groupDevice map[string][]*common.NpuDevice
@@ -267,6 +269,7 @@ func (hdm *HwDevManager) ListenDevice(ctx context.Context) {
 	hwlog.RunLog.Info("starting the listen device")
 	hdm.subscribeFaultEvent()
 	go hdm.Serve(ctx)
+	initTime := time.Now()
 	for {
 		select {
 		case _, ok := <-ctx.Done():
@@ -283,7 +286,7 @@ func (hdm *HwDevManager) ListenDevice(ctx context.Context) {
 				common.UnlockAllDeviceInfo()
 				continue
 			}
-			hdm.notifyToK8s()
+			hdm.notifyToK8s(&initTime)
 			hdm.useVolcanoNotify()
 			hdm.chipHotReset()
 			common.DelOnceRecoverFault(hdm.groupDevice)
@@ -332,7 +335,7 @@ func (hdm *HwDevManager) pluginNotify(classifyDev []*common.NpuDevice, devType s
 	}
 }
 
-func (hdm *HwDevManager) notifyToK8s() {
+func (hdm *HwDevManager) notifyToK8s(initTime *time.Time) {
 	oldGroupDevice := deepCopyGroupDevice(hdm.groupDevice)
 	hdm.manager.UpdateHealth(hdm.groupDevice, hdm.allInfo.AICoreDevs, hdm.RunMode)
 
@@ -341,9 +344,10 @@ func (hdm *HwDevManager) notifyToK8s() {
 	isDevStateChange := hdm.manager.GetChange(hdm.groupDevice, oldGroupDevice)
 
 	for devType, isChanged := range isDevStateChange {
-		if !isChanged {
+		if !isChanged && (time.Now().Sub(*initTime) < time.Minute || lastStatus.Load()) {
 			continue
 		}
+		*initTime = time.Now()
 		if !common.ParamOption.PresetVDevice {
 			hdm.pluginNotify(hdm.allInfo.AICoreDevs, common.AiCoreResourceName)
 			return

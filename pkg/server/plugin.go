@@ -222,9 +222,16 @@ func (ps *PluginServer) deepCopyDevice(cachedDevices []*common.NpuDevice) {
 // ListAndWatch is to send device info to kubelet
 func (ps *PluginServer) ListAndWatch(empty *v1beta1.Empty, stream v1beta1.DevicePlugin_ListAndWatchServer) error {
 	send := func(stream v1beta1.DevicePlugin_ListAndWatchServer) {
-		if err := sendToKubelet(stream, ps.responseToKubelet()); err != nil {
-			hwlog.RunLog.Errorf("send to kubelet failed, error is %#v", err)
+		for i := 0; i < common.RetryUpdateCount; i++ {
+			if err := sendToKubelet(stream, ps.responseToKubelet()); err != nil {
+				hwlog.RunLog.Errorf("send to kubelet failed, error is %v", err)
+				continue
+			}
+			lastStatus.Store(true)
+			return		
 		}
+		lastStatus.Store(false)
+		hwlog.RunLog.Errorf("the number of retries (%d) retries send failed.", common.RetryUpdateCount)
 	}
 	ps.isRunning.Store(true)
 	send(stream)
