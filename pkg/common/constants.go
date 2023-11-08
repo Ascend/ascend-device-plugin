@@ -147,7 +147,7 @@ const (
 	// PollFaultCodeCMInterval is the default interval(second) of polling fault code CM
 	PollFaultCodeCMInterval = 300
 	// PollFaultCodeCMMaxInterval is the max interval(second) of polling fault code CM
-	PollFaultCodeCMMaxInterval = 1000000
+	PollFaultCodeCMMaxInterval = 3600
 	// PollFaultCodeCMMinInterval is the min interval(second) of polling fault code CM
 	PollFaultCodeCMMinInterval = 30
 	// FaultCodeCMName is the name of the configmap that is used to save fault code

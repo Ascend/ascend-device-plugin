@@ -802,7 +802,7 @@ func (hdm *HwDevManager) pollFaultCodeCM(ctx context.Context) {
 			configMap, err := hdm.manager.GetKubeClient().GetConfigMap(common.FaultCodeCMName,
 				common.FaultCodeCMNameSpace)
 			if err != nil {
-				hwlog.RunLog.Infof("cannot find '%s' configmap, err: %v", common.FaultCodeCMName, err)
+				hwlog.RunLog.Debugf("cannot find '%s' configmap, reason: %v", common.FaultCodeCMName, err)
 				if err = common.LoadFaultCodeFromFile(); err != nil {
 					hwlog.RunLog.Errorf("load fault code from file failed, err: %v", err)
 				}
@@ -846,17 +846,19 @@ func handleFaultCodeCMChange(configMap *v1.ConfigMap) error {
 func getFaultCodeCMPollInterval(configMap *v1.ConfigMap) int {
 	intervalStr, ok := configMap.Data[common.PollIntervalKey]
 	if !ok {
-		hwlog.RunLog.Infof("cannot find 'PollInterval', use default interval")
+		hwlog.RunLog.Infof("cannot find 'PollInterval', use default interval: %d", common.PollFaultCodeCMInterval)
 		return common.PollFaultCodeCMInterval
 	}
 	interval, err := strconv.Atoi(intervalStr)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to parse 'PollInterval': %s", intervalStr)
+		hwlog.RunLog.Errorf("failed to parse 'PollInterval': %s, use default interval: %d", intervalStr,
+			common.PollFaultCodeCMInterval)
 		return common.PollFaultCodeCMInterval
 	}
 	if interval < common.PollFaultCodeCMMinInterval || interval > common.PollFaultCodeCMMaxInterval {
-		hwlog.RunLog.Errorf("'PollInterval' exceed limit (%d~%d), 'PollInterval': %d",
-			common.PollFaultCodeCMMinInterval, common.PollFaultCodeCMMaxInterval, interval)
+		hwlog.RunLog.Errorf("'PollInterval' exceed limit (%d~%d), 'PollInterval': %d, use default interval: %d",
+			common.PollFaultCodeCMMinInterval, common.PollFaultCodeCMMaxInterval, interval,
+			common.PollFaultCodeCMInterval)
 		return common.PollFaultCodeCMInterval
 	}
 	return interval
