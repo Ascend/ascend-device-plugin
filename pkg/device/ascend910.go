@@ -982,7 +982,15 @@ func (hnm *HwAscend910Manager) isDevShouldBeIsolate(faultyDevLogicId int32) bool
 		hwlog.RunLog.Warnf("the dev %#v does not in cache", faultyDevLogicId)
 		return false
 	}
-	taskName := pod.Annotations[common.ResetTaskNameKey]
+
+	taskName, ok := pod.Annotations[common.ResetTaskNameKey]
+	if !ok {
+		taskName, ok = pod.Labels[common.ResetTaskNameKeyInLabel]
+		if !ok {
+			hwlog.RunLog.Error("failed to get task name by task key in isDevShouldBeIsolate")
+			return true
+		}
+	}
 	resetCM, err := hnm.client.GetConfigMap(common.ResetInfoCMNamePrefix+taskName, pod.Namespace)
 	if err != nil {
 		hwlog.RunLog.Warnf("get reset cm error: %#v", err)

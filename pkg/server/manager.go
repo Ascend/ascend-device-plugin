@@ -588,7 +588,14 @@ func (hdm *HwDevManager) updatePodAnnotation() error {
 
 // tryToClearResetInfoCM try to clear reset info config map
 func (hdm *HwDevManager) tryToClearResetInfoCM(pod v1.Pod) error {
-	taskName := pod.Annotations[common.ResetTaskNameKey]
+	taskName, ok := pod.Annotations[common.ResetTaskNameKey]
+	if !ok {
+		taskName, ok = pod.Labels[common.ResetTaskNameKeyInLabel]
+		if !ok {
+			hwlog.RunLog.Error("failed to get task name by task key in tryToClearResetInfoCM")
+			return fmt.Errorf("failed to get task name by task key")
+		}
+	}
 	resetInfo, err := hdm.manager.GetKubeClient().GetConfigMap(
 		common.ResetInfoCMNamePrefix+taskName, pod.Namespace)
 	if err != nil {

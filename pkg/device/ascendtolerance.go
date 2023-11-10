@@ -440,7 +440,15 @@ func (hrt *HotResetTools) IsExistFaultyDevInTask(taskName string) bool {
 		return false
 	}
 	for _, pod := range hrt.faultDev2PodMap {
-		if pod.Annotations[common.ResetTaskNameKey] == taskName {
+		taskNameInPod, ok := pod.Annotations[common.ResetTaskNameKey]
+		if !ok {
+			taskNameInPod, ok = pod.Labels[common.ResetTaskNameKeyInLabel]
+			if !ok {
+				hwlog.RunLog.Error("failed to get task name by task key in IsExistFaultyDevInTask")
+				return false
+			}
+		}
+		if taskNameInPod == taskName {
 			hwlog.RunLog.Infof("faulty device exists in task: %s", taskName)
 			return true
 		}
