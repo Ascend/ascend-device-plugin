@@ -29,6 +29,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"huawei.com/npu-exporter/v5/common-utils/hwlog"
@@ -36,16 +37,20 @@ import (
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
-// GetPattern return pattern map
-func GetPattern() map[string]string {
-	return map[string]string{
-		"nodeName":    `^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`,
-		"podName":     "^[a-z0-9]+[a-z0-9\\-]*[a-z0-9]+$",
-		"fullPodName": "^[a-z0-9]+([a-z0-9\\-.]*)[a-z0-9]+$",
-		"vir910":      "Ascend910-(2|4|8|16)c",
-		"vir310p":     "Ascend310P-(1|2|4)c",
-		"ascend910":   `^Ascend910-\d+`,
+var (
+	dpRegexp = map[string]*regexp.Regexp{
+		"nodeName":    regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`),
+		"podName":     regexp.MustCompile("^[a-z0-9]+[a-z0-9\\-]*[a-z0-9]+$"),
+		"fullPodName": regexp.MustCompile("^[a-z0-9]+([a-z0-9\\-.]*)[a-z0-9]+$"),
+		"vir910":      regexp.MustCompile("Ascend910-([2-6]|8|10|12|16)c"),
+		"vir310p":     regexp.MustCompile("Ascend310P-(1|2|4)c"),
+		"ascend910":   regexp.MustCompile(`^Ascend910-\d+`),
 	}
+)
+
+// GetPattern return pattern map
+func GetPattern() map[string]*regexp.Regexp {
+	return dpRegexp
 }
 
 var (
@@ -76,10 +81,13 @@ func SetAscendRuntimeEnv(devices []int, ascendRuntimeOptions string,
 	for _, id := range devices {
 		deviceStr = append(deviceStr, strconv.Itoa(id))
 	}
-	(*resp).Envs[ascendVisibleDevicesEnv] = strings.Join(deviceStr, ",")
+	(*resp).Envs[AscendVisibleDevicesEnv] = strings.Join(deviceStr, ",")
 	(*resp).Envs[ascendRuntimeOptionsEnv] = ascendRuntimeOptions
+	if ParamOption.RealCardType == Ascend310B {
+		(*resp).Envs[ascendAllowLinkEnv] = "True"
+	}
 
-	hwlog.RunLog.Infof("allocate resp env: %s; %s", (*resp).Envs[ascendVisibleDevicesEnv], ascendRuntimeOptions)
+	hwlog.RunLog.Infof("allocate resp env: %s; %s", (*resp).Envs[AscendVisibleDevicesEnv], ascendRuntimeOptions)
 }
 
 // MakeDataHash Make Data Hash
@@ -129,7 +137,7 @@ func GetPodAnnotationByDeviceType(pod *v1.Pod, deviceType string) (string, error
 	if !exist {
 		return "", fmt.Errorf("cannot find the annotation")
 	}
-	if len(annotation) > PodAnnotationMaxMemory {
+	if len(annotation) > PodAnnotationMaxLength {
 		return "", fmt.Errorf("pod annotation size out of memory")
 	}
 	return annotation, nil
@@ -137,6 +145,9 @@ func GetPodAnnotationByDeviceType(pod *v1.Pod, deviceType string) (string, error
 
 // GetDeviceFromPodAnnotation get devices from pod annotation
 func GetDeviceFromPodAnnotation(pod *v1.Pod, deviceType string) ([]string, error) {
+	if pod == nil {
+		return nil, fmt.Errorf("param pod is nil")
+	}
 	annotation, err := GetPodAnnotationByDeviceType(pod, deviceType)
 	if err != nil {
 		return nil, err
@@ -162,19 +173,24 @@ func setDeviceByPath(defaultDevices *[]string, device string) {
 
 // GetDefaultDevices get default device, for allocate mount
 func GetDefaultDevices(getFdFlag bool) ([]string, error) {
-	// hiAIManagerDevice is required
-	if _, err := os.Stat(HiAIManagerDevice); err != nil {
+	davinciManager, err := getDavinciManagerPath()
+	if err != nil {
 		return nil, err
 	}
 	var defaultDevices []string
-	defaultDevices = append(defaultDevices, HiAIManagerDevice)
+	defaultDevices = append(defaultDevices, davinciManager)
 
 	setDeviceByPath(&defaultDevices, HiAIHDCDevice)
 	setDeviceByPath(&defaultDevices, HiAISVMDevice)
 	if getFdFlag {
 		setDeviceByPathWhen200RC(&defaultDevices)
 	}
-	if len(ParamOption.ProductTypes) == 1 && ParamOption.ProductTypes[0] == Atlas200ISoc {
+
+	var productType string
+	if len(ParamOption.ProductTypes) == 1 {
+		productType = ParamOption.ProductTypes[0]
+	}
+	if productType == Atlas200ISoc {
 		socDefaultDevices, err := set200SocDefaultDevices()
 		if err != nil {
 			hwlog.RunLog.Errorf("get 200I soc default devices failed, err: %#v", err)
@@ -182,19 +198,34 @@ func GetDefaultDevices(getFdFlag bool) ([]string, error) {
 		}
 		defaultDevices = append(defaultDevices, socDefaultDevices...)
 	}
+	if ParamOption.RealCardType == Ascend310B {
+		a310BDefaultDevices := set310BDefaultDevices()
+		defaultDevices = append(defaultDevices, a310BDefaultDevices...)
+	}
 	return defaultDevices, nil
+}
+
+func getDavinciManagerPath() (string, error) {
+	if ParamOption.RealCardType == Ascend310B {
+		if _, err := os.Stat(HiAIManagerDeviceDocker); err == nil {
+			return HiAIManagerDeviceDocker, nil
+		}
+		hwlog.RunLog.Warn("get davinci manager docker failed")
+	}
+	if _, err := os.Stat(HiAIManagerDevice); err != nil {
+		return "", err
+	}
+	return HiAIManagerDevice, nil
 }
 
 // set200SocDefaultDevices set 200 soc defaults devices
 func set200SocDefaultDevices() ([]string, error) {
 	var socDefaultDevices = []string{
-		Atlas200ISocXSMEM,
 		Atlas200ISocVPC,
 		Atlas200ISocVDEC,
 		Atlas200ISocSYS,
 		Atlas200ISocSpiSmbus,
 		Atlas200ISocUserConfig,
-		HiAi200RCEventSched,
 		HiAi200RCTsAisle,
 		HiAi200RCSVM0,
 		HiAi200RCLog,
@@ -206,7 +237,47 @@ func set200SocDefaultDevices() ([]string, error) {
 			return nil, err
 		}
 	}
+	var socOptionsDevices = []string{
+		HiAi200RCEventSched,
+		Atlas200ISocXSMEM,
+	}
+	for _, devPath := range socOptionsDevices {
+		if _, err := os.Stat(devPath); err != nil {
+			hwlog.RunLog.Warnf("device %s not exist", devPath)
+			continue
+		}
+		socDefaultDevices = append(socDefaultDevices, devPath)
+	}
 	return socDefaultDevices, nil
+}
+
+func set310BDefaultDevices() []string {
+	var a310BDefaultDevices = []string{
+		Atlas310BDvppCmdlist,
+		Atlas310BPngd,
+		Atlas310BVenc,
+		HiAi200RCUpgrade,
+		Atlas200ISocSYS,
+		HiAi200RCSVM0,
+		Atlas200ISocVDEC,
+		Atlas200ISocVPC,
+		HiAi200RCTsAisle,
+		HiAi200RCLog,
+		Atlas310BAcodec,
+		Atlas310BAi,
+		Atlas310BAo,
+		Atlas310BVo,
+		Atlas310BHdmi,
+	}
+	var available310BDevices []string
+	for _, devPath := range a310BDefaultDevices {
+		if _, err := os.Stat(devPath); err != nil {
+			hwlog.RunLog.Warnf("device %s not exist", devPath)
+			continue
+		}
+		available310BDevices = append(available310BDevices, devPath)
+	}
+	return available310BDevices
 }
 
 func getNPUResourceNumOfPod(pod *v1.Pod, deviceType string) int64 {
@@ -279,7 +350,7 @@ func FilterPods(pods []v1.Pod, deviceType string, conditionFunc func(pod *v1.Pod
 }
 
 // VerifyPathAndPermission used to verify the validity of the path and permission and return resolved absolute path
-func VerifyPathAndPermission(verifyPath string) (string, bool) {
+func VerifyPathAndPermission(verifyPath string, waitSecond int) (string, bool) {
 	hwlog.RunLog.Debug("starting check device socket file path.")
 	absVerifyPath, err := filepath.Abs(verifyPath)
 	if err != nil {
@@ -288,8 +359,17 @@ func VerifyPathAndPermission(verifyPath string) (string, bool) {
 	}
 	pathInfo, err := os.Stat(absVerifyPath)
 	if err != nil {
-		hwlog.RunLog.Error("file path not exist")
-		return "", false
+		for i := 0; i < waitSecond; i++ {
+			time.Sleep(time.Second)
+			pathInfo, err = os.Stat(absVerifyPath)
+			if err == nil {
+				break
+			}
+		}
+		if err != nil {
+			hwlog.RunLog.Error("file path not exist")
+			return "", false
+		}
 	}
 	realPath, err := filepath.EvalSymlinks(absVerifyPath)
 	if err != nil || absVerifyPath != realPath {
@@ -315,8 +395,8 @@ func CheckPodNameAndSpace(podPara string, maxLength int) error {
 		pattern = patternMap["fullPodName"]
 	}
 
-	if match, err := regexp.MatchString(pattern, podPara); !match || err != nil {
-		return fmt.Errorf("podPara is illegal")
+	if match := pattern.MatchString(podPara); !match {
+		return fmt.Errorf("podPara %s is illegal", podPara)
 	}
 	return nil
 }
@@ -408,4 +488,32 @@ func CheckFileUserSameWithProcess(loggerPath string) bool {
 		return false
 	}
 	return true
+}
+
+// IsContainAtlas300IDuo in ProductTypes list, is contain Atlas 300I Duo card
+func IsContainAtlas300IDuo() bool {
+	for _, product := range ParamOption.ProductTypes {
+		if product == Atlas300IDuo {
+			return true
+		}
+	}
+	return false
+}
+
+// RecordFaultInfoList record the fault info
+func RecordFaultInfoList(devFaultInfoList []*TaskDevInfo) {
+	for _, devFaultInfo := range devFaultInfoList {
+		hexErrorCode := strings.ToUpper(Int64Tool.ToHexString(devFaultInfo.ErrorCode))
+		hwlog.RunLog.Infof("rank id: %d, log id: %d, policy: %s, error code: %s",
+			devFaultInfo.RankId, devFaultInfo.LogicId, devFaultInfo.Policy, hexErrorCode)
+	}
+}
+
+// Int32Join int32 join to string
+func Int32Join(data []int32, sep string) string {
+	strData := make([]string, 0, len(data))
+	for _, val := range data {
+		strData = append(strData, strconv.Itoa(int(val)))
+	}
+	return strings.Join(strData, sep)
 }

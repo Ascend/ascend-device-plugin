@@ -35,6 +35,8 @@ const (
 	MaxContainerLimit = 300000
 	// RetryUpdateCount is max number of retry resource update
 	RetryUpdateCount = 3
+	// GetPodFromInformerTime is max number of get pod from informer
+	GetPodFromInformerTime = 3
 	// MaxDeviceNameLen max length of device name, like "Ascend310P-4c.3cpu-100-0"
 	MaxDeviceNameLen = 50
 	// MaxGRPCRecvMsgSize 4MB
@@ -49,10 +51,10 @@ const (
 	CacheSize = 128
 	// MaxVirtualDeviceNum max num of virtual device
 	MaxVirtualDeviceNum = 1024
-	// CMDataMaxMemory configMap max data size 1MB
-	CMDataMaxMemory = 1024 * 1024
-	// PodAnnotationMaxMemory pod annotation max data size 1MB
-	PodAnnotationMaxMemory = 1024 * 1024
+	// CMDataMaxLength configMap max data size 1MB
+	CMDataMaxLength = 1024 * 1024
+	// PodAnnotationMaxLength pod annotation max data length 1MB
+	PodAnnotationMaxLength = 1024 * 1024
 
 	// DeviceInfoCMNameSpace namespace of device info configmap
 	DeviceInfoCMNameSpace = "kube-system"
@@ -61,9 +63,13 @@ const (
 	// DeviceInfoCMDataKey device info configmap data key
 	DeviceInfoCMDataKey = "DeviceInfoCfg"
 
-	runtimeEnvNum           = 2
-	ascendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES" // visible env
-	ascendRuntimeOptionsEnv = "ASCEND_RUNTIME_OPTIONS" // virtual runtime option env
+	runtimeEnvNum = 3
+	// AscendVisibleDevicesEnv visible devices env
+	AscendVisibleDevicesEnv = "ASCEND_VISIBLE_DEVICES"
+	// ascendRuntimeOptionsEnv virtual runtime option env
+	ascendRuntimeOptionsEnv = "ASCEND_RUNTIME_OPTIONS"
+	// ascendAllowLinkEnv a500a2 need mount softlink
+	ascendAllowLinkEnv = "ASCEND_ALLOW_LINK"
 	// PodPredicateTime pod predicate time
 	PodPredicateTime = "predicate-time"
 	// Pod2kl pod annotation key, means kubelet allocate device
@@ -72,6 +78,8 @@ const (
 	PodRealAlloc = "AscendReal"
 	// Pod910DeviceKey pod annotation key, for generate 910 hccl rank table
 	Pod910DeviceKey = "ascend.kubectl.kubernetes.io/ascend-910-configuration"
+	// MetaDataAnnotation downward api which map annotation from volcano to container's env
+	MetaDataAnnotation = "metadata.annotations"
 
 	// PodResourceSeverKey for pod resource key
 	PodResourceSeverKey = "podResource"
@@ -82,7 +90,7 @@ const (
 	// VirDeviceLen like Ascend910-2c-100-1 split length is 4
 	VirDeviceLen = 4
 	// MaxDevicesNum max device num
-	MaxDevicesNum = 64
+	MaxDevicesNum = 100
 	// MaxCardNum max card num
 	MaxCardNum = 64
 	// MaxDevNumInCard max device num in card
@@ -107,6 +115,11 @@ const (
 	// RunMode310P for 310P chip
 	RunMode310P = "ascend310P"
 
+	// AMPMode for AMP chip work mode
+	AMPMode = "AMP"
+	// SMPMode for SMP chip work mode
+	SMPMode = "SMP"
+
 	// Interval interval time
 	Interval = 1
 	// Timeout time
@@ -119,6 +132,32 @@ const (
 	BitSize32 = 32
 	// SleepTime The unit is seconds
 	SleepTime = 5
+
+	// GeneralMapSize general map size
+	GeneralMapSize = 8
+	// GeneralSubscribeTime general subscribe try time
+	GeneralSubscribeTime = 3
+	// Hex hexadecimal
+	Hex = 16
+	// LinkupRecoverTime is the linkup duration for restoring NPU network health
+	LinkupRecoverTime = 60
+	// SecondMagnification is second-level unit magnification
+	SecondMagnification = 1000
+
+	// PollFaultCodeCMInterval is the default interval(second) of polling fault code CM
+	PollFaultCodeCMInterval = 300
+	// PollFaultCodeCMMaxInterval is the max interval(second) of polling fault code CM
+	PollFaultCodeCMMaxInterval = 3600
+	// PollFaultCodeCMMinInterval is the min interval(second) of polling fault code CM
+	PollFaultCodeCMMinInterval = 30
+	// FaultCodeCMName is the name of the configmap that is used to save fault code
+	FaultCodeCMName = "mindx-dl-fault-config"
+	// FaultCodeCMNameSpace is the namespace of the fault code configmap
+	FaultCodeCMNameSpace = "kube-system"
+	// FaultCodeKey is the key to find fault code in cm
+	FaultCodeKey = "faultCode.json"
+	// PollIntervalKey is the key to find poll interval in cm
+	PollIntervalKey = "PollInterval"
 )
 
 const (
@@ -159,11 +198,35 @@ const (
 	Ascend910c8 = Ascend910 + "-" + Core8
 	// Ascend910c16 Ascend910 16core
 	Ascend910c16 = Ascend910 + "-" + Core16
+	// Ascend910c5Cpu1Gb8 Ascend910 5core 1cpu 8 Gb memory
+	Ascend910c5Cpu1Gb8 = Ascend910 + "-" + Core5Cpu1Gb8
+	// Ascend910c5Cpu1Gb16 Ascend910 5core 1cpu 16Gb memory
+	Ascend910c5Cpu1Gb16 = Ascend910 + "-" + Core5Cpu1Gb16
+	// Ascend910c6Cpu1Gb16 Ascend910 6core 1cpu 16Gb memory
+	Ascend910c6Cpu1Gb16 = Ascend910 + "-" + Core6Cpu1Gb16
+	// Ascend910c10Cpu3Gb16 Ascend910 10core 3cpu 16Gb memory
+	Ascend910c10Cpu3Gb16 = Ascend910 + "-" + Core10Cpu3Gb16
+
+	// Ascend910c10Cpu3Gb16Ndvpp Ascend910 10core 3cpu 16Gb memory ndvpp
+	Ascend910c10Cpu3Gb16Ndvpp = Ascend910 + "-" + Core10Cpu3Gb16Ndvpp
+	// Ascend910c10Cpu3Gb32 Ascend910 10core 3cpu 32Gb memory
+	Ascend910c10Cpu3Gb32 = Ascend910 + "-" + Core10Cpu3Gb32
+	// Ascend910c10Cpu4Gb16Dvpp Ascend910 10core 4cpu 16Gb memory dvpp
+	Ascend910c10Cpu4Gb16Dvpp = Ascend910 + "-" + Core10Cpu4Gb16Dvpp
+
+	// Ascend910c12Cpu3Gb32 Ascend910 12core 3cpu 32Gb memory
+	Ascend910c12Cpu3Gb32 = Ascend910 + "-" + Core12Cpu3Gb32
+
+	// Ascend910c3Cpu1Gb8 Ascend910 3core 1cpu 8Gb memory
+	Ascend910c3Cpu1Gb8 = Ascend910 + "-" + Core3Cpu1Gb8
+
 	// HuaweiAscend910 with prefix
 	HuaweiAscend910 = ResourceNamePrefix + Ascend910
 
 	// Ascend310 310
 	Ascend310 = "Ascend310"
+	// Ascend310B 310B chip
+	Ascend310B = "Ascend310B"
 	// HuaweiAscend310 with prefix
 	HuaweiAscend310 = ResourceNamePrefix + Ascend310
 	// AscendfdPrefix use in fd
@@ -185,6 +248,13 @@ const (
 	// HuaweiRecoverAscend910 910 recover
 	HuaweiRecoverAscend910 = ResourceNamePrefix + Ascend910 + "-Recover"
 
+	// HuaweiFaultCodeAscend910 910 fault code
+	HuaweiFaultCodeAscend910 = ResourceNamePrefix + Ascend910 + "-Fault"
+	// HuaweiFaultCodeAscend310P 310p fault code
+	HuaweiFaultCodeAscend310P = ResourceNamePrefix + Ascend310P + "-Fault"
+	// HuaweiFaultCodeAscend310 310 fault code
+	HuaweiFaultCodeAscend310 = ResourceNamePrefix + Ascend310 + "-Fault"
+
 	// AiCoreResourceName resource name for virtual device
 	AiCoreResourceName = "npu-core"
 
@@ -192,39 +262,84 @@ const (
 	Core1 = "1c"
 	// Core2 2 core
 	Core2 = "2c"
-	// Core4 4 core
-	Core4 = "4c"
-	// Core8 8 core
-	Core8 = "8c"
-	// Core16 16 core
-	Core16 = "16c"
-	// Core4Cpu3 4core 3cpu
-	Core4Cpu3 = "4c.3cpu"
 	// Core2Cpu1 2core 1cpu
 	Core2Cpu1 = "2c.1cpu"
-	// Core4Cpu4Dvpp 4core 4cpu dvpp
-	Core4Cpu4Dvpp = "4c.4cpu.dvpp"
+
+	// Core3Cpu1Gb8 3 core, 1 cpu and 8GB memory
+	Core3Cpu1Gb8 = "3c.1cpu.8g"
+	// Core4 4 core
+	Core4 = "4c"
+	// Core4Cpu3 4core 3cpu
+	Core4Cpu3 = "4c.3cpu"
 	// Core4Cpu3Ndvpp 4core 3cpu ndvpp
 	Core4Cpu3Ndvpp = "4c.3cpu.ndvpp"
+	// Core4Cpu4Dvpp 4core 4cpu dvpp
+	Core4Cpu4Dvpp = "4c.4cpu.dvpp"
+	// Core5Cpu1Gb8 5 core, 1 cpu and 8GB memory
+	Core5Cpu1Gb8 = "5c.1cpu.8g"
+	// Core5Cpu1Gb16 5 core, 1 cpu and 16GB memory
+	Core5Cpu1Gb16 = "5c.1cpu.16g"
+
+	// Core6Cpu1Gb16 6 core, 1 cpu and 16GB memory
+	Core6Cpu1Gb16 = "6c.1cpu.16g"
+
+	// Core8 8 core
+	Core8 = "8c"
+	// Core10Cpu3Gb16 10 core, 3 cpu and 16Gb memory
+	Core10Cpu3Gb16 = "10c.3cpu.16g"
+
+	// Core10Cpu3Gb16Ndvpp 10 core, 3 cpu, 16Gb memory and ndvpp
+	Core10Cpu3Gb16Ndvpp = "10c.3cpu.16g.ndvpp"
+	// Core10Cpu3Gb32 10 core, 3 cpu and 32GB memory
+	Core10Cpu3Gb32 = "10c.3cpu.32g"
+	// Core10Cpu4Gb16Dvpp 10 core, 4 cpu, 16Gb memory and dvpp
+	Core10Cpu4Gb16Dvpp = "10c.4cpu.16g.dvpp"
+
+	// Core12Cpu3Gb32 12 core, 3 cpu and 32GB memory
+	Core12Cpu3Gb32 = "12c.3cpu.32g"
+
+	// Core16 16 core
+	Core16 = "16c"
 
 	// Vir01 template name vir01
 	Vir01 = "vir01"
 	// Vir02 template name vir02
 	Vir02 = "vir02"
-	// Vir04 template name vir04
-	Vir04 = "vir04"
-	// Vir08 template name vir08
-	Vir08 = "vir08"
-	// Vir16 template name vir16
-	Vir16 = "vir16"
-	// Vir04C3 template name vir04_3c
-	Vir04C3 = "vir04_3c"
 	// Vir02C1 template name vir02_1c
 	Vir02C1 = "vir02_1c"
+	// Vir03C1G8 template name vir03_1c_8g
+	Vir03C1G8 = "vir03_1c_8g"
+	// Vir04 template name vir04
+	Vir04 = "vir04"
+	// Vir04C3 template name vir04_3c
+	Vir04C3 = "vir04_3c"
 	// Vir04C4Dvpp template name vir04_4c_dvpp
 	Vir04C4Dvpp = "vir04_4c_dvpp"
 	// Vir04C3Ndvpp template name vir04_3c_ndvpp
 	Vir04C3Ndvpp = "vir04_3c_ndvpp"
+	// Vir05C1G8 template name vir05_1c_8g
+	Vir05C1G8 = "vir05_1c_8g"
+	// Vir05C1G16 template name vir05_1c_16g
+	Vir05C1G16 = "vir05_1c_16g"
+	// Vir06C1G16 template name vir06_1c_16g
+	Vir06C1G16 = "vir06_1c_16g"
+	// Vir08 template name vir08
+	Vir08 = "vir08"
+	// Vir10C3G16 template name vir10_3c_16g
+	Vir10C3G16 = "vir10_3c_16g"
+	// Vir10C3G16NM template name vir10_3c_16g_nm
+	Vir10C3G16NM = "vir10_3c_16g_nm"
+	// Vir10C3G32 template name vir10_3c_32g
+	Vir10C3G32 = "vir10_3c_32g"
+	// Vir10C4G16M template name vir10_4c_16g_m
+	Vir10C4G16M = "vir10_4c_16g_m"
+	// Vir12C3G32 template name vir12_3c_32g
+	Vir12C3G32 = "vir12_3c_32g"
+	// Vir16 template name vir16
+	Vir16 = "vir16"
+
+	// VirMark the mark of virtual device
+	VirMark = "vir"
 
 	// AnnotationVNPUInfoSplitLen length of pod annotation for allocate vnpu info
 	AnnotationVNPUInfoSplitLen = 2
@@ -236,10 +351,21 @@ const (
 	// DefaultIDForCreateVNPU default id for creating vnpu
 	DefaultIDForCreateVNPU = 0xFFFFFFFF
 
-	// ServerTypeLabelKey the node label key of server type
-	ServerTypeLabelKey = "servertype"
 	// ServerTypeInfoMinLen the min len of server type split data
 	ServerTypeInfoMinLen = 2
+	// VGroupAndDevLen a list only contain virtual group and device
+	VGroupAndDevLen = 2
+	// MaxShareDevCount open share device function, max share count is 100
+	MaxShareDevCount = 100
+)
+
+const (
+	// ServerTypeLabelKey the node label key of server type
+	ServerTypeLabelKey = "servertype"
+	// AcceleratorTypeKey the node label key of accelerator type
+	AcceleratorTypeKey = "accelerator-type"
+	// A300IA2Label the value of the A300I A2 node label
+	A300IA2Label = "card-910b-infer"
 )
 
 const (
@@ -247,6 +373,8 @@ const (
 	HiAIHDCDevice = "/dev/hisi_hdc"
 	// HiAIManagerDevice davinci_manager
 	HiAIManagerDevice = "/dev/davinci_manager"
+	// HiAIManagerDeviceDocker davinci_manager for docker
+	HiAIManagerDeviceDocker = "/dev/davinci_manager_docker"
 	// HiAISVMDevice devmm_svm
 	HiAISVMDevice = "/dev/devmm_svm"
 	// HiAi200RCSVM0 svm0
@@ -283,6 +411,24 @@ const (
 )
 
 const (
+	// Atlas310BDvppCmdlist is dvpp_cmdlist
+	Atlas310BDvppCmdlist = "/dev/dvpp_cmdlist"
+	// Atlas310BPngd is pngd
+	Atlas310BPngd = "/dev/pngd"
+	// Atlas310BVenc is venc
+	Atlas310BVenc = "/dev/venc"
+)
+
+// Audio and video dependent device for Atlas310B
+const (
+	Atlas310BAcodec = "/dev/acodec"
+	Atlas310BAi     = "/dev/ai"
+	Atlas310BAo     = "/dev/ao"
+	Atlas310BVo     = "/dev/vo"
+	Atlas310BHdmi   = "/dev/hdmi"
+)
+
+const (
 	// RootUID is root user id
 	RootUID = 0
 	// RootGID is root group id
@@ -302,9 +448,137 @@ const (
 	NoNPUResource = "NoNPUResource"
 	// NPUSegmentFailed means create vnpu device failed
 	NPUSegmentFailed = "NPUSegmentFailed"
+	// CenterScene deploy the device-plugin component on the central side
+	CenterScene = "center"
+	// EdgeScene deploy the device-plugin component on the edge side
+	EdgeScene = "edge"
+	// A300IA2BoardId board id of A300I A2
+	A300IA2BoardId = 0x28
+	// Infer means device for inference
+	Infer = "infer"
+	// Train means device for training
+	Train = "train"
 )
 
 // Special scene for invoking the dcmi interface
 const (
 	DeviceNotSupport = 8255
+	// DefaultAiCoreNum set a default value of aicore number
+	DefaultAiCoreNum = 1
+)
+
+const (
+	// Atlas300IDuo for hot reset function, sync chip healthy state
+	Atlas300IDuo = "Atlas 300I Duo"
+	// HotResetClose not using chip hot reset function
+	HotResetClose = -1
+	// HotResetInfer using infer chip hot reset
+	HotResetInfer = 0
+	// HotResetTrain using train chip hot reset
+	HotResetTrain = 1
+	// BootStartFinish chip hot reset finish
+	BootStartFinish = 16
+)
+
+const (
+	// Ascend910RingsNum indicates the number of devices in a ring
+	Ascend910RingsNum = 4
+	// Ascend910BRingsNumTrain indicates the number of devices in a ring
+	Ascend910BRingsNumTrain = 8
+	// Ascend910BRingsNumInfer indicates the number of devices in a ring
+	Ascend910BRingsNumInfer = 1
+	// RingSum indicates the max number of ring
+	RingSum = 2
+	// RankIndexKey for obtain the rank index in the pod
+	RankIndexKey = "hccl/rankIndex"
+	// InferRankIndex indecates the rank index of infer situation (rank index is meaningless in infer situation)
+	InferRankIndex = "-1"
+	// WaitFlushCMTime for wait for cm info to flush in container
+	WaitFlushCMTime = 90
+	// WaitResetEndTime for wait device reset to complete
+	WaitResetEndTime = 120
+	// WaitRetryTime for wait five seconds to reset device again
+	WaitRetryTime = 5
+	// ResetRetryTimes for max retry times when reset failed
+	ResetRetryTimes = 3
+)
+
+const (
+	// ResetInfoCMNamePrefix for reset configmap name prefix
+	ResetInfoCMNamePrefix = "reset-config-"
+	// ResetInfoCMDataKey for reset configmap data key
+	ResetInfoCMDataKey = "reset.json"
+	// ResetInfoCMCheckCodeKey for reset configmap checkcode key
+	ResetInfoCMCheckCodeKey = "checkCode"
+	// ResetTaskNameKey for obtain the reset task name
+	ResetTaskNameKey = "volcano.sh/job-name"
+	// ResetTaskNameKeyInLabel for obtain the reset task name when using operator
+	ResetTaskNameKeyInLabel = "job-name"
+)
+
+const (
+	// FaultInfoCMNamePrefix for fault configmap name prefix
+	FaultInfoCMNamePrefix = "fault-config-"
+	// FaultInfoCMDataKey for fault configmap data key
+	FaultInfoCMDataKey = "fault-npus"
+	// FaultInfoCMCheckCodeKey for fault configmap checkcode key
+	FaultInfoCMCheckCodeKey = "checkCode"
+)
+
+const (
+	// EmptyError indicates that there is no fault
+	EmptyError = "empty"
+	// IgnoreError indicates that the current fault can be ignored
+	IgnoreError = "ignore"
+	// RestartRequestError indicates that the task only needs to re-execute this request
+	RestartRequestError = "restart_request"
+	// RestartError indicates that the training needs to be re-executed for the current fault
+	RestartError = "restart"
+	// ResetError indicates that the current fault requires resetting the chip and re-executing the training
+	ResetError = "reset"
+	// IsolateError indicates that the device needs to be isolated due to the current fault
+	IsolateError = "isolate"
+)
+
+const (
+	// EmptyErrorLevel indicates the level of no fault state
+	EmptyErrorLevel = iota
+	// IgnoreErrorLevel indicates the level of a fault that can be ignored
+	IgnoreErrorLevel
+	// RestartRequestError indicates that the task only needs to re-execute this request
+	RestartRequestErrorLevel
+	// RestartErrorLevel indicates the level of the fault that needs to be re-executed
+	RestartErrorLevel
+	// ResetErrorLevel indicates the fault level of the device to be reset
+	ResetErrorLevel
+	// IsolateErrorLevel indicates the fault level of the device to be isolated
+	IsolateErrorLevel
+)
+
+const (
+	// UnrecoveredStatus indicates the status before recovery
+	UnrecoveredStatus = "unrecovered"
+	// RecoveredStatus indicates that the recovery is successful
+	RecoveredStatus = "recovered"
+	// RecoverFailedStatus indicates that the recovery fails
+	RecoverFailedStatus = "failed"
+)
+
+const (
+	// LeftRingOf910 means id contains [0, 1, 2, 3]
+	LeftRingOf910 = 0
+	// RightRingOf910 means id contains [4, 5, 6, 7]
+	RightRingOf910 = 1
+	// RingOf910B means id contains [0, 1, 2, 3, 4, 5, 6, 7]
+	RingOf910B = 2
+	// MaxResetWaitRecoverTime max reset wait chip recover time is 150s
+	MaxResetWaitRecoverTime = 150
+)
+
+// LogicID list for reset, get id list of ring
+const (
+	LogicID0 = 0
+	LogicID3 = 3
+	LogicID4 = 4
+	LogicID7 = 7
 )

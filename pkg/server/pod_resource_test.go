@@ -26,8 +26,8 @@ import (
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/smartystreets/goconvey/convey"
 	"google.golang.org/grpc"
+	"k8s.io/kubelet/pkg/apis/podresources/v1alpha1"
 	"k8s.io/kubernetes/pkg/kubelet/apis/podresources"
-	"k8s.io/kubernetes/pkg/kubelet/apis/podresources/v1alpha1"
 
 	"Ascend-device-plugin/pkg/common"
 )
@@ -55,16 +55,16 @@ func TestPodResourceStart1(t *testing.T) {
 	pr := NewPodResource()
 	convey.Convey("test start", t, func() {
 		convey.Convey("VerifyPath failed", func() {
-			mockVerifyPath := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(verifyPath string) (string,
-				bool) {
+			mockVerifyPath := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(verifyPath string,
+				waitSecond int) (string, bool) {
 				return "", false
 			})
 			defer mockVerifyPath.Reset()
 			convey.So(pr.start(), convey.ShouldNotBeNil)
 		})
 		convey.Convey("VerifyPath ok", func() {
-			mockVerifyPath := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(verifyPath string) (string,
-				bool) {
+			mockVerifyPath := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(verifyPath string,
+				waitSecond int) (string, bool) {
 				return "", true
 			})
 			defer mockVerifyPath.Reset()
@@ -79,7 +79,7 @@ func TestPodResourceStart2(t *testing.T) {
 	pr := NewPodResource()
 	convey.Convey("test start", t, func() {
 		convey.Convey("GetClient failed", func() {
-			mockGetClient := gomonkey.ApplyFunc(podresources.GetClient, func(socket string,
+			mockGetClient := gomonkey.ApplyFunc(podresources.GetV1alpha1Client, func(socket string,
 				connectionTimeout time.Duration, maxMsgSize int) (v1alpha1.PodResourcesListerClient,
 				*grpc.ClientConn, error) {
 				return nil, nil, fmt.Errorf("err")
@@ -88,14 +88,16 @@ func TestPodResourceStart2(t *testing.T) {
 			convey.So(pr.start(), convey.ShouldNotBeNil)
 		})
 		convey.Convey("start ok", func() {
-			mockGetClient := gomonkey.ApplyFunc(podresources.GetClient, func(socket string,
+			mockGetClient := gomonkey.ApplyFunc(podresources.GetV1alpha1Client, func(socket string,
 				connectionTimeout time.Duration, maxMsgSize int) (v1alpha1.PodResourcesListerClient,
 				*grpc.ClientConn, error) {
 				return nil, nil, nil
 			})
 			defer mockGetClient.Reset()
 			funcStub := gomonkey.ApplyFunc(common.VerifyPathAndPermission,
-				func(verifyPathAndPermission string) (string, bool) { return verifyPathAndPermission, true })
+				func(verifyPathAndPermission string, waitSecond int) (string, bool) {
+					return verifyPathAndPermission, true
+				})
 			defer funcStub.Reset()
 			convey.So(pr.start(), convey.ShouldBeNil)
 		})

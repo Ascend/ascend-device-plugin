@@ -25,10 +25,22 @@ import (
 	"github.com/smartystreets/goconvey/convey"
 	"huawei.com/npu-exporter/v5/devmanager"
 	"k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	"Ascend-device-plugin/pkg/common"
 	"Ascend-device-plugin/pkg/kubeclient"
+)
+
+const (
+	chipPhyID0 = 0
+	chipPhyID1 = 1
+	chipPhyID2 = 2
+	chipPhyID3 = 3
+	chipPhyID4 = 4
+	chipPhyID5 = 5
+	chipPhyID6 = 6
+	chipPhyID7 = 7
 )
 
 func createFake910Manager() *HwAscend910Manager {
@@ -58,19 +70,16 @@ func TestDoWithVolcanoListAndWatch910(t *testing.T) {
 		groupDevice := ClassifyDevices(allInfo.AllDevs, allInfo.AllDevTypes)
 
 		mockGetPodsUsedNpu := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)),
-			"GetPodsUsedNpu", func(_ *kubeclient.ClientK8s, devType string) sets.String {
+			"GetPodsUsedNpu", func(_ *kubeclient.ClientK8s) sets.String {
 				return nil
 			})
 		mockGetConfigMap := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)),
-			"GetConfigMap", func(_ *kubeclient.ClientK8s) (*v1.ConfigMap, error) {
+			"GetDeviceInfoCMCache", func(_ *kubeclient.ClientK8s) *common.NodeDeviceInfoCache {
 				nodeDeviceData := common.NodeDeviceInfoCache{DeviceInfo: common.NodeDeviceInfo{
 					DeviceList: map[string]string{common.Ascend910: "Ascend910-1"},
 					UpdateTime: time.Now().Unix()}}
 				nodeDeviceData.CheckCode = common.MakeDataHash(nodeDeviceData.DeviceInfo)
-				data := common.MarshalData(nodeDeviceData)
-
-				return &v1.ConfigMap{Data: map[string]string{
-					common.DeviceInfoCMDataKey: string(data)}}, nil
+				return &nodeDeviceData
 			})
 		mockPatchNodeState := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)),
 			"PatchNodeState", func(_ *kubeclient.ClientK8s, curNode,
@@ -78,9 +87,9 @@ func TestDoWithVolcanoListAndWatch910(t *testing.T) {
 				return &v1.Node{}, nil, nil
 			})
 		mockCreateConfigMap := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)),
-			"WriteDeviceInfoDataIntoCM", func(_ *kubeclient.ClientK8s,
-				deviceInfo map[string]string) (*v1.ConfigMap, error) {
-				return &v1.ConfigMap{}, nil
+			"WriteDeviceInfoDataIntoCMCache", func(_ *kubeclient.ClientK8s,
+				deviceInfo map[string]string) error {
+				return nil
 			})
 		mockNodeBack := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)), "GetNode",
 			func(_ *kubeclient.ClientK8s) (*v1.Node, error) {
@@ -118,4 +127,180 @@ func TestGetPatchLabel(t *testing.T) {
 		res := hnm.getPatchLabel(devices)
 		convey.So(res, convey.ShouldBeIn, []string{"1.2", "2.1"})
 	})
+}
+
+// TestGraceTolerance a ut for function GraceTolerance
+func TestGraceTolerance(t *testing.T) {
+	manager := createFake910Manager()
+	common.ParamOption.RealCardType = common.Ascend910
+	convey.Convey("exec ut function TestGraceTolerance", t, func() {
+		mockPodList := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)), "GetAllPodList",
+			func(_ *kubeclient.ClientK8s) (*v1.PodList, error) {
+				return mockGetAllPodList(), nil
+			})
+		mockGetCM := mockGetCM()
+		defer mockGetCM.Reset()
+		defer mockPodList.Reset()
+		manager.GraceTolerance(mockGroupDevice())
+		convey.So(manager.hotResetManager, convey.ShouldNotBeNil)
+	})
+}
+
+// TestProcessAllTask a ut for function processAllTask
+func TestProcessAllTask(t *testing.T) {
+	manager := createFake910Manager()
+	convey.Convey("exec ut function TestProcessAllTask", t, func() {
+		mockGetCM := mockGetCM()
+		defer mockGetCM.Reset()
+		manager.hotResetManager = &HotResetTools{
+			allTaskDevFaultInfo: map[string][]*common.TaskDevInfo{
+				"task1": getTaskInfo(),
+			},
+			taskPod: map[string]v1.Pod{
+				"task1": getSinglePod("pod1", map[string]string{}),
+			},
+			processPolicyTable: map[string]int{
+				common.EmptyError:   common.EmptyErrorLevel,
+				common.IgnoreError:  common.IgnoreErrorLevel,
+				common.RestartError: common.RestartErrorLevel,
+				common.ResetError:   common.ResetErrorLevel,
+				common.IsolateError: common.IsolateErrorLevel,
+			},
+		}
+		err := manager.processAllTask()
+		convey.So(err, convey.ShouldBeNil)
+	})
+}
+
+// TestFilterDevStatus a ut for function filterDevStatus
+func TestFilterDevStatus(t *testing.T) {
+	manager := createFake910Manager()
+	convey.Convey("exec ut function TestFilterDevStatus", t, func() {
+		err := manager.filterDevStatus(map[string][]*common.NpuDevice{})
+		convey.So(err, convey.ShouldNotBeNil)
+		mockGetCM := mockGetCM()
+		mockUpdateCM := mockUpdateCM()
+		defer mockGetCM.Reset()
+		defer mockUpdateCM.Reset()
+		manager.hotResetManager = &HotResetTools{
+			ringNum: getChipCountOnRing(),
+			resetDev: map[int32]struct{}{
+				chipPhyID1: {},
+				chipPhyID3: {},
+				chipPhyID5: {},
+			},
+			faultDev2PodMap: map[int32]v1.Pod{
+				chipPhyID3: getSinglePod("pod1", map[string]string{}),
+			},
+		}
+		err = manager.filterDevStatus(mockGroupDevice())
+		convey.So(err, convey.ShouldBeNil)
+	})
+}
+
+func mockGetCM() *gomonkey.Patches {
+	return gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)),
+		"GetConfigMap", func(_ *kubeclient.ClientK8s, _ string, _ string) (*v1.ConfigMap, error) {
+			nodeDeviceData := common.TaskResetInfo{
+				UpdateTime: 11111111,
+			}
+			return &v1.ConfigMap{Data: map[string]string{
+				common.ResetInfoCMDataKey:      string(common.MarshalData(nodeDeviceData)),
+				common.ResetInfoCMCheckCodeKey: common.MakeDataHash(nodeDeviceData)},
+			}, nil
+		})
+}
+
+func mockUpdateCM() *gomonkey.Patches {
+	return gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)), "UpdateConfigMap",
+		func(_ *kubeclient.ClientK8s, _ *v1.ConfigMap) (*v1.ConfigMap, error) {
+			return &v1.ConfigMap{Data: map[string]string{}}, nil
+		})
+}
+
+func mockGetAllPodList() *v1.PodList {
+	annotationHalfRing := map[string]string{
+		common.HuaweiAscend910: "Ascend910-0,Ascend910-1",
+	}
+	annotationEmpty := map[string]string{
+		common.HuaweiAscend910: "",
+	}
+	annotationErr := map[string]string{}
+	annotationErrRank := map[string]string{
+		common.ResetTaskNameKey: "task1",
+	}
+	annotationSuccess := map[string]string{
+		common.ResetTaskNameKey: "task1",
+		common.RankIndexKey:     "1",
+		common.HuaweiAscend910:  "Ascend910-4,Ascend910-5,Ascend910-6,Ascend910-7",
+	}
+	return &v1.PodList{
+		Items: []v1.Pod{
+			getSinglePod("test-pod1", annotationHalfRing),
+			getSinglePod("test-pod2", annotationEmpty),
+			getSinglePod("test-pod3", annotationErr),
+			getSinglePod("test-pod4", annotationErrRank),
+			getSinglePod("test-pod5", annotationSuccess),
+		},
+	}
+}
+
+func mockGroupDevice() map[string][]*common.NpuDevice {
+	return map[string][]*common.NpuDevice{
+		common.Ascend910: mockNpuDevices(),
+	}
+}
+
+func mockNpuDevices() []*common.NpuDevice {
+	return []*common.NpuDevice{
+		getNPU(chipPhyID0),
+		getNPU(chipPhyID1),
+		getNPU(chipPhyID2),
+		getNPU(chipPhyID3),
+		getNPU(chipPhyID4),
+		getNPU(chipPhyID5),
+		getNPU(chipPhyID6),
+		getNPU(chipPhyID7),
+	}
+}
+
+func getTaskInfo() []*common.TaskDevInfo {
+	return []*common.TaskDevInfo{
+		{
+			DevFaultInfo: common.DevFaultInfo{
+				LogicId: chipPhyID0,
+				Policy:  "NotExist",
+			},
+		},
+		{
+			DevFaultInfo: common.DevFaultInfo{
+				LogicId: chipPhyID1,
+				Policy:  common.IsolateError,
+			},
+		},
+		{
+			DevFaultInfo: common.DevFaultInfo{
+				LogicId: chipPhyID2,
+				Policy:  common.RestartError,
+			},
+		},
+	}
+}
+
+func getNPU(autoID int32) *common.NpuDevice {
+	return &common.NpuDevice{
+		LogicID:    autoID,
+		PhyID:      autoID,
+		DevType:    common.Ascend910,
+		DeviceName: fmt.Sprintf("%s-%d", common.Ascend910, autoID),
+	}
+}
+
+func getSinglePod(podName string, annotation map[string]string) v1.Pod {
+	return v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        podName,
+			Annotations: annotation,
+		},
+	}
 }

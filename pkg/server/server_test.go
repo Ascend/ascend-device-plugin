@@ -62,7 +62,8 @@ func TestPluginServerStop(t *testing.T) {
 // TestPluginServerStartPart1 Test PluginServer Start()
 func TestPluginServerStartPart1(t *testing.T) {
 	convey.Convey("when serve func createNetListener verify path failed", t, func() {
-		funcStub := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(VerifyPathAndPermission string) (string, bool) {
+		funcStub := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(VerifyPathAndPermission string,
+			waitSecond int) (string, bool) {
 			return "", false
 		})
 		defer funcStub.Reset()
@@ -79,7 +80,8 @@ func TestPluginServerStartPart1(t *testing.T) {
 	})
 
 	convey.Convey("when serve func createNetListener watch file failed", t, func() {
-		funcStub := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(VerifyPathAndPermission string) (string, bool) {
+		funcStub := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(VerifyPathAndPermission string,
+			waitSecond int) (string, bool) {
 			return VerifyPathAndPermission, true
 		})
 		defer funcStub.Reset()
@@ -105,7 +107,8 @@ func TestPluginServerStartPart1(t *testing.T) {
 // TestPluginServerStartPart2 Test PluginServer Start()
 func TestPluginServerStartPart2(t *testing.T) {
 	convey.Convey("when serve func createNetListener delete socket file failed", t, func() {
-		funcStub := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(VerifyPathAndPermission string) (string, bool) {
+		funcStub := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(VerifyPathAndPermission string,
+			waitSecond int) (string, bool) {
 			return VerifyPathAndPermission, true
 		})
 		defer funcStub.Reset()
@@ -141,7 +144,8 @@ func TestPluginServerStartPart2(t *testing.T) {
 // TestPluginServerStartPart3 Test PluginServer Start()
 func TestPluginServerStartPart3(t *testing.T) {
 	convey.Convey("when serve func createNetListener create listener failed", t, func() {
-		funcStub := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(VerifyPathAndPermission string) (string, bool) {
+		funcStub := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(VerifyPathAndPermission string,
+			waitSecond int) (string, bool) {
 			return VerifyPathAndPermission, true
 		})
 		defer funcStub.Reset()
@@ -177,7 +181,8 @@ func TestPluginServerStartPart3(t *testing.T) {
 // TestPluginServerStartPart4 Test PluginServer Start()
 func TestPluginServerStartPart4(t *testing.T) {
 	convey.Convey("when serve func createNetListener change file mode failed", t, func() {
-		funcStub := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(VerifyPathAndPermission string) (string, bool) {
+		funcStub := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(VerifyPathAndPermission string,
+			waitSecond int) (string, bool) {
 			return VerifyPathAndPermission, true
 		})
 		defer funcStub.Reset()
@@ -218,7 +223,8 @@ func TestPluginServerStartPart4(t *testing.T) {
 // TestPluginServerStartPart5 Test PluginServer Start()
 func TestPluginServerStartPart5(t *testing.T) {
 	convey.Convey("when register check socket failed", t, func() {
-		funcStub := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(VerifyPathAndPermission string) (string, bool) {
+		funcStub := gomonkey.ApplyFunc(common.VerifyPathAndPermission, func(VerifyPathAndPermission string,
+			waitSecond int) (string, bool) {
 			if VerifyPathAndPermission == v1beta1.DevicePluginPath {
 				return VerifyPathAndPermission, true
 			}

@@ -17,7 +17,6 @@ package common
 
 import (
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -28,6 +27,10 @@ import (
 
 // GetDeviceID get device physical id and virtual by device name
 func GetDeviceID(deviceName string, ascendRuntimeOptions string) (int, int, error) {
+	// share mode of ascend310 ascend310P:davinci-devID-index, like Ascend310P-0-99
+	if ShareDev() {
+		deviceName = deviceName[:strings.LastIndex(deviceName, MiddelLine)]
+	}
 	// hiAIAscend310Prefix: davinci-mini
 	// vnpu: davinci-coreNum-vid-devID, like Ascend910-2c-111-0
 	// ascend310:  davinci-mini0
@@ -45,6 +48,9 @@ func GetDeviceID(deviceName string, ascendRuntimeOptions string) (int, int, erro
 		if err != nil {
 			return 0, 0, fmt.Errorf("convert vnpu id %s failed, erros is %v", idSplit[PhyDeviceLen], err)
 		}
+	}
+	if index := strings.Index(phyIDStr, UnderLine); index > 0 {
+		phyIDStr = phyIDStr[:index]
 	}
 	phyID, err := strconv.Atoi(phyIDStr)
 	if err != nil {
@@ -76,12 +82,15 @@ func GetDeviceListID(devices []string, ascendRuntimeOptions string) (map[int]int
 	return phyDevMapVirtualDev, ascendVisibleDevices, nil
 }
 
+// ShareDev open the share dev function
+func ShareDev() bool {
+	return ParamOption.ShareCount > 1 &&
+		(ParamOption.RealCardType == Ascend310B || ParamOption.RealCardType == Ascend310P)
+}
+
 // IsVirtualDev used to judge whether a physical device or a virtual device
 func IsVirtualDev(devType string) bool {
-	patternMap := GetPattern()
-	reg910 := regexp.MustCompile(patternMap["vir910"])
-	reg310P := regexp.MustCompile(patternMap["vir310p"])
-	return reg910.MatchString(devType) || reg310P.MatchString(devType)
+	return GetPattern()["vir910"].MatchString(devType) || GetPattern()["vir310p"].MatchString(devType)
 }
 
 // ToString convert input data to string
@@ -121,8 +130,8 @@ func deviceInfoToSets(deviceInfo []string) sets.String {
 	// pattern no need to defined as global variable, only used here
 	deviceSets := sets.String{}
 	for _, device := range deviceInfo {
-		if match, err := regexp.MatchString(GetPattern()["ascend910"], device); !match || err != nil {
-			hwlog.RunLog.Warnf("current device %s format err: %#v", device, err)
+		if match := GetPattern()["ascend910"].MatchString(device); !match {
+			hwlog.RunLog.Warnf("device %s is illegal ", device)
 			continue
 		}
 		deviceSets.Insert(device)
@@ -175,10 +184,19 @@ func GetTemplateName2DeviceTypeMap() map[string]string {
 		Vir04:        Core4,
 		Vir02:        Core2,
 		Vir01:        Core1,
-		Vir04C3:      Core4Cpu3,
 		Vir02C1:      Core2Cpu1,
+		Vir04C3:      Core4Cpu3,
+		Vir03C1G8:    Core3Cpu1Gb8,
 		Vir04C4Dvpp:  Core4Cpu4Dvpp,
 		Vir04C3Ndvpp: Core4Cpu3Ndvpp,
+		Vir05C1G8:    Core5Cpu1Gb8,
+		Vir05C1G16:   Core5Cpu1Gb16,
+		Vir06C1G16:   Core6Cpu1Gb16,
+		Vir10C3G16:   Core10Cpu3Gb16,
+		Vir10C3G16NM: Core10Cpu3Gb16Ndvpp,
+		Vir10C3G32:   Core10Cpu3Gb32,
+		Vir10C4G16M:  Core10Cpu4Gb16Dvpp,
+		Vir12C3G32:   Core12Cpu3Gb32,
 	}
 }
 
@@ -200,11 +218,12 @@ func GetVNPUSegmentInfo(deviceInfos []string) (int32, string, error) {
 
 // CheckCardUsageMode check card usage mode
 func CheckCardUsageMode(use310PMixedInsert bool, productTypes []string) error {
-	if !use310PMixedInsert && len(productTypes) > 1 {
-		return fmt.Errorf("more than one product type")
-	}
 	if !use310PMixedInsert {
 		return nil
+	}
+	if len(productTypes) == 0 {
+		return fmt.Errorf("do not get product type,only supports ascend310P-V, ascend310P-VPro, " +
+			"ascend310P-IPro card mixed insert mode")
 	}
 	DeviceTypeMap := Get310PProductType()
 	for _, productType := range productTypes {

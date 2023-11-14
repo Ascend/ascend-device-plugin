@@ -69,14 +69,21 @@ func (hnm *HwAscend310PManager) GetNPUs() (common.NpuAllInfo, error) {
 		if vDevInfos.TotalResource.VDevNum > common.MaxVirtualDeviceNum {
 			return common.NpuAllInfo{}, fmt.Errorf("invalid virtual device count")
 		}
+		if vDevInfos.TotalResource.VDevNum > 0 && common.ShareDev() {
+			return common.NpuAllInfo{}, fmt.Errorf("virtual device is exist, shareDevCount should be 1")
+		}
 		if !common.ParamOption.PresetVDevice {
 			common.FakeAiCoreDevice(davinCiDev, &aiCoreDevices)
 		}
-		if vDevInfos.TotalResource.VDevNum == 0 {
-			hnm.assemblePhyDevices(davinCiDev, &allDevices, &allDeviceTypes)
+		if vDevInfos.TotalResource.VDevNum > 0 {
+			hnm.assembleVirtualDevices(davinCiDev, vDevInfos, &allDevices, &allDeviceTypes)
 			continue
 		}
-		hnm.assembleVirtualDevices(davinCiDev, vDevInfos, &allDevices, &allDeviceTypes)
+		if common.ShareDev() {
+			hnm.assembleShareModeDevices(davinCiDev, &allDevices, &allDeviceTypes)
+		} else {
+			hnm.assemblePhyDevices(davinCiDev, &allDevices, &allDeviceTypes)
+		}
 	}
 	allDeviceTypes = hnm.removeDuplicate(&allDeviceTypes)
 	return common.NpuAllInfo{AllDevs: allDevices, AICoreDevs: aiCoreDevices, AllDevTypes: allDeviceTypes}, nil
@@ -98,5 +105,15 @@ func (hnm *HwAscend310PManager) updateDeviceInfo(_, newDevInfo map[string]string
 	newDevInfo[common.HuaweiAscend310P] = common.ToString(devStatusSet.FreeHealthyDevice[hnm.name],
 		common.CommaSepDev)
 	newDevInfo[hnm.unHealthyKey] = common.ToString(devStatusSet.UnHealthyDevice, common.CommaSepDev)
+	var data []byte
+	if data = common.MarshalData(devStatusSet.DeviceFault); len(data) == 0 {
+		return fmt.Errorf("device fault code marshal failed")
+	}
+	newDevInfo[common.HuaweiFaultCodeAscend310P] = string(data)
 	return nil
+}
+
+// GraceTolerance graceful fault tolerance, not supported currently
+func (hnm *HwAscend310PManager) GraceTolerance(map[string][]*common.NpuDevice) {
+	return
 }

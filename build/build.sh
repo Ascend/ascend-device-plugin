@@ -20,7 +20,7 @@ set -e
 CUR_DIR=$(dirname "$(readlink -f "$0")")
 TOP_DIR=$(realpath "${CUR_DIR}"/..)
 
-build_version="v5.0.RC1"
+build_version="v5.0.RC3"
 version_file="${TOP_DIR}"/service_config.ini
 if  [ -f "$version_file" ]; then
   line=$(sed -n '1p' "$version_file" 2>&1)
@@ -29,6 +29,7 @@ if  [ -f "$version_file" ]; then
 fi
 
 output_name="device-plugin"
+build_scene="center"
 os_type=$(arch)
 build_type=build
 
@@ -36,6 +37,10 @@ if [ "$1" == "ci" ] || [ "$2" == "ci" ]; then
     export GO111MODULE="on"
     export GONOSUMDB="*"
     build_type=ci
+fi
+
+if [ "$1" == "edge" ]; then
+   build_scene="edge"
 fi
 
 function clean() {
@@ -49,6 +54,7 @@ function build_plugin() {
     export CGO_CFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
     export CGO_CPPFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
     go build -mod=mod -buildmode=pie -ldflags "-X main.BuildName=${output_name} \
+            -X main.BuildScene=${build_scene} \
             -X main.BuildVersion=${build_version}_linux-${os_type} \
             -buildid none     \
             -s   \
@@ -72,6 +78,9 @@ function change_mod() {
 }
 
 function modify_version() {
+    if [ $build_scene == "edge" ]; then
+      return
+    fi
     cd "${TOP_DIR}"
     sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$CUR_DIR"/ascendplugin-910.yaml
     sed -i "s/ascend-k8sdeviceplugin:.*/ascend-k8sdeviceplugin:${build_version}/" "$CUR_DIR"/ascendplugin-volcano.yaml
@@ -92,6 +101,8 @@ function modify_version() {
     cp "$CUR_DIR"/ascendplugin-310P-volcano.yaml "$TOP_DIR"/output/device-plugin-310P-volcano-"${build_version}".yaml
     cp "$CUR_DIR"/ascendplugin-310P-1usoc.yaml "$TOP_DIR"/output/device-plugin-310P-1usoc-"${build_version}".yaml
     cp "$CUR_DIR"/ascendplugin-310P-1usoc-volcano.yaml "$TOP_DIR"/output/device-plugin-310P-1usoc-volcano-"${build_version}".yaml
+
+    cp "$CUR_DIR"/faultCode.json "$TOP_DIR"/output/faultCode.json
 
     sed -i "s#output/device-plugin#device-plugin#" "$TOP_DIR"/output/Dockerfile
 }

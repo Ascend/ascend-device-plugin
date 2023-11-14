@@ -21,8 +21,9 @@ import (
 	"time"
 
 	"huawei.com/npu-exporter/v5/common-utils/hwlog"
+	"k8s.io/api/core/v1"
+	"k8s.io/kubelet/pkg/apis/podresources/v1alpha1"
 	"k8s.io/kubernetes/pkg/kubelet/apis/podresources"
-	"k8s.io/kubernetes/pkg/kubelet/apis/podresources/v1alpha1"
 
 	"Ascend-device-plugin/pkg/common"
 )
@@ -36,14 +37,14 @@ const (
 // start starts the gRPC server, registers the pod resource with the Kubelet
 func (pr *PodResource) start() error {
 	pr.stop()
-	realKubeletSockPath, isOk := common.VerifyPathAndPermission(socketPath)
+	realKubeletSockPath, isOk := common.VerifyPathAndPermission(socketPath, 0)
 	if !isOk {
 		return fmt.Errorf("check kubelet socket file path failed")
 	}
 	var err error
-	if pr.client, pr.conn, err = podresources.GetClient("unix://"+realKubeletSockPath, callTimeout,
+	if pr.client, pr.conn, err = podresources.GetV1alpha1Client("unix://"+realKubeletSockPath, callTimeout,
 		defaultPodResourcesMaxSize); err != nil {
-		hwlog.RunLog.Errorf("get pod resource client failed, %#v", err)
+		hwlog.RunLog.Errorf("get pod resource client failed, %v", err)
 		return err
 	}
 	hwlog.RunLog.Debug("pod resource client init success.")
@@ -135,7 +136,7 @@ func (pr *PodResource) assemblePodResource() (map[string]PodDevice, error) {
 	defer cancel()
 	resp, err := pr.client.List(ctx, &v1alpha1.ListPodResourcesRequest{})
 	if err != nil {
-		return nil, fmt.Errorf("list pod resource failed, err: %#v", err)
+		return nil, fmt.Errorf("list pod resource failed, err: %v", err)
 	}
 	if resp == nil {
 		return nil, fmt.Errorf("invalid list response")
@@ -177,11 +178,72 @@ func (pr *PodResource) stop() {
 	}
 	if pr.conn != nil {
 		if err := pr.conn.Close(); err != nil {
-			hwlog.RunLog.Errorf("stop connect failed, err: %#v", err)
+			hwlog.RunLog.Errorf("stop connect failed, err: %v", err)
 		}
 		pr.conn = nil
 		pr.client = nil
 	}
+}
+
+// IsPodMoveComplete is UnHealthy Pod remove complete
+func (pr *PodResource) IsPodMoveComplete(deviceName string, podList []v1.Pod, ps *PluginServer) bool {
+	hwlog.RunLog.Infof("check is pod real use chip %s move complete or not", deviceName)
+	podResourceList, err := pr.getValidPodResources(podList)
+	if err != nil {
+		return false
+	}
+	k8sDev := pr.getKltDev(ps, deviceName)
+	hwlog.RunLog.Infof("check is pod klt use chip %s move complete or not", k8sDev)
+	for _, podResource := range podResourceList {
+		if len(podResource.DeviceIds) == 0 {
+			continue
+		}
+		for _, devID := range podResource.DeviceIds {
+			if devID == k8sDev {
+				return false
+			}
+		}
+	}
+	hwlog.RunLog.Info("UnHealthy pod remove complete")
+	return true
+}
+
+func (pr *PodResource) getKltDev(ps *PluginServer, deviceName string) string {
+	if !common.ParamOption.UseVolcanoType {
+		return deviceName
+	}
+	var k8sDev string
+	for klDev, realDev := range ps.klt2RealDevMap {
+		if realDev == deviceName {
+			k8sDev = klDev
+			break
+		}
+	}
+	return k8sDev
+}
+
+func (pr *PodResource) getValidPodResources(podList []v1.Pod) ([]PodDevice, error) {
+	var res []PodDevice
+	podResourceList, err := pr.GetPodResource()
+	if err != nil {
+		hwlog.RunLog.Errorf("get pod resource failed, err: %v", err)
+		return nil, err
+	}
+	for podNameAndNs, podResource := range podResourceList {
+		if pr.isValidPod(podNameAndNs, podList) {
+			res = append(res, podResource)
+		}
+	}
+	return res, nil
+}
+
+func (pr *PodResource) isValidPod(podResourceKey string, podList []v1.Pod) bool {
+	for _, pod := range podList {
+		if podResourceKey == pod.Namespace+common.UnderLine+pod.Name {
+			return true
+		}
+	}
+	return false
 }
 
 // NewPodResource returns an initialized PodResource

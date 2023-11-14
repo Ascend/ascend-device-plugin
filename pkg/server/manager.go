@@ -17,7 +17,7 @@ package server
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -29,7 +29,9 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"huawei.com/npu-exporter/v5/common-utils/hwlog"
 	"huawei.com/npu-exporter/v5/devmanager"
-	"k8s.io/client-go/tools/clientcmd"
+	npuCommon "huawei.com/npu-exporter/v5/devmanager/common"
+	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"Ascend-device-plugin/pkg/common"
@@ -37,56 +39,65 @@ import (
 	"Ascend-device-plugin/pkg/kubeclient"
 )
 
+var lastStatus = common.NewAtomicBool(false)
+
 // HwDevManager manages huawei device devices.
 type HwDevManager struct {
-	groupDevice       map[string][]*common.NpuDevice
-	ServerMap         map[string]InterfaceServer
-	allInfo           common.NpuAllInfo
-	manager           device.DevManager
-	RunMode           string
-	isEmptyKubeCfgErr bool
-	RealCardType      string
+	groupDevice map[string][]*common.NpuDevice
+	ServerMap   map[string]InterfaceServer
+	allInfo     common.NpuAllInfo
+	manager     device.DevManager
+	RunMode     string
+	WorkMode    string
 }
 
 // NewHwDevManager function is used to new a dev manager.
 func NewHwDevManager(devM devmanager.DeviceInterface) *HwDevManager {
 	var hdm HwDevManager
 	if err := hdm.setAscendManager(devM); err != nil {
-		hwlog.RunLog.Errorf("init hw dev manager failed, err: %#v", err)
+		hwlog.RunLog.Errorf("init hw dev manager failed, err: %v", err)
 		return nil
 	}
 	if err := hdm.setAllDeviceAndType(); err != nil {
-		hwlog.RunLog.Errorf("set all device and type failed, err: %#v", err)
+		hwlog.RunLog.Errorf("set all device and type failed, err: %v", err)
+		return nil
+	}
+	if err := hdm.checkSupportedProductType(); err != nil {
+		hwlog.RunLog.Errorf("check supported product type failed, err: %v", err)
+		return nil
+	}
+	if err := hdm.UpdateNodeLabel(); err != nil {
+		hwlog.RunLog.Errorf("update node label failed, err: %#v", err)
 		return nil
 	}
 	if err := hdm.initPluginServer(); err != nil {
-		hwlog.RunLog.Errorf("init plugin server failed, err: %#v", err)
+		hwlog.RunLog.Errorf("init plugin server failed, err: %v", err)
 		return nil
 	}
 	return &hdm
 }
 
 func (hdm *HwDevManager) setAscendManager(dmgr devmanager.DeviceInterface) error {
-	switch dmgr.GetDevType() {
-	case common.Ascend310:
-		if !common.ParamOption.PresetVDevice {
-			return fmt.Errorf("only 310p and 910 support dynamic virtual instance")
-		}
+	devType := dmgr.GetDevType()
+	if !common.ParamOption.PresetVDevice && devType != common.Ascend310P {
+		return fmt.Errorf("only 310p support to set presetVirtualDevice false")
+	}
+	switch devType {
+	case common.Ascend310, common.Ascend310B:
 		hdm.RunMode = common.Ascend310
-		hdm.RealCardType = common.Ascend310
 		hdm.manager = device.NewHwAscend310Manager()
 	case common.Ascend910, common.Ascend910B:
 		hdm.RunMode = common.Ascend910
-		hdm.RealCardType = dmgr.GetDevType()
 		hdm.manager = device.NewHwAscend910Manager()
+		hdm.WorkMode = dmgr.GetNpuWorkMode()
 	case common.Ascend310P:
 		hdm.RunMode = common.Ascend310P
-		hdm.RealCardType = common.Ascend310P
 		hdm.manager = device.NewHwAscend310PManager()
 	default:
 		hwlog.RunLog.Error("found an unsupported device type")
 		return fmt.Errorf("an unsupported device type")
 	}
+	common.ParamOption.RealCardType = devType
 	hdm.manager.SetDmgr(dmgr)
 	productTypes, err := hdm.manager.GetDmgr().GetAllProductType()
 	if err != nil {
@@ -96,63 +107,74 @@ func (hdm *HwDevManager) setAscendManager(dmgr devmanager.DeviceInterface) error
 	if err = common.CheckCardUsageMode(common.ParamOption.Use310PMixedInsert, productTypes); err != nil {
 		return err
 	}
-	return hdm.UpdateServerType()
-}
 
-// UpdateServerType update server type, like Ascend910-32
-func (hdm *HwDevManager) UpdateServerType() error {
-	kubeClient, err := kubeclient.NewClientK8s()
-	if err != nil {
-		hdm.isEmptyKubeCfgErr = strings.Contains(err.Error(), clientcmd.ErrEmptyConfig.Error())
-		if !hdm.isEmptyKubeCfgErr {
-			hwlog.RunLog.Errorf("init kubeclient failed err: %#v", err)
+	if common.ParamOption.BuildScene != common.EdgeScene {
+		aiCoreCount, err := hdm.manager.GetChipAiCoreCount()
+		if err != nil {
+			hwlog.RunLog.Errorf("get chip aicore count failed, err: %#v", err)
 			return err
 		}
-		if common.ParamOption.UseVolcanoType {
-			hwlog.RunLog.Warnf("not exist kube config, maybe it's edge scene")
-			return errors.New("using volcano need kubeConfig, but not found")
-		}
-		return nil
+		common.ParamOption.AiCoreCount = aiCoreCount
 	}
-	if kubeClient == nil {
-		return errors.New("kube client is nil")
-	}
-	hdm.manager.SetKubeClient(kubeClient)
-	hwlog.RunLog.Info("init kube client success")
-	aiCoreCount, err := hdm.manager.GetChipAiCoreCount()
-	if err != nil {
-		hwlog.RunLog.Errorf("get chip aicore count failed, err: %#v", err)
-		return err
-	}
-	common.ParamOption.AiCoreCount = aiCoreCount
-	return hdm.updateNodeServerType(aiCoreCount)
-
+	return nil
 }
 
-func (hdm *HwDevManager) updateNodeServerType(aiCoreCount int32) error {
+// UpdateNodeLabel update server type, like Ascend910-32, and label of 910b infer card
+// other common label will be updated in the future
+func (hdm *HwDevManager) UpdateNodeLabel() error {
+	if common.ParamOption.BuildScene == common.EdgeScene {
+		return nil
+	}
+	kubeClient, err := kubeclient.NewClientK8s()
+	if err != nil {
+		hwlog.RunLog.Errorf("init k8s client failed err: %v", err.Error())
+		return err
+	}
+	hdm.manager.SetKubeClient(kubeClient)
+	hdm.manager.GetKubeClient().InitPodInformer()
+	hwlog.RunLog.Info("init kube client success")
+
+	return hdm.updateNodeLabels(common.ParamOption.AiCoreCount)
+}
+
+func (hdm *HwDevManager) updateNodeLabels(aiCoreCount int32) error {
 	oldNode, err := hdm.manager.GetKubeClient().GetNode()
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get node, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to get node, err: %v", err)
 		return err
 	}
 	if oldNode == nil {
 		hwlog.RunLog.Error("invalid node")
 		return fmt.Errorf("invalid node")
 	}
-	if _, ok := oldNode.Labels[common.ServerTypeLabelKey]; ok {
+	newLabelMap := make(map[string]string)
+	if _, ok := oldNode.Labels[common.ServerTypeLabelKey]; !ok {
+		newLabelMap[common.ServerTypeLabelKey] = common.ParamOption.RealCardType +
+			common.MiddelLine + strconv.Itoa(int(aiCoreCount))
+	}
+
+	if common.ParamOption.RealCardType == common.Ascend910B && hdm.manager.GetDeviceUsage() == common.Infer {
+		newLabelMap[common.AcceleratorTypeKey] = common.A300IA2Label
+	}
+
+	if len(newLabelMap) == 0 {
 		return nil
 	}
+
 	newNode := oldNode.DeepCopy()
-	newNode.Labels[common.ServerTypeLabelKey] = hdm.RealCardType + common.MiddelLine + strconv.Itoa(int(aiCoreCount))
+	for key, value := range newLabelMap {
+		newNode.Labels[key] = value
+	}
+
 	for i := 0; i < common.RetryUpdateCount; i++ {
 		if _, _, err = hdm.manager.GetKubeClient().PatchNodeState(oldNode, newNode); err == nil {
-			hwlog.RunLog.Infof("update server type success")
+			hwlog.RunLog.Infof("update node label success")
 			return nil
 		}
-		hwlog.RunLog.Warnf("failed to patch server type to node, retry count:%d", i+1)
+		hwlog.RunLog.Warnf("failed to patch new label to node, retry count:%d", i+1)
 		time.Sleep(time.Second)
 	}
-	return fmt.Errorf("update server type to node label failed")
+	return fmt.Errorf("update node label failed")
 }
 
 func (hdm *HwDevManager) setAllDeviceAndType() error {
@@ -163,6 +185,10 @@ func (hdm *HwDevManager) setAllDeviceAndType() error {
 	if len(hdm.allInfo.AllDevTypes) == 0 {
 		return fmt.Errorf("no devices type found")
 	}
+	if err = hdm.manager.SetDeviceUsage(hdm.allInfo.AllDevs[0].LogicID); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -186,6 +212,13 @@ func (hdm *HwDevManager) initPluginServer() error {
 	return nil
 }
 
+func (hdm *HwDevManager) checkSupportedProductType() error {
+	if !common.ParamOption.PresetVDevice && common.IsContainAtlas300IDuo() {
+		return fmt.Errorf("%s is not supported to dynamic virtual instance", common.Atlas300IDuo)
+	}
+	return nil
+}
+
 // GetNPUs will set device default health, actually, it should be based on the last status if exist
 func (hdm *HwDevManager) updateDeviceHealth(curAllDevs []common.NpuDevice) {
 	lastAllDevs := make(map[string]int, len(hdm.allInfo.AllDevs))
@@ -196,11 +229,13 @@ func (hdm *HwDevManager) updateDeviceHealth(curAllDevs []common.NpuDevice) {
 		if index, exist := lastAllDevs[dev.DeviceName]; exist && index < len(hdm.allInfo.AllDevs) {
 			curAllDevs[i].Health = hdm.allInfo.AllDevs[index].Health
 			curAllDevs[i].NetworkHealth = hdm.allInfo.AllDevs[index].NetworkHealth
+			curAllDevs[i].FaultCodes = hdm.allInfo.AllDevs[index].FaultCodes
+			curAllDevs[i].AlarmRaisedTime = hdm.allInfo.AllDevs[index].AlarmRaisedTime
 		}
 	}
 }
 
-func (hdm *HwDevManager) updateDevice() error {
+func (hdm *HwDevManager) updateAllInfo() error {
 	if common.ParamOption.PresetVDevice {
 		return nil
 	}
@@ -216,12 +251,12 @@ func (hdm *HwDevManager) updateDevice() error {
 	if err != nil {
 		return err
 	}
+	if err := hdm.manager.CheckDeviceTypeLabel(); err != nil {
+		hwlog.RunLog.Warnf("device type label may not correct, %v", err)
+	}
 	allInfo, err := hdm.manager.GetNPUs()
 	if err != nil {
 		return err
-	}
-	if err := hdm.manager.CheckDeviceTypeLabel(); err != nil {
-		hwlog.RunLog.Warnf("device type label may not correct, %v", err)
 	}
 	hdm.updateDeviceHealth(allInfo.AllDevs)
 	hdm.groupDevice = device.ClassifyDevices(allInfo.AllDevs, allInfo.AllDevTypes)
@@ -232,28 +267,57 @@ func (hdm *HwDevManager) updateDevice() error {
 // ListenDevice ListenDevice coroutine
 func (hdm *HwDevManager) ListenDevice(ctx context.Context) {
 	hwlog.RunLog.Info("starting the listen device")
+	hdm.subscribeFaultEvent()
+	go hdm.pollFaultCodeCM(ctx)
 	go hdm.Serve(ctx)
+	initTime := time.Now()
 	for {
 		select {
 		case _, ok := <-ctx.Done():
 			if !ok {
-				hwlog.RunLog.Info("catch stop signal channel is closed")
+				hwlog.RunLog.Info("catch stop signal channel closed")
 			}
 			hwlog.RunLog.Info("listen device stop")
 			return
 		default:
 			time.Sleep(time.Duration(common.ParamOption.ListAndWatchPeriod) * time.Second)
 			common.LockAllDeviceInfo()
-			if err := hdm.updateDevice(); err != nil {
+			if err := hdm.updateAllInfo(); err != nil {
 				hwlog.RunLog.Error(err)
 				common.UnlockAllDeviceInfo()
 				continue
 			}
-			hdm.notifyToK8s()
+			hdm.notifyToK8s(&initTime)
 			hdm.useVolcanoNotify()
+			hdm.chipHotReset()
+			common.DelOnceRecoverFault(hdm.groupDevice)
 			common.UnlockAllDeviceInfo()
 		}
 	}
+}
+
+func deepCopyGroupDevice(groupDevice map[string][]*common.NpuDevice) map[string][]*common.NpuDevice {
+	newGroupDevice := make(map[string][]*common.NpuDevice, len(groupDevice))
+	for deviceType, npuDevices := range groupDevice {
+		newNpuDevices := make([]*common.NpuDevice, 0, len(npuDevices))
+		for _, npuDevice := range npuDevices {
+			newNpuDevice := &common.NpuDevice{
+				FaultCodes:      npuDevice.FaultCodes,
+				AlarmRaisedTime: npuDevice.AlarmRaisedTime,
+				DevType:         npuDevice.DevType,
+				DeviceName:      npuDevice.DeviceName,
+				Health:          npuDevice.Health,
+				NetworkHealth:   npuDevice.NetworkHealth,
+				IP:              npuDevice.IP,
+				LogicID:         npuDevice.LogicID,
+				PhyID:           npuDevice.PhyID,
+				CardID:          npuDevice.CardID,
+			}
+			newNpuDevices = append(newNpuDevices, newNpuDevice)
+		}
+		newGroupDevice[deviceType] = newNpuDevices
+	}
+	return newGroupDevice
 }
 
 func (hdm *HwDevManager) pluginNotify(classifyDev []*common.NpuDevice, devType string) {
@@ -272,12 +336,19 @@ func (hdm *HwDevManager) pluginNotify(classifyDev []*common.NpuDevice, devType s
 	}
 }
 
-func (hdm *HwDevManager) notifyToK8s() {
-	isDevStateChange := hdm.manager.IsDeviceStatusChange(hdm.groupDevice, hdm.allInfo.AICoreDevs, hdm.RunMode)
+func (hdm *HwDevManager) notifyToK8s(initTime *time.Time) {
+	oldGroupDevice := deepCopyGroupDevice(hdm.groupDevice)
+	hdm.manager.UpdateHealth(hdm.groupDevice, hdm.allInfo.AICoreDevs, hdm.RunMode)
+
+	// If hot reset is used, the health of the device being reset is set here to healthy
+	hdm.graceTolerance(hdm.groupDevice)
+	isDevStateChange := hdm.manager.GetChange(hdm.groupDevice, oldGroupDevice)
+
 	for devType, isChanged := range isDevStateChange {
-		if !isChanged {
+		if !isChanged && (time.Now().Sub(*initTime) < time.Minute || lastStatus.Load()) {
 			continue
 		}
+		*initTime = time.Now()
 		if !common.ParamOption.PresetVDevice {
 			hdm.pluginNotify(hdm.allInfo.AICoreDevs, common.AiCoreResourceName)
 			return
@@ -286,8 +357,79 @@ func (hdm *HwDevManager) notifyToK8s() {
 	}
 }
 
+func (hdm *HwDevManager) chipHotReset() {
+	if hdm.RunMode == common.Ascend910 {
+		return
+	}
+	if common.ParamOption.HotReset != common.HotResetInfer {
+		hwlog.RunLog.Debugf("infer device hot reset mode error: %d", common.ParamOption.HotReset)
+		return
+	}
+	prClient := NewPodResource()
+	for devType, devices := range hdm.groupDevice {
+		if common.IsVirtualDev(devType) || len(devices) == 0 {
+			continue
+		}
+		if common.IsContainAtlas300IDuo() {
+			hdm.resetDuoCard(devType, devices, prClient)
+			continue
+		}
+		hdm.resetCommonInferCard(devType, devices, prClient)
+	}
+}
+
+func (hdm *HwDevManager) resetCommonInferCard(devType string, devices []*common.NpuDevice, prClient *PodResource) {
+	for _, device := range devices {
+		if device.Health == v1beta1.Healthy {
+			continue
+		}
+		if !hdm.isPodRemove(devType, device, prClient) {
+			continue
+		}
+		hdm.hotReset(device)
+	}
+}
+
+func (hdm *HwDevManager) resetDuoCard(devType string, devices []*common.NpuDevice, prClient *PodResource) {
+	var cardResetOnce = make(map[int32][]*common.NpuDevice, 1)
+	for _, device := range devices {
+		cardResetOnce[device.CardID] = append(cardResetOnce[device.CardID], device)
+	}
+	for _, deviceChip := range cardResetOnce {
+		if hdm.isDuoCardChipHealthy(deviceChip) {
+			continue
+		}
+		if !hdm.isDuoRemove(devType, deviceChip, prClient) {
+			continue
+		}
+		hdm.hotReset(deviceChip[0])
+	}
+}
+
+func (hdm *HwDevManager) isDuoRemove(devType string, deviceChip []*common.NpuDevice, prClient *PodResource) bool {
+	for _, dev := range deviceChip {
+		if !hdm.isPodRemove(devType, dev, prClient) {
+			return false
+		}
+	}
+	return true
+}
+
+func (hdm *HwDevManager) isDuoCardChipHealthy(deviceChip []*common.NpuDevice) bool {
+	for _, dev := range deviceChip {
+		if dev.Health == v1beta1.Unhealthy {
+			return false
+		}
+	}
+	return true
+}
+
 func (hdm *HwDevManager) useVolcanoNotify() {
-	if hdm.isEmptyKubeCfgErr {
+	if common.ParamOption.BuildScene == common.EdgeScene {
+		return
+	}
+	if hdm.manager.GetKubeClient() == nil {
+		hwlog.RunLog.Error("kube client is nil, can't interacting with k8s")
 		return
 	}
 	common.DpStartReset.Do(func() {
@@ -297,9 +439,6 @@ func (hdm *HwDevManager) useVolcanoNotify() {
 	})
 	if err := hdm.updatePodAnnotation(); err != nil {
 		hwlog.RunLog.Error(err)
-	}
-	if !common.ParamOption.UseVolcanoType {
-		return
 	}
 	hdm.manager.DoWithVolcanoListAndWatch(hdm.groupDevice)
 }
@@ -339,7 +478,7 @@ func (hdm *HwDevManager) Serve(ctx context.Context) {
 			return
 		}
 		if err := watcher.FileWatcher.Close(); err != nil {
-			hwlog.RunLog.Errorf("close file watcher, err: %#v", err)
+			hwlog.RunLog.Errorf("close file watcher, err: %v", err)
 		}
 	}()
 
@@ -428,9 +567,9 @@ func (hdm *HwDevManager) handleDeleteEvent(deleteFile string) {
 }
 
 func (hdm *HwDevManager) updatePodAnnotation() error {
-	serverID, err := hdm.manager.GetKubeClient().GetNodeServerID()
+	serverID, err := hdm.manager.GetKubeClient().GetNodeServerIDCache()
 	if err != nil {
-		return fmt.Errorf("get node server id failed: %#v", err)
+		return fmt.Errorf("get node server id failed: %v", err)
 	}
 	if !common.ParamOption.PresetVDevice {
 		return hdm.updateSpecTypePodAnnotation(common.AiCoreResourceName, serverID)
@@ -441,12 +580,53 @@ func (hdm *HwDevManager) updatePodAnnotation() error {
 			continue
 		}
 		if err := hdm.updateSpecTypePodAnnotation(devType, serverID); err != nil {
-			hwlog.RunLog.Warnf("update pod annotation failed, %#v", err)
+			hwlog.RunLog.Warnf("update pod annotation failed, %v", err)
 		}
 	}
 	return nil
 }
 
+// tryToClearResetInfoCM try to clear reset info config map
+func (hdm *HwDevManager) tryToClearResetInfoCM(pod v1.Pod) error {
+	taskName, ok := pod.Annotations[common.ResetTaskNameKey]
+	if !ok {
+		taskName, ok = pod.Labels[common.ResetTaskNameKeyInLabel]
+		if !ok {
+			hwlog.RunLog.Error("failed to get task name by task key in tryToClearResetInfoCM")
+			return fmt.Errorf("failed to get task name by task key")
+		}
+	}
+	resetInfo, err := hdm.manager.GetKubeClient().GetConfigMap(
+		common.ResetInfoCMNamePrefix+taskName, pod.Namespace)
+	if err != nil {
+		hwlog.RunLog.Warnf("get reset configMap failed, because: %v", err)
+		return err
+	}
+
+	data, ok := resetInfo.Data[common.ResetInfoCMDataKey]
+	if !ok {
+		return fmt.Errorf("%s not exist", common.ResetInfoCMDataKey)
+	}
+	if len(data) > common.CMDataMaxLength {
+		return fmt.Errorf("configmap data size is out of memory")
+	}
+	var taskResetInfo common.TaskResetInfo
+	if err := json.Unmarshal([]byte(data), &taskResetInfo); err != nil {
+		return fmt.Errorf("unmarshal configmap data failed, err: %v", err)
+	}
+	// skip it when the reset info config map is initialized
+	if taskResetInfo.UpdateTime == 0 {
+		return nil
+	}
+
+	if err := hdm.manager.GetKubeClient().ClearResetInfo(taskName, pod.Namespace); err != nil {
+		return fmt.Errorf("clear reset configMap failed err is: %v", err)
+	}
+	return nil
+}
+
+// updateSpecTypePodAnnotation will update annotation of pod and
+// try to clear reset info config map which may not be initialized after rescheduling
 func (hdm *HwDevManager) updateSpecTypePodAnnotation(deviceType, serverID string) error {
 	element, exist := hdm.ServerMap[deviceType]
 	if !exist {
@@ -456,7 +636,8 @@ func (hdm *HwDevManager) updateSpecTypePodAnnotation(deviceType, serverID string
 	if !ok {
 		return fmt.Errorf("serverMap convert %s failed", deviceType)
 	}
-	podDeviceInfo, err := pluginServer.GetKltAndRealAllocateDev()
+	podList := hdm.manager.GetKubeClient().GetActivePodListCache()
+	podDeviceInfo, err := pluginServer.GetKltAndRealAllocateDev(podList)
 	if err != nil {
 		return err
 	}
@@ -475,11 +656,217 @@ func (hdm *HwDevManager) updateSpecTypePodAnnotation(deviceType, serverID string
 		hwlog.RunLog.Debugf("%s, %d, %v", deviceInfo.Pod.Name, len(deviceInfo.KltDevice), deviceInfo.RealDevice)
 		if err := hdm.manager.AddPodAnnotation(&deviceInfo.Pod, deviceInfo.KltDevice, deviceInfo.RealDevice,
 			deviceType, serverID); err != nil {
-			hwlog.RunLog.Errorf("update pod %s_%s annotation failed, %#v", deviceInfo.Pod.Namespace,
+			hwlog.RunLog.Errorf("update pod %s_%s annotation failed, %v", deviceInfo.Pod.Namespace,
 				deviceInfo.Pod.Name, err)
 		} else {
 			hwlog.RunLog.Infof("update pod %s_%s annotation success", deviceInfo.Pod.Namespace, deviceInfo.Pod.Name)
 		}
+
+		if common.ParamOption.HotReset != common.HotResetTrain {
+			continue
+		}
+
+		// need to clear reset info config map after rescheduling
+		if err = hdm.tryToClearResetInfoCM(deviceInfo.Pod); err != nil {
+			hwlog.RunLog.Warnf("try to clear configMap failed, err is: %#v", err)
+		}
 	}
 	return nil
+}
+
+func (hdm *HwDevManager) hotReset(device *common.NpuDevice) {
+	var isResetExec = false
+	if err := wait.PollImmediate(time.Second, time.Minute, func() (bool, error) {
+		if err := hdm.execResetChip(device.LogicID, &isResetExec); err != nil {
+			hwlog.RunLog.Errorf("get device boot status failed, err: %#v", err)
+			return false, err
+		}
+		bootState, err := hdm.manager.GetDmgr().GetDeviceBootStatus(device.LogicID)
+		if err != nil {
+			hwlog.RunLog.Errorf("get device boot status failed, err: %#v", err)
+			return false, err
+		}
+		if bootState != common.BootStartFinish {
+			hwlog.RunLog.Warnf("device bootState(%d), starting...", bootState)
+			return false, nil
+		}
+		common.SetDeviceInit(device.LogicID)
+		return true, nil
+	}); err != nil {
+		hwlog.RunLog.Warnf("hot reset failed, timeout or err: %#v", err)
+		return
+	}
+	hwlog.RunLog.Info("hot reset success")
+}
+
+func (hdm *HwDevManager) isPodRemove(devType string, device *common.NpuDevice, prClient *PodResource) bool {
+	podList := hdm.manager.GetKubeClient().GetAllPodListCache()
+	element, exist := hdm.ServerMap[devType]
+	if !exist {
+		hwlog.RunLog.Errorf("not found %s plugin server", devType)
+		return false
+	}
+	pluginServer, ok := element.(*PluginServer)
+	if !ok {
+		hwlog.RunLog.Errorf("serverMap convert %s failed", devType)
+		return false
+	}
+	if !prClient.IsPodMoveComplete(device.DeviceName, podList, pluginServer) {
+		hwlog.RunLog.Warn("service pod has not been migrated or destroyed, wait for scanning again.")
+		return false
+	}
+	return true
+}
+
+func (hdm *HwDevManager) execResetChip(logicID int32, isResetExec *bool) error {
+	if *isResetExec {
+		return nil
+	}
+	cardID, deviceID, err := hdm.manager.GetDmgr().GetCardIDDeviceID(logicID)
+	if err != nil {
+		hwlog.RunLog.Errorf("failed to get cardID and deviceID by logicID(%d)", logicID)
+		return err
+	}
+	if common.IsContainAtlas300IDuo() {
+		deviceID = 0
+	}
+	hwlog.RunLog.Infof("start device card(%d) and deviceID(%d) reset...", cardID, deviceID)
+	if err := hdm.manager.GetDmgr().SetDeviceReset(cardID, deviceID); err != nil {
+		hwlog.RunLog.Errorf("hot reset failed, err: %#v", err)
+		return err
+	}
+	*isResetExec = true
+	hwlog.RunLog.Infof("card(%d) and deviceID(%d) exec set device reset function success", cardID, deviceID)
+	return nil
+}
+
+func (hdm *HwDevManager) subscribeFaultEvent() {
+	if err := common.LoadFaultCodeFromFile(); err != nil {
+		common.SubscribeFailed = true
+		hwlog.RunLog.Errorf("load faultCode.json failed, the subscribe way is closed, err: %v", err)
+		return
+	}
+	if hdm.RunMode != common.Ascend910 {
+		hwlog.RunLog.Debug("subscribe mode only support 910 now")
+		common.SubscribeFailed = true
+		return
+	}
+	if err := hdm.manager.GetDmgr().SetFaultEventCallFunc(common.SaveDevFaultInfo); err != nil {
+		common.SubscribeFailed = true
+		hwlog.RunLog.Errorf("set fault event call back function failed, the subscribe way is closed, err: %v", err)
+		return
+	}
+	for i := 0; i < common.GeneralSubscribeTime; i++ {
+		if err := hdm.manager.GetDmgr().SubscribeDeviceFaultEvent(npuCommon.SubscribeAllDevice); err != nil {
+			time.Sleep(time.Second)
+			continue
+		}
+		return
+	}
+	common.SubscribeFailed = true
+	hwlog.RunLog.Errorf("request SubscribeDeviceFaultEvent failed, the subscribe way is closed")
+}
+
+// graceTolerance start fault tolerance for training tasks
+func (hdm *HwDevManager) graceTolerance(groupDevice map[string][]*common.NpuDevice) {
+	if hdm.RunMode != common.Ascend910 {
+		hwlog.RunLog.Debugf("grace tolerance only support training chip")
+		return
+	}
+	if common.ParamOption.HotReset != common.HotResetTrain {
+		hwlog.RunLog.Debugf("train device hot reset mode error: %d", common.ParamOption.HotReset)
+		return
+	}
+	if hdm.isSupportGraceTolerance() {
+		hdm.manager.GraceTolerance(groupDevice)
+	}
+}
+
+func (hdm *HwDevManager) isSupportGraceTolerance() bool {
+	if common.ParamOption.RealCardType == common.Ascend910B {
+		return true
+	}
+	if hdm.WorkMode != common.SMPMode {
+		hwlog.RunLog.Debug("grace tolerance only support SMP chip mode for 910")
+		return false
+	}
+	return true
+}
+
+func (hdm *HwDevManager) pollFaultCodeCM(ctx context.Context) {
+	var resourceVersion = ""
+	var interval = common.PollFaultCodeCMInterval
+	for {
+		select {
+		case _, ok := <-ctx.Done():
+			if !ok {
+				hwlog.RunLog.Info("stop signal chanel closed")
+			}
+			hwlog.RunLog.Info("poll fault code cm stop")
+			return
+		default:
+			hwlog.RunLog.Debugf("polling '%s' configmap", common.FaultCodeCMName)
+			configMap, err := hdm.manager.GetKubeClient().GetConfigMap(common.FaultCodeCMName,
+				common.FaultCodeCMNameSpace)
+			if err != nil {
+				hwlog.RunLog.Debugf("cannot find '%s' configmap, reason: %v", common.FaultCodeCMName, err)
+				if err = common.LoadFaultCodeFromFile(); err != nil {
+					hwlog.RunLog.Errorf("load fault code from file failed, err: %v", err)
+				}
+				time.Sleep(time.Duration(common.PollFaultCodeCMInterval) * time.Second)
+				continue
+			}
+			if resourceVersion != configMap.ResourceVersion {
+				hwlog.RunLog.Infof("detect '%s' configmap changed", common.FaultCodeCMName)
+				interval = getFaultCodeCMPollInterval(configMap)
+				resourceVersion = configMap.ResourceVersion
+				if err = handleFaultCodeCMChange(configMap); err != nil {
+					hwlog.RunLog.Errorf("handling '%s' configmap change failed, err: %v", common.FaultCodeCMName, err)
+				} else {
+					hwlog.RunLog.Infof("handling '%s' configmap change succeed", common.FaultCodeCMName)
+				}
+			}
+			time.Sleep(time.Duration(interval) * time.Second)
+		}
+	}
+}
+
+func handleFaultCodeCMChange(configMap *v1.ConfigMap) error {
+	faultCode, ok := configMap.Data[common.FaultCodeKey]
+	if !ok {
+		hwlog.RunLog.Errorf("cannot find key '%s' in CM", common.FaultCodeKey)
+		if err := common.LoadFaultCodeFromFile(); err != nil {
+			return err
+		}
+		return fmt.Errorf("cannot find key '%s' in CM", common.FaultCodeKey)
+	}
+	if err := common.LoadFaultCode([]byte(faultCode)); err != nil {
+		hwlog.RunLog.Errorf("load fault code from CM failed, err: %v", err)
+		if err = common.LoadFaultCodeFromFile(); err != nil {
+			return err
+		}
+		return fmt.Errorf("load fault code from CM failed")
+	}
+	return nil
+}
+
+func getFaultCodeCMPollInterval(configMap *v1.ConfigMap) int {
+	intervalStr, ok := configMap.Data[common.PollIntervalKey]
+	if !ok {
+		hwlog.RunLog.Infof("cannot find 'PollInterval', use default interval: %d", common.PollFaultCodeCMInterval)
+		return common.PollFaultCodeCMInterval
+	}
+	interval, err := strconv.Atoi(intervalStr)
+	if err != nil {
+		hwlog.RunLog.Errorf("failed to parse 'PollInterval': %s, use default interval: %d", intervalStr,
+			common.PollFaultCodeCMInterval)
+		return common.PollFaultCodeCMInterval
+	}
+	if interval < common.PollFaultCodeCMMinInterval || interval > common.PollFaultCodeCMMaxInterval {
+		hwlog.RunLog.Errorf("'PollInterval' exceed limit (%d~%d), 'PollInterval': %d, use default interval: %d",
+			common.PollFaultCodeCMMinInterval, common.PollFaultCodeCMMaxInterval, interval,
+			common.PollFaultCodeCMInterval)
+		return common.PollFaultCodeCMInterval
+	}
+	return interval
 }

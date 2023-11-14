@@ -21,6 +21,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"time"
 
 	"huawei.com/npu-exporter/v5/common-utils/hwlog"
 	"k8s.io/api/core/v1"
@@ -66,10 +67,16 @@ func (ps *PluginServer) getUnhealthyAICore() sets.String {
 		}
 		allAICore.Insert(device.DeviceName)
 	}
+	// get real used AICore devs
+	realUsedAICore, err := ps.GetRealUsedAICore()
+	if err != nil {
+		hwlog.RunLog.Errorf("failed to get real used AICore device, %v", err)
+		return sets.String{}
+	}
 	// if chip is unhealthy, the real device has same phyid is unhealthy, and the klt ai core is unhealthy
 	unhealthyAICore := sets.String{}
 	usedAICore := sets.String{}
-	for k, r := range ps.klt2RealDevMap {
+	for k, r := range realUsedAICore {
 		phyID, _, err := common.GetDeviceID(r, "")
 		if err != nil {
 			hwlog.RunLog.Warn(err)
@@ -101,6 +108,27 @@ func (ps *PluginServer) getUnhealthyAICore() sets.String {
 		unhealthyAICore.Insert(freeList[count])
 	}
 	return unhealthyAICore
+}
+
+// GetRealUsedAICore get real used aicore from pod
+func (ps *PluginServer) GetRealUsedAICore() (map[string]string, error) {
+	podList := ps.manager.GetKubeClient().GetActivePodListCache()
+	podDeviceInfo, err := ps.GetKltAndRealAllocateDev(podList)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get klt and real allocate device, %w", err)
+	}
+	usedAICore := make(map[string]string, len(podDeviceInfo))
+	for _, deviceInfo := range podDeviceInfo {
+		hwlog.RunLog.Debugf("pod info name: %s, status:%s, uid:%s", deviceInfo.Pod.Name,
+			deviceInfo.Pod.Status.Phase, deviceInfo.Pod.UID)
+		if len(deviceInfo.RealDevice) == 0 {
+			continue
+		}
+		for _, coreName := range deviceInfo.KltDevice {
+			usedAICore[coreName] = deviceInfo.RealDevice[0]
+		}
+	}
+	return usedAICore, nil
 }
 
 func (ps *PluginServer) generateAllDeviceMap() map[string]string {
@@ -164,7 +192,8 @@ func (ps *PluginServer) responseToKubelet() *v1beta1.ListAndWatchResponse {
 				hwlog.RunLog.Warnf(" not exist map key, %s  map %+v", device.DeviceName, vol2kltMap)
 				continue
 			}
-			hwlog.RunLog.Infof("ListAndWatch resp devices: %s %s", d, device.Health)
+			hwlog.RunLog.Infof("ListAndWatch resp devices: inner device: %s %s, real device: %s %s", d,
+				device.Health, device.DeviceName, device.Health)
 			resp.Devices = append(resp.Devices, &v1beta1.Device{ID: d, Health: device.Health})
 		}
 	} else {
@@ -193,9 +222,16 @@ func (ps *PluginServer) deepCopyDevice(cachedDevices []*common.NpuDevice) {
 // ListAndWatch is to send device info to kubelet
 func (ps *PluginServer) ListAndWatch(empty *v1beta1.Empty, stream v1beta1.DevicePlugin_ListAndWatchServer) error {
 	send := func(stream v1beta1.DevicePlugin_ListAndWatchServer) {
-		if err := sendToKubelet(stream, ps.responseToKubelet()); err != nil {
-			hwlog.RunLog.Errorf("send to kubelet failed, error is %#v", err)
+		for i := 0; i < common.RetryUpdateCount; i++ {
+			if err := sendToKubelet(stream, ps.responseToKubelet()); err != nil {
+				hwlog.RunLog.Errorf("send to kubelet failed, error is %v", err)
+				continue
+			}
+			lastStatus.Store(true)
+			return
 		}
+		lastStatus.Store(false)
+		hwlog.RunLog.Errorf("the number of retries (%d) retries send failed.", common.RetryUpdateCount)
 	}
 	ps.isRunning.Store(true)
 	send(stream)
@@ -261,7 +297,7 @@ func getPredicateTimeFromPodAnnotation(pod *v1.Pod) uint64 {
 		hwlog.RunLog.Warnf("volcano not write timestamp, pod Name: %s", pod.Name)
 		return math.MaxUint64
 	}
-	if len(assumeTimeStr) > common.PodAnnotationMaxMemory {
+	if len(assumeTimeStr) > common.PodAnnotationMaxLength {
 		hwlog.RunLog.Warnf("timestamp fmt invalid, pod Name: %s", pod.Name)
 		return math.MaxUint64
 	}
@@ -279,7 +315,7 @@ func (ps *PluginServer) getOldestPod(pods []v1.Pod) *v1.Pod {
 	}
 	oldest := pods[0]
 	for _, pod := range pods {
-		hwlog.RunLog.Debugf("pod %s, predicate time: %s", oldest.Name, pod.Annotations[common.PodPredicateTime])
+		hwlog.RunLog.Debugf("pod %s, predicate time: %s", pod.Name, pod.Annotations[common.PodPredicateTime])
 		if getPredicateTimeFromPodAnnotation(&oldest) > getPredicateTimeFromPodAnnotation(&pod) {
 			oldest = pod
 		}
@@ -287,8 +323,8 @@ func (ps *PluginServer) getOldestPod(pods []v1.Pod) *v1.Pod {
 	hwlog.RunLog.Debugf("oldest pod %#v, predicate time: %#v", oldest.Name,
 		oldest.Annotations[common.PodPredicateTime])
 	annotation := map[string]string{common.PodPredicateTime: strconv.FormatUint(math.MaxUint64, common.BaseDec)}
-	if err := ps.manager.GetKubeClient().TryUpdatePodAnnotation(&oldest, annotation); err != nil {
-		hwlog.RunLog.Errorf("update pod %s failed, err: %#v", oldest.Name, err)
+	if err := ps.manager.GetKubeClient().TryUpdatePodCacheAnnotation(&oldest, annotation); err != nil {
+		hwlog.RunLog.Errorf("update pod %s failed, err: %v", oldest.Name, err)
 		return nil
 	}
 	return &oldest
@@ -369,10 +405,11 @@ func (ps *PluginServer) updatePresetAllocMap(realAlloc, kltAlloc []string) {
 	ps.allocMapLock.Unlock()
 }
 
-// GetRealAllocateDevices is convert kubelet allocate device list to volcano allocate device list
-func (ps *PluginServer) GetRealAllocateDevices(kltAllocate []string) ([]string, error) {
+// GetRealAllocateDevicesFromMap converts devices allocated by kubelet
+// to devices allocated by volcano according to klt2RealDevMap
+func (ps *PluginServer) GetRealAllocateDevicesFromMap(kltAllocate []string) ([]string, error) {
 	if ps == nil {
-		return nil, fmt.Errorf("invalid interface receiver")
+		return nil, fmt.Errorf("invalid interface receiver when get real dev from map")
 	}
 	ps.allocMapLock.RLock()
 	defer ps.allocMapLock.RUnlock()
@@ -390,16 +427,61 @@ func (ps *PluginServer) GetRealAllocateDevices(kltAllocate []string) ([]string, 
 	return realAllocate.List(), nil
 }
 
-// GetKltAndRealAllocateDev get kubelet and real allocate device of pod
-func (ps *PluginServer) GetKltAndRealAllocateDev() ([]PodDeviceInfo, error) {
-	podList, err := ps.manager.GetKubeClient().GetActivePodList()
-	if err != nil {
-		return nil, err
+// GetRealAllocateDevicesFromEnv get real allocated devices from downward api,
+// whose value is annotation updated by volcano
+func (ps *PluginServer) GetRealAllocateDevicesFromEnv(pod v1.Pod) []string {
+	if ps == nil {
+		hwlog.RunLog.Error("invalid interface receiver when get real dev from env")
+		return nil
 	}
+	containers := pod.Spec.Containers
+	if len(containers) == 0 {
+		hwlog.RunLog.Error("no container here")
+		return nil
+	}
+
+	for _, container := range containers {
+		if len(container.Env) == 0 {
+			hwlog.RunLog.Debug("no env setting here")
+			continue
+		}
+		for _, env := range container.Env {
+			if env.Name != common.AscendVisibleDevicesEnv ||
+				env.ValueFrom == nil || env.ValueFrom.FieldRef == nil {
+				continue
+			}
+			// fieldPath is key of annotation updated by volcano,
+			// for example, metadata.annotations['huawei.com/Ascend910']
+			fieldPath := fmt.Sprintf("%s['%s%s']",
+				common.MetaDataAnnotation, common.ResourceNamePrefix, ps.deviceType)
+			if env.ValueFrom.FieldRef.FieldPath != fieldPath {
+				hwlog.RunLog.Errorf("fieldPath in downward api is different from %v, "+
+					"which may affect the mounting of device", ps.deviceType)
+				continue
+			}
+			volAllocateDevice, err := common.GetDeviceFromPodAnnotation(&pod, ps.deviceType)
+			if err != nil {
+				hwlog.RunLog.Errorf("get volcano device err: %v", err)
+				return nil
+			}
+			return volAllocateDevice
+		}
+	}
+
+	hwlog.RunLog.Debug("maybe no downward api setting here")
+	return nil
+}
+
+// GetKltAndRealAllocateDev get kubelet and real allocate device of pod
+func (ps *PluginServer) GetKltAndRealAllocateDev(podList []v1.Pod) ([]PodDeviceInfo, error) {
+	if ps == nil {
+		return nil, fmt.Errorf("invalid interface receiver")
+	}
+
 	prClient := NewPodResource()
 	podDevice, err := prClient.GetPodResource()
 	if err != nil {
-		return nil, fmt.Errorf("get pod resource failed, %#v", err)
+		return nil, fmt.Errorf("get pod resource failed, %v", err)
 	}
 	var podDeviceInfo []PodDeviceInfo
 	for _, pod := range podList {
@@ -409,13 +491,19 @@ func (ps *PluginServer) GetKltAndRealAllocateDev() ([]PodDeviceInfo, error) {
 			continue
 		}
 		if podResource.ResourceName != common.ResourceNamePrefix+ps.deviceType {
-			hwlog.RunLog.Errorf("podKey %s resource name %s not equal device type %s", podKey,
+			hwlog.RunLog.Debugf("podKey %s resource name %s not equal device type %s", podKey,
 				podResource.ResourceName, ps.deviceType)
 			continue
 		}
+		if common.ParamOption.PresetVDevice && common.IsVirtualDev(ps.deviceType) {
+			podDeviceInfo = append(podDeviceInfo, PodDeviceInfo{Pod: pod, KltDevice: podResource.DeviceIds,
+				RealDevice: podResource.DeviceIds})
+			continue
+		}
 
-		realDeviceList, err := ps.GetRealAllocateDevices(podResource.DeviceIds)
+		realDeviceList, err := ps.GetRealAllocateDevicesFromMap(podResource.DeviceIds)
 		if err != nil {
+			hwlog.RunLog.Warnf("get real allocate devices err: %v", err)
 			realDevice, exist := pod.Annotations[common.ResourceNamePrefix+common.PodRealAlloc]
 			if exist {
 				realDeviceList = strings.Split(realDevice, common.CommaSepDev)
@@ -425,6 +513,14 @@ func (ps *PluginServer) GetKltAndRealAllocateDev() ([]PodDeviceInfo, error) {
 				continue
 			}
 		}
+
+		volAllocatedDevices := ps.GetRealAllocateDevicesFromEnv(pod)
+		if len(volAllocatedDevices) != 0 {
+			realDeviceList = volAllocatedDevices
+			ps.updateAllocMap(realDeviceList, podResource.DeviceIds)
+			hwlog.RunLog.Debugf("get real devices:%v from env successfully", realDeviceList)
+		}
+
 		podDeviceInfo = append(podDeviceInfo, PodDeviceInfo{Pod: pod, KltDevice: podResource.DeviceIds,
 			RealDevice: realDeviceList})
 	}
@@ -437,14 +533,12 @@ func (ps *PluginServer) DestroyNotUsedVNPU() error {
 	if err != nil {
 		return err
 	}
-	podDeviceInfo, err := ps.GetKltAndRealAllocateDev()
+	podList := ps.manager.GetKubeClient().GetAllPodListCache()
+	podDeviceInfo, err := ps.GetKltAndRealAllocateDev(podList)
 	if err != nil {
 		return err
 	}
-	usedDevice := sets.String{}
-	for _, deviceInfo := range podDeviceInfo {
-		usedDevice.Insert(deviceInfo.RealDevice...)
-	}
+	usedDevice := ps.removeVGroup(podDeviceInfo)
 	var needToDestroy []string
 	for _, dev := range allDevInfo.AllDevs {
 		if !usedDevice.Has(dev.DeviceName) {
@@ -464,7 +558,28 @@ func (ps *PluginServer) DestroyNotUsedVNPU() error {
 	return nil
 }
 
+func (ps *PluginServer) removeVGroup(podDeviceInfo []PodDeviceInfo) sets.String {
+	usedDevice := sets.String{}
+	for _, deviceInfo := range podDeviceInfo {
+		usedDevice.Insert(deviceInfo.RealDevice...)
+	}
+	noVGroupDevice := sets.String{}
+	for dev := range usedDevice {
+		vDevAndGroup := strings.Split(dev, common.UnderLine)
+		if len(vDevAndGroup) == 1 || len(vDevAndGroup) == common.VGroupAndDevLen {
+			noVGroupDevice.Insert(vDevAndGroup[0])
+		}
+	}
+	return noVGroupDevice
+}
+
 func checkAnnotationAllocateValid(requestDevices []string, deviceType string, pod *v1.Pod, chipAICore int32) bool {
+	if predicateTime, ok := pod.Annotations[common.PodPredicateTime]; ok {
+		if predicateTime == strconv.FormatUint(math.MaxUint64, common.BaseDec) {
+			hwlog.RunLog.Debugf("The pod has been mounted to a device, pod name: %s", pod.Name)
+			return false
+		}
+	}
 	if common.ParamOption.PresetVDevice {
 		allocateDevice, err := common.GetDeviceFromPodAnnotation(pod, deviceType)
 		if err != nil {
@@ -563,16 +678,33 @@ func (ps *PluginServer) doWithVolcanoSchedule(requestDevices []string) ([]string
 	conditionFunc := func(pod *v1.Pod) bool {
 		return checkAnnotationAllocateValid(requestDevices, ps.deviceType, pod, ps.manager.GetChipAICore())
 	}
-	allPods, err := ps.manager.GetKubeClient().GetActivePodList()
-	if err != nil {
-		return nil, err
+	var filteredPods []v1.Pod
+	var allPods []v1.Pod
+	for i := 0; i < common.GetPodFromInformerTime; i++ {
+		if i == common.GetPodFromInformerTime-1 {
+			// in the last time of retry, get the pod from api server instead of cache
+			noneCachedPod, err := ps.manager.GetKubeClient().GetActivePodList()
+			if err != nil {
+				hwlog.RunLog.Errorf("get active pod from api server failed")
+				return nil, err
+			}
+			allPods = noneCachedPod
+		} else {
+			allPods = ps.manager.GetKubeClient().GetActivePodListCache()
+		}
+		filteredPods = common.FilterPods(allPods, ps.deviceType, conditionFunc)
+		if len(filteredPods) != 0 {
+			break
+		}
+		hwlog.RunLog.Warnf("no pod passed the filter, request device: %v, retry: %d", requestDevices, i)
+		time.Sleep(time.Second)
 	}
-	pods := common.FilterPods(allPods, ps.deviceType, conditionFunc)
-	oldestPod := ps.getOldestPod(pods)
+	oldestPod := ps.getOldestPod(filteredPods)
 	if oldestPod == nil {
 		return nil, fmt.Errorf("not get valid pod")
 	}
 	var allocateDevices []string
+	var err error
 	if !common.ParamOption.PresetVDevice {
 		common.LockAllDeviceInfo()
 		allocateDevices, err = ps.getAICoreFromPodAnnotation(oldestPod, ps.deviceType)
@@ -621,10 +753,17 @@ func mountDefaultDevice(resp *v1beta1.ContainerAllocateResponse, defaultDevs []s
 	for _, d := range defaultDevs {
 		resp.Devices = append(resp.Devices, &v1beta1.DeviceSpec{
 			HostPath:      d,
-			ContainerPath: d,
+			ContainerPath: getDeviceContainerPath(d),
 			Permissions:   "rw",
 		})
 	}
+}
+
+func getDeviceContainerPath(hostPath string) string {
+	if hostPath == common.HiAIManagerDeviceDocker {
+		return common.HiAIManagerDevice
+	}
+	return hostPath
 }
 
 // Allocate is called by kubelet to mount device to k8s pod.
@@ -657,12 +796,12 @@ func (ps *PluginServer) Allocate(ctx context.Context, requests *v1beta1.Allocate
 		}
 
 		resp := new(v1beta1.ContainerAllocateResponse)
-		common.SetAscendRuntimeEnv(ascendVisibleDevices, ps.ascendRuntimeOptions, resp)
 		if !common.ParamOption.UseAscendDocker {
 			hwlog.RunLog.Info("device-plugin will use origin mount way")
 			mountDefaultDevice(resp, ps.defaultDevs)
 			mountDevice(resp, ascendVisibleDevices, ps.ascendRuntimeOptions)
 		} else {
+			common.SetAscendRuntimeEnv(ascendVisibleDevices, ps.ascendRuntimeOptions, resp)
 			hwlog.RunLog.Info("device-plugin will use ascend-docker to mount")
 		}
 		resps.ContainerResponses = append(resps.ContainerResponses, resp)

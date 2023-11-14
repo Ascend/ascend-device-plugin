@@ -31,8 +31,13 @@ import (
 	"Ascend-device-plugin/pkg/common"
 )
 
+const waitKubectlSockCreateTime = 5 * 60
+
 // Start starts the gRPC server, registers the device plugin with the Kubelet
 func (ps *PluginServer) Start(socketWatcher *common.FileWatch) error {
+	if socketWatcher == nil {
+		return fmt.Errorf("param socketWatcher is nil pointer")
+	}
 	// clean
 	ps.Stop()
 
@@ -49,7 +54,7 @@ func (ps *PluginServer) Start(socketWatcher *common.FileWatch) error {
 		return nil
 	}
 	ps.Stop()
-	hwlog.RunLog.Errorf("register to kubelet failed, err: %#v", err)
+	hwlog.RunLog.Errorf("register to kubelet failed, err: %v", err)
 	return err
 }
 
@@ -89,7 +94,7 @@ func (ps *PluginServer) serve(socketWatcher *common.FileWatch) error {
 	v1beta1.RegisterDevicePluginServer(ps.grpcServer, ps)
 	go func() {
 		if err := ps.grpcServer.Serve(netListener); err != nil {
-			hwlog.RunLog.Errorf("GRPC server for '%s' crashed with error: %#v", ps.deviceType, err)
+			hwlog.RunLog.Errorf("GRPC server for '%s' crashed with error: %v", ps.deviceType, err)
 		}
 	}()
 
@@ -104,7 +109,7 @@ func (ps *PluginServer) serve(socketWatcher *common.FileWatch) error {
 
 // register function is use to register k8s devicePlugin to kubelet.
 func (ps *PluginServer) register() error {
-	realKubeletSockPath, ok := common.VerifyPathAndPermission(v1beta1.KubeletSocket)
+	realKubeletSockPath, ok := common.VerifyPathAndPermission(v1beta1.KubeletSocket, 0)
 	if !ok {
 		return fmt.Errorf("check kubelet socket file path failed")
 	}
@@ -119,12 +124,12 @@ func (ps *PluginServer) register() error {
 			}))
 
 	if err != nil {
-		hwlog.RunLog.Errorf("connect to kubelet failed, err: %#v", err)
-		return fmt.Errorf("connect to kubelet fail: %#v", err)
+		hwlog.RunLog.Errorf("connect to kubelet failed, err: %v", err)
+		return fmt.Errorf("connect to kubelet fail: %v", err)
 	}
 	defer func() {
 		if err := conn.Close(); err != nil {
-			hwlog.RunLog.Errorf("close kubelet connect failed, err: %#v", err)
+			hwlog.RunLog.Errorf("close kubelet connect failed, err: %v", err)
 		}
 	}()
 
@@ -135,21 +140,21 @@ func (ps *PluginServer) register() error {
 		ResourceName: common.ResourceNamePrefix + ps.deviceType,
 	}
 	if _, err = client.Register(context.Background(), reqt); err != nil {
-		return fmt.Errorf("register to kubelet fail: %#v", err)
+		return fmt.Errorf("register to kubelet fail: %v", err)
 	}
 	return nil
 }
 
 // need privilege
 func createNetListener(socketWatcher *common.FileWatch, deviceType string) (net.Listener, error) {
-	realSocketPath, ok := common.VerifyPathAndPermission(v1beta1.DevicePluginPath)
+	realSocketPath, ok := common.VerifyPathAndPermission(v1beta1.DevicePluginPath, waitKubectlSockCreateTime)
 	if !ok {
 		hwlog.RunLog.Error("socket path verify failed!")
 		return nil, fmt.Errorf("socket path verify failed")
 	}
 
 	if err := socketWatcher.WatchFile(realSocketPath); err != nil {
-		hwlog.RunLog.Errorf("failed to create file watcher, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to create file watcher, err: %v", err)
 		return nil, err
 	}
 
@@ -163,7 +168,7 @@ func createNetListener(socketWatcher *common.FileWatch, deviceType string) (net.
 	}
 	netListen, err := net.Listen("unix", pluginSocketPath)
 	if err != nil {
-		hwlog.RunLog.Errorf("device plugin start failed, err: %#v", err)
+		hwlog.RunLog.Errorf("device plugin start failed, err: %v", err)
 		return nil, err
 	}
 

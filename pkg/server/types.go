@@ -20,7 +20,7 @@ import (
 
 	"google.golang.org/grpc"
 	"k8s.io/api/core/v1"
-	"k8s.io/kubernetes/pkg/kubelet/apis/podresources/v1alpha1"
+	"k8s.io/kubelet/pkg/apis/podresources/v1alpha1"
 
 	"Ascend-device-plugin/pkg/common"
 	"Ascend-device-plugin/pkg/device"

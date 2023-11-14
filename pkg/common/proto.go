@@ -43,6 +43,7 @@ type NodeDeviceInfo struct {
 
 // DeviceHealth health status of device
 type DeviceHealth struct {
+	FaultCodes    []int64
 	Health        string
 	NetworkHealth string
 }
@@ -56,19 +57,24 @@ type NpuAllInfo struct {
 
 // NpuDevice npu device description
 type NpuDevice struct {
-	DevType       string
-	DeviceName    string
-	Health        string
-	NetworkHealth string
-	IP            string
-	LogicID       int32
-	PhyID         int32
+	FaultCodes        []int64
+	AlarmRaisedTime   int64
+	DevType           string
+	DeviceName        string
+	Health            string
+	NetworkRealHealth string
+	NetworkHealth     string
+	IP                string
+	LogicID           int32
+	PhyID             int32
+	CardID            int32
 }
 
 // DavinCiDev davinci device
 type DavinCiDev struct {
 	LogicID int32
 	PhyID   int32
+	CardID  int32
 }
 
 // Device id for Instcance
@@ -93,8 +99,13 @@ type Option struct {
 	PresetVDevice      bool     // preset virtual device
 	Use310PMixedInsert bool     // chose 310P mixed insert mode
 	ListAndWatchPeriod int      // set listening device state period
+	HotReset           int      // unhealthy chip hot reset
+	ShareCount         uint     // share device count
 	AiCoreCount        int32    // found by dcmi interface
+	BuildScene         string   // build scene judge device-plugin start scene
 	ProductTypes       []string // all product types
+	RealCardType       string   // real card type
+	LinkdownTimeout    int64    // linkdown timeout duration
 }
 
 // GetAllDeviceInfoTypeList Get All Device Info Type List
@@ -102,7 +113,12 @@ func GetAllDeviceInfoTypeList() map[string]struct{} {
 	return map[string]struct{}{HuaweiUnHealthAscend910: {}, HuaweiNetworkUnHealthAscend910: {},
 		ResourceNamePrefix + Ascend910: {}, ResourceNamePrefix + Ascend910c2: {},
 		ResourceNamePrefix + Ascend910c4: {}, ResourceNamePrefix + Ascend910c8: {},
-		ResourceNamePrefix + Ascend910c16: {}, ResourceNamePrefix + Ascend310: {},
+		ResourceNamePrefix + Ascend910c16: {}, ResourceNamePrefix + Ascend910c5Cpu1Gb8: {},
+		ResourceNamePrefix + Ascend910c5Cpu1Gb16: {}, ResourceNamePrefix + Ascend910c6Cpu1Gb16: {},
+		ResourceNamePrefix + Ascend910c10Cpu3Gb16: {}, ResourceNamePrefix + Ascend910c3Cpu1Gb8: {},
+		ResourceNamePrefix + Ascend910c10Cpu3Gb16Ndvpp: {}, ResourceNamePrefix + Ascend910c10Cpu3Gb32: {},
+		ResourceNamePrefix + Ascend910c10Cpu4Gb16Dvpp: {},
+		ResourceNamePrefix + Ascend910c12Cpu3Gb32:     {}, ResourceNamePrefix + Ascend310: {},
 		ResourceNamePrefix + Ascend310P: {}, ResourceNamePrefix + Ascend310Pc1: {},
 		ResourceNamePrefix + Ascend310Pc2: {}, ResourceNamePrefix + Ascend310Pc4: {},
 		ResourceNamePrefix + Ascend310Pc2Cpu1: {}, ResourceNamePrefix + Ascend310Pc4Cpu3: {},
@@ -119,7 +135,58 @@ type FileWatch struct {
 type DevStatusSet struct {
 	UnHealthyDevice    sets.String
 	NetUnHealthyDevice sets.String
+	HealthDevices      sets.String
 	FreeHealthyDevice  map[string]sets.String
+	DeviceFault        []DeviceFault
+}
+
+// DeviceFault  npu or network fault info
+type DeviceFault struct {
+	FaultType            string `json:"fault_type"`
+	NPUName              string `json:"npu_name"`
+	LargeModelFaultLevel string `json:"large_model_fault_level"`
+	FaultLevel           string `json:"fault_level"`
+	FaultCode            string `json:"fault_code"`
+}
+
+// TaskResetInfoCache record task reset device information cache
+type TaskResetInfoCache struct {
+	ResetInfo *TaskResetInfo
+	CheckCode string
+}
+
+// TaskResetInfo record task reset device information
+type TaskResetInfo struct {
+	RankList   []*TaskDevInfo
+	UpdateTime int64
+}
+
+// TaskDevInfo is the device info of a task
+type TaskDevInfo struct {
+	RankId int
+	DevFaultInfo
+}
+
+// DevFaultInfo is the fault info of device
+type DevFaultInfo struct {
+	LogicId       int32
+	Status        string
+	Policy        string
+	InitialPolicy string
+	ErrorCode     []int64
+	ErrorCodeHex  string
+}
+
+// TaskFaultInfoCache record task fault rank information cache
+type TaskFaultInfoCache struct {
+	FaultInfo *TaskFaultInfo
+	CheckCode string
+}
+
+// TaskFaultInfo record task fault rank information
+type TaskFaultInfo struct {
+	FaultRank  []int
+	UpdateTime int64
 }
 
 // Get310PProductType get 310P product type
