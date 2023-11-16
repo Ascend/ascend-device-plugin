@@ -56,6 +56,8 @@ const (
 	CardNetworkDisconnected = "Disconnected"
 	// LinkDownFaultCode linkdown fault code
 	LinkDownFaultCode = 0x81078603
+	// ResetFinishFaultCode reset finish fault code
+	ResetFinishFaultCode = 0x8C2FA009
 
 	faultCodeFilePath = "/usr/local/faultCode.json"
 )
@@ -294,11 +296,15 @@ func DelOnceRecoverFault(groupDevice map[string][]*NpuDevice) {
 
 // SaveDevFaultInfo save device fault info , subscribe interface call back function
 func SaveDevFaultInfo(devFaultInfo common.DevFaultInfo) {
-	hwlog.RunLog.Debugf("receive devFaultInfo: %v, hex code: %v", devFaultInfo,
+	hwlog.RunLog.Infof("receive devFaultInfo: %v, hex code: %v", devFaultInfo,
 		strconv.FormatInt(devFaultInfo.EventID, Hex))
 	if devFaultInfo.EventID == 0 {
 		return
 	}
+    if devFaultInfo.EventID == ResetFinishFaultCode {
+        SetDeviceInit(devFaultInfo.LogicID)
+        return
+    }
 	devFaultInfoMapLock.Lock()
 	devFaultInfoMap[devFaultInfo.LogicID] = append(devFaultInfoMap[devFaultInfo.LogicID], devFaultInfo)
 	devFaultInfoMapLock.Unlock()
