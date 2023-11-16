@@ -156,7 +156,7 @@ func TestWriteDeviceInfoDataIntoCM(t *testing.T) {
 				return nil, fmt.Errorf("test function errors")
 			})
 		defer mockGetCM.Reset()
-		_, err := utKubeClient.WriteDeviceInfoDataIntoCM(getDeviceInfo(common.HuaweiAscend310P, npuChip310PPhyID0))
+		_, err := utKubeClient.WriteDeviceInfoDataIntoCM(getDeviceInfo(common.HuaweiAscend310P, npuChip310PPhyID0), "")
 		convey.So(err, convey.ShouldEqual, nil)
 	})
 	convey.Convey("get write device info (cm) when get cm success", t, func() {
@@ -165,7 +165,7 @@ func TestWriteDeviceInfoDataIntoCM(t *testing.T) {
 				return updateCM, nil
 			})
 		defer mockGetCM.Reset()
-		_, err := utKubeClient.WriteDeviceInfoDataIntoCM(getDeviceInfo(common.HuaweiAscend310P, npuChip310PPhyID0))
+		_, err := utKubeClient.WriteDeviceInfoDataIntoCM(getDeviceInfo(common.HuaweiAscend310P, npuChip310PPhyID0), "")
 		convey.So(err, convey.ShouldEqual, nil)
 	})
 }
@@ -372,7 +372,7 @@ func resetMock(resetMockList ...*gomonkey.Patches) {
 func annotationResetMock(devErr, stateErr, nodeErr error) (*gomonkey.Patches, *gomonkey.Patches, *gomonkey.Patches) {
 	node := getMockNode(common.HuaweiAscend910, npuChip910PhyID0)
 	mockWrite := gomonkey.ApplyMethod(reflect.TypeOf(new(ClientK8s)), "WriteDeviceInfoDataIntoCM",
-		func(_ *ClientK8s, _ map[string]string) (*common.NodeDeviceInfoCache, error) {
+		func(_ *ClientK8s, _ map[string]string, _ string) (*common.NodeDeviceInfoCache, error) {
 			return nil, devErr
 		})
 	mockPatchNode := gomonkey.ApplyMethod(reflect.TypeOf(new(ClientK8s)), "PatchNodeState",

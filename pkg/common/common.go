@@ -33,6 +33,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"huawei.com/npu-exporter/v5/common-utils/hwlog"
+	"huawei.com/npu-exporter/v5/devmanager/common"
 	"k8s.io/api/core/v1"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
@@ -45,6 +46,8 @@ var (
 		"vir910":      regexp.MustCompile("Ascend910-([2-6]|8|10|12|16)c"),
 		"vir310p":     regexp.MustCompile("Ascend310P-(1|2|4)c"),
 		"ascend910":   regexp.MustCompile(`^Ascend910-\d+`),
+		"ascend310":   regexp.MustCompile(`^Ascend310-\d+`),
+		"ascend310P":  regexp.MustCompile(`^Ascend310P-\d+`),
 	}
 )
 
@@ -401,6 +404,25 @@ func CheckPodNameAndSpace(podPara string, maxLength int) error {
 	return nil
 }
 
+// CheckDeviceName used to check device name
+func CheckDeviceName(deviceName, deviceRunMode string) bool {
+	patternMap := GetPattern()
+
+	runModeRegexpMap := map[string]string{
+		common.Ascend910:  RunMode910,
+		common.Ascend310:  RunMode310,
+		common.Ascend310P: RunMode310P,
+	}
+
+	pattern := patternMap[runModeRegexpMap[deviceRunMode]]
+	if !pattern.MatchString(deviceName) {
+		hwlog.RunLog.Warnf("in %s device run mode, device name %s is illegal", deviceRunMode, deviceName)
+		return false
+	}
+
+	return true
+}
+
 // NewFileWatch is used to watch socket file
 func NewFileWatch() (*FileWatch, error) {
 	watcher, err := fsnotify.NewWatcher()
@@ -516,4 +538,21 @@ func Int32Join(data []int32, sep string) string {
 		strData = append(strData, strconv.Itoa(int(val)))
 	}
 	return strings.Join(strData, sep)
+}
+
+// GetDeviceRunMode get current env device run mode
+func GetDeviceRunMode() (string, error) {
+	devType := ParamOption.RealCardType
+
+	switch devType {
+	case common.Ascend310, common.Ascend310B:
+		return common.Ascend310, nil
+	case common.Ascend910, common.Ascend910B:
+		return common.Ascend910, nil
+	case common.Ascend310P:
+		return common.Ascend310P, nil
+	default:
+		hwlog.RunLog.Errorf("found an unsupported device type %s", devType)
+		return "", fmt.Errorf("%v is a unsupported device type", devType)
+	}
 }

@@ -88,7 +88,7 @@ func TestDoWithVolcanoListAndWatch910(t *testing.T) {
 			})
 		mockCreateConfigMap := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)),
 			"WriteDeviceInfoDataIntoCMCache", func(_ *kubeclient.ClientK8s,
-				deviceInfo map[string]string) error {
+				deviceInfo map[string]string, manuallySeperateNPUFaultInfo string) error {
 				return nil
 			})
 		mockNodeBack := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)), "GetNode",

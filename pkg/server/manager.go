@@ -820,34 +820,47 @@ func (hdm *HwDevManager) pollFaultCodeCM(ctx context.Context) {
 				hwlog.RunLog.Infof("detect '%s' configmap changed", common.FaultCodeCMName)
 				interval = getFaultCodeCMPollInterval(configMap)
 				resourceVersion = configMap.ResourceVersion
-				if err = handleFaultCodeCMChange(configMap); err != nil {
-					hwlog.RunLog.Errorf("handling '%s' configmap change failed, err: %v", common.FaultCodeCMName, err)
-				} else {
-					hwlog.RunLog.Infof("handling '%s' configmap change succeed", common.FaultCodeCMName)
-				}
+				loadFaultCode(configMap)
+				loadFaultCustomization(configMap)
+				hwlog.RunLog.Infof("handling '%s' configmap change complete", common.FaultCodeCMName)
 			}
 			time.Sleep(time.Duration(interval) * time.Second)
 		}
 	}
 }
 
-func handleFaultCodeCMChange(configMap *v1.ConfigMap) error {
+func loadFaultCode(configMap *v1.ConfigMap) {
 	faultCode, ok := configMap.Data[common.FaultCodeKey]
 	if !ok {
-		hwlog.RunLog.Errorf("cannot find key '%s' in CM", common.FaultCodeKey)
+		hwlog.RunLog.Errorf("cannot find key '%s' in CM, try to load faultCode.json", common.FaultCodeKey)
 		if err := common.LoadFaultCodeFromFile(); err != nil {
-			return err
+			hwlog.RunLog.Errorf("load fault code from faultCode.json failed, err: %v", err)
+			return
 		}
-		return fmt.Errorf("cannot find key '%s' in CM", common.FaultCodeKey)
+		hwlog.RunLog.Infof("load fault code from faultCode.json success")
+		return
 	}
 	if err := common.LoadFaultCode([]byte(faultCode)); err != nil {
-		hwlog.RunLog.Errorf("load fault code from CM failed, err: %v", err)
+		hwlog.RunLog.Errorf("load fault code from configmap failed, try to load faultCode.json, err: %v", err)
 		if err = common.LoadFaultCodeFromFile(); err != nil {
-			return err
+			hwlog.RunLog.Errorf("load fault code from faultCode.json failed, err: %v", err)
+			return
 		}
-		return fmt.Errorf("load fault code from CM failed")
+		hwlog.RunLog.Infof("load fault code from faultCode.json success")
+		return
 	}
-	return nil
+	hwlog.RunLog.Infof("load fault code from configmap success")
+}
+
+func loadFaultCustomization(configMap *v1.ConfigMap) {
+	faultCustomization, ok := configMap.Data[common.FaultCustomizationKey]
+	if !ok {
+		hwlog.RunLog.Warnf("did not find key(%s) in configmap, reset fault customization", common.FaultCustomizationKey)
+		common.ResetFaultCustomization()
+		return
+	}
+	common.LoadFaultCustomization(faultCustomization)
+	hwlog.RunLog.Infof("load fault customization from configmap complete")
 }
 
 func getFaultCodeCMPollInterval(configMap *v1.ConfigMap) int {
