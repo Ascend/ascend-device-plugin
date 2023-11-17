@@ -582,3 +582,18 @@ const (
 	LogicID4 = 4
 	LogicID7 = 7
 )
+
+const (
+	// AssertionRecovery the name of assertion 0
+	AssertionRecovery = "Recovery"
+	// AssertionOccur the name of assertion 1
+	AssertionOccur = "Occur"
+	// AssertionNotice the name of assertion 2
+	AssertionNotice = "Notice"
+
+	// TimeFormat the format for time
+	TimeFormat = "2006-01-02 15:04:05"
+
+	// ResourceKindPod the kind pod of resource
+	ResourceKindPod = "pod"
+)
