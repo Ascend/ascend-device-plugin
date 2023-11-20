@@ -52,7 +52,7 @@ func NewClientK8s() (*ClientK8s, error) {
 		hwlog.RunLog.Errorf("get client err: %v", err)
 		return nil, err
 	}
-	nodeName, err := getNodeNameFromEnv()
+	nodeName, err := GetNodeNameFromEnv()
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +205,16 @@ func (ki *ClientK8s) ClearResetInfo(taskName, namespace string) error {
 	return nil
 }
 
-func getNodeNameFromEnv() (string, error) {
+// CreateEvent create event resource
+func (ki *ClientK8s) CreateEvent(evt *v1.Event) (*v1.Event, error) {
+	if evt == nil {
+		return nil, fmt.Errorf("param event is nil")
+	}
+	return ki.Clientset.CoreV1().Events(evt.ObjectMeta.Namespace).Create(context.TODO(), evt, metav1.CreateOptions{})
+}
+
+// GetNodeNameFromEnv get current node name from env
+func GetNodeNameFromEnv() (string, error) {
 	nodeName := os.Getenv("NODE_NAME")
 	if err := checkNodeName(nodeName); err != nil {
 		return "", fmt.Errorf("check node name failed: %#v", err)

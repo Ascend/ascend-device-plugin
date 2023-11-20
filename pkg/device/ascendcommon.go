@@ -26,6 +26,7 @@ import (
 	"huawei.com/npu-exporter/v5/devmanager"
 	npuCommon "huawei.com/npu-exporter/v5/devmanager/common"
 	"k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
@@ -764,9 +765,15 @@ func (tool *AscendTools) flushFaultCodesWithInit(device *common.NpuDevice, initL
 			hwlog.RunLog.Errorf("get device fault failed logic: %d, err: %v", device.LogicID, err)
 			return
 		}
+
+		tool.writeFaultToEvent(device.CardID, common.GetChangedDevFaultInfo(device, errCodes))
 		common.SetFaultCodes(device, errCodes)
 		logFaultModeChange(device, initLogicIDs, polling)
 		return
+	}
+
+	if devFaultInfo, ok := devFaultInfoMap[device.LogicID]; ok {
+		tool.writeFaultToEvent(device.CardID, devFaultInfo)
 	}
 	common.SetNewFaultAndCacheOnceRecoverFault(device.LogicID, devFaultInfoMap[device.LogicID], device)
 	logFaultModeChange(device, initLogicIDs, subscribe)
@@ -868,4 +875,60 @@ func (tool *AscendTools) handleDeviceNetworkFault(device *common.NpuDevice,
 	common.SortMergeFaultQueue(device)
 
 	common.LinkDownTimeoutCheck(device)
+}
+
+func (tool *AscendTools) writeFaultToEvent(cardID int32, devFaultInfo []npuCommon.DevFaultInfo) {
+	for _, faultInfo := range devFaultInfo {
+		if err := tool.doWriteFaultToEvent(cardID, faultInfo); err != nil {
+			hwlog.RunLog.Errorf("failed to write device fault to event, %v", err)
+			continue
+		}
+	}
+}
+
+func (tool *AscendTools) doWriteFaultToEvent(cardID int32, faultInfo npuCommon.DevFaultInfo) error {
+	nodeName, err := kubeclient.GetNodeNameFromEnv()
+	if err != nil {
+		return fmt.Errorf("failed to get node name, %w", err)
+	}
+	podName, err := common.GetPodNameFromEnv()
+	if err != nil {
+		return fmt.Errorf("failed to get pod name, %w", err)
+	}
+	assertionName := common.GetFaultAssertionName(faultInfo.Assertion)
+	if assertionName == "" {
+		return fmt.Errorf("failed to get name of assertion: %d", faultInfo.Assertion)
+	}
+	faultLevelName := common.GetFaultTypeByCode([]int64{faultInfo.EventID})
+	faultInfo.AlarmRaisedTime = time.Now().UnixMilli()
+
+	event := &v1.Event{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: common.DeviceInfoCMNameSpace,
+			Name:      fmt.Sprintf("%s.%d%d", podName, faultInfo.AlarmRaisedTime, faultInfo.LogicID),
+		},
+		Type: v1.EventTypeWarning,
+		Message: fmt.Sprintf("device fault, nodeName:%s, assertion:%s, logicID:%d, cardID:%d, faultCodes:%s, "+
+			"faultLevelName:%s, alarmRaisedTime:%s", nodeName, assertionName, faultInfo.LogicID, cardID,
+			strings.ToUpper(strconv.FormatInt(faultInfo.EventID, common.Hex)), faultLevelName,
+			time.UnixMilli(faultInfo.AlarmRaisedTime).Format(common.TimeFormat)),
+		EventTime: metav1.MicroTime{Time: time.UnixMilli(faultInfo.AlarmRaisedTime)},
+		Reason:    assertionName,
+		Action:    faultLevelName,
+		Source:    v1.EventSource{Component: common.Component, Host: nodeName},
+		InvolvedObject: v1.ObjectReference{
+			Kind:      common.ResourceKindPod,
+			Namespace: common.DeviceInfoCMNameSpace,
+			Name:      podName,
+		},
+		ReportingController: common.Component,
+		ReportingInstance:   podName,
+	}
+	if faultInfo.Assertion != npuCommon.FaultOccur {
+		event.Type = v1.EventTypeNormal
+	}
+	if _, err := tool.client.CreateEvent(event); err != nil {
+		return fmt.Errorf("failed to create event, %w", err)
+	}
+	return nil
 }

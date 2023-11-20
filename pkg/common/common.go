@@ -517,3 +517,12 @@ func Int32Join(data []int32, sep string) string {
 	}
 	return strings.Join(strData, sep)
 }
+
+// GetPodNameFromEnv get current pod name from env
+func GetPodNameFromEnv() (string, error) {
+	podName := os.Getenv("HOSTNAME")
+	if err := CheckPodNameAndSpace(podName, PodNameMaxLength); err != nil {
+		return "", fmt.Errorf("check pod name failed: %w", err)
+	}
+	return podName, nil
+}

@@ -541,3 +541,43 @@ func LinkDownTimeoutCheck(device *NpuDevice) {
 
 	device.NetworkHealth = device.NetworkRealHealth
 }
+
+// GetFaultAssertionName get assertion name of fault code
+func GetFaultAssertionName(assertion int8) string {
+	switch assertion {
+	case common.FaultRecover:
+		return AssertionRecovery
+	case common.FaultOccur:
+		return AssertionOccur
+	case common.FaultOnce:
+		return AssertionNotice
+	default:
+		return ""
+	}
+}
+
+// GetChangedDevFaultInfo get device changed fault info
+func GetChangedDevFaultInfo(device *NpuDevice, newErrCodes []int64) []common.DevFaultInfo {
+	devFaultInfo := make([]common.DevFaultInfo, 0, len(newErrCodes))
+	for _, newCode := range newErrCodes {
+		if Int64Tool.Index(device.FaultCodes, newCode) == -1 {
+			faultInfo := common.DevFaultInfo{
+				EventID:   newCode,
+				LogicID:   device.LogicID,
+				Assertion: common.FaultOccur,
+			}
+			devFaultInfo = append(devFaultInfo, faultInfo)
+		}
+	}
+	for _, oldCode := range device.FaultCodes {
+		if Int64Tool.Index(newErrCodes, oldCode) == -1 {
+			faultInfo := common.DevFaultInfo{
+				EventID:   oldCode,
+				LogicID:   device.LogicID,
+				Assertion: common.FaultRecover,
+			}
+			devFaultInfo = append(devFaultInfo, faultInfo)
+		}
+	}
+	return devFaultInfo
+}
