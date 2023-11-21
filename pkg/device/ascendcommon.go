@@ -766,14 +766,14 @@ func (tool *AscendTools) flushFaultCodesWithInit(device *common.NpuDevice, initL
 			return
 		}
 
-		tool.writeFaultToEvent(device.CardID, common.GetChangedDevFaultInfo(device, errCodes))
+		tool.writeFaultToEvent(common.GetChangedDevFaultInfo(device, errCodes))
 		common.SetFaultCodes(device, errCodes)
 		logFaultModeChange(device, initLogicIDs, polling)
 		return
 	}
 
 	if devFaultInfo, ok := devFaultInfoMap[device.LogicID]; ok {
-		tool.writeFaultToEvent(device.CardID, devFaultInfo)
+		tool.writeFaultToEvent(devFaultInfo)
 	}
 	common.SetNewFaultAndCacheOnceRecoverFault(device.LogicID, devFaultInfoMap[device.LogicID], device)
 	logFaultModeChange(device, initLogicIDs, subscribe)
@@ -877,16 +877,20 @@ func (tool *AscendTools) handleDeviceNetworkFault(device *common.NpuDevice,
 	common.LinkDownTimeoutCheck(device)
 }
 
-func (tool *AscendTools) writeFaultToEvent(cardID int32, devFaultInfo []npuCommon.DevFaultInfo) {
+func (tool *AscendTools) writeFaultToEvent(devFaultInfo []npuCommon.DevFaultInfo) {
 	for _, faultInfo := range devFaultInfo {
-		if err := tool.doWriteFaultToEvent(cardID, faultInfo); err != nil {
+		if err := tool.doWriteFaultToEvent(faultInfo); err != nil {
 			hwlog.RunLog.Errorf("failed to write device fault to event, %v", err)
 			continue
 		}
 	}
 }
 
-func (tool *AscendTools) doWriteFaultToEvent(cardID int32, faultInfo npuCommon.DevFaultInfo) error {
+func (tool *AscendTools) doWriteFaultToEvent(faultInfo npuCommon.DevFaultInfo) error {
+	cardID, deviceID, err := tool.dmgr.GetCardIDDeviceID(faultInfo.LogicID)
+	if err != nil {
+		return fmt.Errorf("failed to get cardID and deviceID, %w", err)
+	}
 	nodeName, err := kubeclient.GetNodeNameFromEnv()
 	if err != nil {
 		return fmt.Errorf("failed to get node name, %w", err)
@@ -908,8 +912,8 @@ func (tool *AscendTools) doWriteFaultToEvent(cardID int32, faultInfo npuCommon.D
 			Name:      fmt.Sprintf("%s.%d%d", podName, faultInfo.AlarmRaisedTime, faultInfo.LogicID),
 		},
 		Type: v1.EventTypeWarning,
-		Message: fmt.Sprintf("device fault, nodeName:%s, assertion:%s, logicID:%d, cardID:%d, faultCodes:%s, "+
-			"faultLevelName:%s, alarmRaisedTime:%s", nodeName, assertionName, faultInfo.LogicID, cardID,
+		Message: fmt.Sprintf("device fault, nodeName:%s, assertion:%s, cardID:%d, deviceID:%d, "+
+			"faultCodes:%s, faultLevelName:%s, alarmRaisedTime:%s", nodeName, assertionName, cardID, deviceID,
 			strings.ToUpper(strconv.FormatInt(faultInfo.EventID, common.Hex)), faultLevelName,
 			time.UnixMilli(faultInfo.AlarmRaisedTime).Format(common.TimeFormat)),
 		EventTime: metav1.MicroTime{Time: time.UnixMilli(faultInfo.AlarmRaisedTime)},
