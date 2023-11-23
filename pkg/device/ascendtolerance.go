@@ -373,7 +373,7 @@ func (hrt *HotResetTools) UpdateGlobalDevFaultInfoCache(devDeviceList []*common.
 		hrt.globalDevFaultInfo[device.LogicID].LogicId = device.LogicID
 		hrt.globalDevFaultInfo[device.LogicID].ErrorCode = device.FaultCodes
 		hrt.globalDevFaultInfo[device.LogicID].Policy =
-			hrt.GetDevProcessPolicy(common.GetFaultTypeByCode(device.FaultCodes))
+			hrt.GetDevProcessPolicy(common.GetFaultType(device.FaultCodes, device.LogicID))
 	}
 	return nil
 }

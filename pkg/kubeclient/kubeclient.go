@@ -188,7 +188,7 @@ func (ki *ClientK8s) resetNodeAnnotations(node *v1.Node) {
 // ResetDeviceInfo reset device info
 func (ki *ClientK8s) ResetDeviceInfo() {
 	deviceList := make(map[string]string, 1)
-	if err := ki.WriteDeviceInfoDataIntoCMCache(deviceList); err != nil {
+	if err := ki.WriteDeviceInfoDataIntoCMCache(deviceList, ""); err != nil {
 		hwlog.RunLog.Errorf("write device info failed, error is %v", err)
 	}
 }

@@ -18,6 +18,7 @@ package kubeclient
 import (
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 	"time"
 
@@ -99,8 +100,65 @@ func (ki *ClientK8s) createOrUpdateDeviceCM(cm *v1.ConfigMap) error {
 	}
 }
 
+func getDeviceInfoManuallySeparateNPUData(deviceInfo *v1.ConfigMap) (string, error) {
+	data, ok := deviceInfo.Data[common.DeviceInfoCMManuallySeparateNPUKey]
+	if !ok {
+		return "", fmt.Errorf("%s not exist, from %s", common.DeviceInfoCMManuallySeparateNPUKey, deviceInfo.Name)
+	}
+
+	return data, nil
+}
+
+// GetManuallySeparateNPUIDFromDeviceInfo returns the ManuallySeparateNPU from device info
+func (ki *ClientK8s) GetManuallySeparateNPUIDFromDeviceInfo(deviceInfoCMName, deviceInfoCMNamespace string) []int32 {
+	phyIDs := make([]int32, 0)
+
+	deviceInfo, err := ki.GetConfigMap(deviceInfoCMName, deviceInfoCMNamespace)
+	if err != nil {
+		hwlog.RunLog.Warnf("get device info cm error: %v", err)
+		return phyIDs
+	}
+
+	manuallySeparateNPUData, err := getDeviceInfoManuallySeparateNPUData(deviceInfo)
+	if err != nil {
+		hwlog.RunLog.Warnf("failed to get manually seperate NPU data, error: %v", err)
+		return phyIDs
+	}
+
+	deviceRunMode, err := common.GetDeviceRunMode()
+	if err != nil {
+		hwlog.RunLog.Warnf("failed to get device run mode, error: %v", err)
+		return phyIDs
+	}
+
+	manuallySeparateNPUs := strings.Split(manuallySeparateNPUData, ",")
+	if len(manuallySeparateNPUs) == 1 && manuallySeparateNPUs[0] == "" {
+		hwlog.RunLog.Debug("manually seperate NPU cache is empty, skip the lookup phase")
+		return phyIDs
+	}
+
+	for _, manuallySeparateNPU := range manuallySeparateNPUs {
+		deviceNameCheck := common.CheckDeviceName(manuallySeparateNPU, deviceRunMode)
+		if !deviceNameCheck {
+			hwlog.RunLog.Warnf("in %v run mode, device name %s is illegal, it will be ignored",
+				deviceRunMode, manuallySeparateNPU)
+			continue
+		}
+		phyIDStr := strings.Split(manuallySeparateNPU, "-")[1]
+		phyID, err := strconv.Atoi(phyIDStr)
+		if err != nil {
+			hwlog.RunLog.Warnf("failed to convert %v string type to int type, error: %v", phyIDStr, err)
+			return phyIDs
+		}
+
+		phyIDs = append(phyIDs, int32(phyID))
+	}
+	return phyIDs
+}
+
 // WriteDeviceInfoDataIntoCM write deviceinfo into config map
-func (ki *ClientK8s) WriteDeviceInfoDataIntoCM(deviceInfo map[string]string) (*common.NodeDeviceInfoCache, error) {
+func (ki *ClientK8s) WriteDeviceInfoDataIntoCM(deviceInfo map[string]string,
+	manuallySeparateNPU string) (*common.NodeDeviceInfoCache, error) {
 
 	var nodeDeviceData = common.NodeDeviceInfoCache{
 		DeviceInfo: common.NodeDeviceInfo{
@@ -119,7 +177,8 @@ func (ki *ClientK8s) WriteDeviceInfoDataIntoCM(deviceInfo map[string]string) (*c
 			Name:      ki.DeviceInfoName,
 			Namespace: common.DeviceInfoCMNameSpace,
 		},
-		Data: map[string]string{common.DeviceInfoCMDataKey: string(data)},
+		Data: map[string]string{common.DeviceInfoCMDataKey: string(data),
+			common.DeviceInfoCMManuallySeparateNPUKey: manuallySeparateNPU},
 	}
 
 	hwlog.RunLog.Debugf("write device info cache into cm: %s/%s.", deviceInfoCM.Namespace, deviceInfoCM.Name)

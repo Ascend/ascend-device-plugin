@@ -1,0 +1,22 @@
+{
+  "GraceTolerance": {
+    "WaitFlushingCMTime": 90,
+    "WaitDeviceResetTime": 60
+  },
+  "FaultFrequency": [
+    {
+      "EventId": [],
+      "TimeWindow": 3600,
+      "Times": 5,
+      "FaultLevel": "NotHandleFault"
+    }
+  ],
+  "FaultDuration": [
+    {
+      "EventId": ["81078603"],
+      "FaultTimeout": 30,
+      "RecoverTimeout": 60,
+      "FaultLevel": "PreSeparateNPU"
+    }
+  ]
+}

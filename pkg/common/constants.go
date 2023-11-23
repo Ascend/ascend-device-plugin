@@ -62,6 +62,8 @@ const (
 	DeviceInfoCMNamePrefix = "mindx-dl-deviceinfo-"
 	// DeviceInfoCMDataKey device info configmap data key
 	DeviceInfoCMDataKey = "DeviceInfoCfg"
+	// DeviceInfoCMManuallySeparateNPUKey for deviceinfo configmap ManuallySeparateNPU key
+	DeviceInfoCMManuallySeparateNPUKey = "ManuallySeparateNPU"
 
 	runtimeEnvNum = 3
 	// AscendVisibleDevicesEnv visible devices env
@@ -143,21 +145,6 @@ const (
 	LinkupRecoverTime = 60
 	// SecondMagnification is second-level unit magnification
 	SecondMagnification = 1000
-
-	// PollFaultCodeCMInterval is the default interval(second) of polling fault code CM
-	PollFaultCodeCMInterval = 300
-	// PollFaultCodeCMMaxInterval is the max interval(second) of polling fault code CM
-	PollFaultCodeCMMaxInterval = 3600
-	// PollFaultCodeCMMinInterval is the min interval(second) of polling fault code CM
-	PollFaultCodeCMMinInterval = 30
-	// FaultCodeCMName is the name of the configmap that is used to save fault code
-	FaultCodeCMName = "mindx-dl-fault-config"
-	// FaultCodeCMNameSpace is the namespace of the fault code configmap
-	FaultCodeCMNameSpace = "kube-system"
-	// FaultCodeKey is the key to find fault code in cm
-	FaultCodeKey = "faultCode.json"
-	// PollIntervalKey is the key to find poll interval in cm
-	PollIntervalKey = "PollInterval"
 )
 
 const (
@@ -493,8 +480,6 @@ const (
 	RankIndexKey = "hccl/rankIndex"
 	// InferRankIndex indecates the rank index of infer situation (rank index is meaningless in infer situation)
 	InferRankIndex = "-1"
-	// WaitFlushCMTime for wait for cm info to flush in container
-	WaitFlushCMTime = 90
 	// WaitResetEndTime for wait device reset to complete
 	WaitResetEndTime = 120
 	// WaitRetryTime for wait five seconds to reset device again
@@ -545,7 +530,7 @@ const (
 	EmptyErrorLevel = iota
 	// IgnoreErrorLevel indicates the level of a fault that can be ignored
 	IgnoreErrorLevel
-	// RestartRequestError indicates that the task only needs to re-execute this request
+	// RestartRequestErrorLevel indicates that the task only needs to re-execute this request
 	RestartRequestErrorLevel
 	// RestartErrorLevel indicates the level of the fault that needs to be re-executed
 	RestartErrorLevel
@@ -581,4 +566,69 @@ const (
 	LogicID3 = 3
 	LogicID4 = 4
 	LogicID7 = 7
+)
+
+// Fault customization const
+const (
+	// PollFaultCodeCMInterval is the default interval(second) of polling fault code CM
+	PollFaultCodeCMInterval = 300
+	// PollFaultCodeCMMaxInterval is the max interval(second) of polling fault code CM
+	PollFaultCodeCMMaxInterval = 3600
+	// PollFaultCodeCMMinInterval is the min interval(second) of polling fault code CM
+	PollFaultCodeCMMinInterval = 30
+	// FaultCodeCMName is the name of the configmap that is used to save fault code
+	FaultCodeCMName = "mindx-dl-fault-config"
+	// FaultCodeCMNameSpace is the namespace of the fault code configmap
+	FaultCodeCMNameSpace = "kube-system"
+	// FaultCodeKey is the key to find fault code in cm
+	FaultCodeKey = "faultCode.json"
+	// FaultCustomizationKey is the key to find fault customization in cm
+	FaultCustomizationKey = "faultCustomization.json"
+	// PollIntervalKey is the key to find poll interval in cm
+	PollIntervalKey = "PollInterval"
+	// DefaultWaitFlushCMTime for wait for cm info to flush in container
+	DefaultWaitFlushCMTime = 90
+	// MaxWaitFlushCMTime for max time waiting for cm info to flush in container
+	MaxWaitFlushCMTime = 300
+	// MinWaitFlushCMTime for min time waiting for cm info to flush in container
+	MinWaitFlushCMTime = 90
+	// DefaultWaitDeviceResetTime is the default time used in waiting device reset
+	DefaultWaitDeviceResetTime = 60
+	// MaxWaitDeviceResetTime is the max time used in waiting device reset
+	MaxWaitDeviceResetTime = 120
+	// MinWaitDeviceResetTime is the min time used in waiting device reset
+	MinWaitDeviceResetTime = 60
+	// MaxFaultFrequencyTimeWindow is the max time for the time window of fault frequency
+	MaxFaultFrequencyTimeWindow = 864000
+	// MinFaultFrequencyTimeWindow is the min time for the time window of fault frequency
+	MinFaultFrequencyTimeWindow = 60
+	// MaxFaultFrequencyTimes is the max count for the fault occurrence time of fault frequency
+	MaxFaultFrequencyTimes = 100
+	// MinFaultFrequencyTimes is the min count for the fault occurrence time of fault frequency
+	MinFaultFrequencyTimes = 2
+	// DefaultLinkUpTimeout is the default time for the linkup event
+	DefaultLinkUpTimeout = 60
+	// MinLinkUpTimeout is the min time for the linkup event
+	MinLinkUpTimeout = 1
+	// MaxLinkUpTimeout is the max time for the linkup event
+	MaxLinkUpTimeout = 60
+	// MinLinkDownTimeout is the min time for the linkdown event
+	MinLinkDownTimeout = 1
+	// MaxLinkDownTimeout is the max time for the linkdown event
+	MaxLinkDownTimeout = 30
+)
+
+// the severity level of fault
+const (
+	FaultSeveritySuggestion = iota
+	FaultSeverityMinor
+	FaultSeverityMajor
+	FaultSeverityCritical
+)
+
+// LogicID list for reset, get id list of ring
+const (
+	ManuallySeparateNpuFirstHandle = "FirstHandle"
+	ManuallySeparateNpuHandled     = "Handled"
+	ManuallySeparateNpuAll         = "All"
 )

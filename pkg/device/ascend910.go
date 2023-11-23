@@ -384,6 +384,21 @@ func (hnm *HwAscend910Manager) convertPhysicIdToLogicId(physicIds []int32) (logi
 	return logicIds, nil
 }
 
+func (hnm *HwAscend910Manager) convertLogicIdToPhysicId(logicIds []int32) (physicIds []int32, err error) {
+	if len(logicIds) == 0 {
+		return nil, fmt.Errorf("convert logic id to physic id failed, logic id empty")
+	}
+	for _, logicId := range logicIds {
+		physicId, err := hnm.GetDmgr().GetPhysicIDFromLogicID(logicId)
+		if err != nil {
+			hwlog.RunLog.Errorf("convert logic id to physic id failed, err: %v", err)
+			return nil, err
+		}
+		physicIds = append(physicIds, physicId)
+	}
+	return physicIds, nil
+}
+
 func (hnm *HwAscend910Manager) isReSchedulingScene(npuCount int) bool {
 	if common.ParamOption.RealCardType == common.Ascend910 && npuCount < common.Ascend910RingsNum {
 		return true
@@ -546,7 +561,7 @@ func (hnm *HwAscend910Manager) restartRequestProcess(taskName string, resetInfo 
 	common.RecordFaultInfoList(devFaultInfoList)
 	devFaultInfoListInReset := hnm.hotResetManager.DeepCopyDevFaultInfoList(devFaultInfoList)
 	// wait L2 fault to self-healing
-	time.Sleep(common.WaitFlushCMTime * time.Second)
+	time.Sleep(common.WaitFlushingCMTime * time.Second)
 	if err := hnm.refreshDevFaultInfo(devFaultInfoList); err != nil {
 		hwlog.RunLog.Errorf("failed to refresh device fault info, err %#v", err)
 		return
@@ -585,7 +600,7 @@ func (hnm *HwAscend910Manager) restartProcess(taskName string, resetInfo *common
 	hwlog.RunLog.Infof("start handle L3 fault, task name: %s", taskName)
 	common.RecordFaultInfoList(devFaultInfoList)
 	devFaultInfoListInReset := hnm.hotResetManager.DeepCopyDevFaultInfoList(devFaultInfoList)
-	time.Sleep(common.WaitFlushCMTime * time.Second)
+	time.Sleep(common.WaitFlushingCMTime * time.Second)
 	if err := hnm.refreshDevFaultInfo(devFaultInfoList); err != nil {
 		hwlog.RunLog.Errorf("failed to refresh device fault info, err %#v", err)
 		return
@@ -707,7 +722,7 @@ func (hnm *HwAscend910Manager) updateResetCMStatus(taskName, policy, initPolicy,
 		hwlog.RunLog.Errorf("failed to write reset info to cm, err: %#v", err)
 		return err
 	}
-	time.Sleep(common.WaitFlushCMTime * time.Second)
+	time.Sleep(common.WaitFlushingCMTime * time.Second)
 	return nil
 }
 
@@ -725,7 +740,7 @@ func (hnm *HwAscend910Manager) resetProcess(taskName string, resetInfo *common.T
 	hwlog.RunLog.Infof("start handle L5 fault, task name: %s", taskName)
 	common.RecordFaultInfoList(devFaultInfoList)
 	devFaultInfoListInReset := hnm.hotResetManager.DeepCopyDevFaultInfoList(devFaultInfoList)
-	time.Sleep(common.WaitFlushCMTime * time.Second)
+	time.Sleep(common.WaitFlushingCMTime * time.Second)
 	if err := hnm.resetDeviceOnce(devFaultInfoList); err != nil {
 		hwlog.RunLog.Errorf("failed to reset device, err: %#v", err)
 		return
@@ -831,7 +846,7 @@ func (hnm *HwAscend910Manager) refreshDevFaultInfo(devFaultInfo []*common.TaskDe
 			hwlog.RunLog.Errorf("failed to get device %d healthy", devInfo.LogicId)
 			return err
 		}
-		devInfo.Policy = hnm.hotResetManager.GetDevProcessPolicy(common.GetFaultTypeByCode(errorCode))
+		devInfo.Policy = hnm.hotResetManager.GetDevProcessPolicy(common.GetFaultType(errorCode, devInfo.LogicId))
 		devInfo.ErrorCode = errorCode
 	}
 	return nil
@@ -883,7 +898,7 @@ func (hnm *HwAscend910Manager) execResetDevice(devList map[int32]struct{}) error
 }
 
 func (hnm *HwAscend910Manager) waitDeviceResetComplete(logicId int32, totalTime *int) error {
-	if err := wait.PollImmediate(time.Second, time.Minute, func() (bool, error) {
+	if err := wait.PollImmediate(time.Second, common.WaitDeviceResetTime*time.Second, func() (bool, error) {
 		*totalTime += 1
 		if *totalTime > common.MaxResetWaitRecoverTime {
 			return true, fmt.Errorf("wait device reset recover timeout")

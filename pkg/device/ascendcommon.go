@@ -18,6 +18,7 @@ package device
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -120,6 +121,78 @@ func (tool *AscendTools) GetName() string {
 	return tool.name
 }
 
+func (tool *AscendTools) convertLogicIDsToDeviceNames(logicIds []int32) string {
+	deviceRunMode, err := common.GetDeviceRunMode()
+	if err != nil {
+		hwlog.RunLog.Warnf("failed to get device run mode, error: %v", err)
+		return ""
+	}
+	deviceNamesSlice := make([]string, 0)
+	for _, logicId := range logicIds {
+		physicId, err := tool.GetDmgr().GetPhysicIDFromLogicID(logicId)
+		if err != nil {
+			hwlog.RunLog.Warnf("get physic id failed, err: %v", err)
+			continue
+		}
+		deviceName := fmt.Sprintf("%s-%d", deviceRunMode, physicId)
+		deviceNamesSlice = append(deviceNamesSlice, deviceName)
+	}
+
+	deviceNames := strings.Join(deviceNamesSlice, ",")
+
+	return deviceNames
+}
+
+func (tool *AscendTools) handleManuallySeparateNPUFaultInfo() string {
+	deviceRunMode, err := common.GetDeviceRunMode()
+	if err != nil {
+		hwlog.RunLog.Warnf("failed to get device run mode, error: %v", err)
+		return ""
+	}
+
+	deviceInfoName := tool.client.DeviceInfoName
+	physicIDsFromDeviceInfo := tool.client.GetManuallySeparateNPUIDFromDeviceInfo(deviceInfoName, common.DeviceInfoCMNameSpace)
+	logicIDsHandledFromCache := common.QueryManuallyFaultNPULogicIDsByHandleStatus(common.ManuallySeparateNpuHandled)
+
+	for _, logicId := range logicIDsHandledFromCache {
+		physicId, err := tool.GetDmgr().GetPhysicIDFromLogicID(logicId)
+		if err != nil {
+			hwlog.RunLog.Warnf("get physic id failed, err: %v", err)
+			common.DeleteManuallyFaultInfo(logicId)
+			continue
+		}
+		deviceName := fmt.Sprintf("%s-%d", deviceRunMode, physicId)
+
+		if !common.Int32Tool.Contains(physicIDsFromDeviceInfo, physicId) {
+			hwlog.RunLog.Infof("%s is not in ManuallySeparateNPU of device info configmap, will be removed in "+
+				"cache", deviceName)
+			common.DeleteManuallyFaultInfo(logicId)
+		}
+	}
+
+	logicIDsAllFromCache := common.QueryManuallyFaultNPULogicIDsByHandleStatus(common.ManuallySeparateNpuAll)
+	sort.Slice(logicIDsAllFromCache, func(i, j int) bool {
+		return logicIDsAllFromCache[i] < logicIDsAllFromCache[j]
+	})
+	for _, physicId := range physicIDsFromDeviceInfo {
+		logicId, err := tool.GetDmgr().GetLogicIDFromPhysicID(physicId)
+		if err != nil {
+			hwlog.RunLog.Warnf("get logic id failed, err: %v", err)
+			continue
+		}
+
+		deviceName := fmt.Sprintf("%s-%d", deviceRunMode, physicId)
+		if !common.Int32Tool.Contains(logicIDsAllFromCache, logicId) {
+			hwlog.RunLog.Infof("cache does not contain %v, %v will be removed in ManuallySeparateNPU field "+
+				"of device info configmap", deviceName, deviceName)
+		}
+	}
+
+	common.SetManuallyFaultNPUHandled()
+	manuallySeparateNPU := tool.convertLogicIDsToDeviceNames(logicIDsAllFromCache)
+	return manuallySeparateNPU
+}
+
 // UpdateNodeDeviceInfo update device info
 func (tool *AscendTools) UpdateNodeDeviceInfo(devStatusSet common.DevStatusSet,
 	updateDeviceInfoFunc func(map[string]string, map[string]string, common.DevStatusSet) error) error {
@@ -128,11 +201,14 @@ func (tool *AscendTools) UpdateNodeDeviceInfo(devStatusSet common.DevStatusSet,
 		deviceList := nodeDeviceInfo.DeviceInfo.DeviceList
 		newDeviceList := common.MapDeepCopy(deviceList)
 		if err := updateDeviceInfoFunc(deviceList, newDeviceList, devStatusSet); err != nil {
-			hwlog.RunLog.Errorf("update device info failed, err: %#v", err)
+			hwlog.RunLog.Errorf("update device info failed, err: %v", err)
 			return false, nil
 		}
 		tool.delVirDevInfo(newDeviceList)
-		if err := tool.client.WriteDeviceInfoDataIntoCMCache(newDeviceList); err != nil {
+
+		manuallySeparateNPU := tool.handleManuallySeparateNPUFaultInfo()
+
+		if err := tool.client.WriteDeviceInfoDataIntoCMCache(newDeviceList, manuallySeparateNPU); err != nil {
 			hwlog.RunLog.Errorf("write device info failed: %v", err)
 			return false, nil
 		}
@@ -308,20 +384,22 @@ func (tool *AscendTools) groupDevsByStatus(subClassDevices []*common.NpuDevice, 
 	for _, device := range subClassDevices {
 		if device.NetworkHealth != v1beta1.Healthy {
 			totalNetworkUHDevices.Insert(device.DeviceName)
+			faultType := common.GetNetworkFaultTypeByCode([]string{common.CardNetworkDisconnected})
 			deviceFaults = append(deviceFaults, common.DeviceFault{
 				FaultType:            common.CardNetworkUnhealthy,
 				NPUName:              device.DeviceName,
-				LargeModelFaultLevel: common.GetNetworkFaultTypeByCode([]string{common.CardNetworkDisconnected}),
-				FaultLevel:           common.GetNetworkFaultTypeByCode([]string{common.CardNetworkDisconnected}),
+				LargeModelFaultLevel: faultType,
+				FaultLevel:           faultType,
 				FaultCode:            common.CardNetworkDisconnected,
 			})
 		}
 		if len(device.FaultCodes) != 0 {
+			faultType := common.GetFaultType(device.FaultCodes, device.LogicID)
 			deviceFaults = append(deviceFaults, common.DeviceFault{
 				FaultType:            common.CardUnhealthy,
 				NPUName:              device.DeviceName,
-				LargeModelFaultLevel: common.GetFaultTypeByCode(device.FaultCodes),
-				FaultLevel:           common.GetFaultTypeByCode(device.FaultCodes),
+				LargeModelFaultLevel: faultType,
+				FaultLevel:           faultType,
 				FaultCode:            strings.ToUpper(common.Int64Tool.ToHexString(device.FaultCodes)),
 			})
 		}
@@ -555,7 +633,7 @@ func classifyDevByType(allDevs []common.NpuDevice, suffix string) []*common.NpuD
 }
 
 func (tool *AscendTools) isHealthy(device *common.NpuDevice) string {
-	faultType := common.GetFaultTypeByCode(device.FaultCodes)
+	faultType := common.GetFaultType(device.FaultCodes, device.LogicID)
 	if faultType == common.NormalNPU || faultType == common.NotHandleFault {
 		return v1beta1.Healthy
 	}
@@ -742,13 +820,12 @@ func (tool *AscendTools) getAiCoreCount(cgoVDevInfo npuCommon.VirtualDevInfo) (i
 func (tool *AscendTools) writeNewFaultCode(deviceMap map[string][]*common.NpuDevice, runMode string) {
 	initLogicIDs := common.GetAndCleanLogicID()
 	devFaultInfoMap := common.GetAndCleanFaultInfo()
-	var podList []v1.Pod
 	for _, devices := range deviceMap {
 		for _, device := range devices {
 			tool.flushFaultCodesWithInit(device, initLogicIDs, devFaultInfoMap)
 			device.Health = tool.isHealthy(device)
 			if runMode == common.Ascend910 && tool.deviceUsage == common.Train {
-				tool.handleDeviceNetworkFault(device, devFaultInfoMap, podList)
+				tool.handleDeviceNetworkFault(device, devFaultInfoMap)
 			}
 		}
 	}
@@ -854,7 +931,7 @@ func (tool *AscendTools) GetDeviceUsage() string {
 }
 
 func (tool *AscendTools) handleDeviceNetworkFault(device *common.NpuDevice,
-	devFaultInfoMap map[int32][]npuCommon.DevFaultInfo, podList []v1.Pod) {
+	devFaultInfoMap map[int32][]npuCommon.DevFaultInfo) {
 	if isFirstFlushFault {
 		device.NetworkHealth = v1beta1.Healthy
 		device.NetworkRealHealth = v1beta1.Healthy
@@ -862,8 +939,10 @@ func (tool *AscendTools) handleDeviceNetworkFault(device *common.NpuDevice,
 
 	common.GetLinkdownLinkupFaultEvents(device.LogicID, devFaultInfoMap[device.LogicID])
 
-	deviceNetworkHealth := tool.getDeviceNetworkState(device.LogicID)
-	common.GetCurrentDeviceNetWorkHealth(device.LogicID, deviceNetworkHealth)
+	if common.UseGetDeviceNetWorkHealthApi {
+		deviceNetworkHealth := tool.getDeviceNetworkState(device.LogicID)
+		common.GetCurrentDeviceNetWorkHealth(device.LogicID, deviceNetworkHealth)
+	}
 
 	common.SortMergeFaultQueue(device)
 
