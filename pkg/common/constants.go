@@ -597,3 +597,6 @@ const (
 	// ResourceKindPod the kind pod of resource
 	ResourceKindPod = "pod"
 )
+
+// ApiServerPort is port of API server
+const ApiServerPort = "443"
