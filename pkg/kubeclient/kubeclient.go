@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"huawei.com/npu-exporter/v5/common-utils/hwlog"
 	"k8s.io/api/core/v1"
@@ -37,6 +38,7 @@ type ClientK8s struct {
 	Clientset      kubernetes.Interface
 	NodeName       string
 	DeviceInfoName string
+	IsApiErr       bool
 }
 
 // NewClientK8s create k8s client
@@ -61,6 +63,7 @@ func NewClientK8s() (*ClientK8s, error) {
 		Clientset:      client,
 		NodeName:       nodeName,
 		DeviceInfoName: common.DeviceInfoCMNamePrefix + nodeName,
+		IsApiErr:       false,
 	}, nil
 }
 
@@ -73,7 +76,12 @@ func (ki *ClientK8s) GetNode() (*v1.Node, error) {
 
 // PatchNodeState patch node state
 func (ki *ClientK8s) PatchNodeState(curNode, newNode *v1.Node) (*v1.Node, []byte, error) {
-	return util.PatchNodeStatus(ki.Clientset.CoreV1(), types.NodeName(ki.NodeName), curNode, newNode)
+	node, patchBytes, err := util.PatchNodeStatus(ki.Clientset.CoreV1(), types.NodeName(ki.NodeName), curNode, newNode)
+	if err != nil && strings.Contains(err.Error(), common.ApiServerPort) {
+		ki.IsApiErr = true
+	}
+
+	return node, patchBytes, err
 }
 
 // GetPod get pod by namespace and name
@@ -81,14 +89,25 @@ func (ki *ClientK8s) GetPod(pod *v1.Pod) (*v1.Pod, error) {
 	if pod == nil {
 		return nil, fmt.Errorf("param pod is nil")
 	}
-	return ki.Clientset.CoreV1().Pods(pod.Namespace).Get(context.Background(), pod.Name, metav1.GetOptions{
+
+	v1Pod, err := ki.Clientset.CoreV1().Pods(pod.Namespace).Get(context.Background(), pod.Name, metav1.GetOptions{
 		ResourceVersion: "0",
 	})
+	if err != nil && strings.Contains(err.Error(), common.ApiServerPort) {
+		ki.IsApiErr = true
+	}
+
+	return v1Pod, err
 }
 
 // UpdatePod update pod by namespace and name
 func (ki *ClientK8s) UpdatePod(pod *v1.Pod) (*v1.Pod, error) {
-	return ki.Clientset.CoreV1().Pods(pod.Namespace).Update(context.Background(), pod, metav1.UpdateOptions{})
+	v1Pod, err := ki.Clientset.CoreV1().Pods(pod.Namespace).Update(context.Background(), pod, metav1.UpdateOptions{})
+	if err != nil && strings.Contains(err.Error(), common.ApiServerPort) {
+		ki.IsApiErr = true
+	}
+
+	return v1Pod, err
 }
 
 // GetActivePodList is to get active pod list
@@ -108,24 +127,29 @@ func (ki *ClientK8s) GetActivePodList() ([]v1.Pod, error) {
 // GetAllPodList get pod list by field selector
 func (ki *ClientK8s) GetAllPodList() (*v1.PodList, error) {
 	selector := fields.SelectorFromSet(fields.Set{"spec.nodeName": ki.NodeName})
-	podList, err := ki.getPodListByCondition(selector)
+	v1PodList, err := ki.getPodListByCondition(selector)
 	if err != nil {
 		hwlog.RunLog.Errorf("get pod list failed, err: %v", err)
 		return nil, err
 	}
-	if len(podList.Items) >= common.MaxPodLimit {
+	if len(v1PodList.Items) >= common.MaxPodLimit {
 		hwlog.RunLog.Error("The number of pods exceeds the upper limit")
 		return nil, fmt.Errorf("pod list count invalid")
 	}
-	return podList, nil
+	return v1PodList, nil
 }
 
 // getPodListByCondition get pod list by field selector
 func (ki *ClientK8s) getPodListByCondition(selector fields.Selector) (*v1.PodList, error) {
-	return ki.Clientset.CoreV1().Pods(v1.NamespaceAll).List(context.Background(), metav1.ListOptions{
+	newPodList, err := ki.Clientset.CoreV1().Pods(v1.NamespaceAll).List(context.Background(), metav1.ListOptions{
 		FieldSelector:   selector.String(),
 		ResourceVersion: "0",
 	})
+	if err != nil && strings.Contains(err.Error(), common.ApiServerPort) {
+		ki.IsApiErr = true
+	}
+
+	return newPodList, err
 }
 
 // checkPodList check each pod and return podList
@@ -156,14 +180,25 @@ func (ki *ClientK8s) CreateConfigMap(cm *v1.ConfigMap) (*v1.ConfigMap, error) {
 	if cm == nil {
 		return nil, fmt.Errorf("param cm is nil")
 	}
-	return ki.Clientset.CoreV1().ConfigMaps(cm.ObjectMeta.Namespace).Create(context.TODO(), cm, metav1.CreateOptions{})
+
+	newCM, err := ki.Clientset.CoreV1().ConfigMaps(cm.ObjectMeta.Namespace).Create(context.TODO(), cm, metav1.CreateOptions{})
+	if err != nil && strings.Contains(err.Error(), common.ApiServerPort) {
+		ki.IsApiErr = true
+	}
+
+	return newCM, err
 }
 
 // GetConfigMap get config map by name and namespace
 func (ki *ClientK8s) GetConfigMap(cmName, cmNameSpace string) (*v1.ConfigMap, error) {
-	return ki.Clientset.CoreV1().ConfigMaps(cmNameSpace).Get(context.TODO(), cmName, metav1.GetOptions{
+	newCM, err := ki.Clientset.CoreV1().ConfigMaps(cmNameSpace).Get(context.TODO(), cmName, metav1.GetOptions{
 		ResourceVersion: "0",
 	})
+	if err != nil && strings.Contains(err.Error(), common.ApiServerPort) {
+		ki.IsApiErr = true
+	}
+
+	return newCM, err
 }
 
 // UpdateConfigMap update device info, which is cm
@@ -171,7 +206,12 @@ func (ki *ClientK8s) UpdateConfigMap(cm *v1.ConfigMap) (*v1.ConfigMap, error) {
 	if cm == nil {
 		return nil, fmt.Errorf("param cm is nil")
 	}
-	return ki.Clientset.CoreV1().ConfigMaps(cm.ObjectMeta.Namespace).Update(context.TODO(), cm, metav1.UpdateOptions{})
+	newCM, err := ki.Clientset.CoreV1().ConfigMaps(cm.ObjectMeta.Namespace).Update(context.TODO(), cm, metav1.UpdateOptions{})
+	if err != nil && strings.Contains(err.Error(), common.ApiServerPort) {
+		ki.IsApiErr = true
+	}
+
+	return newCM, err
 }
 
 func (ki *ClientK8s) resetNodeAnnotations(node *v1.Node) {
