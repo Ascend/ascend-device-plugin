@@ -632,3 +632,6 @@ const (
 	ManuallySeparateNpuHandled     = "Handled"
 	ManuallySeparateNpuAll         = "All"
 )
+
+// ApiServerPort is port of API server
+const ApiServerPort = "443"

@@ -70,6 +70,17 @@ func UpdatePodList(oldObj, newObj interface{}, operator string) {
 
 // GetAllPodListCache get pod list by field selector with cache,
 func (ki *ClientK8s) GetAllPodListCache() []v1.Pod {
+	if ki.IsApiErr {
+		newV1PodList, err := ki.GetAllPodList()
+		if err != nil {
+			hwlog.RunLog.Errorf("get pod list from api-server failed: %v", err)
+			return podList
+		}
+		podList = newV1PodList.Items
+		ki.IsApiErr = false
+		hwlog.RunLog.Info("get new pod list success")
+	}
+
 	return podList
 }
 
@@ -81,6 +92,18 @@ func (ki *ClientK8s) GetActivePodListCache() []v1.Pod {
 	newPodList := make([]v1.Pod, 0, common.GeneralMapSize)
 	lock.Lock()
 	defer lock.Unlock()
+
+	if ki.IsApiErr {
+		newV1PodList, err := ki.GetAllPodList()
+		if err != nil {
+			hwlog.RunLog.Errorf("get pod list from api-server failed: %v", err)
+		} else {
+			podList = newV1PodList.Items
+			ki.IsApiErr = false
+			hwlog.RunLog.Info("get new pod list success")
+		}
+	}
+
 	for _, pod := range podList {
 		if err := common.CheckPodNameAndSpace(pod.GetName(), common.PodNameMaxLength); err != nil {
 			hwlog.RunLog.Warnf("pod name syntax illegal, err: %#v", err)
@@ -132,8 +155,7 @@ func (ki *ClientK8s) GetDeviceInfoCMCache() *common.NodeDeviceInfoCache {
 }
 
 // WriteDeviceInfoDataIntoCMCache write deviceinfo into config map with cache
-func (ki *ClientK8s) WriteDeviceInfoDataIntoCMCache(deviceInfo map[string]string,
-	manuallySeparateNPU string) error {
+func (ki *ClientK8s) WriteDeviceInfoDataIntoCMCache(deviceInfo map[string]string, manuallySeparateNPU string) error {
 	newNodeDeviceInfoCache, err := ki.WriteDeviceInfoDataIntoCM(deviceInfo, manuallySeparateNPU)
 	if err != nil {
 		return err
