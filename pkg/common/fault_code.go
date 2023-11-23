@@ -467,24 +467,26 @@ func GetFaultTypeFromFaultFrequency(logicId int32) string {
 	faultFrequencyMapLock.Lock()
 	defer faultFrequencyMapLock.Unlock()
 	for eventId, frequencyCache := range faultFrequencyMap {
-		occurrenceTimeList, ok := frequencyCache.Frequency[logicId]
+		_, ok := frequencyCache.Frequency[logicId]
 		if !ok {
 			continue
 		}
 		timeWindowStart := time.Now().Unix() - frequencyCache.TimeWindow
-		for i, occurrenceTime := range occurrenceTimeList {
+		for i, occurrenceTime := range frequencyCache.Frequency[logicId] {
 			if occurrenceTime < timeWindowStart {
 				continue
 			}
-			// delete the occurrence times those less than the start of time window
-			hwlog.RunLog.Infof("delete the expired fault occurrence, count: %d, event id: %s, logic id: %d, "+
-				"time window start: %d", i, eventId, logicId, timeWindowStart)
-			occurrenceTimeList = occurrenceTimeList[i:]
+			if i > 0 {
+				// delete the occurrence times those less than the start of time window
+				hwlog.RunLog.Infof("delete the expired fault occurrence, count: %d, event id: %s, logic id: %d, "+
+					"time window start: %d", i, eventId, logicId, timeWindowStart)
+				frequencyCache.Frequency[logicId] = frequencyCache.Frequency[logicId][i:]
+			}
 			break
 		}
-		if int64(len(occurrenceTimeList)) >= frequencyCache.Times {
+		if int64(len(frequencyCache.Frequency[logicId])) >= frequencyCache.Times {
 			hwlog.RunLog.Infof("FaultFrequency detected, event id: %s, logic id: %d, fault occurred times: %d, "+
-				"fault level: %s", eventId, logicId, len(occurrenceTimeList), frequencyCache.FaultLevel)
+				"fault level: %s", eventId, logicId, len(frequencyCache.Frequency[logicId]), frequencyCache.FaultLevel)
 			if frequencyCache.FaultLevel == ManuallySeparateNPU {
 				hwlog.RunLog.Infof("detect ManuallySeparateNPU, logic id: %d", logicId)
 				SaveManuallyFaultInfo(logicId)
