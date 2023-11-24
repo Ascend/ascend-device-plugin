@@ -150,9 +150,16 @@ func (tool *AscendTools) handleManuallySeparateNPUFaultInfo() string {
 		return ""
 	}
 
+	if manuallyFaultCache := common.QueryManuallyFaultNPULogicIDsByHandleStatus(common.
+		ManuallySeparateNpuAll); len(manuallyFaultCache) == 0 {
+		hwlog.RunLog.Debug("manually separate npu cache is empty, no need to handle manually separate npu " +
+			"fault, the value of ManuallySeparateNPU field in device info configmap will be cleared")
+		return ""
+	}
+
+	logicIDsHandledFromCache := common.QueryManuallyFaultNPULogicIDsByHandleStatus(common.ManuallySeparateNpuHandled)
 	deviceInfoName := tool.client.DeviceInfoName
 	physicIDsFromDeviceInfo := tool.client.GetManuallySeparateNPUIDFromDeviceInfo(deviceInfoName, common.DeviceInfoCMNameSpace)
-	logicIDsHandledFromCache := common.QueryManuallyFaultNPULogicIDsByHandleStatus(common.ManuallySeparateNpuHandled)
 
 	for _, logicId := range logicIDsHandledFromCache {
 		physicId, err := tool.GetDmgr().GetPhysicIDFromLogicID(logicId)

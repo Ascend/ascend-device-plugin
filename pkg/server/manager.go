@@ -264,10 +264,28 @@ func (hdm *HwDevManager) updateAllInfo() error {
 	return nil
 }
 
+func (hdm *HwDevManager) separateNPUIDFromDeviceInfoIntoCache() {
+	deviceInfoName := hdm.manager.GetKubeClient().DeviceInfoName
+	physicIDsFromDeviceInfo := hdm.manager.GetKubeClient().GetManuallySeparateNPUIDFromDeviceInfo(deviceInfoName,
+		common.DeviceInfoCMNameSpace)
+
+	for _, physicId := range physicIDsFromDeviceInfo {
+		logicId, err := hdm.manager.GetDmgr().GetLogicIDFromPhysicID(physicId)
+		if err != nil {
+			hwlog.RunLog.Warnf("get logic id failed, err: %v", err)
+			continue
+		}
+		common.SaveManuallyFaultInfo(logicId)
+	}
+}
+
 // ListenDevice ListenDevice coroutine
 func (hdm *HwDevManager) ListenDevice(ctx context.Context) {
 	hwlog.RunLog.Info("starting the listen device")
 	hdm.subscribeFaultEvent()
+	// when device-plugin is started, the value of ManuallySeparateNPU in device info configmap needs to be written into
+	// cache to prevent manually separate npu IDs in cache from been lost
+	hdm.separateNPUIDFromDeviceInfoIntoCache()
 	go hdm.pollFaultCodeCM(ctx)
 	go hdm.Serve(ctx)
 	initTime := time.Now()
