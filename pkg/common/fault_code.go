@@ -472,18 +472,18 @@ func GetFaultTypeFromFaultFrequency(logicId int32) string {
 			continue
 		}
 		timeWindowStart := time.Now().Unix() - frequencyCache.TimeWindow
-		for i, occurrenceTime := range frequencyCache.Frequency[logicId] {
+		// delete the occurrence times those less than the start of time window
+		index := 0
+		for _, occurrenceTime := range frequencyCache.Frequency[logicId] {
 			if occurrenceTime < timeWindowStart {
-				continue
+				hwlog.RunLog.Infof("delete the expired fault occurrence, event id: %s, logic id: %d, "+
+					"time window start: %d, occurrence time: %d", eventId, logicId, timeWindowStart, occurrenceTime)
+				index++
+			} else {
+				break
 			}
-			if i > 0 {
-				// delete the occurrence times those less than the start of time window
-				hwlog.RunLog.Infof("delete the expired fault occurrence, count: %d, event id: %s, logic id: %d, "+
-					"time window start: %d", i, eventId, logicId, timeWindowStart)
-				frequencyCache.Frequency[logicId] = frequencyCache.Frequency[logicId][i:]
-			}
-			break
 		}
+		frequencyCache.Frequency[logicId] = frequencyCache.Frequency[logicId][index:]
 		if int64(len(frequencyCache.Frequency[logicId])) >= frequencyCache.Times {
 			hwlog.RunLog.Infof("FaultFrequency detected, event id: %s, logic id: %d, fault occurred times: %d, "+
 				"fault level: %s", eventId, logicId, len(frequencyCache.Frequency[logicId]), frequencyCache.FaultLevel)
