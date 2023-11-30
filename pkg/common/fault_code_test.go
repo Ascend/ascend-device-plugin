@@ -186,7 +186,7 @@ func TestTakeOutDevFaultInfo(t *testing.T) {
 // TestGetNetworkFaultTypeByCode for test GetNetworkFaultTypeByCode
 func TestGetNetworkFaultTypeByCode(t *testing.T) {
 	convey.Convey("test GetNetworkFaultTypeByCode", t, func() {
-		faultCodes := []string{CardNetworkDisconnected}
+		faultCodes := []string{LinkDownFaultCodeStr}
 		convey.Convey("fault type NormalNetwork", func() {
 			convey.So(GetNetworkFaultTypeByCode(nil), convey.ShouldEqual, NormalNetwork)
 		})
