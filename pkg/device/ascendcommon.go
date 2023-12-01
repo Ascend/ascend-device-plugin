@@ -391,13 +391,13 @@ func (tool *AscendTools) groupDevsByStatus(subClassDevices []*common.NpuDevice, 
 	for _, device := range subClassDevices {
 		if device.NetworkHealth != v1beta1.Healthy {
 			totalNetworkUHDevices.Insert(device.DeviceName)
-			faultType := common.GetNetworkFaultTypeByCode([]string{common.CardNetworkDisconnected})
+			faultType := common.GetNetworkFaultTypeByCode([]string{common.LinkDownFaultCodeStr})
 			deviceFaults = append(deviceFaults, common.DeviceFault{
 				FaultType:            common.CardNetworkUnhealthy,
 				NPUName:              device.DeviceName,
 				LargeModelFaultLevel: faultType,
 				FaultLevel:           faultType,
-				FaultCode:            common.CardNetworkDisconnected,
+				FaultCode:            common.LinkDownFaultCodeStr,
 			})
 		}
 		if len(device.FaultCodes) != 0 {

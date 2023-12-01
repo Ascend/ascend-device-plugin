@@ -56,8 +56,6 @@ const (
 	CardUnhealthy = "CardUnhealthy"
 	// CardNetworkUnhealthy  fault is caused by card network unhealthy
 	CardNetworkUnhealthy = "CardNetworkUnhealthy"
-	// CardNetworkDisconnected card network disconnected
-	CardNetworkDisconnected = "Disconnected"
 	// LinkDownFaultCode linkdown fault code
 	LinkDownFaultCode = 0x81078603
 	// LinkDownFaultCodeStr linkdown fault code string
