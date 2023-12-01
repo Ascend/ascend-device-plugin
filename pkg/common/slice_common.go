@@ -75,9 +75,9 @@ func (i int64Tool) Remove(sources []int64, target int64) []int64 {
 
 // Index slice for int64 search the index with target
 func (i int64Tool) Index(sources []int64, target int64) int {
-	for i, source := range sources {
+	for index, source := range sources {
 		if source == target {
-			return i
+			return index
 		}
 	}
 	return -1
