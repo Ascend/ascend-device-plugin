@@ -31,6 +31,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/smartystreets/goconvey/convey"
 	"huawei.com/npu-exporter/v5/common-utils/hwlog"
+	"huawei.com/npu-exporter/v5/devmanager/common"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -493,6 +494,61 @@ func TestIsContainAtlas300IDuo(t *testing.T) {
 			convey.So(IsContainAtlas300IDuo(), convey.ShouldBeFalse)
 			ParamOption.ProductTypes = []string{Atlas300IDuo}
 			convey.So(IsContainAtlas300IDuo(), convey.ShouldBeTrue)
+		})
+	})
+}
+
+// TestRecordFaultInfoList for test RecordFaultInfoList
+func TestRecordFaultInfoList(t *testing.T) {
+	convey.Convey("test RecordFaultInfoList success", t, func() {
+		RecordFaultInfoList([]*TaskDevInfo{{}})
+	})
+}
+
+// TestInt32Join for test Int32Join
+func TestInt32Join(t *testing.T) {
+	convey.Convey("test Int32Join success", t, func() {
+		convey.So(Int32Join([]int32{0, 1}, ","), convey.ShouldEqual, "0,1")
+	})
+}
+
+// TestGetDeviceRunMode for test GetDeviceRunMode
+func TestGetDeviceRunMode(t *testing.T) {
+	convey.Convey("test GetDeviceRunMode", t, func() {
+		convey.Convey("device mode is Ascend310", func() {
+			ParamOption.RealCardType = common.Ascend310
+			ret, err := GetDeviceRunMode()
+			convey.So(ret, convey.ShouldEqual, common.Ascend310)
+			convey.So(err, convey.ShouldBeNil)
+		})
+		convey.Convey("device mode is Ascend910", func() {
+			ParamOption.RealCardType = common.Ascend910
+			ret, err := GetDeviceRunMode()
+			convey.So(ret, convey.ShouldEqual, common.Ascend910)
+			convey.So(err, convey.ShouldBeNil)
+		})
+		convey.Convey("device mode is Ascend310P", func() {
+			ParamOption.RealCardType = common.Ascend310P
+			ret, err := GetDeviceRunMode()
+			convey.So(ret, convey.ShouldEqual, common.Ascend310P)
+			convey.So(err, convey.ShouldBeNil)
+		})
+		convey.Convey("device mode is invalid", func() {
+			ParamOption.RealCardType = ""
+			_, err := GetDeviceRunMode()
+			convey.So(err, convey.ShouldNotBeNil)
+		})
+	})
+}
+
+// TestCheckDeviceName for test CheckDeviceName
+func TestCheckDeviceName(t *testing.T) {
+	convey.Convey("test CheckDeviceName", t, func() {
+		convey.Convey("device name is valid", func() {
+			convey.So(CheckDeviceName("Ascend910-0", common.Ascend910), convey.ShouldBeTrue)
+		})
+		convey.Convey("device name is invalid", func() {
+			convey.So(CheckDeviceName("", common.Ascend910), convey.ShouldBeFalse)
 		})
 	})
 }

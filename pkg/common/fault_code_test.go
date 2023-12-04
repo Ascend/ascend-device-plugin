@@ -24,6 +24,7 @@ import (
 	"github.com/smartystreets/goconvey/convey"
 	"huawei.com/npu-exporter/v5/common-utils/utils"
 	"huawei.com/npu-exporter/v5/devmanager/common"
+	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
 // TestLoadFaultCodeFromFile for test LoadFaultCodeFromFile
@@ -218,6 +219,149 @@ func TestGetNetworkFaultTypeByCode(t *testing.T) {
 			mockLoadFile := gomonkey.ApplyFuncReturn(utils.LoadFile, nil, errors.New("failed"))
 			defer mockLoadFile.Reset()
 			convey.So(GetNetworkFaultTypeByCode(faultCodes), convey.ShouldEqual, PreSeparateNPU)
+		})
+	})
+}
+
+// TestDevFaultInfoBasedTimeAscendLen for test DevFaultInfoBasedTimeAscend.Len
+func TestDevFaultInfoBasedTimeAscendLen(t *testing.T) {
+	convey.Convey("test DevFaultInfoBasedTimeAscend.Len success", t, func() {
+		devFault := []common.DevFaultInfo{{}}
+		convey.So(DevFaultInfoBasedTimeAscend(devFault).Len(), convey.ShouldEqual, len(devFault))
+	})
+}
+
+// TestDevFaultInfoBasedTimeAscendSwap for test DevFaultInfoBasedTimeAscend.Swap
+func TestDevFaultInfoBasedTimeAscendSwap(t *testing.T) {
+	convey.Convey("test DevFaultInfoBasedTimeAscend.Swap success", t, func() {
+		devFault := DevFaultInfoBasedTimeAscend([]common.DevFaultInfo{{EventID: 0}, {EventID: 1}})
+		iKey, jKey := 0, 1
+		if len(devFault) > iKey && len(devFault) > jKey {
+			expectIVal, expectJVal := devFault[jKey], devFault[iKey]
+			devFault.Swap(iKey, jKey)
+			convey.So(devFault[iKey], convey.ShouldResemble, expectIVal)
+			convey.So(devFault[jKey], convey.ShouldResemble, expectJVal)
+		}
+	})
+}
+
+// TestDevFaultInfoBasedTimeAscendLess for test DevFaultInfoBasedTimeAscend.Less
+func TestDevFaultInfoBasedTimeAscendLess(t *testing.T) {
+	convey.Convey("test DevFaultInfoBasedTimeAscend.Less success", t, func() {
+		devFault := DevFaultInfoBasedTimeAscend([]common.DevFaultInfo{{AlarmRaisedTime: 0}, {AlarmRaisedTime: 1}})
+		iKey, jKey := 0, 1
+		convey.So(devFault.Less(iKey, jKey), convey.ShouldBeTrue)
+	})
+}
+
+// TestQueryManuallyFaultInfoByLogicID for test QueryManuallyFaultInfoByLogicID
+func TestQueryManuallyFaultInfoByLogicID(t *testing.T) {
+	convey.Convey("test QueryManuallyFaultInfoByLogicID", t, func() {
+		convey.Convey("test valid logicID", func() {
+			logicID := int32(10)
+			_, ok := manuallySeparateNpuMap[logicID]
+			convey.So(QueryManuallyFaultInfoByLogicID(logicID), convey.ShouldEqual, ok)
+		})
+		convey.Convey("test invalid logicID", func() {
+			logicID := int32(20)
+			convey.So(QueryManuallyFaultInfoByLogicID(logicID), convey.ShouldBeFalse)
+		})
+	})
+}
+
+// TestGetLinkdownLinkupFaultEvents for test GetLinkdownLinkupFaultEvents
+func TestGetLinkdownLinkupFaultEvents(t *testing.T) {
+	convey.Convey("test GetLinkdownLinkupFaultEvents success", t, func() {
+		timeoutFaultInfoMap = make(map[int32][]common.DevFaultInfo, GeneralMapSize)
+		UseGetDeviceNetWorkHealthApi = true
+		logicID := int32(0)
+		faultInfos := []common.DevFaultInfo{{EventID: LinkDownFaultCode}}
+		GetLinkdownLinkupFaultEvents(logicID, faultInfos)
+		convey.So(len(timeoutFaultInfoMap), convey.ShouldEqual, len(faultInfos))
+	})
+}
+
+// TestSetManuallyFaultNPUHandled for test SetManuallyFaultNPUHandled
+func TestSetManuallyFaultNPUHandled(t *testing.T) {
+	convey.Convey("test SetManuallyFaultNPUHandled success", t, func() {
+		manuallySeparateNpuMap = map[int32]ManuallyFaultInfo{0: {FirstHandle: true}}
+		expectVal := map[int32]ManuallyFaultInfo{0: {FirstHandle: false}}
+		SetManuallyFaultNPUHandled()
+		convey.So(manuallySeparateNpuMap, convey.ShouldResemble, expectVal)
+	})
+}
+
+// TestGetCurrentDeviceNetWorkHealth for test GetCurrentDeviceNetWorkHealth
+func TestGetCurrentDeviceNetWorkHealth(t *testing.T) {
+	convey.Convey("test GetCurrentDeviceNetWorkHealth success", t, func() {
+		logicID, expectVal := int32(0), 1
+		convey.Convey("test net work status Unhealthy", func() {
+			timeoutFaultInfoMap = make(map[int32][]common.DevFaultInfo, GeneralMapSize)
+			GetCurrentDeviceNetWorkHealth(logicID, v1beta1.Unhealthy)
+			convey.So(len(timeoutFaultInfoMap), convey.ShouldEqual, expectVal)
+		})
+		convey.Convey("test net work status Healthy", func() {
+			timeoutFaultInfoMap = make(map[int32][]common.DevFaultInfo, GeneralMapSize)
+			GetCurrentDeviceNetWorkHealth(logicID, v1beta1.Healthy)
+			convey.So(len(timeoutFaultInfoMap), convey.ShouldEqual, expectVal)
+		})
+	})
+}
+
+// TestMergeContinuousElementBasedAssertion for test mergeContinuousElementBasedAssertion
+func TestMergeContinuousElementBasedAssertion(t *testing.T) {
+	convey.Convey("test mergeContinuousElementBasedAssertion success", t, func() {
+		devFaultInfo := []common.DevFaultInfo{{}, {}}
+		expectVal := 1
+		mergeContinuousElementBasedAssertion(&devFaultInfo)
+		convey.So(len(devFaultInfo), convey.ShouldEqual, expectVal)
+	})
+}
+
+// TestResetFaultCustomization for test ResetFaultCustomization
+func TestResetFaultCustomization(t *testing.T) {
+	convey.Convey("test ResetFaultCustomization success", t, func() {
+		expectVal := 0
+		ResetFaultCustomization()
+		convey.So(WaitFlushingCMTime, convey.ShouldEqual, DefaultWaitFlushCMTime)
+		convey.So(WaitDeviceResetTime, convey.ShouldEqual, DefaultWaitDeviceResetTime)
+		convey.So(LinkUpTimeoutCustomization, convey.ShouldEqual, DefaultLinkUpTimeout)
+		convey.So(len(faultFrequencyMap), convey.ShouldEqual, expectVal)
+	})
+}
+
+// TestSaveManuallyFaultInfo for test SaveManuallyFaultInfo
+func TestSaveManuallyFaultInfo(t *testing.T) {
+	convey.Convey("test SaveManuallyFaultInfo", t, func() {
+		convey.Convey("test valid logicID", func() {
+			manuallySeparateNpuMap = make(map[int32]ManuallyFaultInfo, GeneralMapSize)
+			logicID, expectVal := int32(10), 1
+			SaveManuallyFaultInfo(logicID)
+			convey.So(len(manuallySeparateNpuMap), convey.ShouldEqual, expectVal)
+		})
+		convey.Convey("test invalid logicID", func() {
+			manuallySeparateNpuMap = make(map[int32]ManuallyFaultInfo, GeneralMapSize)
+			logicID, expectVal := int32(20), 0
+			SaveManuallyFaultInfo(logicID)
+			convey.So(len(manuallySeparateNpuMap), convey.ShouldEqual, expectVal)
+		})
+	})
+}
+
+// TestDeleteManuallyFaultInfo for test DeleteManuallyFaultInfo
+func TestDeleteManuallyFaultInfo(t *testing.T) {
+	convey.Convey("test DeleteManuallyFaultInfo", t, func() {
+		convey.Convey("test valid logicID", func() {
+			manuallySeparateNpuMap = make(map[int32]ManuallyFaultInfo, GeneralMapSize)
+			logicID, expectVal := int32(10), 1
+			SaveManuallyFaultInfo(logicID)
+			convey.So(len(manuallySeparateNpuMap), convey.ShouldEqual, expectVal)
+		})
+		convey.Convey("test invalid logicID", func() {
+			manuallySeparateNpuMap = make(map[int32]ManuallyFaultInfo, GeneralMapSize)
+			logicID, expectVal := int32(20), 0
+			SaveManuallyFaultInfo(logicID)
+			convey.So(len(manuallySeparateNpuMap), convey.ShouldEqual, expectVal)
 		})
 	})
 }

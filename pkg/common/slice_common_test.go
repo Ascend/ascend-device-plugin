@@ -116,3 +116,14 @@ func TestHexStringToInt(t *testing.T) {
 		})
 	})
 }
+
+// TestInt64ToolIndex for test int64Tool.Index
+func TestInt64ToolIndex(t *testing.T) {
+	convey.Convey("test int64Tool.Index", t, func() {
+		tool := int64Tool{}
+		testVal := []int64{1}
+		existVal, unExistVal := int64(1), int64(2)
+		convey.So(tool.Index(testVal, existVal), convey.ShouldEqual, 0)
+		convey.So(tool.Index(testVal, unExistVal), convey.ShouldEqual, -1)
+	})
+}
