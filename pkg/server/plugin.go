@@ -303,7 +303,7 @@ func getPredicateTimeFromPodAnnotation(pod *v1.Pod) uint64 {
 	}
 	predicateTime, err := strconv.ParseUint(assumeTimeStr, common.BaseDec, common.BitSize)
 	if err != nil {
-		hwlog.RunLog.Errorf("parse timestamp failed, %#v", err)
+		hwlog.RunLog.Errorf("parse timestamp failed, %v", err)
 		return math.MaxUint64
 	}
 	return predicateTime

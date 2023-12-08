@@ -106,7 +106,7 @@ func initLogModule(ctx context.Context) error {
 		MaxLineLength: maxLogLineLength,
 	}
 	if err := hwlog.InitRunLogger(&hwLogConfig, ctx); err != nil {
-		fmt.Printf("hwlog init failed, error is %#v\n", err)
+		fmt.Printf("hwlog init failed, error is %v\n", err)
 		return err
 	}
 	return nil
@@ -193,7 +193,7 @@ func main() {
 func InitFunction() (*server.HwDevManager, error) {
 	devM, err := devmanager.AutoInit("")
 	if err != nil {
-		hwlog.RunLog.Errorf("init devmanager failed, err: %#v", err)
+		hwlog.RunLog.Errorf("init devmanager failed, err: %v", err)
 		return nil, err
 	}
 	hdm := server.NewHwDevManager(devM)

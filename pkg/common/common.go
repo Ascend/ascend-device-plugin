@@ -112,7 +112,7 @@ func MakeDataHash(data interface{}) string {
 func MarshalData(data interface{}) []byte {
 	dataBuffer, err := json.Marshal(data)
 	if err != nil {
-		hwlog.RunLog.Errorf("marshal data err: %#v", err)
+		hwlog.RunLog.Errorf("marshal data err: %v", err)
 		return nil
 	}
 	return dataBuffer
@@ -196,7 +196,7 @@ func GetDefaultDevices(getFdFlag bool) ([]string, error) {
 	if productType == Atlas200ISoc {
 		socDefaultDevices, err := set200SocDefaultDevices()
 		if err != nil {
-			hwlog.RunLog.Errorf("get 200I soc default devices failed, err: %#v", err)
+			hwlog.RunLog.Errorf("get 200I soc default devices failed, err: %v", err)
 			return nil, err
 		}
 		defaultDevices = append(defaultDevices, socDefaultDevices...)
@@ -479,7 +479,7 @@ func GetPodConfiguration(phyDevMapVirtualDev map[int]int, devices map[int]string
 	}
 	instanceByte, err := json.Marshal(instance)
 	if err != nil {
-		hwlog.RunLog.Errorf("Transform marshal failed, err: %#v", err)
+		hwlog.RunLog.Errorf("Transform marshal failed, err: %v", err)
 		return ""
 	}
 	return string(instanceByte)
@@ -496,7 +496,7 @@ func CheckFileUserSameWithProcess(loggerPath string) bool {
 		path := filepath.Dir(loggerPath)
 		pathInfo, err = os.Lstat(path)
 		if err != nil {
-			fmt.Printf("get logger path stat failed, error is %#v\n", err)
+			fmt.Printf("get logger path stat failed, error is %v\n", err)
 			return false
 		}
 	}

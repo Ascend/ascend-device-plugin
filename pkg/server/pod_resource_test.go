@@ -41,11 +41,11 @@ func init() {
 		return
 	}
 	if _, err := os.OpenFile(socketPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, sockMode); err != nil {
-		fmt.Errorf("err: %#v", err)
+		fmt.Errorf("err: %v", err)
 		return
 	}
 	if err := os.Chmod(socketPath, os.ModeSocket); err != nil {
-		fmt.Errorf("err: %#v", err)
+		fmt.Errorf("err: %v", err)
 		return
 	}
 }

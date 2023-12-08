@@ -195,7 +195,7 @@ func (hrt *HotResetTools) GetDevIdList(devStr string) []int32 {
 	for _, deviceName := range strings.Split(devStr, common.CommaSepDev) {
 		phyID, _, err := common.GetDeviceID(deviceName, common.CommaSepDev)
 		if err != nil {
-			hwlog.RunLog.Errorf("get phyID failed, err: %#v", err)
+			hwlog.RunLog.Errorf("get phyID failed, err: %v", err)
 			return nil
 		}
 		phyIDs = append(phyIDs, int32(phyID))
@@ -321,7 +321,7 @@ func (hrt *HotResetTools) GenerateTaskDevFaultInfoList(devIdList []int32,
 	})
 	rankStart, err := strconv.Atoi(rankIndex)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to convert rank index to int, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to convert rank index to int, err: %v", err)
 		return nil, err
 	}
 	devNum := len(devIdList)
