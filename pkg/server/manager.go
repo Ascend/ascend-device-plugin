@@ -67,7 +67,7 @@ func NewHwDevManager(devM devmanager.DeviceInterface) *HwDevManager {
 		return nil
 	}
 	if err := hdm.UpdateNodeLabel(); err != nil {
-		hwlog.RunLog.Errorf("update node label failed, err: %#v", err)
+		hwlog.RunLog.Errorf("update node label failed, err: %v", err)
 		return nil
 	}
 	if err := hdm.initPluginServer(); err != nil {
@@ -111,7 +111,7 @@ func (hdm *HwDevManager) setAscendManager(dmgr devmanager.DeviceInterface) error
 	if common.ParamOption.BuildScene != common.EdgeScene {
 		aiCoreCount, err := hdm.manager.GetChipAiCoreCount()
 		if err != nil {
-			hwlog.RunLog.Errorf("get chip aicore count failed, err: %#v", err)
+			hwlog.RunLog.Errorf("get chip aicore count failed, err: %v", err)
 			return err
 		}
 		common.ParamOption.AiCoreCount = aiCoreCount
@@ -686,7 +686,7 @@ func (hdm *HwDevManager) updateSpecTypePodAnnotation(deviceType, serverID string
 
 		// need to clear reset info config map after rescheduling
 		if err = hdm.tryToClearResetInfoCM(deviceInfo.Pod); err != nil {
-			hwlog.RunLog.Warnf("try to clear configMap failed, err is: %#v", err)
+			hwlog.RunLog.Warnf("try to clear configMap failed, err is: %v", err)
 		}
 	}
 	return nil
@@ -696,12 +696,12 @@ func (hdm *HwDevManager) hotReset(device *common.NpuDevice) {
 	var isResetExec = false
 	if err := wait.PollImmediate(time.Second, time.Minute, func() (bool, error) {
 		if err := hdm.execResetChip(device.LogicID, &isResetExec); err != nil {
-			hwlog.RunLog.Errorf("get device boot status failed, err: %#v", err)
+			hwlog.RunLog.Errorf("get device boot status failed, err: %v", err)
 			return false, err
 		}
 		bootState, err := hdm.manager.GetDmgr().GetDeviceBootStatus(device.LogicID)
 		if err != nil {
-			hwlog.RunLog.Errorf("get device boot status failed, err: %#v", err)
+			hwlog.RunLog.Errorf("get device boot status failed, err: %v", err)
 			return false, err
 		}
 		if bootState != common.BootStartFinish {
@@ -711,7 +711,7 @@ func (hdm *HwDevManager) hotReset(device *common.NpuDevice) {
 		common.SetDeviceInit(device.LogicID)
 		return true, nil
 	}); err != nil {
-		hwlog.RunLog.Warnf("hot reset failed, timeout or err: %#v", err)
+		hwlog.RunLog.Warnf("hot reset failed, timeout or err: %v", err)
 		return
 	}
 	hwlog.RunLog.Info("hot reset success")
@@ -750,7 +750,7 @@ func (hdm *HwDevManager) execResetChip(logicID int32, isResetExec *bool) error {
 	}
 	hwlog.RunLog.Infof("start device card(%d) and deviceID(%d) reset...", cardID, deviceID)
 	if err := hdm.manager.GetDmgr().SetDeviceReset(cardID, deviceID); err != nil {
-		hwlog.RunLog.Errorf("hot reset failed, err: %#v", err)
+		hwlog.RunLog.Errorf("hot reset failed, err: %v", err)
 		return err
 	}
 	*isResetExec = true

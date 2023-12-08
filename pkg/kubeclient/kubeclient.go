@@ -163,11 +163,11 @@ func checkPodList(podList *v1.PodList) ([]v1.Pod, error) {
 	var pods []v1.Pod
 	for _, pod := range podList.Items {
 		if err := common.CheckPodNameAndSpace(pod.Name, common.PodNameMaxLength); err != nil {
-			hwlog.RunLog.Warnf("pod name syntax illegal, err: %#v", err)
+			hwlog.RunLog.Warnf("pod name syntax illegal, err: %v", err)
 			continue
 		}
 		if err := common.CheckPodNameAndSpace(pod.Namespace, common.PodNameSpaceMaxLength); err != nil {
-			hwlog.RunLog.Warnf("pod namespace syntax illegal, err: %#v", err)
+			hwlog.RunLog.Warnf("pod namespace syntax illegal, err: %v", err)
 			continue
 		}
 		pods = append(pods, pod)
@@ -248,7 +248,7 @@ func (ki *ClientK8s) ClearResetInfo(taskName, namespace string) error {
 func getNodeNameFromEnv() (string, error) {
 	nodeName := os.Getenv("NODE_NAME")
 	if err := checkNodeName(nodeName); err != nil {
-		return "", fmt.Errorf("check node name failed: %#v", err)
+		return "", fmt.Errorf("check node name failed: %v", err)
 	}
 	return nodeName, nil
 }

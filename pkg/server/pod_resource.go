@@ -151,11 +151,11 @@ func (pr *PodResource) assemblePodResource() (map[string]PodDevice, error) {
 			continue
 		}
 		if err := common.CheckPodNameAndSpace(pod.Name, common.PodNameMaxLength); err != nil {
-			hwlog.RunLog.Warnf("pod name syntax illegal, err: %#v", err)
+			hwlog.RunLog.Warnf("pod name syntax illegal, err: %v", err)
 			continue
 		}
 		if err := common.CheckPodNameAndSpace(pod.Namespace, common.PodNameSpaceMaxLength); err != nil {
-			hwlog.RunLog.Warnf("pod namespace syntax illegal, err: %#v", err)
+			hwlog.RunLog.Warnf("pod namespace syntax illegal, err: %v", err)
 			continue
 		}
 		resourceName, podDevice, err := pr.getDeviceFromPod(pod)

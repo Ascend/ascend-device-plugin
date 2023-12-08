@@ -106,11 +106,11 @@ func (ki *ClientK8s) GetActivePodListCache() []v1.Pod {
 
 	for _, pod := range podList {
 		if err := common.CheckPodNameAndSpace(pod.GetName(), common.PodNameMaxLength); err != nil {
-			hwlog.RunLog.Warnf("pod name syntax illegal, err: %#v", err)
+			hwlog.RunLog.Warnf("pod name syntax illegal, err: %v", err)
 			continue
 		}
 		if err := common.CheckPodNameAndSpace(pod.GetNamespace(), common.PodNameSpaceMaxLength); err != nil {
-			hwlog.RunLog.Warnf("pod namespace syntax illegal, err: %#v", err)
+			hwlog.RunLog.Warnf("pod namespace syntax illegal, err: %v", err)
 			continue
 		}
 		if pod.Status.Phase == v1.PodFailed || pod.Status.Phase == v1.PodSucceeded {

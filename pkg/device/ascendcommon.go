@@ -291,15 +291,15 @@ func (tool *AscendTools) assemble310PMixedPhyDevices(davinCiDev common.DavinCiDe
 	deviceTypes *[]string) error {
 	cardID, deviceID, err := tool.dmgr.GetCardIDDeviceID(davinCiDev.LogicID)
 	if err != nil {
-		return fmt.Errorf("get cardID and deviceID failed: LogicID[%#v]", davinCiDev.LogicID)
+		return fmt.Errorf("get cardID and deviceID failed: LogicID[%v]", davinCiDev.LogicID)
 	}
 	productType, err := tool.dmgr.GetProductType(cardID, deviceID)
 	if err != nil {
-		return fmt.Errorf("get product type failed:cardID[%#v] deviceID[%#v]", cardID, deviceID)
+		return fmt.Errorf("get product type failed:cardID[%v] deviceID[%v]", cardID, deviceID)
 	}
 	ProductTypeMap := common.Get310PProductType()
 	if _, ok := ProductTypeMap[productType]; !ok {
-		return fmt.Errorf("%#v not found", productType)
+		return fmt.Errorf("%v not found", productType)
 	}
 	deviceName := fmt.Sprintf("%s-%d", ProductTypeMap[productType], davinCiDev.PhyID)
 	device := tool.assembleNpuDeviceStruct(ProductTypeMap[productType], deviceName, davinCiDev)
@@ -463,11 +463,11 @@ func (tool *AscendTools) getDeviceIP(deviceType string, phyID int) (string, erro
 	}
 	logicID, err := tool.dmgr.GetLogicIDFromPhysicID(int32(phyID))
 	if err != nil {
-		return "", fmt.Errorf("transfor phyID %d to logicID failed, err: %#v", phyID, err)
+		return "", fmt.Errorf("transfor phyID %d to logicID failed, err: %v", phyID, err)
 	}
 	chip, err := tool.dmgr.GetChipInfo(logicID)
 	if err != nil {
-		return "", fmt.Errorf("get logicID %d chip info failed, err: %#v", logicID, err)
+		return "", fmt.Errorf("get logicID %d chip info failed, err: %v", logicID, err)
 	}
 	if strings.Contains(chip.Name, common.VirMark) {
 		return common.DefaultDeviceIP, nil
@@ -496,7 +496,7 @@ func (tool *AscendTools) getDeviceListIP(devices []string, deviceType string) (m
 	}
 	_, ascendDevices, err := common.GetDeviceListID(devices, ascendRuntimeOptions)
 	if err != nil {
-		hwlog.RunLog.Errorf("get device list id err: %#v", err)
+		hwlog.RunLog.Errorf("get device list id err: %v", err)
 		return nil, err
 	}
 	devicesWithIP := make(map[int]string, len(devices))
@@ -507,7 +507,7 @@ func (tool *AscendTools) getDeviceListIP(devices []string, deviceType string) (m
 		}
 		deviceIP, err := tool.getDeviceIP(deviceType, id)
 		if err != nil {
-			hwlog.RunLog.Errorf("get device %d ip err: %#v", id, err)
+			hwlog.RunLog.Errorf("get device %d ip err: %v", id, err)
 			return nil, err
 		}
 		devicesWithIP[id] = deviceIP
@@ -524,12 +524,12 @@ func (tool *AscendTools) AddPodAnnotation(pod *v1.Pod, kltRequestDevices, dpResp
 	}
 	phyDevMapVirtualDev, _, err := common.GetDeviceListID(dpResponseDevices, ascendRuntimeOptions)
 	if err != nil {
-		hwlog.RunLog.Errorf("get device list id err: %#v", err)
+		hwlog.RunLog.Errorf("get device list id err: %v", err)
 		return err
 	}
 	ascendVisibleDevices, err := tool.getDeviceListIP(dpResponseDevices, deviceType)
 	if err != nil {
-		return fmt.Errorf("get ascend devices ip failed, err: %#v", err)
+		return fmt.Errorf("get ascend devices ip failed, err: %v", err)
 	}
 	configuration := common.GetPodConfiguration(phyDevMapVirtualDev, ascendVisibleDevices, pod.Name, serverID,
 		deviceType)
@@ -671,10 +671,10 @@ func (tool *AscendTools) npuIsUsedNow(deviceName string) bool {
 func (tool *AscendTools) unhealthyState(healthyState uint32, logicID int32) error {
 	phyID, err := tool.dmgr.GetPhysicIDFromLogicID(logicID)
 	if err != nil {
-		return fmt.Errorf("get phyID failed %#v", err)
+		return fmt.Errorf("get phyID failed %v", err)
 	}
 	if _, _, err := tool.dmgr.GetDeviceErrorCode(logicID); err != nil {
-		return fmt.Errorf("get device error code failed %#v", err)
+		return fmt.Errorf("get device error code failed %v", err)
 	}
 	hwlog.RunLog.Errorf("device logicID: %d, phyID: %d, state is %d", logicID, phyID, healthyState)
 	return nil
@@ -807,7 +807,7 @@ func (tool *AscendTools) GetChipAiCoreCount() (int32, error) {
 		}
 		if err != nil {
 			// if not support found aicore number, setting a default value
-			hwlog.RunLog.Infof("not found aicore number by dcmi: %#v", err)
+			hwlog.RunLog.Infof("not found aicore number by dcmi: %v", err)
 			return common.DefaultAiCoreNum, nil
 		}
 		return tool.getAiCoreCount(cgoVDevInfo)
@@ -920,7 +920,7 @@ func (tool *AscendTools) SetDeviceUsage(devLogicID int32) error {
 
 	boardInfo, err := tool.dmgr.GetBoardInfo(devLogicID)
 	if err != nil {
-		hwlog.RunLog.Errorf("%#v", err)
+		hwlog.RunLog.Errorf("%v", err)
 		return fmt.Errorf("set device usage error")
 	}
 	if devType == common.Ascend910B && boardInfo.BoardId == common.A300IA2BoardId {

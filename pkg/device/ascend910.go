@@ -549,12 +549,12 @@ func (hnm *HwAscend910Manager) runProcessTask(taskName string, policyLevel int, 
 func (hnm *HwAscend910Manager) restartRequestProcess(taskName string, resetInfo *common.TaskResetInfo) {
 	defer func() {
 		if err := hnm.postProcess(taskName, resetInfo); err != nil {
-			hwlog.RunLog.Errorf("failed to unset device in reset, err %#v", err)
+			hwlog.RunLog.Errorf("failed to unset device in reset, err %v", err)
 		}
 	}()
 	devFaultInfoList, err := hnm.hotResetManager.GetTaskDevFaultInfoList(taskName)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get task device fault info list, err %#v", err)
+		hwlog.RunLog.Errorf("failed to get task device fault info list, err %v", err)
 		return
 	}
 	hwlog.RunLog.Infof("start handle L2 fault, task name: %s", taskName)
@@ -563,12 +563,12 @@ func (hnm *HwAscend910Manager) restartRequestProcess(taskName string, resetInfo 
 	// wait L2 fault to self-healing
 	time.Sleep(common.WaitFlushingCMTime * time.Second)
 	if err := hnm.refreshDevFaultInfo(devFaultInfoList); err != nil {
-		hwlog.RunLog.Errorf("failed to refresh device fault info, err %#v", err)
+		hwlog.RunLog.Errorf("failed to refresh device fault info, err %v", err)
 		return
 	}
 	currentPolicy, err := hnm.upgradeRestartRequestProcess(taskName, devFaultInfoList)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to exec upgrade reset process, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to exec upgrade reset process, err: %v", err)
 		return
 	}
 	for _, devInfo := range devFaultInfoList {
@@ -576,11 +576,11 @@ func (hnm *HwAscend910Manager) restartRequestProcess(taskName string, resetInfo 
 	}
 	if err := hnm.updateResetCMStatus(taskName, currentPolicy, common.RestartRequestError, common.RecoveredStatus,
 		devFaultInfoListInReset); err != nil {
-		hwlog.RunLog.Errorf("failed to update reset cm to recovered status, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to update reset cm to recovered status, err: %v", err)
 		return
 	}
 	if err := hnm.hotResetManager.UnSetTaskInReset(taskName); err != nil {
-		hwlog.RunLog.Errorf("failed to unset task in reset, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to unset task in reset, err: %v", err)
 		return
 	}
 	return
@@ -589,12 +589,12 @@ func (hnm *HwAscend910Manager) restartRequestProcess(taskName string, resetInfo 
 func (hnm *HwAscend910Manager) restartProcess(taskName string, resetInfo *common.TaskResetInfo) {
 	defer func() {
 		if err := hnm.postProcess(taskName, resetInfo); err != nil {
-			hwlog.RunLog.Errorf("failed to unset device in reset, err %#v", err)
+			hwlog.RunLog.Errorf("failed to unset device in reset, err %v", err)
 		}
 	}()
 	devFaultInfoList, err := hnm.hotResetManager.GetTaskDevFaultInfoList(taskName)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get task device fault info list, err %#v", err)
+		hwlog.RunLog.Errorf("failed to get task device fault info list, err %v", err)
 		return
 	}
 	hwlog.RunLog.Infof("start handle L3 fault, task name: %s", taskName)
@@ -602,21 +602,21 @@ func (hnm *HwAscend910Manager) restartProcess(taskName string, resetInfo *common
 	devFaultInfoListInReset := hnm.hotResetManager.DeepCopyDevFaultInfoList(devFaultInfoList)
 	time.Sleep(common.WaitFlushingCMTime * time.Second)
 	if err := hnm.refreshDevFaultInfo(devFaultInfoList); err != nil {
-		hwlog.RunLog.Errorf("failed to refresh device fault info, err %#v", err)
+		hwlog.RunLog.Errorf("failed to refresh device fault info, err %v", err)
 		return
 	}
 	currentPolicy, err := hnm.upgradeRestartProcess(taskName, devFaultInfoList)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to exec upgrade restart process, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to exec upgrade restart process, err: %v", err)
 		return
 	}
 	if err := hnm.updateResetCMStatus(taskName, currentPolicy, common.RestartError, common.RecoveredStatus,
 		devFaultInfoListInReset); err != nil {
-		hwlog.RunLog.Errorf("failed to update reset cm to recovered status, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to update reset cm to recovered status, err: %v", err)
 		return
 	}
 	if err := hnm.hotResetManager.UnSetTaskInReset(taskName); err != nil {
-		hwlog.RunLog.Errorf("failed to unset task in reset, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to unset task in reset, err: %v", err)
 		return
 	}
 	return
@@ -627,7 +627,7 @@ func (hnm *HwAscend910Manager) upgradeRestartProcess(taskName string, devFaultIn
 	error) {
 	restartFaultInfoList, err := hnm.hotResetManager.GetDevListByPolicyLevel(devFaultInfoList, common.RestartErrorLevel)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get need reset device list, err %#v", err)
+		hwlog.RunLog.Errorf("failed to get need reset device list, err %v", err)
 		return "", err
 	}
 	if len(restartFaultInfoList) == 0 {
@@ -637,7 +637,7 @@ func (hnm *HwAscend910Manager) upgradeRestartProcess(taskName string, devFaultIn
 	hwlog.RunLog.Errorf("after restart, L3 fault healing failed, upgrade fault, task name: %s", taskName)
 	if err := hnm.updateResetCMStatus(taskName, common.ResetError, common.RestartError, common.UnrecoveredStatus,
 		devFaultInfoList); err != nil {
-		hwlog.RunLog.Errorf("failed to update reset cm to recover failed status, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to update reset cm to recover failed status, err: %v", err)
 		return "", err
 	}
 	if err := hnm.resetDeviceOnce(devFaultInfoList); err != nil {
@@ -645,7 +645,7 @@ func (hnm *HwAscend910Manager) upgradeRestartProcess(taskName string, devFaultIn
 	}
 	resultFaultInfoList, err := hnm.hotResetManager.GetDevListByPolicyLevel(devFaultInfoList, common.RestartErrorLevel)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get need reset device list, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to get need reset device list, err: %v", err)
 		return "", err
 	}
 	if len(resultFaultInfoList) == 0 {
@@ -654,7 +654,7 @@ func (hnm *HwAscend910Manager) upgradeRestartProcess(taskName string, devFaultIn
 	}
 	if err := hnm.updateResetCMStatus(taskName, common.IsolateError, common.RestartError, common.RecoverFailedStatus,
 		devFaultInfoList); err != nil {
-		hwlog.RunLog.Errorf("failed to update reset cm to recover failed status, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to update reset cm to recover failed status, err: %v", err)
 		return "", err
 	}
 	return "", fmt.Errorf("failed to restart task, upgrade recovery failed status")
@@ -666,7 +666,7 @@ func (hnm *HwAscend910Manager) upgradeRestartRequestProcess(taskName string,
 	faultInfoList, err := hnm.hotResetManager.GetDevListByPolicyLevel(devFaultInfoList,
 		common.RestartRequestErrorLevel)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get need fault device list, err %#v", err)
+		hwlog.RunLog.Errorf("failed to get need fault device list, err %v", err)
 		return "", err
 	}
 	if len(faultInfoList) == 0 {
@@ -676,7 +676,7 @@ func (hnm *HwAscend910Manager) upgradeRestartRequestProcess(taskName string,
 	hwlog.RunLog.Errorf("L2 fault self-healing failed, upgrade fault, task name: %s", taskName)
 	if err := hnm.updateResetCMStatus(taskName, common.ResetError, common.RestartRequestError,
 		common.UnrecoveredStatus, devFaultInfoList); err != nil {
-		hwlog.RunLog.Errorf("failed to update reset cm to ResetError, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to update reset cm to ResetError, err: %v", err)
 		return "", err
 	}
 	if err := hnm.resetDeviceOnce(devFaultInfoList); err != nil {
@@ -685,7 +685,7 @@ func (hnm *HwAscend910Manager) upgradeRestartRequestProcess(taskName string,
 	resultFaultInfoList, err := hnm.hotResetManager.GetDevListByPolicyLevel(devFaultInfoList,
 		common.RestartRequestErrorLevel)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get need fault device list, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to get need fault device list, err: %v", err)
 		return "", err
 	}
 	if len(resultFaultInfoList) == 0 {
@@ -694,7 +694,7 @@ func (hnm *HwAscend910Manager) upgradeRestartRequestProcess(taskName string,
 	}
 	if err := hnm.updateResetCMStatus(taskName, common.IsolateError, common.RestartRequestError,
 		common.RecoverFailedStatus, devFaultInfoList); err != nil {
-		hwlog.RunLog.Errorf("failed to update reset cm to recover failed status, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to update reset cm to recover failed status, err: %v", err)
 		return "", err
 	}
 	return "", fmt.Errorf("after reset, L2 fault still exists, task name: %s", taskName)
@@ -710,16 +710,16 @@ func (hnm *HwAscend910Manager) updateResetCMStatus(taskName, policy, initPolicy,
 
 	newResetInfo, err := hnm.hotResetManager.GetTaskResetInfo(devFaultInfoList, policy, initPolicy, status)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get task reset info list, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to get task reset info list, err: %v", err)
 		return err
 	}
 	pod, err := hnm.hotResetManager.GetTaskPod(taskName)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get task pod, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to get task pod, err: %v", err)
 		return err
 	}
 	if _, err := hnm.client.WriteResetInfoDataIntoCM(taskName, pod.Namespace, newResetInfo); err != nil {
-		hwlog.RunLog.Errorf("failed to write reset info to cm, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to write reset info to cm, err: %v", err)
 		return err
 	}
 	time.Sleep(common.WaitFlushingCMTime * time.Second)
@@ -729,12 +729,12 @@ func (hnm *HwAscend910Manager) updateResetCMStatus(taskName, policy, initPolicy,
 func (hnm *HwAscend910Manager) resetProcess(taskName string, resetInfo *common.TaskResetInfo) {
 	defer func() {
 		if err := hnm.postProcess(taskName, resetInfo); err != nil {
-			hwlog.RunLog.Errorf("failed to exec post process, err: %#v", err)
+			hwlog.RunLog.Errorf("failed to exec post process, err: %v", err)
 		}
 	}()
 	devFaultInfoList, err := hnm.hotResetManager.GetTaskDevFaultInfoList(taskName)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get task device fault info list, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to get task device fault info list, err: %v", err)
 		return
 	}
 	hwlog.RunLog.Infof("start handle L5 fault, task name: %s", taskName)
@@ -742,20 +742,20 @@ func (hnm *HwAscend910Manager) resetProcess(taskName string, resetInfo *common.T
 	devFaultInfoListInReset := hnm.hotResetManager.DeepCopyDevFaultInfoList(devFaultInfoList)
 	time.Sleep(common.WaitFlushingCMTime * time.Second)
 	if err := hnm.resetDeviceOnce(devFaultInfoList); err != nil {
-		hwlog.RunLog.Errorf("failed to reset device, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to reset device, err: %v", err)
 		return
 	}
 	if err := hnm.upgradeResetProcess(taskName, devFaultInfoList); err != nil {
-		hwlog.RunLog.Errorf("failed to exec upgrade reset process, err :%#v", err)
+		hwlog.RunLog.Errorf("failed to exec upgrade reset process, err :%v", err)
 		return
 	}
 	if err := hnm.updateResetCMStatus(taskName, common.ResetError, common.ResetError, common.RecoveredStatus,
 		devFaultInfoListInReset); err != nil {
-		hwlog.RunLog.Errorf("failed to update reset cm to recovered status, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to update reset cm to recovered status, err: %v", err)
 		return
 	}
 	if err := hnm.hotResetManager.UnSetTaskInReset(taskName); err != nil {
-		hwlog.RunLog.Errorf("failed to unset task in reset, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to unset task in reset, err: %v", err)
 		return
 	}
 	return
@@ -765,7 +765,7 @@ func (hnm *HwAscend910Manager) resetProcess(taskName string, resetInfo *common.T
 func (hnm *HwAscend910Manager) upgradeResetProcess(taskName string, devFaultInfoList []*common.TaskDevInfo) error {
 	resultFaultInfoList, err := hnm.hotResetManager.GetNeedResetDevList(devFaultInfoList)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get need reset device list, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to get need reset device list, err: %v", err)
 		return err
 	}
 	if len(resultFaultInfoList) == 0 {
@@ -773,7 +773,7 @@ func (hnm *HwAscend910Manager) upgradeResetProcess(taskName string, devFaultInfo
 	}
 	if err := hnm.updateResetCMStatus(taskName, common.IsolateError, common.ResetError, common.RecoverFailedStatus,
 		devFaultInfoList); err != nil {
-		hwlog.RunLog.Errorf("failed to update reset cm to recover failed status, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to update reset cm to recover failed status, err: %v", err)
 		return err
 	}
 	return fmt.Errorf("failed to reset task, upgrade recovery failed status")
@@ -783,38 +783,38 @@ func (hnm *HwAscend910Manager) upgradeResetProcess(taskName string, devFaultInfo
 func (hnm *HwAscend910Manager) preProcess(taskName, policy string) (*common.TaskResetInfo, error) {
 	devFaultInfoList, err := hnm.hotResetManager.GetTaskDevFaultInfoList(taskName)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get task device fault info list, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to get task device fault info list, err: %v", err)
 		return nil, err
 	}
 	pod, err := hnm.hotResetManager.GetTaskPod(taskName)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get task pod, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to get task pod, err: %v", err)
 		return nil, err
 	}
 	resetInfo, err := hnm.hotResetManager.GetTaskResetInfo(devFaultInfoList, policy, policy, common.UnrecoveredStatus)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get task reset info list, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to get task reset info list, err: %v", err)
 		return nil, err
 	}
 	if _, err := hnm.client.WriteResetInfoDataIntoCM(taskName, pod.Namespace, resetInfo); err != nil {
-		hwlog.RunLog.Errorf("failed to write reset info to cm, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to write reset info to cm, err: %v", err)
 		return nil, err
 	}
 	faultInfo, err := hnm.hotResetManager.GetTaskFaultRankInfo(devFaultInfoList)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get task fault rank info, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to get task fault rank info, err: %v", err)
 		return nil, err
 	}
+	// This CM is used for elastic-agent to generate recover strategy, which is optional for chip reset
 	if _, err := hnm.client.WriteFaultInfoDataIntoCM(taskName, pod.Namespace, faultInfo); err != nil {
-		hwlog.RunLog.Errorf("failed to write fault rank info to cm, err %#v", err)
-		return nil, err
+		hwlog.RunLog.Warnf("failed to write fault rank info to cm, err %v", err)
 	}
 	if err := hnm.hotResetManager.SetTaskInReset(taskName); err != nil {
 		hwlog.RunLog.Errorf("failed to set task %s in reset", taskName)
 		return nil, err
 	}
 	if err := hnm.hotResetManager.SetAllDevInReset(resetInfo); err != nil {
-		hwlog.RunLog.Errorf("failed to set all device in reset, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to set all device in reset, err: %v", err)
 		return nil, err
 	}
 	return resetInfo, nil
@@ -823,17 +823,17 @@ func (hnm *HwAscend910Manager) preProcess(taskName, policy string) (*common.Task
 // postProcess clear reset info cm and unset the reset status of all device in a task
 func (hnm *HwAscend910Manager) postProcess(taskName string, resetInfo *common.TaskResetInfo) error {
 	if err := hnm.hotResetManager.UnSetAllDevInReset(resetInfo); err != nil {
-		hwlog.RunLog.Errorf("failed to unset all device in reset, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to unset all device in reset, err: %v", err)
 		return err
 	}
 
 	pod, err := hnm.hotResetManager.GetTaskPod(taskName)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get task pod, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to get task pod, err: %v", err)
 		return err
 	}
 	if err := hnm.client.ClearResetInfo(taskName, pod.Namespace); err != nil {
-		hwlog.RunLog.Errorf("failed to clear reset info, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to clear reset info, err: %v", err)
 		return err
 	}
 	hwlog.RunLog.Infof("grace tolerance process complete, task name: %s", taskName)
@@ -855,18 +855,18 @@ func (hnm *HwAscend910Manager) refreshDevFaultInfo(devFaultInfo []*common.TaskDe
 func (hnm *HwAscend910Manager) resetDeviceOnce(devFaultInfoList []*common.TaskDevInfo) error {
 	resetFaultInfoList, err := hnm.hotResetManager.GetNeedResetDevList(devFaultInfoList)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get need reset device list, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to get need reset device list, err: %v", err)
 		return err
 	}
 	if err := hnm.execResetDevice(resetFaultInfoList); err != nil {
-		hwlog.RunLog.Errorf("failed to exec reset device list, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to exec reset device list, err: %v", err)
 		return err
 	}
 	for _, devInfo := range devFaultInfoList {
 		common.SetDeviceInit(devInfo.LogicId)
 	}
 	if err := hnm.refreshDevFaultInfo(devFaultInfoList); err != nil {
-		hwlog.RunLog.Errorf("failed to refresh device fault info, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to refresh device fault info, err: %v", err)
 		return err
 	}
 	return nil
@@ -877,7 +877,7 @@ func (hnm *HwAscend910Manager) execResetDevice(devList map[int32]struct{}) error
 	for devLogicId := range devList {
 		cardId, deviceId, err := hnm.GetDmgr().GetCardIDDeviceID(devLogicId)
 		if err != nil {
-			hwlog.RunLog.Errorf("failed to get reset device card id and device id, err %#v", err)
+			hwlog.RunLog.Errorf("failed to get reset device card id and device id, err %v", err)
 			return err
 		}
 		if err := hnm.tryResetDevice(cardId, deviceId); err != nil {
@@ -905,7 +905,7 @@ func (hnm *HwAscend910Manager) waitDeviceResetComplete(logicId int32, totalTime 
 		}
 		bootState, err := hnm.GetDmgr().GetDeviceBootStatus(logicId)
 		if err != nil {
-			hwlog.RunLog.Errorf("get device boot status failed, logic id: %d, err: %#v", logicId, err)
+			hwlog.RunLog.Errorf("get device boot status failed, logic id: %d, err: %v", logicId, err)
 			return false, err
 		}
 		if bootState != common.BootStartFinish {
@@ -914,7 +914,7 @@ func (hnm *HwAscend910Manager) waitDeviceResetComplete(logicId int32, totalTime 
 		}
 		return true, nil
 	}); err != nil {
-		hwlog.RunLog.Errorf("hot reset failed, timeout or err: %#v, logic id: %d", err, logicId)
+		hwlog.RunLog.Errorf("hot reset failed, timeout or err: %v, logic id: %d", err, logicId)
 		return err
 	}
 	return nil
@@ -965,7 +965,7 @@ func (hnm *HwAscend910Manager) tryResetDevice(cardId, deviceId int32) error {
 			hwlog.RunLog.Infof("execute reset cardId %d success", cardId)
 			return nil
 		}
-		hwlog.RunLog.Errorf("cardId(%d) failed to reset device, err: %#v", cardId, err)
+		hwlog.RunLog.Errorf("cardId(%d) failed to reset device, err: %v", cardId, err)
 		realError = err
 	}
 	return realError
@@ -976,12 +976,12 @@ func (hnm *HwAscend910Manager) tryResetDevice(cardId, deviceId int32) error {
 func (hnm *HwAscend910Manager) tryWriteIsolationInfo(taskName string) {
 	devFaultInfoList, err := hnm.hotResetManager.GetTaskDevFaultInfoList(taskName)
 	if err != nil {
-		hwlog.RunLog.Errorf("failed to get task device fault info list, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to get task device fault info list, err: %v", err)
 		return
 	}
 	if err := hnm.updateResetCMStatus(taskName, common.IsolateError, common.IsolateError, common.RecoverFailedStatus,
 		devFaultInfoList); err != nil {
-		hwlog.RunLog.Errorf("failed to update reset cm to isolate, err: %#v", err)
+		hwlog.RunLog.Errorf("failed to update reset cm to isolate, err: %v", err)
 	}
 }
 

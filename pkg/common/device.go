@@ -69,7 +69,7 @@ func GetDeviceListID(devices []string, ascendRuntimeOptions string) (map[int]int
 	for _, id := range devices {
 		deviceID, virID, err := GetDeviceID(id, ascendRuntimeOptions)
 		if err != nil {
-			hwlog.RunLog.Errorf("get device ID err: %#v", err)
+			hwlog.RunLog.Errorf("get device ID err: %v", err)
 			return nil, nil, err
 		}
 		if ascendRuntimeOptions == VirtualDev {
@@ -147,7 +147,7 @@ func IsValidNumber(checkVal string) (int64, bool) {
 	}
 	conversionRes, err := strconv.ParseInt(checkVal, BaseDec, BitSize)
 	if err != nil {
-		hwlog.RunLog.Warnf("current device id invalid, err: %#v", err)
+		hwlog.RunLog.Warnf("current device id invalid, err: %v", err)
 		return -1, false
 	}
 	return conversionRes, true
