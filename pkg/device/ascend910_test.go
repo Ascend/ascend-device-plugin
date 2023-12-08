@@ -49,6 +49,15 @@ func createFake910Manager() *HwAscend910Manager {
 	return manager
 }
 
+func createFakeDeviceInfo() *common.NodeDeviceInfoCache {
+	return &common.NodeDeviceInfoCache{
+		DeviceInfo: common.NodeDeviceInfo{
+			DeviceList: map[string]string{},
+		},
+		CheckCode: "",
+	}
+}
+
 func TestHwAscend910ManagerGetNPUs(t *testing.T) {
 	convey.Convey("910 test GetNPUs", t, func() {
 		manager := createFake910Manager()
@@ -87,9 +96,9 @@ func TestDoWithVolcanoListAndWatch910(t *testing.T) {
 				return &v1.Node{}, nil, nil
 			})
 		mockCreateConfigMap := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)),
-			"WriteDeviceInfoDataIntoCMCache", func(_ *kubeclient.ClientK8s,
-				deviceInfo map[string]string, manuallySeperateNPUFaultInfo string) error {
-				return nil
+			"WriteDeviceInfoDataIntoCM", func(_ *kubeclient.ClientK8s,
+				deviceInfo map[string]string, manuallySeparateNPU string) (*common.NodeDeviceInfoCache, error) {
+				return &common.NodeDeviceInfoCache{}, nil
 			})
 		mockNodeBack := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)), "GetNode",
 			func(_ *kubeclient.ClientK8s) (*v1.Node, error) {
@@ -104,9 +113,8 @@ func TestDoWithVolcanoListAndWatch910(t *testing.T) {
 			mockCreateConfigMap.Reset()
 			mockNodeBack.Reset()
 		}()
-
+		manager.client.SetNodeDeviceInfoCache(createFakeDeviceInfo())
 		manager.DoWithVolcanoListAndWatch(groupDevice)
-
 	})
 }
 

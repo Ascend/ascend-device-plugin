@@ -163,3 +163,8 @@ func (ki *ClientK8s) WriteDeviceInfoDataIntoCMCache(deviceInfo map[string]string
 	nodeDeviceInfoCache = newNodeDeviceInfoCache
 	return nil
 }
+
+// SetNodeDeviceInfoCache set device info cache
+func (ki *ClientK8s) SetNodeDeviceInfoCache(deviceInfoCache *common.NodeDeviceInfoCache) {
+	nodeDeviceInfoCache = deviceInfoCache
+}
