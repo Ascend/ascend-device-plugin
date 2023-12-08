@@ -97,16 +97,16 @@ func TestDoWithVolcanoListAndWatch310(t *testing.T) {
 				return &nodeDeviceData
 			})
 		mockCreateConfigMap := gomonkey.ApplyMethod(reflect.TypeOf(new(kubeclient.ClientK8s)),
-			"WriteDeviceInfoDataIntoCMCache", func(_ *kubeclient.ClientK8s,
-				deviceInfo map[string]string, manuallySeperateNPUFaultInfo string) error {
-				return nil
+			"WriteDeviceInfoDataIntoCM", func(_ *kubeclient.ClientK8s,
+				deviceInfo map[string]string, manuallySeparateNPU string) (*common.NodeDeviceInfoCache, error) {
+				return &common.NodeDeviceInfoCache{}, nil
 			})
 		defer func() {
 			mockGetPodsUsedNpu.Reset()
 			mockGetConfigMap.Reset()
 			mockCreateConfigMap.Reset()
 		}()
-
+		manager.client.SetNodeDeviceInfoCache(createFakeDeviceInfo())
 		manager.DoWithVolcanoListAndWatch(groupDevice)
 	})
 }

@@ -57,6 +57,7 @@ type HotResetManager interface {
 	UnSetAllDevInReset(*common.TaskResetInfo) error
 	IsCurNodeTaskInReset(string) bool
 	IsExistFaultyDevInTask(string) bool
+	DeepCopyDevInfo(*common.TaskDevInfo) *common.TaskDevInfo
 	DeepCopyDevFaultInfoList([]*common.TaskDevInfo) []*common.TaskDevInfo
 }
 
@@ -202,7 +203,7 @@ func (hrt *HotResetTools) GetDevIdList(devStr string) []int32 {
 	return phyIDs
 }
 
-// GetNeedRestartDevList return the task list by policy level
+// GetDevListByPolicyLevel return the dev list by policy level
 func (hrt *HotResetTools) GetDevListByPolicyLevel(devFaultInfoList []*common.TaskDevInfo,
 	policyLevel int) (map[int32]struct{}, error) {
 	devList := make(map[int32]struct{})
@@ -250,9 +251,15 @@ func (hrt *HotResetTools) GetTaskResetInfo(devFaultInfoList []*common.TaskDevInf
 	faultRing := make(map[int]struct{}, common.RingSum)
 	var rankList []*common.TaskDevInfo
 	for _, devFaultInfo := range devFaultInfoList {
-		policy := hrt.processPolicyTable[devFaultInfo.Policy]
-		if policy != common.RestartErrorLevel && policy != common.ResetErrorLevel &&
-			policy != common.RestartRequestErrorLevel {
+		policyType, ok := hrt.processPolicyTable[devFaultInfo.Policy]
+		if !ok {
+			err := fmt.Errorf("invalid policy str of device %d",
+				devFaultInfo.LogicId)
+			hwlog.RunLog.Error(err)
+			return nil, err
+		}
+		if policyType != common.RestartErrorLevel && policyType != common.ResetErrorLevel &&
+			policyType != common.RestartRequestErrorLevel {
 			continue
 		}
 		ringStartIndex := int(devFaultInfo.LogicId) / hrt.GetRingNum()
@@ -340,7 +347,7 @@ func (hrt *HotResetTools) GenerateTaskDevFaultInfoList(devIdList []int32,
 	return taskDevInfoList, nil
 }
 
-// UpdateFaultDevAndPodMap updates the mapping between the unhealthy device and pod
+// UpdateFaultDev2PodMap updates the mapping between the unhealthy device and pod
 func (hrt *HotResetTools) UpdateFaultDev2PodMap(devList []int32, pod v1.Pod) error {
 	if hrt.faultDev2PodMap == nil {
 		return fmt.Errorf("no valid faultDev2PodMap here")
