@@ -172,9 +172,9 @@ type FaultFrequencyCache struct {
 
 // FaultFrequency is the base info of fault frequency
 type FaultFrequency struct {
-	TimeWindow int64
-	Times      int64
-	FaultLevel string
+	TimeWindow    int64
+	Times         int64
+	FaultHandling string
 }
 
 // FaultDurationCustomization is the customization info of fault duration
@@ -187,7 +187,7 @@ type FaultDurationCustomization struct {
 type FaultDuration struct {
 	FaultTimeout   int64
 	RecoverTimeout int64
-	FaultLevel     string
+	FaultHandling  string
 }
 
 // DevFaultInfoBasedTimeAscend sort fault queue based on alarmRaisedTime in ascending order
@@ -227,9 +227,9 @@ func LoadFaultCode(faultCodeBytes []byte) error {
 		FreeRestartNPUCodes:        StringTool.HexStringToInt(fileInfo.FreeRestartNPUCodes),
 		PreSeparateNPUCodes:        StringTool.HexStringToInt(fileInfo.PreSeparateNPUCodes),
 		SeparateNPUCodes:           StringTool.HexStringToInt(fileInfo.SeparateNPUCodes),
-		NotHandleFaultNetworkCodes: fileInfo.NotHandleFaultNetworkCodes,
-		PreSeparateNPUNetworkCodes: fileInfo.PreSeparateNPUNetworkCodes,
-		SeparateNPUNetworkCodes:    fileInfo.SeparateNPUNetworkCodes,
+		NotHandleFaultNetworkCodes: []string{},
+		PreSeparateNPUNetworkCodes: []string{LinkDownFaultCodeStr},
+		SeparateNPUNetworkCodes:    []string{},
 	}
 	return nil
 }
@@ -326,20 +326,20 @@ func loadFaultFrequencyCustomization(customizations []FaultFrequencyCustomizatio
 			if cache, ok := faultFrequencyMap[id]; ok {
 				cache.TimeWindow = cus.TimeWindow
 				cache.Times = cus.Times
-				cache.FaultLevel = cus.FaultLevel
+				cache.FaultHandling = cus.FaultHandling
 				hwlog.RunLog.Infof("update FaultFrequency for event id %s success, TimeWindow: %d, "+
-					"Times: %d, FaultLevel: %s", id, cus.TimeWindow, cus.Times, cus.FaultLevel)
+					"Times: %d, FaultHandling: %s", id, cus.TimeWindow, cus.Times, cus.FaultHandling)
 			} else {
 				faultFrequencyMap[id] = &FaultFrequencyCache{
 					Frequency: make(map[int32][]int64, common.MaxErrorCodeCount),
 					FaultFrequency: FaultFrequency{
-						TimeWindow: cus.TimeWindow,
-						Times:      cus.Times,
-						FaultLevel: cus.FaultLevel,
+						TimeWindow:    cus.TimeWindow,
+						Times:         cus.Times,
+						FaultHandling: cus.FaultHandling,
 					},
 				}
 				hwlog.RunLog.Infof("insert FaultFrequency for event id %s success, TimeWindow: %d, "+
-					"Times: %d, FaultLevel: %s", id, cus.TimeWindow, cus.Times, cus.FaultLevel)
+					"Times: %d, FaultHandling: %s", id, cus.TimeWindow, cus.Times, cus.FaultHandling)
 			}
 		}
 	}
@@ -389,9 +389,9 @@ func validateFaultFrequencyCustomization(customization FaultFrequencyCustomizati
 			customization.Times, MinFaultFrequencyTimes, MaxFaultFrequencyTimes)
 		return false
 	}
-	if !FaultTypeSet.Has(customization.FaultLevel) {
-		hwlog.RunLog.Warnf("FaultLevel(%s) in this FaultFrequency is unrecognized, skip",
-			customization.FaultLevel)
+	if !FaultTypeSet.Has(customization.FaultHandling) {
+		hwlog.RunLog.Warnf("FaultHandling(%s) in this FaultFrequency is unrecognized, skip",
+			customization.FaultHandling)
 		return false
 	}
 	return true
@@ -484,12 +484,12 @@ func GetFaultTypeFromFaultFrequency(logicId int32) string {
 		frequencyCache.Frequency[logicId] = frequencyCache.Frequency[logicId][index:]
 		if int64(len(frequencyCache.Frequency[logicId])) >= frequencyCache.Times {
 			hwlog.RunLog.Infof("FaultFrequency detected, event id: %s, logic id: %d, fault occurred times: %d, "+
-				"fault level: %s", eventId, logicId, len(frequencyCache.Frequency[logicId]), frequencyCache.FaultLevel)
-			if frequencyCache.FaultLevel == ManuallySeparateNPU {
+				"fault level: %s", eventId, logicId, len(frequencyCache.Frequency[logicId]), frequencyCache.FaultHandling)
+			if frequencyCache.FaultHandling == ManuallySeparateNPU {
 				hwlog.RunLog.Infof("detect ManuallySeparateNPU, logic id: %d", logicId)
 				SaveManuallyFaultInfo(logicId)
 			}
-			faultTypes = append(faultTypes, frequencyCache.FaultLevel)
+			faultTypes = append(faultTypes, frequencyCache.FaultHandling)
 			// every time when FaultFrequency detected, clear all the fault occurrence time in cache
 			frequencyCache.Frequency[logicId] = make([]int64, 0, frequencyCache.Times)
 		}

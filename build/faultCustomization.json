@@ -8,7 +8,7 @@
       "EventId": [],
       "TimeWindow": 3600,
       "Times": 5,
-      "FaultLevel": "NotHandleFault"
+      "FaultHandling": "NotHandleFault"
     }
   ],
   "FaultDuration": [
@@ -16,7 +16,7 @@
       "EventId": ["81078603"],
       "FaultTimeout": 30,
       "RecoverTimeout": 60,
-      "FaultLevel": "PreSeparateNPU"
+      "FaultHandling": "PreSeparateNPU"
     }
   ]
 }

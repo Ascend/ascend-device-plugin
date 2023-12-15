@@ -43,10 +43,5 @@
     "A419321B","A419321C","A42F390F","A42F3916","A42F391A","A6183207","A62F3934","A8028801","A819320F","A8193234",
     "A8193235","819B8003"
   ],
-  "PreSeparateNPUCodes":[],
-  "PreSeparateNPUNetworkCodes":[
-    "81078603"
-  ],
-  "NotHandleFaultNetworkCodes": [],
-  "SeparateNPUNetworkCodes": []
+  "PreSeparateNPUCodes":[]
 }
